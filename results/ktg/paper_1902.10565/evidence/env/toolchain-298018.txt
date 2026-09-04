@@ -1,0 +1,85 @@
+# ktg-train toolchain provenance -- slurm job 298018 on gb205 (b200), 2026-09-03
+# root R = /scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train
+
+## modules and compilers (verbatim from the job log)
+=== [2026-09-03T22:01:40-04:00] stage 0: modules ===
+
+Currently Loaded Modules:
+  1) lmod/8.7.37   3) helpers/0.1.1      5) gcc/12.3.0     7) cuda/12.8.1
+  2) lua/5.4.6     4) standard/2024.10   6) cmake/3.30.2   8) python/3.11.9
+gcc     : gcc (Spack GCC) 12.3.0
+cmake   : cmake version 3.30.2
+nvcc    : Cuda compilation tools, release 12.8, V12.8.93
+python  : Python 3.11.9  (/apps/software/spack/gcc/12.3.0/python/3.11.9-flp52wbsone25ohgc4joc3k5dabwdf7n/bin/python3)
+zip.h   : -rw-r--r-- 1 root root 26491 Jul 15  2020 /usr/include/zip.h
+libzip  : lrwxrwxrwx 1 root root     11 Jul 10 15:00 /lib64/libzip.so -> libzip.so.5
+lrwxrwxrwx 1 root root     13 Jul 10 15:00 /lib64/libzip.so.5 -> libzip.so.5.3
+
+## venv (python 3.11.9 -m venv + ensurepip; no pip in the module)
+cudnn version header:
+#define CUDNN_MAJOR 9
+#define CUDNN_MINOR 19
+#define CUDNN_PATCHLEVEL 0
+total 973392
+lrwxrwxrwx 1 ssci-haiyangw users        13 Sep  3 21:53 libcudnn.so -> libcudnn.so.9
+-rw-r--r-- 1 ssci-haiyangw users    129240 Sep  3 21:51 libcudnn.so.9
+-rw-r--r-- 1 ssci-haiyangw users 272749720 Sep  3 21:51 libcudnn_adv.so.9
+-rw-r--r-- 1 ssci-haiyangw users   4203784 Sep  3 21:51 libcudnn_cnn.so.9
+-rw-r--r-- 1 ssci-haiyangw users 515924288 Sep  3 21:51 libcudnn_engines_precompiled.so.9
+-rw-r--r-- 1 ssci-haiyangw users  31483304 Sep  3 21:51 libcudnn_engines_runtime_compiled.so.9
+-rw-r--r-- 1 ssci-haiyangw users   4451608 Sep  3 21:51 libcudnn_graph.so.9
+numpy                    2.4.6
+packaging                26.3
+psutil                   7.2.2
+scipy                    1.17.1
+sgfmill                  1.1.1
+torch                    2.11.0+cu128
+
+## katago source pin
+=== [2026-09-03T22:01:41-04:00] stage 2: clone -- already done, skipping ===
+HEAD          = fd0723fdbc0e9d82cf269c9630af8c27c57c07c4
+expected      = fd0723fdbc0e9d82cf269c9630af8c27c57c07c4
+v1.18.2
+
+## sm_100 architecture patch (results/ktg/paper_1902.10565/codes/env/cmake-sm100.diff)
+=== [2026-09-03T22:01:41-04:00] stage 2b: sm_100 architecture patch ===
+Checking patch cpp/CMakeLists.txt...
+Applied patch cpp/CMakeLists.txt cleanly.
+patch applied; build stamp invalidated
+761:    set(CMAKE_CUDA_ARCHITECTURES 50 52 53 60 61 62 70 72 75 80 86 87 90 100 120)
+764:    set(CMAKE_CUDA_ARCHITECTURES 50 52 53 60 61 62 70 72 75 80 86 87 90)
+
+## cmake configure decisions
+=== [2026-09-03T22:01:41-04:00] stage 3: cmake configure + build (USE_BACKEND=CUDA) ===
+-- Building 'katago' executable for GTP engine and other tools.
+-- -DUSE_BACKEND=CUDA, using CUDA backend.
+-- Found vendored CUTLASS at external/cutlass, enabling the fused FFN kernel.
+-- Found CUDAToolkit: /apps/software/extern/cuda/12.8.1/targets/x86_64-linux/include (found version "12.8.93")
+-- Found ZLIB: /usr/lib64/libz.so (found version "1.2.11")
+
+## linked cuDNN / cuBLAS (ldd on the built binary)
+=== [2026-09-03T22:03:00-04:00] stage 4: install env.sh ===
+KATAGO_BIN      = /scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/build/KataGo/cpp/build/katago
+LD_LIBRARY_PATH = /scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/venv/lib/python3.11/site-packages/nvidia/cudnn/lib:/apps/software/extern/cuda/12.8.1/lib64:/apps/software/spack/gcc/9.3.0/gcc/12.3.0-ad6neh67rioem57tvoynxt24r4yfg354/lib64:/apps/software/spack/gcc/9.3.0/gcc/12.3.0-ad6neh67rioem57tvoynxt24r4yfg354/lib:/usr/local/cuda/lib64:/usr/local/cuda/extras/CUPTI/lib64:/apps/software/extern/cuda/12.8.1/extras/CUPTI/lib64
+	libcublas.so.12 => /apps/software/extern/cuda/12.8.1/lib64/libcublas.so.12 (0x00007f1497214000)
+	libcudnn.so.9 => /scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/venv/lib/python3.11/site-packages/nvidia/cudnn/lib/libcudnn.so.9 (0x00007f1496ff4000)
+	libcublasLt.so.12 => /apps/software/extern/cuda/12.8.1/lib64/libcublasLt.so.12 (0x00007f145e575000)
+
+## compiled SASS architectures
+cuobjdump --list-elf katago | grep -c sm_100 = 2
+sm_100 sm_120 sm_50 sm_52 sm_53 sm_60 sm_61 sm_62 sm_70 sm_72 sm_75 sm_80 sm_86 sm_87 sm_90
+
+## compute-budget self-check run before sbatch (exit 0)
+== compute-budget self-check  2026-09-03T22:01:25-04:00 ==
+my jobs      : gpus=0 cpus=0  (0 jobs)
+partition b200 : free_gpus=3/128 (excludes reserved/drained nodes)
+partition b300 : free_gpus=0/8 (excludes reserved/drained nodes)
+reservations : 8 defined (6 active) — scontrol show reservation
+quota        : | /home/ssci-haiyangw/ | 3.37 GB  | 100.00 GB |  3.37%   |
+quota        : | /scratch/ssci-anima/ | 37.80 TB |  40.00 TB |   94%    |
+OK           : request gpus=1 cpus=16 part=b200 within policy (gpu<=4, cpu<=24)
+
+## sacct
+JobID         Partition    Elapsed      State ExitCode 
+------------ ---------- ---------- ---------- -------- 
+298018             b200   00:02:10  COMPLETED      0:0 

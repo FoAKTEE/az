@@ -1,0 +1,159 @@
+# env_build attempt 2 -- slurm job 298018, b200/gb205, 1x NVIDIA B200 (sm_100), 16 cpus, 96G
+# elapsed 00:02:10, State COMPLETED, ExitCode 0:0
+# full log: /scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/logs/env_build-298018.log
+# job script: results/ktg/paper_1902.10565/codes/env/env_build.sbatch
+
+== ktg-train env_build smoke, job 298018, gb205, 2026-09-03T22:03:00-04:00
+== gpu: NVIDIA B200, 10.0
+== katago sha: fd0723fdbc0e9d82cf269c9630af8c27c57c07c4 (v1.18.2)
+--- katago version
+KataGo v1.18.2
+Git revision: fd0723fdbc0e9d82cf269c9630af8c27c57c07c4-dirty
+Compile Time: Sep  3 2026 22:02:13
+Using CUDA backend
+Compiled with CUDA version 12.8.93
+[OK] katago version
+--- katago runtests
+Running rng and hash tests
+Running fancy math tests
+Running base64 tests
+Running thread tests
+Running board IO tests
+Running board basic tests
+Running board area tests
+Running rules tests
+Ran pass-alive suicide mode tests
+Ran exclude-territory-adjacent-to-atari mode tests
+Running board undo test
+Running board handicap test
+Running board stress test
+Running sgf tests
+Sgf tolerateIllegalMoves tests passed
+Running basic symmetries tests
+Running board symmetry tests
+Running symmetry difference tests
+Running board replay test
+Not being run out of git repo, skipping config parsing tests
+All tests passed
+[OK] katago runtests
+--- sm_100 SASS present in katago binary
+cuobjdump --list-elf | grep -c sm_100 = 2
+sm_100 sm_120 sm_50 sm_52 sm_53 sm_60 sm_61 sm_62 sm_70 sm_72 sm_75 sm_80 sm_86 sm_87 sm_90 
+[OK] sm_100 SASS present in katago binary
+total 6140
+-rw-r--r-- 1 ssci-haiyangw users    1244 Sep  3 22:03 log.txt
+-rw-r--r-- 1 ssci-haiyangw users       2 Sep  3 22:03 metadata.json
+-rw-r--r-- 1 ssci-haiyangw users 3281596 Sep  3 22:03 model.bin
+-rw-r--r-- 1 ssci-haiyangw users 2992909 Sep  3 22:03 model.bin.gz
+--- katago benchmark (b7c96h3tfrs, 9x9 board, 80 visits, 1 thread)
+2026-09-03 22:03:13-0400: Running with following config:
+allowResignation = true
+lagBuffer = 1.0
+logAllGTPCommunication = true
+logDir = gtp_logs
+logSearchInfo = true
+logSearchInfoForChosenMove = false
+logToStderr = false
+maxTimePondering = 60.0
+maxVisits = 500
+numSearchThreads = 6
+ponderingEnabled = false
+resignConsecTurns = 3
+resignThreshold = -0.90
+rules = tromp-taylor
+searchFactorAfterOnePass = 0.50
+searchFactorAfterTwoPass = 0.25
+searchFactorWhenWinning = 0.40
+searchFactorWhenWinningThreshold = 0.95
+
+2026-09-03 22:03:13-0400: Loading model and initializing benchmark...
+2026-09-03 22:03:13-0400: Testing with default positions for board size: 9
+2026-09-03 22:03:13-0400: nnRandSeed0 = 7713098990100709788
+2026-09-03 22:03:13-0400: After dedups: nnModelFile0 = /scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/runtime/smoke/model-b7c96h3tfrs/model.bin.gz useFP16 auto
+2026-09-03 22:03:13-0400: Initializing neural net buffer to be size 9 * 9 exactly
+2026-09-03 22:03:14-0400: Cuda backend thread 0: Found GPU NVIDIA B200 memory 191495471104 compute capability major 10 minor 0
+2026-09-03 22:03:14-0400: Cuda backend thread 0: Model version 17 useFP16 = true useNHWC = true
+2026-09-03 22:03:14-0400: Cuda backend thread 0: Model name: ktg-smoke-b7c96h3tfrs (transformer, 818857 params)
+2026-09-03 22:03:14-0400: Cuda backend: using combined QKV projection for attention
+2026-09-03 22:03:14-0400: Cuda backend: using CUTLASS fused FFN kernel
+2026-09-03 22:03:14-0400: CUDA backend: running 1x1 NHWC convolutions as a GEMM
+2026-09-03 22:03:14-0400: Cuda backend thread 0: warming up transformer graphs for batch sizes 1..8
+2026-09-03 22:03:14-0400: Cuda backend: using tensor-core mma flash attention kernel
+
+2026-09-03 22:03:14-0400: Loaded config /scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/build/KataGo/cpp/configs/gtp_example.cfg
+2026-09-03 22:03:14-0400: Loaded model /scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/runtime/smoke/model-b7c96h3tfrs/model.bin.gz
+
+Testing using 80 visits.
+
+Your GTP config is currently set to cudaUseFP16 = auto
+
+Your GTP config is currently set to use numSearchThreads = 6
+Testing (board size 9x9): 
+
+numSearchThreads =  1: 0 / 10 positions, visits/s = -nan (0.0 secs)      
+numSearchThreads =  1: 1 / 10 positions, visits/s = 2240.07 (0.0 secs)      
+numSearchThreads =  1: 2 / 10 positions, visits/s = 2317.96 (0.1 secs)      
+numSearchThreads =  1: 3 / 10 positions, visits/s = 2336.86 (0.1 secs)      
+numSearchThreads =  1: 4 / 10 positions, visits/s = 2344.44 (0.1 secs)      
+numSearchThreads =  1: 5 / 10 positions, visits/s = 2348.31 (0.2 secs)      
+numSearchThreads =  1: 6 / 10 positions, visits/s = 2325.70 (0.2 secs)      
+numSearchThreads =  1: 7 / 10 positions, visits/s = 2324.23 (0.2 secs)      
+numSearchThreads =  1: 8 / 10 positions, visits/s = 2322.06 (0.3 secs)      
+numSearchThreads =  1: 9 / 10 positions, visits/s = 2321.39 (0.3 secs)      
+numSearchThreads =  1: 10 / 10 positions, visits/s = 2322.17 nnEvals/s = 2322.17 nnBatches/s = 2322.17 avgBatchSize = 1.00 (0.3 secs) (EloDiff baseline)
+
+2026-09-03 22:03:15-0400: GPU -1 finishing, processed 805 rows 805 batches
+[OK] katago benchmark (b7c96h3tfrs, 9x9 board, 80 visits, 1 thread)
+--- katago gtp genmove on 9x9 vs b7c96h3tfrs
+KataGo v1.18.2
+Using TrompTaylor rules initially, unless GTP/GUI overrides this
+Initializing board with boardXSize 19 boardYSize 19
+Loaded config /scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/build/KataGo/cpp/configs/gtp_example.cfg
+Loaded model /scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/runtime/smoke/model-b7c96h3tfrs/model.bin.gz
+Model name: ktg-smoke-b7c96h3tfrs
+GTP ready, beginning main protocol loop
+Initializing board with boardXSize 9 boardYSize 9
+= 
+
+= 
+
+= 
+
+= H7
+
+= MoveNum: 1 HASH: B51F04A717B381D4B8657B95FFD13D59
+   A B C D E F G H J
+ 9 . . . . . . . . .
+ 8 . . . . . . . . .
+ 7 . . . . . . . X1.
+ 6 . . . . . . . . .
+ 5 . . . . . . . . .
+ 4 . . . . . . . . .
+ 3 . . . . . . . . .
+ 2 . . . . . . . . .
+ 1 . . . . . . . . .
+Next player: White
+Rules: {"friendlyPassOk":false,"hasButton":false,"ko":"POSITIONAL","komi":7.0,"scoring":"AREA","suicide":true,"tax":"NONE","whiteHandicapBonus":"0"}
+B stones captured: 0
+W stones captured: 0
+
+= 
+
+[OK] katago gtp genmove on 9x9 vs b7c96h3tfrs
+--- torch cuda forward/backward (b7c96h3tfrs, pos_len 9)
+/scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/runtime/smoke/torch_smoke.py:40: UserWarning: Converting a tensor with requires_grad=True to a scalar may lead to unexpected behavior.
+Consider using tensor.detach() first. (Triggered internally at /pytorch/torch/csrc/autograd/generated/python_variable_methods.cpp:836.)
+  print("loss        = %.6f" % float(loss))
+torch 2.11.0+cu128 cuda 12.8 cudnn 91900
+torch.cuda.is_available() = True
+device name = NVIDIA B200
+capability  = (10, 0)
+model=b7c96h3tfrs pos_len=9 bin_feats=22 global_feats=19
+parameters  = 825837
+forward ok: 9 output tensors, shapes[:4]=[(4, 6, 82), (4, 3), (4, 10), (4, 8)]
+loss        = 32.673550
+grad l2norm = 13.598043
+mem alloc MB=162.0
+TORCH_SMOKE_OK
+[OK] torch cuda forward/backward (b7c96h3tfrs, pos_len 9)
+SMOKE RESULT: PASS
