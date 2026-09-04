@@ -1,0 +1,20 @@
+# consumer repo for the ktg-train mission; ref-code/ and phys-agentic-loop/ are git submodules
+# never commit datasets / checkpoints / selfplay data — they live on /scratch
+data/
+*.npz
+*.bin.gz
+*.ckpt
+*.pt
+*.pth
+# python / editor / runtime
+__pycache__/
+*.pyc
+.venv/
+venv/
+.vscode/
+.DS_Store
+# selfplay data, checkpoints, wheels live on /scratch, never here
+results/**/selfplay/
+results/**/shuffleddata/
+results/**/models/
+*.sgf

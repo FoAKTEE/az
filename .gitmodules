@@ -1,0 +1,7 @@
+[submodule "phys-agentic-loop"]
+	path = phys-agentic-loop
+	url = git@github.com:FoAKTEE/phys-agentic-loop.git
+	branch = ssci
+[submodule "ref-code/lightvector-KataGo"]
+	path = ref-code/lightvector-KataGo
+	url = https://github.com/lightvector/KataGo.git
