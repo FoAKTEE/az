@@ -1,0 +1,173 @@
+{
+ "_note": "CANDIDATE rows only. Written by the worker for node arxiv-1902.10565::derive_cycle_knobs_9x9; NOT appended. An independent validator admits or refutes them. The only rows this worker appended itself are the two error-ledger trials row_hash f3377f43658fc8251a7e5e6b1a75cba6a723f7028b2ae41bd0a9ad79380e71e6 (iteration 1, fail: the task file section 2 command run verbatim, refuting DESIGN section 2's 500-game pilot) and 8cf75777099d1e5430c1632db7ba03d72ba4c1d48d9eb000b746037e76a51c44 (iteration 2, pass: the derived set).",
+ "node_id": "arxiv-1902.10565::derive_cycle_knobs_9x9",
+ "task_id": "derive_cycle_knobs_9x9",
+ "worker_role": "worker",
+ "evidence_files": [
+  "results/ktg/paper_1902.10565/evidence/knobs/derivation.txt",
+  "results/ktg/paper_1902.10565/evidence/derive_cycle_knobs/derivation.md",
+  "results/ktg/paper_1902.10565/evidence/derive_cycle_knobs/closing_check.txt",
+  "results/ktg/paper_1902.10565/evidence/derive_cycle_knobs/derived_knobs.json"
+ ],
+ "artifacts": [
+  "results/ktg/paper_1902.10565/codes/loop/knobs_9x9.env",
+  "results/ktg/paper_1902.10565/codes/eval/derive_knobs.py",
+  "results/ktg/paper_1902.10565/codes/eval/check_knobs_9x9.py",
+  "results/ktg/paper_1902.10565/codes/loop/synchronous_loop_9x9.sh",
+  "results/ktg/paper_1902.10565/decomposition/DESIGN.md"
+ ],
+ "measured_inputs_read": {
+  "_why": "The unsuffixed evidence names are mutable and attempt-2 job 299259 overwrote them (o37); every number below was read from a job-suffixed, content-hashed copy. A validator can re-hash these.",
+  "results/ktg/paper_1902.10565/evidence/smoke/rows_per_game-298712.txt": "daed88eff2a9d4e8cfa70b538caf5597fc2addb71cbcb6a1adc169ba16c3c828",
+  "results/ktg/paper_1902.10565/evidence/smoke/throughput_smoke-298712.json": "927fb04cd2ac97eef7c30d471f06ac2d67ba8a014ac92cfe2109aa1efc72c947",
+  "results/ktg/paper_1902.10565/evidence/smoke/nlwp_max-298712.txt": "c153834283bfe29bf9c1f99856b405f690b53ac8040dd3094fa877d0992042d3",
+  "results/ktg/paper_1902.10565/evidence/smoke/audit-298712.json": "646e4ef1a9f295b10926fa10f43172482cf4f1ca7244ca9146919d358d09f282",
+  "results/ktg/paper_1902.10565/evidence/smoke/throughput_smoke-299259.json": "d91e79205cd664bbe74690dd2ce015de8836fd974d042de262fa01c6ffe7b9ff",
+  "results/ktg/paper_1902.10565/evidence/smoke/audit-299259.json": "6968eb122b83564f1c130330d745d7e9873764f915df7ba7f2b7a2edea062eea",
+  "results/ktg/paper_1902.10565/codes/data_budget/budget.env": "6f38681ea6befc64f1e0f0c4faced2ddd1d774ac7f445595997d07e4abf81f62"
+ },
+ "verification": {
+  "command": "python3 results/ktg/paper_1902.10565/codes/eval/check_knobs_9x9.py",
+  "exit_code": 0,
+  "why_this_and_not_the_task_file_section_2_command": "The task file's section 2 command is DESIGN section 2's 500-game pilot HYPOTHESIS with its parameters hard-coded, and this node refutes it: run verbatim it exits 1 (evidence/knobs/derivation.txt block 2), which is the correct scientific outcome and is recorded on error row f3377f43. It is also defective in three independent ways -- it interpolates a prose evidence file with an unquoted $(cat ...) that word-splits into 79 argv tokens, it names the MUTABLE rows_per_game.txt that o37 records as overwritten, and its --min-rows default of 10000 fails K4 from cycle 1 at any rows/game. derive_knobs.py accepts the word-split blob so the command still RUNS as written, and the block-2 output is retained. The proposed closing_check above takes NO parameters at all: the knobs come from codes/loop/knobs_9x9.env, the measurements from the job-suffixed evidence of both smoke jobs, the storage constants from codes/data_budget/budget.env, so it cannot be made to pass by choosing arguments, and it re-runs by itself whenever any of those files changes.",
+  "conjuncts": {
+   "K1_bucket_gain_clears_epoch": "gain 258400 (lower90 200620) / E = 12.92 (10.03) >= 0.99",
+   "T1_no_train_starvation": "rows_per_cycle 32300 (lower90 25078) >= 1.2*E = 24000",
+   "K2_one_export_per_cycle": "epochs_per_export = max_epochs_this_instance = 5 at r AND at r_lo",
+   "K2b_effective_reuse_within_cap": "3.10 (lower90 3.99) <= MAX_TRAIN_PER_DATA 8",
+   "K2c_at_most_one_export_per_cycle": "structural: -epochs-per-export == -max-epochs-this-instance",
+   "K3_keep_gt_cap": "120000 > 100000 and >= epochs*E = 100000",
+   "K4_window_holds_one_epoch": "worst is cycle 1: 25000 rows = 195 batches >= 156 needed, ratio 1.25",
+   "K5_random_bootstrap_reaches_min_rows": "31675 (lower90 28134) >= 25000",
+   "K6_swa_period_is_half_epoch": "10000 = 20000 // 2 (train.py:441)",
+   "K7_cycle_wall_under_bound": "11182 s = 3.11 h <= 60 h; 23 whole cycles per 257400 s chain link",
+   "T3_storage_projection_under_budget": "20.90 GiB after a full link < 500 GiB; 30480 cycles of headroom",
+   "T4_threads_le_cpus": "worst stage 29 <= KTG_CPUS_PER_TASK 32",
+   "loop_default_wiring": "all 11 ${VAR:-default} in synchronous_loop_9x9.sh == knobs_9x9.env == derivation",
+   "self_test": "derive_knobs.py --self-test exit 0: 2 DESIGN negative cases + the executed smoke's set",
+   "sensitivity": "PASS at rows/game 31.95, 32.3 and 34.4; the set first fails below 24.0",
+   "bash_n_loop_copy": "clean; the diff against HEAD touches only the CHANGE 9 knob block"
+  },
+  "measured_at": "2026-09-04T10:18Z",
+  "device": "login node, CPU only, no Slurm allocation, no GPU"
+ },
+ "derived_knob_set": {
+  "NUM_GAMES_PER_CYCLE": 1000,
+  "NUM_THREADS_FOR_SHUFFLING": 8,
+  "NUM_TRAIN_SAMPLES_PER_EPOCH": 20000,
+  "MAX_TRAIN_PER_DATA": 8,
+  "NUM_TRAIN_SAMPLES_PER_SWA": 10000,
+  "BATCHSIZE": 128,
+  "SHUFFLE_MINROWS": 25000,
+  "MAX_TRAIN_SAMPLES_PER_CYCLE": 100000,
+  "TAPER_WINDOW_SCALE": 50000,
+  "SHUFFLE_KEEPROWS": 120000,
+  "EPOCHS_PER_EXPORT": 5,
+  "KTG_CPUS_PER_TASK": 32,
+  "KTG_NUM_GAME_THREADS": 18
+ },
+ "candidate_result_row": {
+  "paper": "arxiv-1902.10565",
+  "result_id": "r_cycle_knobs_9x9_derived",
+  "name": "Production cycle knobs derived from the measured 9x9 rows/game, satisfying every train.py / shuffle.py constraint at the measurement and at its 90 % lower bound",
+  "working_context": {
+   "cluster": "skipjack, partition b200 (b300 preferred when free), account ssci-anima; 1 GPU, --cpus-per-task 32, --mem 120G, --time 2-23:30:00",
+   "upstream": "lightvector/KataGo v1.18.2 @ fd0723fdbc0e9d82cf269c9630af8c27c57c07c4 (read-only mirror ref-code/lightvector-KataGo)",
+   "model": "b7c96h3tfrs, pos_len 9, 825837 params",
+   "measured_inputs": "r = 32.3 rows/game real net (646/20, job 298712 leg-D1 probe), r0 = 31.675 (2534/80), 353.8 B/row on disk, real-net selfplay 2031.7 games/h (job 299259, 80 games / 141.75 s), train 14.243 samples/s all-in (298712), threads 22 random-net selfplay / 25 any CUDA-context stage / 14 train / 4+8 shuffle",
+   "conservatism": "every binding inequality is evaluated at r AND at the task file section 11 lower bound r_lo = r*(1-1/sqrt(n)) = 25.0775 (r0_lo = 28.1336) and must hold at both; the wall projection takes the slower of each rate the two smoke jobs measured, then derates selfplay by a further 0.5",
+   "scope": "closed-form derivation over measured numbers plus an executed arithmetic check; NO engine run, no job, no GPU"
+  },
+  "claim": "The knob set NUM_GAMES_PER_CYCLE 1000, NUM_THREADS_FOR_SHUFFLING 8, NUM_TRAIN_SAMPLES_PER_EPOCH 20000, MAX_TRAIN_PER_DATA 8, NUM_TRAIN_SAMPLES_PER_SWA 10000, BATCHSIZE 128, SHUFFLE_MINROWS 25000, MAX_TRAIN_SAMPLES_PER_CYCLE 100000, TAPER_WINDOW_SCALE 50000, SHUFFLE_KEEPROWS 120000, EPOCHS_PER_EXPORT 5 (passed as both -epochs-per-export and -max-epochs-this-instance), with --cpus-per-task 32 at numGameThreads 18, satisfies every constraint train.py and shuffle.py impose at the measured 9x9 rows/game, and does so at the 90 % lower bound of that measurement as well. Specifically: the per-cycle bucket gain games*r*reuse = 258400 (200620 at r_lo) exceeds 0.99*samples_per_epoch by 12.9x (10.0x) so training never starves (train.py:1256-1259,1434-1445); a cycle produces 32300 new rows (25078) against a 24000-row freshness floor of 1.2*samples_per_epoch; epochs_per_export = floor(min(gain, max(cap,E))/E) = 5 at both r and r_lo with a realised reuse of 3.10 (3.99) against the cap of 8; keep 120000 > cap 100000 (synchronous_loop.sh:66) and holds a whole cycle's 100000-sample draw; the shuffle window (shuffle.py:414-435 at -expand-window-per-row 0.4 -taper-window-exponent 0.65) holds at least one epoch in EVERY cycle including the first, worst case 195 batches against the 156 an epoch needs; the random bootstrap reaches min_rows in cycle 1 (31675 >= 25000, 28134 at r0_lo); swa_period = E//2 = 10000 is train.py:441's own default; the worst stage thread count 29 is inside the 32 declared; the projected cycle is 3.11 h so 23 whole cycles fit one 2-23:30:00 chain link; and the projection writes 16.11 MiB per cycle monotonic, 20.90 GiB after a full link against the 500 GiB cap in budget.env. TWO THINGS ARE NOT CLAIMED. (i) The knobs have never been executed -- no production cycle has run at them; the evidence is a derivation over measured inputs plus an executed arithmetic check, not a measurement of the loop at these values. (ii) 'Exactly one exported candidate per cycle' holds only from cycle 13. What holds from cycle 1 is AT MOST one, structurally, because -epochs-per-export equals -max-epochs-this-instance so train.py's persistent export_cycle_counter (:871,975,1743,1831) can advance by at most 5 per cycle; cycles 1-12 are window-limited to 1-4 epochs and the counter carries the remainder forward, so the export slips rather than duplicating. Forcing exactly one from cycle 1 would need SHUFFLE_MINROWS >= 100000 and hence >= 3554 random bootstrap games, which re-enters the NUM_GAMES derivation and diverges.",
+  "evidence_type": "symbolic_derivation_with_executed_numerical_check",
+  "evidence": "results/ktg/paper_1902.10565/evidence/knobs/derivation.txt",
+  "verifier_result": {
+   "verdict": "pass",
+   "command": "python3 results/ktg/paper_1902.10565/codes/eval/check_knobs_9x9.py",
+   "exit_code": 0,
+   "detail": "16 conjuncts, all ok: K1 12.92/10.03; T1 32300/25078 >= 24000; K2 5 == 5; K2b 3.10/3.99 <= 8; K2c structural; K3 120000 > 100000; K4 worst cycle 1 at 195 >= 156 batches; K5 31675/28134 >= 25000; K6 10000; K7 3.11 h, 23 cycles/link; T3 20.90 GiB < 500 GiB; T4 29 <= 32; loop wiring 11/11; self-test exit 0; sensitivity PASS at 31.95/32.3/34.4; bash -n clean"
+  },
+  "dependencies": [
+   "arxiv-1902.10565::synchronous_loop_smoke",
+   "arxiv-1902.10565::train_resume_semantics",
+   "arxiv-1902.10565::training_window_shuffle",
+   "arxiv-1902.10565::data_format_pos_len",
+   "arxiv-1902.10565::data_budget"
+  ],
+  "assumptions": [
+   "a01_single_node",
+   "a02_gpu_cap_start_at_1",
+   "a03_walltime_resume",
+   "a10_random_bootstrap_ok",
+   "NOT a07_moves_per_game_80: every row count here is the MEASURED rows/game. Job 299259 measured full_frac 0.342 against the 0.25 that a07's (1-cheapSearchProb)*80 chain predicts, so a07 and the ~22 rows/game planning figure derived from it are refuted; this derivation is independent of both, which is exactly why the measurement moved NUM_GAMES from 500 to 1000 rather than invalidating the method."
+  ],
+  "status": "conditional",
+  "_status_rationale": "conditional, not empirical: the numbers going IN are measured (job 298712 / 299259) but nothing has been measured AT these knob values -- no cycle has run at 1000 games / 20000 samples per epoch. The claim is conditional on (a) rows/game staying above 24.0 in production, which measure_stage_throughput settles, and (b) the two-real-net gatekeeper costing no more than the 29 threads the arithmetic projects. Promote to empirical when selfplay_stage / train_stage report an executed cycle at this set.",
+  "provenance": "worker derive_cycle_knobs_9x9, login node 2026-09-04, CPU only, no allocation; error-ledger trials row_hash f3377f43658fc8251a7e5e6b1a75cba6a723f7028b2ae41bd0a9ad79380e71e6 (fail) and 8cf75777099d1e5430c1632db7ba03d72ba4c1d48d9eb000b746037e76a51c44 (pass)",
+  "open_obligations": [
+   "o38_cpus_per_task_wiring",
+   "o03_thread_budget (re-measure at 32 in a real-net cycle)",
+   "o37_mutable_smoke_evidence",
+   "measure_stage_throughput: real-net games/hour (n=100 probe games only) and train samples/s at batch 128",
+   "gatekeeper_stage: two-real-net thread count",
+   "scale_data_window: the 12-cycle export ramp"
+  ],
+  "_validator_decision_point": "The two places to attack. (1) STATUS: is 'conditional' right, or is this 'symbolic derivation' with no empirical content at all? The inputs are measured and the output is an arithmetic consequence, so it is not a bare derivation, but nothing was measured at the derived point. (2) The K4 window model. It ports shuffle.py:414-435 verbatim and then applies min(window, keep) >= samples_per_epoch, which DELIBERATELY does not credit the file-granularity slack of shuffle.sh:48 (-approx-rows-per-out-file 70000). That makes K4 conservative -- and it is why the self-test reports the EXECUTED smoke as a K4 failure even though the smoke did export. A refuter should check that the conservatism runs in the safe direction everywhere it is used, and that the per-cycle usable-rows model (min_rows + (c-1)*games*r for c >= 2) is right about post-random rows being uncapped (shuffle.py:1073-1077)."
+ },
+ "candidate_knowledge_row": {
+  "paper": "arxiv-1902.10565",
+  "node_id": "arxiv-1902.10565::derive_cycle_knobs_9x9",
+  "task_id": "derive_cycle_knobs_9x9",
+  "domain": "symbolic",
+  "status": "preliminary",
+  "summary": "The production cycle knobs are derived, not hand-picked, and are wired into the loop copy's CHANGE 9 block: NUM_GAMES 1000, epoch 20000, batch 128, reuse 8, SWA 10000, MINROWS 25000, TAPER 50000, KEEPROWS 120000 > cap 100000, EPOCHS_PER_EXPORT 5, with --cpus-per-task 32 at numGameThreads 18. codes/eval/derive_knobs.py holds the arithmetic and the K1-K7 checks plus a self-test that reproduces DESIGN section 2's two negative cases and the executed smoke; codes/eval/check_knobs_9x9.py is the parameterless closing check that re-reads the knobs, the measurements and the storage constants from files and asserts the four mission tolerances and the loop wiring; codes/loop/knobs_9x9.env is the single source of truth with one derivation comment per knob. preliminary, not solid: predecessor synchronous_loop_smoke is preliminary, no cycle has executed at this set, and the --cpus-per-task 32 is decided but not yet wired into loop.sbatch (o38).",
+  "evidence": "results/ktg/paper_1902.10565/evidence/knobs/derivation.txt",
+  "_validator_decision_point": "solid requires solid predecessors; synchronous_loop_smoke is preliminary and data_budget is hypothesis, so preliminary is the ceiling regardless of this node's own evidence."
+ },
+ "candidate_claim_transitions": [
+  {
+   "entry_id": "o24_cycle_knobs_derived",
+   "kind": "obligation",
+   "proposed_status": "discharged",
+   "discharged_by": "arxiv-1902.10565::derive_cycle_knobs_9x9",
+   "rationale": "Every conjunct of the obligation statement is met and executed. The seven named knobs plus -epochs-per-export / -max-epochs-this-instance are derived from the measured rows/game rather than chosen: games*rows_per_game*MAX_TRAIN_PER_DATA = 258400 >= 0.99*20000 (train.py:1256-1259,1433-1445) and still 200620 at the 90 % lower bound; SHUFFLE_KEEPROWS 120000 > MAX_TRAIN_SAMPLES_PER_CYCLE 100000 (synchronous_loop.sh:66); and -epochs-per-export equals -max-epochs-this-instance, which is what bounds the export to one candidate per cycle. The derivation output is recorded as evidence (evidence/knobs/derivation.txt, evidence/derive_cycle_knobs/derivation.md) and is re-runnable by a parameterless script.",
+   "evidence": "results/ktg/paper_1902.10565/evidence/derive_cycle_knobs/derivation.md",
+   "caveat": "The obligation says 'exactly one candidate is exported per cycle'. What is proved is AT MOST one from cycle 1 (structural) and exactly one from cycle 13, when the shuffle window first holds 5*samples_per_epoch rows. A validator who reads the obligation strictly should narrow its wording rather than admit the discharge as written; the alternative -- SHUFFLE_MINROWS >= 100000 and a >= 3554-game bootstrap cycle -- is recorded and rejected in evidence/derive_cycle_knobs/derivation.md section 3."
+  },
+  {
+   "entry_id": "o13_loop_config_paths",
+   "kind": "obligation",
+   "proposed_status": "discharged",
+   "discharged_by": "arxiv-1902.10565::derive_cycle_knobs_9x9",
+   "rationale": "The knob conjunct -- 'scales NUM_GAMES_PER_CYCLE / SHUFFLE_MINROWS / samples-per-epoch to the 9x9 rows-per-game' -- is now met by measurement rather than by the ~22 rows/game planning figure: 1000 / 25000 / 20000 are each the solution of a constraint at r = 32.3. The other two conjuncts (SELFPLAY_CONFIG / GATING_CONFIG pointing at the mission 9x9 cfgs, and running from the scratch git clone) were already satisfied by loop_resume_under_walltime's CHANGE 1/2 and the KATAGO_SRC guard, and are unchanged here.",
+   "evidence": "results/ktg/paper_1902.10565/evidence/derive_cycle_knobs/closing_check.txt",
+   "caveat": "This node touched only the CHANGE 9 knob block; the config-path conjuncts rest on loop_resume_under_walltime's evidence, not on anything measured here. A validator should confirm both conjuncts before discharging the whole obligation."
+  },
+  {
+   "entry_id": "o03_thread_budget",
+   "kind": "obligation",
+   "proposed_status": "open",
+   "discharged_by": null,
+   "rationale": "STAYS OPEN, with its decision half settled. DESIGN section 1's [BLOCKING] asked derive_cycle_knobs_9x9 to pick between raising --cpus-per-task and lowering numGameThreads, and to move both together. The pick is made and recorded: --cpus-per-task 32 with numGameThreads unchanged at 18, because with the CPU cap withdrawn (mission.json decisions[0]) the declaration is the free side of the trade while the game threads are what feed a GPU already measured at 21.5 % mean duty. The budget re-sums to a worst stage of 29 (gatekeeper with two real nets), inside 32 with headroom 3. What is NOT done: the number is not wired into codes/loop/loop.sbatch, and no real-net cycle has re-measured nlwp_max against 32. The obligation's own closing condition names that re-measurement, so it stays open.",
+   "evidence": "results/ktg/paper_1902.10565/evidence/derive_cycle_knobs/derivation.md",
+   "caveat": "c06's real-net clause is already refuted on r_smoke_threads_realnet; nothing here revives it."
+  },
+  {
+   "entry_id": "o38_cpus_per_task_wiring",
+   "kind": "obligation",
+   "proposed_status": "open",
+   "_new": true,
+   "discharged_by": null,
+   "rationale": "NEW. codes/loop/loop.sbatch still carries #SBATCH --cpus-per-task=24 and REQ_CPUS=24, and the sizing table in the compute-budget skill still lists 24 for single-GPU training, while codes/loop/knobs_9x9.env declares KTG_CPUS_PER_TASK=32 as the number the thread budget requires. derive_cycle_knobs_9x9's task file section 13 forbids it editing anything outside the loop's knob block, so the edit belongs to loop_resume_under_walltime. Until it lands, the first real-net production cycle would re-run the same 'declared < used' defect job 298712 found (25 > 24), and selfplay_stage must not start. Closes when: loop.sbatch declares 32 in both places, the check script named by mission.json compute.policyCheck passes at --gpus 1 --cpus 32, and one executed real-net cycle re-measures nlwp_max <= 32 with a ppid-filtered sampler.",
+   "evidence": "results/ktg/paper_1902.10565/evidence/derive_cycle_knobs/derivation.md",
+   "caveat": "Blocking for selfplay_stage only; verify_preemption_resume and loop_failure_circuit_breaker are unaffected."
+  },
+  {
+   "entry_id": "c09_gpu_not_the_bottleneck",
+   "kind": "claim",
+   "proposed_status": "unchanged",
+   "discharged_by": null,
+   "rationale": "Recorded, not proposed for transition. The knob derivation supplies one more datum for c09: at the derived set the projected cycle is 3544 s of selfplay against 7021 s of training, i.e. training is now the larger half of the cycle, which is the opposite of the paper's 16-24:1 selfplay:train GPU ratio and is an artefact of the deliberately pessimistic train rate (14.243 samples/s all-in at batch 32, used as a lower bound for batch 128). measure_stage_throughput must re-measure both before c09 is settled either way."
+  }
+ ]
+}

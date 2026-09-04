@@ -122,10 +122,15 @@ results/ktg/paper_1902.10565/codes/
 
 ## 12. Current State
 
-- `[SOLID]` The constraints are read at `path:line`: `train.py:971-972,1256-1259,1303-1346,1434,1831`, `shuffle.py:414-435,1077,1331`, `shuffle.sh:44-45`, `synchronous_loop.sh:57-66`.
-- `[SOLID]` Negative cases exist: pass 2 (44 000 < 49 500), pass 1 (keep 300 k / cap 500 k), and DESIGN S2 (2000-sample epoch on ~440 rows → no export).
-- `[OPEN]` `r` not yet measured — waits for `synchronous_loop_smoke`. Until then the DESIGN §2 pilot set stays `[HYPOTHESIS]` in the loop copy.
-- `[OPEN]` `o13` knob conjunct and `o24` close together when Phase 2 lands and the § 2 command exits 0.
+- `[SOLID]` The constraints are read at `path:line`: `train.py:441,972,1256-1259,1303-1346,1379,1423,1434,1487-1488,1743,1831`, `shuffle.py:414-435,1058,1077,1090,1331`, `shuffle.sh:44-45,48`, `synchronous_loop.sh:57-66`.
+- `[SOLID]` Negative cases exist and are executed by `derive_knobs.py --self-test` (exit 0): pass 2 (44 000 < 49 500), pass 1 (keep 300 k / cap 500 k), and the smoke's own set.
+- `[SOLID]` `r` is measured: **32.3** rows/game real net (646/20, job 298712), 31.675 random (2534/80); corroborated at 31.95 and 34.4 by job 299259's two probes. Phases 1 and 2 both landed: `codes/eval/derive_knobs.py`, `codes/eval/check_knobs_9x9.py`, `codes/loop/knobs_9x9.env`, and the loop copy's CHANGE 9 block, which `--assert-loop-defaults` matches 11/11.
+- `[SOLID]` The derived set is `NUM_GAMES 1000 / epoch 20 000 / batch 128 / reuse 8 / SWA 10 000 / MINROWS 25 000 / TAPER 50 000 / KEEPROWS 120 000 > cap 100 000 / EPOCHS_PER_EXPORT 5`, with `--cpus-per-task 32` at `numGameThreads 18`. All of K1–K7 and the four mission tolerances pass at `r` and at the § 11 lower bound `r_lo = 25.08`; verbatim output `evidence/knobs/derivation.txt`, trace `evidence/derive_cycle_knobs/derivation.md`.
+- `[BLOCKING]` **The § 2 verification command exits 1 and this node's evidence explains why rather than tuning it.** Its literal `--games 500` is DESIGN § 2's pilot hypothesis, which the measured `r` refutes (freshness ratio 0.799 < 1.2); its `--min-rows` default of 10 000 fails K4 from cycle 1 at any `r`; and it interpolates a prose file with an unquoted `$(cat …)` that names the mutable evidence copy `o37` records as overwritten. Verbatim in `evidence/knobs/derivation.txt` block 2, error row `f3377f43…`. Unblocks when a validator replaces § 2's `closing_check` with the parameterless `python3 results/ktg/paper_1902.10565/codes/eval/check_knobs_9x9.py` (exit 0, block 5), proposed in `evidence/derive_cycle_knobs/candidate_rows.json`.
+- `[PRELIMINARY]` "Exactly one candidate per cycle" is narrowed to **at most one from cycle 1** (structural) and exactly one from cycle 13, when the shuffle window first holds `5 × 20 000` rows. `o24`'s wording needs the same narrowing.
+- `[OPEN]` `o38` (new): `codes/loop/loop.sbatch` still declares `--cpus-per-task=24` / `REQ_CPUS=24`. § 13 forbids this node touching it; the edit belongs to `loop_resume_under_walltime`, and `selfplay_stage` must not start before it lands.
+- `[OPEN]` `o13` knob conjunct and `o24` are proposed discharged in `evidence/derive_cycle_knobs/candidate_rows.json`; `o03` stays open (its closing condition is a real-net re-measurement at 32, not a decision).
+- `[OPEN]` Real-net games/hour rests on 100 probe games across the two jobs and train samples/s on batch-32 runs; `measure_stage_throughput` owns both, and `check_knobs_9x9.py` re-runs on its output.
 
 ## 13. Forbidden Actions
 

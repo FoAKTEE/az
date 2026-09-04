@@ -1,0 +1,441 @@
+derivation.txt -- node arxiv-1902.10565::derive_cycle_knobs_9x9
+date: 2026-09-04T10:15:26Z   host: login03   git: 98d6c42
+login node, CPU only, no Slurm allocation, no GPU.
+
+############################################################################
+# 1. self-test (task file section 8 phase 1): two DESIGN section 2 negative
+#    cases and the executed smoke's knob set
+############################################################################
+$ python3 results/ktg/paper_1902.10565/codes/eval/derive_knobs.py --self-test
+--- self-test: DESIGN pass-2 knobs (reuse 4, 50k/epoch) starve from cycle 2
+    pass=False failing=['K1_bucket_gain_clears_epoch', 'T1_freshness_rows_per_cycle_ge_1p2_E', 'K2_one_export_per_cycle', 'K5_random_bootstrap_reaches_min_rows']
+--- self-test: pass-1 data window keep 300k <= cap 500k
+    pass=False failing=['T1_freshness_rows_per_cycle_ge_1p2_E', 'K2_one_export_per_cycle', 'K2b_effective_reuse_within_cap', 'K3_keep_gt_cap', 'K5_random_bootstrap_reaches_min_rows', 'K4_window_holds_one_epoch']
+--- self-test: smoke knobs (40 games, 256/epoch, reuse 8, batch 32)
+    pass=False failing=['K4_window_holds_one_epoch', 'T4_threads_le_cpus']
+
+SELF-TEST: PASS  (3 cases: 2 negative, 1 executed-smoke)
+EXIT=0
+
+############################################################################
+# 2. the task file section 2 verification command, VERBATIM, both invocations
+#    (it exits 1; see derivation.md section 7 for the three reasons)
+############################################################################
+$ python3 results/ktg/paper_1902.10565/codes/eval/derive_knobs.py --rows-per-game $(cat results/ktg/paper_1902.10565/evidence/smoke/rows_per_game.txt) --reuse 8 --samples-per-epoch 20000 --games 500 --keep 300000 --cap 200000
+derive_knobs.py -- node arxiv-1902.10565::derive_cycle_knobs_9x9
+
+MEASURED INPUTS (Slurm job 298712, commit 5bb85ad)
+  rows/game real      r        = 31.9500     (lower90 24.8058 over 20 games)
+  rows/game random    r0       = 31.6750     (lower90 28.1336 over 80 games)
+  bytes/row on disk            = 353.8
+
+KNOB SET UNDER TEST
+  NUM_GAMES_PER_CYCLE          = 500
+  NUM_THREADS_FOR_SHUFFLING    = 8
+  NUM_TRAIN_SAMPLES_PER_EPOCH  = 20000
+  MAX_TRAIN_PER_DATA           = 8.0
+  NUM_TRAIN_SAMPLES_PER_SWA    = 10000
+  BATCHSIZE                    = 128
+  SHUFFLE_MINROWS              = 10000
+  MAX_TRAIN_SAMPLES_PER_CYCLE  = 200000
+  TAPER_WINDOW_SCALE           = 50000
+  SHUFFLE_KEEPROWS             = 300000
+  EPOCHS_PER_EXPORT            = 6
+
+DERIVED QUANTITIES
+  rows_per_cycle    = games*r            = 15975.0   (lower90 12402.9)
+  bucket gain       = games*r*reuse      = 127800.0   (lower90 99223.1)
+  bucket cap_eff    = max(cap,E)         = 200000
+  epochs_per_export = max_epochs_this_instance = 6
+  batches_per_epoch = round(E/batch)     = 156
+  samples_per_cycle = epochs*E           = 120000
+  effective reuse   = epochs*E/rows      = 7.512  (lower90 9.675, cap 8.0)
+  first cycle with a full 6-epoch window = None
+  swa_period_samples                     = 10000
+
+SHUFFLE WINDOW BY CYCLE (shuffle.py:414-435 at expand 0.4 / exponent 0.65)
+  cycle  usable_rows    desired_window   rows_available batches    epochs_supported
+  1      10000          10000            10000          78         0
+  2      22403          14766            14766          115        0
+  3      34806          19210            19210          150        0
+  4      47209          23403            23403          182        1
+  5      59612          27390            27390          213        1
+  6      72014          31208            31208          243        1
+  7      84417          34879            34879          272        1
+  8      96820          38425            38425          300        1
+  9      109223         41860            41860          327        2
+  10     121626         45196            45196          353        2
+  11     134029         48444            48444          378        2
+  12     146432         51611            51611          403        2
+  13     158835         54706            54706          427        2
+  14     171237         57733            57733          451        2
+  15     183640         60700            60700          474        3
+  16     196043         63609            63609          496        3
+  17     208446         66465            66465          519        3
+  18     220849         69271            69271          541        3
+  19     233252         72031            72031          562        3
+  20     245655         74748            74748          583        3
+
+THREAD BUDGET
+  selfplay_real_net            = 25
+  selfplay_with_net_switch     = 27
+  gatekeeper_one_real_net      = 25
+  gatekeeper_two_real_nets     = 29
+  train                        = 14
+  shuffle                      = 12
+  worst_case                   = 29
+  cpus_per_task                = 32
+
+CYCLE WALL PROJECTION  [PRELIMINARY]
+  selfplay_games_per_hour_measured   = 2341.463
+  games_per_hour_derate              = 0.500
+  selfplay_games_per_hour_planning   = 1170.732
+  train_samples_per_second           = 14.243
+  selfplay_s                         = 1537.500
+  train_s                            = 8425.191
+  gatekeeper_s                       = 179.974
+  shuffle_s                          = 853.212
+  export_s                           = 60.000
+  cycle_s                            = 11055.878
+  cycle_h                            = 3.071
+  cycles_per_link                    = 23
+
+STORAGE PROJECTION
+  per-cycle monotonic         = 9.62 MiB
+  bounded steady state        = 735.10 MiB
+  env + build allowance       = 20.00 GiB
+  after one 23-cycle link      = 20.934 GiB
+  hard cap (budget.env)       = 500 GiB
+  cycles until the cap        = 51001
+
+CHECKS
+  ok   K1_bucket_gain_clears_epoch            gain = games*r*reuse = 127800.0 (lower90 99223.1) vs 0.99*E = 19800.0; ratio gain/E = 6.390 (lower90 4.961)
+  FAIL T1_freshness_rows_per_cycle_ge_1p2_E   rows_per_cycle = 15975.0 (lower90 12402.9) vs 1.2*E = 24000.0; ratio 0.799 (lower90 0.620)
+  FAIL K2_one_export_per_cycle                epochs_per_export = max_epochs_this_instance = floor(min(gain,cap_eff)/E) = 6 (lower90 4); cap_eff = max(cap,E) = 200000; effective reuse 7.51 (lower90 9.68) <= 8.0
+  FAIL K2b_effective_reuse_within_cap         epochs*E/rows_per_cycle = 7.51 (lower90 9.68) <= reuse cap 8.0
+  ok   K3_keep_gt_cap                         keep = 300000 > cap = 200000 (synchronous_loop.sh:66) and keep >= epochs*E = 120000
+  ok   K5_random_bootstrap_reaches_min_rows   cycle-1 random rows = games*r_random = 15837.5 (lower90 14066.8) >= min_rows = 10000 (shuffle.py:1090 exit-0 gate; :1077 caps the usable count at min_rows)
+  FAIL K4_window_holds_one_epoch              worst of cycles 1..20 is cycle 1: min(window 10000, keep 300000) = 10000 rows = 78 batches >= round(E/batch) = 156 batches (= 19968 rows); ratio 0.500. Conservative: the file-granularity slack of shuffle.sh:48 (-approx-rows-per-out-file 70000) is not credited.
+  ok   K2c_at_most_one_export_per_cycle       epochs_per_export == max_epochs_this_instance == 6, so train.py's persistent export_cycle_counter (:871,:975,:1743,:1831) can advance by at most 6 per cycle: never more than one candidate per cycle. Exactly one per cycle from cycle None on, when the shuffled window first holds 120000 rows; before that the counter carries over and the export slips, which is upstream's own designed behaviour.
+  ok   K6_swa_period_is_half_epoch            swa_period_samples = samples_per_epoch // 2 = 10000 (train.py:441 default made explicit)
+  ok   T4_threads_le_cpus                     worst stage thread count 29 (selfplay real-net 25 +2 net switch = 27; gatekeeper two real nets 29; train 14; shuffle 4+8=12) <= --cpus-per-task 32, headroom 3
+  ok   K7_cycle_wall_under_bound              projected cycle = 11056 s = 3.07 h <= 60 h bound, and 23 whole cycles fit the 257400 s chain link. [PRELIMINARY] tiny-count throughput inputs.
+  ok   T3_storage_projection_under_budget     per-cycle monotonic write 9.6 MiB; bounded steady state 735.1 MiB; env+build 20.0 GiB; after one full 23-cycle link 20.93 GiB of 500 GiB cap; 51001 cycles fit before the cap
+
+RESULT: FAIL
+EXIT=1
+
+$ ... --assert-loop-defaults results/ktg/paper_1902.10565/codes/loop/synchronous_loop_9x9.sh   (tail)
+  ok   K7_cycle_wall_under_bound              projected cycle = 11056 s = 3.07 h <= 60 h bound, and 23 whole cycles fit the 257400 s chain link. [PRELIMINARY] tiny-count throughput inputs.
+  ok   T3_storage_projection_under_budget     per-cycle monotonic write 9.6 MiB; bounded steady state 735.1 MiB; env+build 20.0 GiB; after one full 23-cycle link 20.93 GiB of 500 GiB cap; 51001 cycles fit before the cap
+
+RESULT: FAIL
+
+LOOP DEFAULT WIRING  (results/ktg/paper_1902.10565/codes/loop/synchronous_loop_9x9.sh)
+  ok   NUM_THREADS_FOR_SHUFFLING    loop default 8 == derived 8
+  ok   NUM_TRAIN_SAMPLES_PER_EPOCH  loop default 20000 == derived 20000
+  ok   MAX_TRAIN_PER_DATA           loop default 8 == derived 8.0
+  ok   NUM_TRAIN_SAMPLES_PER_SWA    loop default 10000 == derived 10000
+  ok   BATCHSIZE                    loop default 128 == derived 128
+  ok   TAPER_WINDOW_SCALE           loop default 50000 == derived 50000
+  FAIL NUM_GAMES_PER_CYCLE: loop default 1000 != derived 500
+  FAIL SHUFFLE_MINROWS: loop default 25000 != derived 10000
+  FAIL MAX_TRAIN_SAMPLES_PER_CYCLE: loop default 100000 != derived 200000
+  FAIL SHUFFLE_KEEPROWS: loop default 120000 != derived 300000
+  FAIL EPOCHS_PER_EXPORT: loop default 5 != derived 6
+  WIRING: FAIL
+EXIT=1
+
+############################################################################
+# 3. the DERIVED closing check: same script, the parameters this node solved
+#    for, against the immutable evidence copy rows_per_game-298712.txt
+############################################################################
+$ python3 results/ktg/paper_1902.10565/codes/eval/derive_knobs.py --rows-per-game "$(cat results/ktg/paper_1902.10565/evidence/smoke/rows_per_game-298712.txt)" --reuse 8 --samples-per-epoch 20000 --games 1000 --keep 120000 --cap 100000 --min-rows 25000 --taper 50000 --batch 128 --cpus 32 --game-threads 18 --assert-loop-defaults results/ktg/paper_1902.10565/codes/loop/synchronous_loop_9x9.sh
+derive_knobs.py -- node arxiv-1902.10565::derive_cycle_knobs_9x9
+
+MEASURED INPUTS (Slurm job 298712, commit 5bb85ad)
+  rows/game real      r        = 32.3000     (lower90 25.0775 over 20 games)
+  rows/game random    r0       = 31.6750     (lower90 28.1336 over 80 games)
+  bytes/row on disk            = 353.8
+
+KNOB SET UNDER TEST
+  NUM_GAMES_PER_CYCLE          = 1000
+  NUM_THREADS_FOR_SHUFFLING    = 8
+  NUM_TRAIN_SAMPLES_PER_EPOCH  = 20000
+  MAX_TRAIN_PER_DATA           = 8.0
+  NUM_TRAIN_SAMPLES_PER_SWA    = 10000
+  BATCHSIZE                    = 128
+  SHUFFLE_MINROWS              = 25000
+  MAX_TRAIN_SAMPLES_PER_CYCLE  = 100000
+  TAPER_WINDOW_SCALE           = 50000
+  SHUFFLE_KEEPROWS             = 120000
+  EPOCHS_PER_EXPORT            = 5
+
+DERIVED QUANTITIES
+  rows_per_cycle    = games*r            = 32300.0   (lower90 25077.5)
+  bucket gain       = games*r*reuse      = 258400.0   (lower90 200620.0)
+  bucket cap_eff    = max(cap,E)         = 100000
+  epochs_per_export = max_epochs_this_instance = 5
+  batches_per_epoch = round(E/batch)     = 156
+  samples_per_cycle = epochs*E           = 100000
+  effective reuse   = epochs*E/rows      = 3.096  (lower90 3.988, cap 8.0)
+  first cycle with a full 5-epoch window = 13
+  swa_period_samples                     = 10000
+
+SHUFFLE WINDOW BY CYCLE (shuffle.py:414-435 at expand 0.4 / exponent 0.65)
+  cycle  usable_rows    desired_window   rows_available batches    epochs_supported
+  1      25000          25000            25000          195        1
+  2      50078          34305            34305          268        1
+  3      75155          42561            42561          332        2
+  4      100233         50116            50116          391        2
+  5      125310         57156            57156          446        2
+  6      150388         63794            63794          498        3
+  7      175465         70107            70107          547        3
+  8      200543         76149            76149          594        3
+  9      225620         81960            81960          640        4
+  10     250698         87570            87570          684        4
+  11     275775         93004            93004          726        4
+  12     300853         98282            98282          767        4
+  13     325930         103419           103419         807        5
+  14     351008         108430           108430         847        5
+  15     376085         113324           113324         885        5
+  16     401163         118113           118113         922        5
+  17     426240         122804           120000         937        6
+  18     451318         127404           120000         937        6
+  19     476395         131921           120000         937        6
+  20     501473         136358           120000         937        6
+
+THREAD BUDGET
+  selfplay_real_net            = 25
+  selfplay_with_net_switch     = 27
+  gatekeeper_one_real_net      = 25
+  gatekeeper_two_real_nets     = 29
+  train                        = 14
+  shuffle                      = 12
+  worst_case                   = 29
+  cpus_per_task                = 32
+
+CYCLE WALL PROJECTION  [PRELIMINARY]
+  selfplay_games_per_hour_measured   = 2341.463
+  games_per_hour_derate              = 0.500
+  selfplay_games_per_hour_planning   = 1170.732
+  train_samples_per_second           = 14.243
+  selfplay_s                         = 3075.000
+  train_s                            = 7020.993
+  gatekeeper_s                       = 179.974
+  shuffle_s                          = 377.285
+  export_s                           = 60.000
+  cycle_s                            = 10713.252
+  cycle_h                            = 2.976
+  cycles_per_link                    = 24
+
+STORAGE PROJECTION
+  per-cycle monotonic         = 16.11 MiB
+  bounded steady state        = 552.90 MiB
+  env + build allowance       = 20.00 GiB
+  after one 24-cycle link      = 20.917 GiB
+  hard cap (budget.env)       = 500 GiB
+  cycles until the cap        = 30480
+
+CHECKS
+  ok   K1_bucket_gain_clears_epoch            gain = games*r*reuse = 258400.0 (lower90 200620.0) vs 0.99*E = 19800.0; ratio gain/E = 12.920 (lower90 10.031)
+  ok   T1_freshness_rows_per_cycle_ge_1p2_E   rows_per_cycle = 32300.0 (lower90 25077.5) vs 1.2*E = 24000.0; ratio 1.615 (lower90 1.254)
+  ok   K2_one_export_per_cycle                epochs_per_export = max_epochs_this_instance = floor(min(gain,cap_eff)/E) = 5 (lower90 5); cap_eff = max(cap,E) = 100000; effective reuse 3.10 (lower90 3.99) <= 8.0
+  ok   K2b_effective_reuse_within_cap         epochs*E/rows_per_cycle = 3.10 (lower90 3.99) <= reuse cap 8.0
+  ok   K3_keep_gt_cap                         keep = 120000 > cap = 100000 (synchronous_loop.sh:66) and keep >= epochs*E = 100000
+  ok   K5_random_bootstrap_reaches_min_rows   cycle-1 random rows = games*r_random = 31675.0 (lower90 28133.6) >= min_rows = 25000 (shuffle.py:1090 exit-0 gate; :1077 caps the usable count at min_rows)
+  ok   K4_window_holds_one_epoch              worst of cycles 1..20 is cycle 1: min(window 25000, keep 120000) = 25000 rows = 195 batches >= round(E/batch) = 156 batches (= 19968 rows); ratio 1.250. Conservative: the file-granularity slack of shuffle.sh:48 (-approx-rows-per-out-file 70000) is not credited.
+  ok   K2c_at_most_one_export_per_cycle       epochs_per_export == max_epochs_this_instance == 5, so train.py's persistent export_cycle_counter (:871,:975,:1743,:1831) can advance by at most 5 per cycle: never more than one candidate per cycle. Exactly one per cycle from cycle 13 on, when the shuffled window first holds 100000 rows; before that the counter carries over and the export slips, which is upstream's own designed behaviour.
+  ok   K6_swa_period_is_half_epoch            swa_period_samples = samples_per_epoch // 2 = 10000 (train.py:441 default made explicit)
+  ok   T4_threads_le_cpus                     worst stage thread count 29 (selfplay real-net 25 +2 net switch = 27; gatekeeper two real nets 29; train 14; shuffle 4+8=12) <= --cpus-per-task 32, headroom 3
+  ok   K7_cycle_wall_under_bound              projected cycle = 10713 s = 2.98 h <= 60 h bound, and 24 whole cycles fit the 257400 s chain link. [PRELIMINARY] tiny-count throughput inputs.
+  ok   T3_storage_projection_under_budget     per-cycle monotonic write 16.1 MiB; bounded steady state 552.9 MiB; env+build 20.0 GiB; after one full 24-cycle link 20.92 GiB of 500 GiB cap; 30480 cycles fit before the cap
+
+RESULT: PASS
+
+LOOP DEFAULT WIRING  (results/ktg/paper_1902.10565/codes/loop/synchronous_loop_9x9.sh)
+  ok   NUM_GAMES_PER_CYCLE          loop default 1000 == derived 1000
+  ok   NUM_THREADS_FOR_SHUFFLING    loop default 8 == derived 8
+  ok   NUM_TRAIN_SAMPLES_PER_EPOCH  loop default 20000 == derived 20000
+  ok   MAX_TRAIN_PER_DATA           loop default 8 == derived 8.0
+  ok   NUM_TRAIN_SAMPLES_PER_SWA    loop default 10000 == derived 10000
+  ok   BATCHSIZE                    loop default 128 == derived 128
+  ok   SHUFFLE_MINROWS              loop default 25000 == derived 25000
+  ok   MAX_TRAIN_SAMPLES_PER_CYCLE  loop default 100000 == derived 100000
+  ok   TAPER_WINDOW_SCALE           loop default 50000 == derived 50000
+  ok   SHUFFLE_KEEPROWS             loop default 120000 == derived 120000
+  ok   EPOCHS_PER_EXPORT            loop default 5 == derived 5
+  WIRING: PASS
+EXIT=0
+
+############################################################################
+# 4. sensitivity of the derived set to every rows/game the two smoke jobs
+#    measured: 31.95 (299259, 639/20), 32.3 (298712, 646/20, the one used),
+#    34.4 (299259 nofork, 2064/60)
+############################################################################
+$ ... --rows-per-game 31.95 --rows-per-game-random 31.675 <derived set>
+  epochs_per_export = max_epochs_this_instance = 5
+  effective reuse   = epochs*E/rows      = 3.130  (lower90 4.031, cap 8.0)
+  ok   K2_one_export_per_cycle                epochs_per_export = max_epochs_this_instance = floor(min(gain,cap_eff)/E) = 5 (lower90 5); cap_eff = max(cap,E) = 100000; effective reuse 3.13 (lower90 4.03) <= 8.0
+RESULT: PASS
+EXIT=0
+$ ... --rows-per-game 32.3 --rows-per-game-random 31.675 <derived set>
+  epochs_per_export = max_epochs_this_instance = 5
+  effective reuse   = epochs*E/rows      = 3.096  (lower90 3.988, cap 8.0)
+  ok   K2_one_export_per_cycle                epochs_per_export = max_epochs_this_instance = floor(min(gain,cap_eff)/E) = 5 (lower90 5); cap_eff = max(cap,E) = 100000; effective reuse 3.10 (lower90 3.99) <= 8.0
+RESULT: PASS
+EXIT=0
+$ ... --rows-per-game 34.4 --rows-per-game-random 31.675 <derived set>
+  epochs_per_export = max_epochs_this_instance = 5
+  effective reuse   = epochs*E/rows      = 2.907  (lower90 3.744, cap 8.0)
+  ok   K2_one_export_per_cycle                epochs_per_export = max_epochs_this_instance = floor(min(gain,cap_eff)/E) = 5 (lower90 5); cap_eff = max(cap,E) = 100000; effective reuse 2.91 (lower90 3.74) <= 8.0
+RESULT: PASS
+EXIT=0
+
+############################################################################
+# 5. the closing check: check_knobs_9x9.py -- knobs from knobs_9x9.env,
+#    measurements from the job-suffixed evidence of BOTH smoke jobs (slower
+#    rate of each pair), storage constants from budget.env, loop wiring
+############################################################################
+$ python3 results/ktg/paper_1902.10565/codes/eval/check_knobs_9x9.py
+check_knobs_9x9 -- node arxiv-1902.10565::derive_cycle_knobs_9x9
+
+INPUTS (content-hashed)
+  daed88eff2a9d4e8cfa70b538caf5597fc2addb71cbcb6a1adc169ba16c3c828  paper_1902.10565/evidence/smoke/rows_per_game-298712.txt
+  927fb04cd2ac97eef7c30d471f06ac2d67ba8a014ac92cfe2109aa1efc72c947  paper_1902.10565/evidence/smoke/throughput_smoke-298712.json
+  b6d9102fcfcd66e8877490168c74d168a412ea8f97f141eb20b3ba40c7d17c59  paper_1902.10565/codes/loop/knobs_9x9.env
+  6f38681ea6befc64f1e0f0c4faced2ddd1d774ac7f445595997d07e4abf81f62  paper_1902.10565/codes/data_budget/budget.env
+  3967fd93519d7bc41f2f612775bf52b1f04902eb21bfb31fa650b9eda74b96a9  paper_1902.10565/codes/loop/synchronous_loop_9x9.sh
+
+REAL-NET SELFPLAY games/h: 2341.5 (throughput_smoke-298712.json), 2031.7 (throughput_smoke-299259.json) -> taking 2031.7 (throughput_smoke-299259.json)
+TRAIN samples/s:           14.243 (throughput_smoke-298712.json), 17.202 (throughput_smoke-299259.json) -> taking 14.243 (throughput_smoke-298712.json)
+
+derive_knobs.py -- node arxiv-1902.10565::derive_cycle_knobs_9x9
+
+MEASURED INPUTS (Slurm job 298712, commit 5bb85ad)
+  rows/game real      r        = 32.3000     (lower90 25.0775 over 20 games)
+  rows/game random    r0       = 31.6750     (lower90 28.1336 over 80 games)
+  bytes/row on disk            = 353.8
+
+KNOB SET UNDER TEST
+  NUM_GAMES_PER_CYCLE          = 1000
+  NUM_THREADS_FOR_SHUFFLING    = 8
+  NUM_TRAIN_SAMPLES_PER_EPOCH  = 20000
+  MAX_TRAIN_PER_DATA           = 8.0
+  NUM_TRAIN_SAMPLES_PER_SWA    = 10000
+  BATCHSIZE                    = 128
+  SHUFFLE_MINROWS              = 25000
+  MAX_TRAIN_SAMPLES_PER_CYCLE  = 100000
+  TAPER_WINDOW_SCALE           = 50000
+  SHUFFLE_KEEPROWS             = 120000
+  EPOCHS_PER_EXPORT            = 5
+
+DERIVED QUANTITIES
+  rows_per_cycle    = games*r            = 32300.0   (lower90 25077.5)
+  bucket gain       = games*r*reuse      = 258400.0   (lower90 200620.0)
+  bucket cap_eff    = max(cap,E)         = 100000
+  epochs_per_export = max_epochs_this_instance = 5
+  batches_per_epoch = round(E/batch)     = 156
+  samples_per_cycle = epochs*E           = 100000
+  effective reuse   = epochs*E/rows      = 3.096  (lower90 3.988, cap 8.0)
+  first cycle with a full 5-epoch window = 13
+  swa_period_samples                     = 10000
+
+SHUFFLE WINDOW BY CYCLE (shuffle.py:414-435 at expand 0.4 / exponent 0.65)
+  cycle  usable_rows    desired_window   rows_available batches    epochs_supported
+  1      25000          25000            25000          195        1
+  2      50078          34305            34305          268        1
+  3      75155          42561            42561          332        2
+  4      100233         50116            50116          391        2
+  5      125310         57156            57156          446        2
+  6      150388         63794            63794          498        3
+  7      175465         70107            70107          547        3
+  8      200543         76149            76149          594        3
+  9      225620         81960            81960          640        4
+  10     250698         87570            87570          684        4
+  11     275775         93004            93004          726        4
+  12     300853         98282            98282          767        4
+  13     325930         103419           103419         807        5
+  14     351008         108430           108430         847        5
+  15     376085         113324           113324         885        5
+  16     401163         118113           118113         922        5
+  17     426240         122804           120000         937        6
+  18     451318         127404           120000         937        6
+  19     476395         131921           120000         937        6
+  20     501473         136358           120000         937        6
+
+THREAD BUDGET
+  selfplay_real_net            = 25
+  selfplay_with_net_switch     = 27
+  gatekeeper_one_real_net      = 25
+  gatekeeper_two_real_nets     = 29
+  train                        = 14
+  shuffle                      = 12
+  worst_case                   = 29
+  cpus_per_task                = 32
+
+CYCLE WALL PROJECTION  [PRELIMINARY]
+  selfplay_games_per_hour_measured   = 2031.700
+  games_per_hour_derate              = 0.500
+  selfplay_games_per_hour_planning   = 1015.850
+  train_samples_per_second           = 14.243
+  selfplay_s                         = 3543.830
+  train_s                            = 7020.993
+  gatekeeper_s                       = 179.974
+  shuffle_s                          = 377.285
+  export_s                           = 60.000
+  cycle_s                            = 11182.082
+  cycle_h                            = 3.106
+  cycles_per_link                    = 23
+
+STORAGE PROJECTION
+  per-cycle monotonic         = 16.11 MiB
+  bounded steady state        = 552.90 MiB
+  env + build allowance       = 20.00 GiB
+  after one 23-cycle link      = 20.902 GiB
+  hard cap (budget.env)       = 500 GiB
+  cycles until the cap        = 30480
+
+CHECKS
+  ok   K1_bucket_gain_clears_epoch            gain = games*r*reuse = 258400.0 (lower90 200620.0) vs 0.99*E = 19800.0; ratio gain/E = 12.920 (lower90 10.031)
+  ok   T1_freshness_rows_per_cycle_ge_1p2_E   rows_per_cycle = 32300.0 (lower90 25077.5) vs 1.2*E = 24000.0; ratio 1.615 (lower90 1.254)
+  ok   K2_one_export_per_cycle                epochs_per_export = max_epochs_this_instance = floor(min(gain,cap_eff)/E) = 5 (lower90 5); cap_eff = max(cap,E) = 100000; effective reuse 3.10 (lower90 3.99) <= 8.0
+  ok   K2b_effective_reuse_within_cap         epochs*E/rows_per_cycle = 3.10 (lower90 3.99) <= reuse cap 8.0
+  ok   K3_keep_gt_cap                         keep = 120000 > cap = 100000 (synchronous_loop.sh:66) and keep >= epochs*E = 100000
+  ok   K5_random_bootstrap_reaches_min_rows   cycle-1 random rows = games*r_random = 31675.0 (lower90 28133.6) >= min_rows = 25000 (shuffle.py:1090 exit-0 gate; :1077 caps the usable count at min_rows)
+  ok   K4_window_holds_one_epoch              worst of cycles 1..20 is cycle 1: min(window 25000, keep 120000) = 25000 rows = 195 batches >= round(E/batch) = 156 batches (= 19968 rows); ratio 1.250. Conservative: the file-granularity slack of shuffle.sh:48 (-approx-rows-per-out-file 70000) is not credited.
+  ok   K2c_at_most_one_export_per_cycle       epochs_per_export == max_epochs_this_instance == 5, so train.py's persistent export_cycle_counter (:871,:975,:1743,:1831) can advance by at most 5 per cycle: never more than one candidate per cycle. Exactly one per cycle from cycle 13 on, when the shuffled window first holds 100000 rows; before that the counter carries over and the export slips, which is upstream's own designed behaviour.
+  ok   K6_swa_period_is_half_epoch            swa_period_samples = samples_per_epoch // 2 = 10000 (train.py:441 default made explicit)
+  ok   T4_threads_le_cpus                     worst stage thread count 29 (selfplay real-net 25 +2 net switch = 27; gatekeeper two real nets 29; train 14; shuffle 4+8=12) <= --cpus-per-task 32, headroom 3
+  ok   K7_cycle_wall_under_bound              projected cycle = 11182 s = 3.11 h <= 60 h bound, and 23 whole cycles fit the 257400 s chain link. [PRELIMINARY] tiny-count throughput inputs.
+  ok   T3_storage_projection_under_budget     per-cycle monotonic write 16.1 MiB; bounded steady state 552.9 MiB; env+build 20.0 GiB; after one full 23-cycle link 20.90 GiB of 500 GiB cap; 30480 cycles fit before the cap
+
+RESULT: PASS
+
+MISSION TOLERANCES
+  ok   T1_no_train_starvation             rows_per_cycle 32300.0 (lower90 25077.5) >= 1.2*E = 24000.0
+  ok   T2_bucket_holds_batches            worst cycle 1 has 195 batches >= 156 needed; per-cycle bucket gain 258400 (lower90 200620) >= epochs*E = 100000
+  ok   T3_storage_projection_under_budget 20.902 GiB after one 23-cycle link < 500 GiB (KTG_SCRATCH_HARD_BYTES)
+  ok   T4_threads_le_cpus                 worst stage 29 <= KTG_CPUS_PER_TASK 32
+
+LOOP DEFAULT WIRING  (paper_1902.10565/codes/loop/synchronous_loop_9x9.sh)
+  ok   NUM_GAMES_PER_CYCLE          loop default 1000 == derived 1000
+  ok   NUM_THREADS_FOR_SHUFFLING    loop default 8 == derived 8
+  ok   NUM_TRAIN_SAMPLES_PER_EPOCH  loop default 20000 == derived 20000
+  ok   MAX_TRAIN_PER_DATA           loop default 8 == derived 8
+  ok   NUM_TRAIN_SAMPLES_PER_SWA    loop default 10000 == derived 10000
+  ok   BATCHSIZE                    loop default 128 == derived 128
+  ok   SHUFFLE_MINROWS              loop default 25000 == derived 25000
+  ok   MAX_TRAIN_SAMPLES_PER_CYCLE  loop default 100000 == derived 100000
+  ok   TAPER_WINDOW_SCALE           loop default 50000 == derived 50000
+  ok   SHUFFLE_KEEPROWS             loop default 120000 == derived 120000
+  ok   EPOCHS_PER_EXPORT            loop default 5 == derived 5
+
+CHECK_KNOBS_9X9: PASS
+EXIT=0
+
+############################################################################
+# 6. bash -n on the edited loop copy
+############################################################################
+$ bash -n results/ktg/paper_1902.10565/codes/loop/synchronous_loop_9x9.sh
+EXIT=0

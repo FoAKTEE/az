@@ -128,24 +128,32 @@ mkdir -p "$BASEDIR"/torchmodels_toexport
 # Parameters for the training run.
 # CHANGE 9: one override-able block. `derive_cycle_knobs_9x9` edits the defaults
 # here and nowhere else; smoke_loop.sbatch (node synchronous_loop_smoke)
-# overrides them in the environment. Defaults are the production column and are
-# [HYPOTHESIS] until derive_cycle_knobs_9x9 re-derives them from measured
-# rows/game (~22 expected at 9x9, not the 19x19 numbers upstream ships).
-NUM_GAMES_PER_CYCLE="${NUM_GAMES_PER_CYCLE:-500}"           # upstream :57 = 500
-NUM_THREADS_FOR_SHUFFLING="${NUM_THREADS_FOR_SHUFFLING:-8}" # upstream :58 = 8
-NUM_TRAIN_SAMPLES_PER_EPOCH="${NUM_TRAIN_SAMPLES_PER_EPOCH:-20000}"   # upstream :59 = 100000
-MAX_TRAIN_PER_DATA="${MAX_TRAIN_PER_DATA:-8}"               # upstream :60 = 8
-NUM_TRAIN_SAMPLES_PER_SWA="${NUM_TRAIN_SAMPLES_PER_SWA:-40000}"       # upstream :61 = 80000
-BATCHSIZE="${BATCHSIZE:-128}"                               # upstream :62 = 128
-SHUFFLE_MINROWS="${SHUFFLE_MINROWS:-10000}"                 # upstream :63 = 100000
-MAX_TRAIN_SAMPLES_PER_CYCLE="${MAX_TRAIN_SAMPLES_PER_CYCLE:-200000}"  # upstream :64 = 500000
-TAPER_WINDOW_SCALE="${TAPER_WINDOW_SCALE:-50000}"           # upstream :65 = 50000
-SHUFFLE_KEEPROWS="${SHUFFLE_KEEPROWS:-300000}"              # upstream :66 = 600000
+# overrides them in the environment.
+#
+# The defaults below are DERIVED, no longer a hypothesis: every one is the
+# solution of a constraint read out of train.py / shuffle.py at path:line,
+# evaluated at the rows/game Slurm job 298712 measured (r = 32.3 real net,
+# 31.675 random net). The derivation, one comment per knob, lives in
+# codes/loop/knobs_9x9.env; the full trace is
+# evidence/derive_cycle_knobs/derivation.md; the arithmetic is re-run by
+# codes/eval/derive_knobs.py, and `--assert-loop-defaults <this file>` fails if
+# any default below drifts from it. Obligations o24, o13 (knob conjunct).
+NUM_GAMES_PER_CYCLE="${NUM_GAMES_PER_CYCLE:-1000}"          # upstream :57 = 500; >= max(1.2*E/r_lo, 1.25*MINROWS/r0_lo)
+NUM_THREADS_FOR_SHUFFLING="${NUM_THREADS_FOR_SHUFFLING:-8}" # upstream :58 = 8, unchanged (measured 4+8 = 12 threads)
+NUM_TRAIN_SAMPLES_PER_EPOCH="${NUM_TRAIN_SAMPLES_PER_EPOCH:-20000}"   # upstream :59 = 100000; >= 100*BATCHSIZE (train.py:1379)
+MAX_TRAIN_PER_DATA="${MAX_TRAIN_PER_DATA:-8}"               # upstream :60 = 8, the reuse cap; never raised
+NUM_TRAIN_SAMPLES_PER_SWA="${NUM_TRAIN_SAMPLES_PER_SWA:-10000}"       # upstream :61 = 80000; = E//2, train.py:441's own default
+BATCHSIZE="${BATCHSIZE:-128}"                               # upstream :62 = 128, unchanged (peak VRAM 4094 MiB at batch 32)
+SHUFFLE_MINROWS="${SHUFFLE_MINROWS:-25000}"                 # upstream :63 = 100000; = 1.25*E, and cycle 1's window IS min_rows
+MAX_TRAIN_SAMPLES_PER_CYCLE="${MAX_TRAIN_SAMPLES_PER_CYCLE:-100000}"  # upstream :64 = 500000; = 5*E, upstream's own cap/epoch ratio
+TAPER_WINDOW_SCALE="${TAPER_WINDOW_SCALE:-50000}"           # upstream :65 = 50000, unchanged (no constraint binds it)
+SHUFFLE_KEEPROWS="${SHUFFLE_KEEPROWS:-120000}"              # upstream :66 = 600000; = 1.2*cap, upstream's own keep/cap ratio
 
-# Exactly one exported candidate per cycle: without the pair the trainer keeps
+# At most one exported candidate per cycle: without the pair the trainer keeps
 # exporting inside one cycle (train.py:116 -epochs-per-export, :118
-# -max-epochs-this-instance).
-EPOCHS_PER_EXPORT="${EPOCHS_PER_EXPORT:-4}"
+# -max-epochs-this-instance). 5 = floor(min(games*r*reuse, max(cap,E)) / E), the
+# same at r and at the conservative r_lo.
+EPOCHS_PER_EXPORT="${EPOCHS_PER_EXPORT:-5}"
 
 # CHANGE 1 + 2: mission 9x9 configs. Upstream :70-71 default to the
 # mixed-board-size selfplay1.cfg / gatekeeper1.cfg. Obligation o13.
