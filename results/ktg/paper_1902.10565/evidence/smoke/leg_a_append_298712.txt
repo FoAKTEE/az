@@ -1,0 +1,1 @@
+{"appended": true, "git_commit": "9fdeb6b", "timestamp": "2026-09-04T09:20:49.697957+00:00", "paper": "arxiv-1902.10565", "node_id": "arxiv-1902.10565::cfg_9x9_override", "status": "preliminary", "evidence_sha256": "e39348bf760d7ef64980beb71117aa1c1d639c858ce31d64078fb5fc0629ddd3"}

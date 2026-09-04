@@ -1,0 +1,1600 @@
+{
+ "S11_probe_train": {
+  "block_kinds": [
+   "attnrope",
+   "ffnsg",
+   "attnrope",
+   "ffnsg",
+   "attnrope",
+   "ffnsg",
+   "attnrope",
+   "ffnsg",
+   "attnrope",
+   "ffnsg",
+   "attnrope",
+   "ffnsg",
+   "attnrope",
+   "ffnsg"
+  ],
+  "checks": [
+   {
+    "detail": "trunk_gpool_count=0 == 0",
+    "name": "1_no_trunk_gpool",
+    "pass": true
+   },
+   {
+    "detail": "max|pool2 + 0.5*pool1| = 0.000e+00 < 1e-05",
+    "name": "2a_pool2_is_minus_half_pool1",
+    "pass": true
+   },
+   {
+    "detail": "max|pool3 - 0.15*pool1| = 0.000e+00 < 1e-05",
+    "name": "2b_pool3_is_015_pool1",
+    "pass": true
+   },
+   {
+    "detail": "row_bytes=2145 == 2145",
+    "name": "3_row_bytes_2145",
+    "pass": true
+   },
+   {
+    "detail": "scorebelief_len=282 == 282",
+    "name": "4_scorebelief_len_282",
+    "pass": true
+   }
+  ],
+  "gpool_out_channels": 96,
+  "gpool_tol": 1e-05,
+  "mask_sum_hw": 81,
+  "model_gpool_count": 0,
+  "model_kind": "b7c96h3tfrs",
+  "npz": "/scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/runs/smoke/selfplay/random/tdata/33785D4998C6F9A3.npz",
+  "npz_arrays": {
+   "binaryInputNCHWPacked": {
+    "dtype": "|u1",
+    "shape": [
+     1221,
+     22,
+     11
+    ]
+   },
+   "globalInputNC": {
+    "dtype": "<f4",
+    "shape": [
+     1221,
+     19
+    ]
+   },
+   "globalTargetsNC": {
+    "dtype": "<f4",
+    "shape": [
+     1221,
+     80
+    ]
+   },
+   "policyTargetsNCMove": {
+    "dtype": "<i2",
+    "shape": [
+     1221,
+     2,
+     82
+    ]
+   },
+   "qValueTargetsNCMove": {
+    "dtype": "<i2",
+    "shape": [
+     1221,
+     3,
+     82
+    ]
+   },
+   "scoreDistrN": {
+    "dtype": "|i1",
+    "shape": [
+     1221,
+     282
+    ]
+   },
+   "valueTargetsNCHW": {
+    "dtype": "|i1",
+    "shape": [
+     1221,
+     5,
+     9,
+     9
+    ]
+   }
+  },
+  "npz_rows": 1221,
+  "num_params": 825837,
+  "pass": true,
+  "pos_len": 9,
+  "residual_pool2_plus_half_pool1": 0.0,
+  "residual_pool3_minus_015_pool1": 0.0,
+  "row_bytes": 2145,
+  "scorebelief_len": 282,
+  "scorebelief_len_from_metrics": 282,
+  "sqrt_offset": -5.0,
+  "torch_version": "2.11.0+cu128",
+  "trunk_block_container": "Model.blocks (model_pytorch.py:3153)",
+  "trunk_blocks": 14,
+  "trunk_gpool_count": 0,
+  "trunk_num_channels": 96,
+  "v1_num_channels": 32,
+  "value_head_gpool_count": 1
+ },
+ "S12_probe_resume": {
+  "checks": [
+   {
+    "detail": "global_step_samples_at_kill=None >= 4096",
+    "name": "phase1_reached_two_epochs",
+    "pass": false
+   },
+   {
+    "detail": "'Initializing new model!' in phase 1 log = 1 (expected >= 1)",
+    "name": "phase1_initialized_fresh",
+    "pass": true
+   },
+   {
+    "detail": "global_step_samples None -> None",
+    "name": "4a_samples_increase_after_resume",
+    "pass": false
+   },
+   {
+    "detail": "'Initializing new model!' = 1, 'No preexisting checkpoint found' = 1 in phase 2",
+    "name": "4b_no_reinitialisation_on_resume",
+    "pass": false
+   },
+   {
+    "detail": "total_num_data_rows None -> None",
+    "name": "4c_total_num_data_rows_unchanged",
+    "pass": true
+   },
+   {
+    "detail": "phase 2 exit_code = 1",
+    "name": "phase2_exit_zero",
+    "pass": false
+   }
+  ],
+  "global_step_samples_after": null,
+  "global_step_samples_at_kill": null,
+  "initializing_new_model_phase1": 1,
+  "initializing_new_model_phase2": 1,
+  "no_preexisting_checkpoint_phase2": 1,
+  "pass": false,
+  "phase2_exit_code": 1,
+  "state_after": {},
+  "state_at_kill": {},
+  "total_num_data_rows_after": null,
+  "total_num_data_rows_at_kill": null
+ },
+ "S13_throughput": {
+  "basedir_bytes": 100545534,
+  "bytes_per_row_on_disk": 353.8,
+  "cpus_per_task": 24,
+  "foreign_pids_excluded": [
+   317109,
+   322317,
+   323223
+  ],
+  "gpu_util_max_pct": 80,
+  "gpu_util_mean_pct": 21.48,
+  "gpu_util_samples": 170,
+  "nlwp_max_per_phase_stage": {
+   "cycle1/gatekeeper": 2,
+   "cycle1/selfplay": 22,
+   "cycle1/shuffle": 4,
+   "cycle1/train": 14,
+   "cycle2/gatekeeper": 25,
+   "cycle2/selfplay": 22,
+   "cycle2/shuffle": 4,
+   "cycle2/train": 14,
+   "legA/selfplay": 22,
+   "probe_search/selfplay": 25,
+   "probe_train/train": 10
+  },
+  "nlwp_max_per_stage": {
+   "gatekeeper": 25,
+   "selfplay": 25,
+   "shuffle": 4,
+   "train": 14
+  },
+  "nlwp_per_pid": [
+   {
+    "elapsed_s": 345.47,
+    "foreign": true,
+    "nlwp_max": 36,
+    "phases": [
+     "cycle1",
+     "cycle2",
+     "legA",
+     "probe_search",
+     "probe_train"
+    ],
+    "pid": 317109,
+    "rss_kb_max": 2621608,
+    "samples": 1331,
+    "stage": "train"
+   },
+   {
+    "elapsed_s": 21.75,
+    "foreign": true,
+    "nlwp_max": 36,
+    "phases": [
+     "cycle1",
+     "legA"
+    ],
+    "pid": 322317,
+    "rss_kb_max": 2654396,
+    "samples": 85,
+    "stage": "train"
+   },
+   {
+    "elapsed_s": 345.47,
+    "foreign": true,
+    "nlwp_max": 36,
+    "phases": [
+     "cycle1",
+     "cycle2",
+     "legA",
+     "probe_search",
+     "probe_train"
+    ],
+    "pid": 323223,
+    "rss_kb_max": 2656448,
+    "samples": 1331,
+    "stage": "train"
+   },
+   {
+    "elapsed_s": 1.32,
+    "foreign": false,
+    "nlwp_max": 5,
+    "phases": [
+     "legA"
+    ],
+    "pid": 323672,
+    "rss_kb_max": 304492,
+    "samples": 6,
+    "stage": "selfplay"
+   },
+   {
+    "elapsed_s": 5.93,
+    "foreign": false,
+    "nlwp_max": 22,
+    "phases": [
+     "legA"
+    ],
+    "pid": 323745,
+    "rss_kb_max": 1402512,
+    "samples": 24,
+    "stage": "selfplay"
+   },
+   {
+    "elapsed_s": 0.0,
+    "foreign": false,
+    "nlwp_max": 1,
+    "phases": [
+     "cycle1"
+    ],
+    "pid": 324287,
+    "rss_kb_max": 2048,
+    "samples": 1,
+    "stage": "train"
+   },
+   {
+    "elapsed_s": 0.52,
+    "foreign": false,
+    "nlwp_max": 2,
+    "phases": [
+     "cycle1"
+    ],
+    "pid": 324381,
+    "rss_kb_max": 221916,
+    "samples": 3,
+    "stage": "gatekeeper"
+   },
+   {
+    "elapsed_s": 6.25,
+    "foreign": false,
+    "nlwp_max": 22,
+    "phases": [
+     "cycle1"
+    ],
+    "pid": 324406,
+    "rss_kb_max": 1497288,
+    "samples": 25,
+    "stage": "selfplay"
+   },
+   {
+    "elapsed_s": 3.35,
+    "foreign": false,
+    "nlwp_max": 4,
+    "phases": [
+     "cycle1"
+    ],
+    "pid": 324615,
+    "rss_kb_max": 39936,
+    "samples": 14,
+    "stage": "shuffle"
+   },
+   {
+    "elapsed_s": 0.0,
+    "foreign": false,
+    "nlwp_max": 1,
+    "phases": [
+     "cycle1"
+    ],
+    "pid": 324712,
+    "rss_kb_max": 29100,
+    "samples": 1,
+    "stage": "shuffle"
+   },
+   {
+    "elapsed_s": 0.0,
+    "foreign": false,
+    "nlwp_max": 1,
+    "phases": [
+     "cycle1"
+    ],
+    "pid": 324713,
+    "rss_kb_max": 33940,
+    "samples": 1,
+    "stage": "shuffle"
+   },
+   {
+    "elapsed_s": 0.0,
+    "foreign": false,
+    "nlwp_max": 1,
+    "phases": [
+     "cycle1"
+    ],
+    "pid": 324714,
+    "rss_kb_max": 24728,
+    "samples": 1,
+    "stage": "shuffle"
+   },
+   {
+    "elapsed_s": 0.0,
+    "foreign": false,
+    "nlwp_max": 1,
+    "phases": [
+     "cycle1"
+    ],
+    "pid": 324715,
+    "rss_kb_max": 24728,
+    "samples": 1,
+    "stage": "shuffle"
+   },
+   {
+    "elapsed_s": 0.0,
+    "foreign": false,
+    "nlwp_max": 1,
+    "phases": [
+     "cycle1"
+    ],
+    "pid": 324716,
+    "rss_kb_max": 24728,
+    "samples": 1,
+    "stage": "shuffle"
+   },
+   {
+    "elapsed_s": 0.0,
+    "foreign": false,
+    "nlwp_max": 1,
+    "phases": [
+     "cycle1"
+    ],
+    "pid": 324717,
+    "rss_kb_max": 24728,
+    "samples": 1,
+    "stage": "shuffle"
+   },
+   {
+    "elapsed_s": 0.0,
+    "foreign": false,
+    "nlwp_max": 1,
+    "phases": [
+     "cycle1"
+    ],
+    "pid": 324718,
+    "rss_kb_max": 24732,
+    "samples": 1,
+    "stage": "shuffle"
+   },
+   {
+    "elapsed_s": 0.0,
+    "foreign": false,
+    "nlwp_max": 1,
+    "phases": [
+     "cycle1"
+    ],
+    "pid": 324719,
+    "rss_kb_max": 24732,
+    "samples": 1,
+    "stage": "shuffle"
+   },
+   {
+    "elapsed_s": 102.4,
+    "foreign": false,
+    "nlwp_max": 14,
+    "phases": [
+     "cycle1"
+    ],
+    "pid": 325065,
+    "rss_kb_max": 3434752,
+    "samples": 395,
+    "stage": "train"
+   },
+   {
+    "elapsed_s": 70.19,
+    "foreign": false,
+    "nlwp_max": 25,
+    "phases": [
+     "cycle2"
+    ],
+    "pid": 328662,
+    "rss_kb_max": 4549468,
+    "samples": 270,
+    "stage": "gatekeeper"
+   },
+   {
+    "elapsed_s": 6.95,
+    "foreign": false,
+    "nlwp_max": 22,
+    "phases": [
+     "cycle2"
+    ],
+    "pid": 330480,
+    "rss_kb_max": 1537412,
+    "samples": 28,
+    "stage": "selfplay"
+   },
+   {
+    "elapsed_s": 3.35,
+    "foreign": false,
+    "nlwp_max": 4,
+    "phases": [
+     "cycle2"
+    ],
+    "pid": 330702,
+    "rss_kb_max": 38912,
+    "samples": 14,
+    "stage": "shuffle"
+   },
+   {
+    "elapsed_s": 0.0,
+    "foreign": false,
+    "nlwp_max": 1,
+    "phases": [
+     "cycle2"
+    ],
+    "pid": 330794,
+    "rss_kb_max": 28892,
+    "samples": 1,
+    "stage": "shuffle"
+   },
+   {
+    "elapsed_s": 0.0,
+    "foreign": false,
+    "nlwp_max": 1,
+    "phases": [
+     "cycle2"
+    ],
+    "pid": 330795,
+    "rss_kb_max": 34880,
+    "samples": 1,
+    "stage": "shuffle"
+   },
+   {
+    "elapsed_s": 0.0,
+    "foreign": false,
+    "nlwp_max": 1,
+    "phases": [
+     "cycle2"
+    ],
+    "pid": 330796,
+    "rss_kb_max": 24644,
+    "samples": 1,
+    "stage": "shuffle"
+   },
+   {
+    "elapsed_s": 0.0,
+    "foreign": false,
+    "nlwp_max": 1,
+    "phases": [
+     "cycle2"
+    ],
+    "pid": 330797,
+    "rss_kb_max": 24644,
+    "samples": 1,
+    "stage": "shuffle"
+   },
+   {
+    "elapsed_s": 0.0,
+    "foreign": false,
+    "nlwp_max": 1,
+    "phases": [
+     "cycle2"
+    ],
+    "pid": 330798,
+    "rss_kb_max": 24644,
+    "samples": 1,
+    "stage": "shuffle"
+   },
+   {
+    "elapsed_s": 0.0,
+    "foreign": false,
+    "nlwp_max": 1,
+    "phases": [
+     "cycle2"
+    ],
+    "pid": 330799,
+    "rss_kb_max": 24648,
+    "samples": 1,
+    "stage": "shuffle"
+   },
+   {
+    "elapsed_s": 0.0,
+    "foreign": false,
+    "nlwp_max": 1,
+    "phases": [
+     "cycle2"
+    ],
+    "pid": 330800,
+    "rss_kb_max": 24648,
+    "samples": 1,
+    "stage": "shuffle"
+   },
+   {
+    "elapsed_s": 0.0,
+    "foreign": false,
+    "nlwp_max": 1,
+    "phases": [
+     "cycle2"
+    ],
+    "pid": 330801,
+    "rss_kb_max": 24648,
+    "samples": 1,
+    "stage": "shuffle"
+   },
+   {
+    "elapsed_s": 29.6,
+    "foreign": false,
+    "nlwp_max": 14,
+    "phases": [
+     "cycle2"
+    ],
+    "pid": 331077,
+    "rss_kb_max": 3160008,
+    "samples": 113,
+    "stage": "train"
+   },
+   {
+    "elapsed_s": 30.75,
+    "foreign": false,
+    "nlwp_max": 25,
+    "phases": [
+     "probe_search"
+    ],
+    "pid": 332406,
+    "rss_kb_max": 1760412,
+    "samples": 120,
+    "stage": "selfplay"
+   },
+   {
+    "elapsed_s": 7.03,
+    "foreign": false,
+    "nlwp_max": 10,
+    "phases": [
+     "probe_train"
+    ],
+    "pid": 333416,
+    "rss_kb_max": 1909032,
+    "samples": 28,
+    "stage": "train"
+   },
+   {
+    "elapsed_s": 7.26,
+    "foreign": false,
+    "nlwp_max": 1,
+    "phases": [
+     "probe_train"
+    ],
+    "pid": 333823,
+    "rss_kb_max": 1024,
+    "samples": 29,
+    "stage": "train"
+   },
+   {
+    "elapsed_s": 7.0,
+    "foreign": false,
+    "nlwp_max": 10,
+    "phases": [
+     "probe_train"
+    ],
+    "pid": 333824,
+    "rss_kb_max": 1908964,
+    "samples": 28,
+    "stage": "train"
+   }
+  ],
+  "note": "[PRELIMINARY] tiny-count smoke knobs (40 games/cycle, 256 samples/epoch, batch 32); inputs of measure_stage_throughput and of the data_budget calibration, not production rates",
+  "peak_rss_kb_per_stage": {
+   "gatekeeper": 4549468,
+   "selfplay": 1760412,
+   "shuffle": 39936,
+   "train": 3434752
+  },
+  "peak_vram_mib": 4094,
+  "per_net": {
+   "random": {
+    "games": 80,
+    "npz_files": 2,
+    "real_net": false,
+    "rows": 2534,
+    "rows_per_game": 31.675,
+    "tdata_bytes": 896536
+   }
+  },
+  "per_phase_stage": {
+   "cycle1/gatekeeper": {
+    "elapsed_s": 0.52,
+    "nlwp_max": 2,
+    "rss_kb_max": 221916,
+    "samples": 3
+   },
+   "cycle1/selfplay": {
+    "elapsed_s": 6.25,
+    "nlwp_max": 22,
+    "rss_kb_max": 1497288,
+    "samples": 25
+   },
+   "cycle1/shuffle": {
+    "elapsed_s": 3.35,
+    "nlwp_max": 4,
+    "rss_kb_max": 39936,
+    "samples": 22
+   },
+   "cycle1/train": {
+    "elapsed_s": 125.62,
+    "nlwp_max": 14,
+    "rss_kb_max": 3434752,
+    "samples": 396
+   },
+   "cycle2/gatekeeper": {
+    "elapsed_s": 70.19,
+    "nlwp_max": 25,
+    "rss_kb_max": 4549468,
+    "samples": 270
+   },
+   "cycle2/selfplay": {
+    "elapsed_s": 6.95,
+    "nlwp_max": 22,
+    "rss_kb_max": 1537412,
+    "samples": 28
+   },
+   "cycle2/shuffle": {
+    "elapsed_s": 3.35,
+    "nlwp_max": 4,
+    "rss_kb_max": 38912,
+    "samples": 22
+   },
+   "cycle2/train": {
+    "elapsed_s": 29.6,
+    "nlwp_max": 14,
+    "rss_kb_max": 3160008,
+    "samples": 113
+   },
+   "legA/selfplay": {
+    "elapsed_s": 7.76,
+    "nlwp_max": 22,
+    "rss_kb_max": 1402512,
+    "samples": 30
+   },
+   "probe_search/selfplay": {
+    "elapsed_s": 30.75,
+    "nlwp_max": 25,
+    "rss_kb_max": 1760412,
+    "samples": 120
+   },
+   "probe_train/train": {
+    "elapsed_s": 22.27,
+    "nlwp_max": 10,
+    "rss_kb_max": 1909032,
+    "samples": 85
+   }
+  },
+  "probe_search": {
+   "full_frac": 0.33304498269896193,
+   "games": 20,
+   "rows": 646,
+   "searched_turns": 2312
+  },
+  "ps_scope": "node-wide ps -e (pre-repair sampler); foreign pids excluded by the legA rule",
+  "row_bytes_uncompressed": 2145,
+  "selfplay_games_per_hour": 5569.5,
+  "selfplay_games_total": 80,
+  "selfplay_rows_per_hour": 176414.6,
+  "selfplay_rows_total": 2534,
+  "shuffleddata_bytes": 1075349,
+  "stage_elapsed_s": {
+   "gatekeeper": 70.71,
+   "selfplay": 51.71,
+   "shuffle": 6.7,
+   "train": 177.49
+  },
+  "tdata_bytes_on_disk": 896536,
+  "train_samples_per_second": 14.243,
+  "train_samples_total": 2528
+ },
+ "S1_cycles_completed": 2,
+ "S2_candidate_exported": 2,
+ "S2_candidate_gated": 1,
+ "S2_candidate_lost": 1,
+ "S2_candidate_won": 0,
+ "S2_exported": [
+  {
+   "bytes": 3004833,
+   "dir": "rejectedmodels",
+   "mtime": 1788513789.4688036,
+   "name": "t9-s1216-d1221",
+   "path": "/scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/runs/smoke/rejectedmodels/t9-s1216-d1221/model.bin.gz"
+  },
+  {
+   "bytes": 3005068,
+   "dir": "modelstobetested",
+   "mtime": 1788513926.4172509,
+   "name": "t9-s2528-d2534",
+   "path": "/scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/runs/smoke/modelstobetested/t9-s2528-d2534/model.bin.gz"
+  }
+ ],
+ "S3_gate_random": 1,
+ "S4_gatekeeper_sgfs": {
+  "files": 1,
+  "lines": 156,
+  "rectangular": 0,
+  "sz9": 156,
+  "sz_other": 0
+ },
+ "S4_rectangular": 0,
+ "S4_selfplay_sgfs": {
+  "files": 2,
+  "lines": 80,
+  "rectangular": 0,
+  "sz9": 80,
+  "sz_other": 0
+ },
+ "S4_sz_other": 0,
+ "S5_raw_npz": {
+  "files": 2,
+  "per_file": [
+   {
+    "path": "/scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/runs/smoke/selfplay/random/tdata/33785D4998C6F9A3.npz",
+    "row_bytes": 2145,
+    "rows": 1221
+   },
+   {
+    "path": "/scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/runs/smoke/selfplay/random/tdata/F0492CFB0FE6A83C.npz",
+    "row_bytes": 2145,
+    "rows": 1313
+   }
+  ],
+  "problems": [],
+  "row_bytes_seen": [
+   2145
+  ],
+  "rows": 2534
+ },
+ "S5_shuffled_npz": {
+  "files": 2,
+  "per_file": [
+   {
+    "path": "/scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/runs/smoke/shuffleddata/20260904-052108/train/data0_0.npz",
+    "row_bytes": 2145,
+    "rows": 1221
+   },
+   {
+    "path": "/scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/runs/smoke/shuffleddata/20260904-052438/train/data0_0.npz",
+    "row_bytes": 2145,
+    "rows": 1313
+   }
+  ],
+  "problems": [],
+  "row_bytes_seen": [
+   2145
+  ],
+  "rows": 2534
+ },
+ "S6": {
+  "global_step_samples_cycle1": 1216,
+  "global_step_samples_cycle2": 2528,
+  "initializing_new_model_in_cycle2_log": 0,
+  "initializing_new_model_in_train_stdout_total": 1,
+  "last_metrics": null,
+  "metrics_lines": 0,
+  "metrics_nonfinite": [],
+  "metrics_train_json": "/scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/runs/smoke/train/t9/metrics_train.json",
+  "metrics_train_json_empty_reason": "print_train_loss_every_batches = 100 (train.py:1379) > batches per epoch at the smoke knobs; log_metrics never fires, so the file is 0 bytes. Not a defect.",
+  "running_metrics_nonfinite": [],
+  "running_metrics_terms": 172,
+  "snapshot_cycle1": {
+   "checkpoint": "/scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/runs/smoke/train/t9/checkpoint_prev0.ckpt",
+   "checkpoint_bytes": 10021767,
+   "exists": true,
+   "export_cycle_counter": 0,
+   "global_step_samples": 1216,
+   "label": "cycle1",
+   "running_metrics_nonfinite": [],
+   "running_metrics_nsamp": 1216.0,
+   "running_metrics_terms": 86,
+   "source": "checkpoint_prev0.ckpt (rotated cycle-1 save)",
+   "total_num_data_rows": 1221,
+   "train_bucket_level": 0,
+   "train_bucket_level_at_row": 1221,
+   "train_steps_since_last_reload": 1216,
+   "window_start_data_row_idx": 0
+  },
+  "snapshot_cycle2": {
+   "checkpoint": "/scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/runs/smoke/train/t9/checkpoint.ckpt",
+   "checkpoint_bytes": 10022023,
+   "exists": true,
+   "export_cycle_counter": 0,
+   "global_step_samples": 2528,
+   "label": "cycle2",
+   "running_metrics_nonfinite": [],
+   "running_metrics_nsamp": 2528.0,
+   "running_metrics_terms": 86,
+   "source": "checkpoint.ckpt (latest save)",
+   "total_num_data_rows": 2534,
+   "train_bucket_level": 3744.0,
+   "train_bucket_level_at_row": 2534,
+   "train_steps_since_last_reload": 1312,
+   "window_start_data_row_idx": 1221
+  }
+ },
+ "S7_probe_search": {
+  "cheap_search_turns": 1542,
+  "cheap_search_visits_cfg": 100,
+  "checks": [
+   {
+    "detail": "searched_turns=2312 >= 500",
+    "name": "searched_turns_sufficient",
+    "pass": true
+   },
+   {
+    "detail": "full_frac=0.33304498269896193 band=[0.2, 0.3]",
+    "name": "a_full_frac_in_band",
+    "pass": false
+   },
+   {
+    "detail": "rows_per_game=32.3 band=[12, 35]",
+    "name": "b_rows_per_game_in_band",
+    "pass": true
+   },
+   {
+    "detail": "games=20 sz_other=0 rectangular=0",
+    "name": "c_sz_other_zero",
+    "pass": true
+   }
+  ],
+  "full_frac": 0.33304498269896193,
+  "full_frac_band": [
+   0.2,
+   0.3
+  ],
+  "full_frac_expected": 0.25,
+  "full_search_turns": 770,
+  "games": 20,
+  "games_sz9": 20,
+  "log_files": [
+   "/scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/runs/smoke_probe/search/logs/probe_search.log"
+  ],
+  "max_root_visits_seen": 600,
+  "max_visits_cfg": 600,
+  "min_root_visits_seen": 100,
+  "npz_files": 1,
+  "pass": false,
+  "rectangular_games": 0,
+  "rows": 646,
+  "rows_per_game": 32.3,
+  "rows_per_game_band": [
+   12,
+   35
+  ],
+  "searched_turns": 2312,
+  "selfplay_dir": "/scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/runs/smoke_probe/search/selfplay",
+  "sgfs_files": 1,
+  "sz_other": 0
+ },
+ "S8": {
+  "band": [
+   12,
+   35
+  ],
+  "per_net": {
+   "random": {
+    "games": 80,
+    "npz_files": 2,
+    "real_net": false,
+    "rows": 2534,
+    "rows_per_game": 31.675,
+    "tdata_bytes": 896536
+   }
+  },
+  "probe_search_games": 20,
+  "probe_search_rows": 646,
+  "random_games": 80,
+  "random_rows": 2534,
+  "real_games": 20,
+  "real_in_band": true,
+  "real_rows": 646,
+  "rows_per_game_random": 31.675,
+  "rows_per_game_real": 32.3
+ },
+ "S9_monitor": {
+  "foreign_pids_excluded": [
+   317109,
+   322317,
+   323223
+  ],
+  "gpu": {
+   "mem_used_mib_max": 4094,
+   "samples": 170,
+   "util_max": 80,
+   "util_mean": 21.48,
+   "util_over_50_frac": 0.276
+  },
+  "per_phase_stage": {
+   "cycle1/gatekeeper": {
+    "elapsed_s": 0.52,
+    "nlwp_max": 2,
+    "rss_kb_max": 221916,
+    "samples": 3
+   },
+   "cycle1/selfplay": {
+    "elapsed_s": 6.25,
+    "nlwp_max": 22,
+    "rss_kb_max": 1497288,
+    "samples": 25
+   },
+   "cycle1/shuffle": {
+    "elapsed_s": 3.35,
+    "nlwp_max": 4,
+    "rss_kb_max": 39936,
+    "samples": 22
+   },
+   "cycle1/train": {
+    "elapsed_s": 125.62,
+    "nlwp_max": 14,
+    "rss_kb_max": 3434752,
+    "samples": 396
+   },
+   "cycle2/gatekeeper": {
+    "elapsed_s": 70.19,
+    "nlwp_max": 25,
+    "rss_kb_max": 4549468,
+    "samples": 270
+   },
+   "cycle2/selfplay": {
+    "elapsed_s": 6.95,
+    "nlwp_max": 22,
+    "rss_kb_max": 1537412,
+    "samples": 28
+   },
+   "cycle2/shuffle": {
+    "elapsed_s": 3.35,
+    "nlwp_max": 4,
+    "rss_kb_max": 38912,
+    "samples": 22
+   },
+   "cycle2/train": {
+    "elapsed_s": 29.6,
+    "nlwp_max": 14,
+    "rss_kb_max": 3160008,
+    "samples": 113
+   },
+   "legA/selfplay": {
+    "elapsed_s": 7.76,
+    "nlwp_max": 22,
+    "rss_kb_max": 1402512,
+    "samples": 30
+   },
+   "probe_search/selfplay": {
+    "elapsed_s": 30.75,
+    "nlwp_max": 25,
+    "rss_kb_max": 1760412,
+    "samples": 120
+   },
+   "probe_train/train": {
+    "elapsed_s": 22.27,
+    "nlwp_max": 10,
+    "rss_kb_max": 1909032,
+    "samples": 85
+   }
+  },
+  "per_pid": [
+   {
+    "elapsed_s": 345.47,
+    "foreign": true,
+    "nlwp_max": 36,
+    "phases": [
+     "cycle1",
+     "cycle2",
+     "legA",
+     "probe_search",
+     "probe_train"
+    ],
+    "pid": 317109,
+    "rss_kb_max": 2621608,
+    "samples": 1331,
+    "stage": "train"
+   },
+   {
+    "elapsed_s": 21.75,
+    "foreign": true,
+    "nlwp_max": 36,
+    "phases": [
+     "cycle1",
+     "legA"
+    ],
+    "pid": 322317,
+    "rss_kb_max": 2654396,
+    "samples": 85,
+    "stage": "train"
+   },
+   {
+    "elapsed_s": 345.47,
+    "foreign": true,
+    "nlwp_max": 36,
+    "phases": [
+     "cycle1",
+     "cycle2",
+     "legA",
+     "probe_search",
+     "probe_train"
+    ],
+    "pid": 323223,
+    "rss_kb_max": 2656448,
+    "samples": 1331,
+    "stage": "train"
+   },
+   {
+    "elapsed_s": 1.32,
+    "foreign": false,
+    "nlwp_max": 5,
+    "phases": [
+     "legA"
+    ],
+    "pid": 323672,
+    "rss_kb_max": 304492,
+    "samples": 6,
+    "stage": "selfplay"
+   },
+   {
+    "elapsed_s": 5.93,
+    "foreign": false,
+    "nlwp_max": 22,
+    "phases": [
+     "legA"
+    ],
+    "pid": 323745,
+    "rss_kb_max": 1402512,
+    "samples": 24,
+    "stage": "selfplay"
+   },
+   {
+    "elapsed_s": 0.0,
+    "foreign": false,
+    "nlwp_max": 1,
+    "phases": [
+     "cycle1"
+    ],
+    "pid": 324287,
+    "rss_kb_max": 2048,
+    "samples": 1,
+    "stage": "train"
+   },
+   {
+    "elapsed_s": 0.52,
+    "foreign": false,
+    "nlwp_max": 2,
+    "phases": [
+     "cycle1"
+    ],
+    "pid": 324381,
+    "rss_kb_max": 221916,
+    "samples": 3,
+    "stage": "gatekeeper"
+   },
+   {
+    "elapsed_s": 6.25,
+    "foreign": false,
+    "nlwp_max": 22,
+    "phases": [
+     "cycle1"
+    ],
+    "pid": 324406,
+    "rss_kb_max": 1497288,
+    "samples": 25,
+    "stage": "selfplay"
+   },
+   {
+    "elapsed_s": 3.35,
+    "foreign": false,
+    "nlwp_max": 4,
+    "phases": [
+     "cycle1"
+    ],
+    "pid": 324615,
+    "rss_kb_max": 39936,
+    "samples": 14,
+    "stage": "shuffle"
+   },
+   {
+    "elapsed_s": 0.0,
+    "foreign": false,
+    "nlwp_max": 1,
+    "phases": [
+     "cycle1"
+    ],
+    "pid": 324712,
+    "rss_kb_max": 29100,
+    "samples": 1,
+    "stage": "shuffle"
+   },
+   {
+    "elapsed_s": 0.0,
+    "foreign": false,
+    "nlwp_max": 1,
+    "phases": [
+     "cycle1"
+    ],
+    "pid": 324713,
+    "rss_kb_max": 33940,
+    "samples": 1,
+    "stage": "shuffle"
+   },
+   {
+    "elapsed_s": 0.0,
+    "foreign": false,
+    "nlwp_max": 1,
+    "phases": [
+     "cycle1"
+    ],
+    "pid": 324714,
+    "rss_kb_max": 24728,
+    "samples": 1,
+    "stage": "shuffle"
+   },
+   {
+    "elapsed_s": 0.0,
+    "foreign": false,
+    "nlwp_max": 1,
+    "phases": [
+     "cycle1"
+    ],
+    "pid": 324715,
+    "rss_kb_max": 24728,
+    "samples": 1,
+    "stage": "shuffle"
+   },
+   {
+    "elapsed_s": 0.0,
+    "foreign": false,
+    "nlwp_max": 1,
+    "phases": [
+     "cycle1"
+    ],
+    "pid": 324716,
+    "rss_kb_max": 24728,
+    "samples": 1,
+    "stage": "shuffle"
+   },
+   {
+    "elapsed_s": 0.0,
+    "foreign": false,
+    "nlwp_max": 1,
+    "phases": [
+     "cycle1"
+    ],
+    "pid": 324717,
+    "rss_kb_max": 24728,
+    "samples": 1,
+    "stage": "shuffle"
+   },
+   {
+    "elapsed_s": 0.0,
+    "foreign": false,
+    "nlwp_max": 1,
+    "phases": [
+     "cycle1"
+    ],
+    "pid": 324718,
+    "rss_kb_max": 24732,
+    "samples": 1,
+    "stage": "shuffle"
+   },
+   {
+    "elapsed_s": 0.0,
+    "foreign": false,
+    "nlwp_max": 1,
+    "phases": [
+     "cycle1"
+    ],
+    "pid": 324719,
+    "rss_kb_max": 24732,
+    "samples": 1,
+    "stage": "shuffle"
+   },
+   {
+    "elapsed_s": 102.4,
+    "foreign": false,
+    "nlwp_max": 14,
+    "phases": [
+     "cycle1"
+    ],
+    "pid": 325065,
+    "rss_kb_max": 3434752,
+    "samples": 395,
+    "stage": "train"
+   },
+   {
+    "elapsed_s": 70.19,
+    "foreign": false,
+    "nlwp_max": 25,
+    "phases": [
+     "cycle2"
+    ],
+    "pid": 328662,
+    "rss_kb_max": 4549468,
+    "samples": 270,
+    "stage": "gatekeeper"
+   },
+   {
+    "elapsed_s": 6.95,
+    "foreign": false,
+    "nlwp_max": 22,
+    "phases": [
+     "cycle2"
+    ],
+    "pid": 330480,
+    "rss_kb_max": 1537412,
+    "samples": 28,
+    "stage": "selfplay"
+   },
+   {
+    "elapsed_s": 3.35,
+    "foreign": false,
+    "nlwp_max": 4,
+    "phases": [
+     "cycle2"
+    ],
+    "pid": 330702,
+    "rss_kb_max": 38912,
+    "samples": 14,
+    "stage": "shuffle"
+   },
+   {
+    "elapsed_s": 0.0,
+    "foreign": false,
+    "nlwp_max": 1,
+    "phases": [
+     "cycle2"
+    ],
+    "pid": 330794,
+    "rss_kb_max": 28892,
+    "samples": 1,
+    "stage": "shuffle"
+   },
+   {
+    "elapsed_s": 0.0,
+    "foreign": false,
+    "nlwp_max": 1,
+    "phases": [
+     "cycle2"
+    ],
+    "pid": 330795,
+    "rss_kb_max": 34880,
+    "samples": 1,
+    "stage": "shuffle"
+   },
+   {
+    "elapsed_s": 0.0,
+    "foreign": false,
+    "nlwp_max": 1,
+    "phases": [
+     "cycle2"
+    ],
+    "pid": 330796,
+    "rss_kb_max": 24644,
+    "samples": 1,
+    "stage": "shuffle"
+   },
+   {
+    "elapsed_s": 0.0,
+    "foreign": false,
+    "nlwp_max": 1,
+    "phases": [
+     "cycle2"
+    ],
+    "pid": 330797,
+    "rss_kb_max": 24644,
+    "samples": 1,
+    "stage": "shuffle"
+   },
+   {
+    "elapsed_s": 0.0,
+    "foreign": false,
+    "nlwp_max": 1,
+    "phases": [
+     "cycle2"
+    ],
+    "pid": 330798,
+    "rss_kb_max": 24644,
+    "samples": 1,
+    "stage": "shuffle"
+   },
+   {
+    "elapsed_s": 0.0,
+    "foreign": false,
+    "nlwp_max": 1,
+    "phases": [
+     "cycle2"
+    ],
+    "pid": 330799,
+    "rss_kb_max": 24648,
+    "samples": 1,
+    "stage": "shuffle"
+   },
+   {
+    "elapsed_s": 0.0,
+    "foreign": false,
+    "nlwp_max": 1,
+    "phases": [
+     "cycle2"
+    ],
+    "pid": 330800,
+    "rss_kb_max": 24648,
+    "samples": 1,
+    "stage": "shuffle"
+   },
+   {
+    "elapsed_s": 0.0,
+    "foreign": false,
+    "nlwp_max": 1,
+    "phases": [
+     "cycle2"
+    ],
+    "pid": 330801,
+    "rss_kb_max": 24648,
+    "samples": 1,
+    "stage": "shuffle"
+   },
+   {
+    "elapsed_s": 29.6,
+    "foreign": false,
+    "nlwp_max": 14,
+    "phases": [
+     "cycle2"
+    ],
+    "pid": 331077,
+    "rss_kb_max": 3160008,
+    "samples": 113,
+    "stage": "train"
+   },
+   {
+    "elapsed_s": 30.75,
+    "foreign": false,
+    "nlwp_max": 25,
+    "phases": [
+     "probe_search"
+    ],
+    "pid": 332406,
+    "rss_kb_max": 1760412,
+    "samples": 120,
+    "stage": "selfplay"
+   },
+   {
+    "elapsed_s": 7.03,
+    "foreign": false,
+    "nlwp_max": 10,
+    "phases": [
+     "probe_train"
+    ],
+    "pid": 333416,
+    "rss_kb_max": 1909032,
+    "samples": 28,
+    "stage": "train"
+   },
+   {
+    "elapsed_s": 7.26,
+    "foreign": false,
+    "nlwp_max": 1,
+    "phases": [
+     "probe_train"
+    ],
+    "pid": 333823,
+    "rss_kb_max": 1024,
+    "samples": 29,
+    "stage": "train"
+   },
+   {
+    "elapsed_s": 7.0,
+    "foreign": false,
+    "nlwp_max": 10,
+    "phases": [
+     "probe_train"
+    ],
+    "pid": 333824,
+    "rss_kb_max": 1908964,
+    "samples": 28,
+    "stage": "train"
+   }
+  ],
+  "per_stage": {
+   "gatekeeper": {
+    "elapsed_s": 209.48,
+    "nlwp_max": 25,
+    "rss_kb_max": 4549468,
+    "samples": 273
+   },
+   "selfplay": {
+    "elapsed_s": 315.43,
+    "nlwp_max": 25,
+    "rss_kb_max": 1760412,
+    "samples": 203
+   },
+   "shuffle": {
+    "elapsed_s": 213.01,
+    "nlwp_max": 4,
+    "rss_kb_max": 39936,
+    "samples": 44
+   },
+   "train": {
+    "elapsed_s": 335.64,
+    "nlwp_max": 14,
+    "rss_kb_max": 3434752,
+    "samples": 594
+   }
+  },
+  "ps_sample_columns": 6,
+  "ps_samples": 1114,
+  "ps_scope": "node-wide ps -e (pre-repair sampler); foreign pids excluded by the legA rule"
+ },
+ "allocation": {
+  "cpus_per_task": 24,
+  "gpus": 1,
+  "mem_mb": 65536,
+  "node": "gb207",
+  "partition": "b200",
+  "slurm_job_id": "298712",
+  "started_utc": "2026-09-04T09:20:49Z"
+ },
+ "attempts": [
+  {
+   "ended_utc": "2026-09-04T09:26:38Z",
+   "failed_legs": " D1 D2 E",
+   "leg_exit_codes": " A=0 B=0 C=0 D1=1 D2=1 E=1",
+   "node": "gb207",
+   "overall": 0,
+   "resumed_from_leg": "none",
+   "slurm_job_id": "298712"
+  }
+ ],
+ "basedir": "/scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/runs/smoke",
+ "checks": [
+  {
+   "detail": "'one cycle done' lines = 2, expected 2, over 2 log(s)",
+   "hard": true,
+   "name": "S1_cycles_completed_eq_2",
+   "pass": true
+  },
+  {
+   "detail": "exported model.bin.gz dirs = 2 (rejectedmodels/t9-s1216-d1221, modelstobetested/t9-s2528-d2534)",
+   "hard": true,
+   "name": "S2_candidate_exported_ge_1",
+   "pass": true
+  },
+  {
+   "detail": "'Candidate (won|lost) match' lines = 1 (won 0, lost 1)",
+   "hard": true,
+   "name": "S2_candidate_gated_ge_1",
+   "pass": true
+  },
+  {
+   "detail": "'Loaded accepted neural net random' lines = 1 in /scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/runs/smoke/gatekeepersgf/stdout.txt",
+   "hard": true,
+   "name": "S3_gate_random_ge_1",
+   "pass": true
+  },
+  {
+   "detail": "sgf lines selfplay=80 gatekeeper=156, sz_other=0, rectangular=0",
+   "hard": true,
+   "name": "S4_sz_other_eq_0",
+   "pass": true
+  },
+  {
+   "detail": "raw npz files=2 rows=2534 row_bytes=[2145] problems=0",
+   "hard": true,
+   "name": "S5_raw_npz_pos_len_9_2145",
+   "pass": true
+  },
+  {
+   "detail": "shuffled npz files=2 rows=2534 row_bytes=[2145] problems=0",
+   "hard": true,
+   "name": "S5_shuffled_npz_pos_len_9_2145",
+   "pass": true
+  },
+  {
+   "detail": "global_step_samples cycle1=1216 -> cycle2=2528",
+   "hard": true,
+   "name": "S6_global_step_samples_increases",
+   "pass": true
+  },
+  {
+   "detail": "running_metrics numeric terms=172 nonfinite=none (metrics_train.json lines=0, empty by scale)",
+   "hard": true,
+   "name": "S6_metrics_finite",
+   "pass": true
+  },
+  {
+   "detail": "'Initializing new model!' in the cycle-2 log = 0 (train stdout total over both cycles = 1, 1 expected from cycle 1)",
+   "hard": true,
+   "name": "S6_no_reinit_in_cycle2",
+   "pass": true
+  },
+  {
+   "detail": "nlwp_max per stage = {'selfplay': 25, 'train': 14, 'gatekeeper': 25, 'shuffle': 4}, cpus_per_task = 24, over budget = {'selfplay': 25, 'gatekeeper': 25} (scope: node-wide ps -e (pre-repair sampler); foreign pids excluded by the legA rule; foreign pids excluded: [317109, 322317, 323223])",
+   "hard": true,
+   "name": "S9_nlwp_max_within_cpus",
+   "pass": false
+  },
+  {
+   "detail": "full_frac=0.33304498269896193 band=[0.20, 0.30] searched_turns=2312",
+   "hard": false,
+   "name": "S7_full_frac_in_band",
+   "pass": false
+  },
+  {
+   "detail": "trunk_gpool_count=0 res2=0.0 res3=0.0 row_bytes=2145",
+   "hard": false,
+   "name": "S11_probe_train_pass",
+   "pass": true
+  },
+  {
+   "detail": "global_step_samples None -> None, reinit_phase2=1",
+   "hard": false,
+   "name": "S12_probe_resume_pass",
+   "pass": false
+  },
+  {
+   "detail": "rows_per_game_real=32.3 over 20 games band=[12, 35] (random-net 31.675 over 80 games)",
+   "hard": false,
+   "name": "S8_rows_per_game_real_in_band",
+   "pass": true
+  }
+ ],
+ "cpus_per_task": 24,
+ "cycle_logs": [
+  "/scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/runs/smoke/logs/smoke_cycle1.txt",
+  "/scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/runs/smoke/logs/smoke_cycle2.txt"
+ ],
+ "evidence_dir": "results/ktg/paper_1902.10565/evidence/smoke",
+ "hard_failures": [
+  "S9_nlwp_max_within_cpus"
+ ],
+ "markers_present": [
+  "A.done",
+  "B.done",
+  "C.done"
+ ],
+ "pass": false,
+ "recorded_findings": [
+  "S7_full_frac_in_band",
+  "S12_probe_resume_pass"
+ ],
+ "resumed_from_leg": [
+  "none"
+ ],
+ "trainingname": "t9"
+}

@@ -1,0 +1,45 @@
+{
+ "checks": [
+  {
+   "detail": "global_step_samples_at_kill=None >= 4096",
+   "name": "phase1_reached_two_epochs",
+   "pass": false
+  },
+  {
+   "detail": "'Initializing new model!' in phase 1 log = 1 (expected >= 1)",
+   "name": "phase1_initialized_fresh",
+   "pass": true
+  },
+  {
+   "detail": "global_step_samples None -> None",
+   "name": "4a_samples_increase_after_resume",
+   "pass": false
+  },
+  {
+   "detail": "'Initializing new model!' = 1, 'No preexisting checkpoint found' = 1 in phase 2",
+   "name": "4b_no_reinitialisation_on_resume",
+   "pass": false
+  },
+  {
+   "detail": "total_num_data_rows None -> None",
+   "name": "4c_total_num_data_rows_unchanged",
+   "pass": true
+  },
+  {
+   "detail": "phase 2 exit_code = 1",
+   "name": "phase2_exit_zero",
+   "pass": false
+  }
+ ],
+ "global_step_samples_after": null,
+ "global_step_samples_at_kill": null,
+ "initializing_new_model_phase1": 1,
+ "initializing_new_model_phase2": 1,
+ "no_preexisting_checkpoint_phase2": 1,
+ "pass": false,
+ "phase2_exit_code": 1,
+ "state_after": {},
+ "state_at_kill": {},
+ "total_num_data_rows_after": null,
+ "total_num_data_rows_at_kill": null
+}

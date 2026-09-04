@@ -150,52 +150,131 @@ def npz_report(paths):
 
 
 # ----------------------------------------------------------------- snapshot mode
-def snapshot(basedir, label, trainingname):
+def _read_ckpt(path):
+    """train_state counters + running-metrics finiteness of one checkpoint (needs torch)."""
     import torch  # allocation-only
+    rec = {"checkpoint": path, "exists": os.path.exists(path)}
+    if not rec["exists"]:
+        return rec
+    d = torch.load(path, map_location="cpu", weights_only=False)
+    ts = d.get("train_state", {}) or {}
+    rec.update({
+        "global_step_samples": ts.get("global_step_samples"),
+        "total_num_data_rows": ts.get("total_num_data_rows"),
+        "train_bucket_level": ts.get("train_bucket_level"),
+        "train_bucket_level_at_row": ts.get("train_bucket_level_at_row"),
+        "export_cycle_counter": ts.get("export_cycle_counter"),
+        "window_start_data_row_idx": ts.get("window_start_data_row_idx"),
+        "train_steps_since_last_reload": ts.get("train_steps_since_last_reload"),
+        "checkpoint_bytes": os.path.getsize(path),
+    })
+    # S6's "metrics all finite". metrics_train.json is only appended every
+    # print_train_loss_every_batches = 100 batches (train.py:1379,1661,1694), so at the
+    # smoke scale (38 batches/epoch) it stays EMPTY and cannot carry the measurement.
+    # running_metrics inside the checkpoint is the same accumulator and is always there.
+    rm = d.get("running_metrics") or {}
+    nonfinite, terms = [], 0
+    for section in ("sums", "weights"):
+        for k, v in (rm.get(section) or {}).items():
+            try:
+                f = float(v)
+            except (TypeError, ValueError):
+                continue
+            terms += 1
+            if math.isnan(f) or math.isinf(f):
+                nonfinite.append("%s.%s=%r" % (section, k, f))
+    rec["running_metrics_terms"] = terms
+    rec["running_metrics_nonfinite"] = nonfinite
+    rec["running_metrics_nsamp"] = (rm.get("sums") or {}).get("nsamp")
+    return rec
+
+
+def snapshot(basedir, label, trainingname):
     traindir = os.path.join(basedir, "train", trainingname)
-    ckpt = os.path.join(traindir, "checkpoint.ckpt")
     out_dir = os.path.join(basedir, "audit_hooks")
     os.makedirs(out_dir, exist_ok=True)
-    out = os.path.join(out_dir, "ckpt_%s.json" % label)
-    rec = {"label": label, "checkpoint": ckpt, "exists": os.path.exists(ckpt)}
-    if rec["exists"]:
-        d = torch.load(ckpt, map_location="cpu", weights_only=False)
-        ts = d.get("train_state", {})
-        rec.update({
-            "global_step_samples": ts.get("global_step_samples"),
-            "total_num_data_rows": ts.get("total_num_data_rows"),
-            "train_bucket_level": ts.get("train_bucket_level"),
-            "train_bucket_level_at_row": ts.get("train_bucket_level_at_row"),
-            "export_cycle_counter": ts.get("export_cycle_counter"),
-            "window_start_data_row_idx": ts.get("window_start_data_row_idx"),
-            "config_model_kind": (d.get("config") or {}).get("model_kind"),
-            "pos_len": d.get("pos_len"),
-            "checkpoint_bytes": os.path.getsize(ckpt),
-        })
-    with open(out, "w") as fh:
-        json.dump(rec, fh, indent=1, sort_keys=True)
-    print("audit_smoke snapshot %s -> %s" % (label, out))
-    print(json.dumps(rec, indent=1, sort_keys=True))
+
+    if label == "cycles":
+        # Post-hoc / belt-and-braces path: train.py rotates checkpoint.ckpt into
+        # checkpoint_prev0.ckpt before each save (train.py:578,1875), so after two
+        # cycles prev0 IS cycle 1's final checkpoint and checkpoint.ckpt is cycle 2's.
+        # This recovers S6 from a run whose per-cycle snapshots did not execute.
+        pairs = [("cycle1", os.path.join(traindir, "checkpoint_prev0.ckpt")),
+                 ("cycle2", os.path.join(traindir, "checkpoint.ckpt"))]
+    else:
+        pairs = [(label, os.path.join(traindir, "checkpoint.ckpt"))]
+
+    for lab, path in pairs:
+        rec = _read_ckpt(path)
+        rec["label"] = lab
+        rec["source"] = "checkpoint_prev0.ckpt (rotated cycle-1 save)" if path.endswith("prev0.ckpt") \
+            else "checkpoint.ckpt (latest save)"
+        out = os.path.join(out_dir, "ckpt_%s.json" % lab)
+        with open(out, "w") as fh:
+            json.dump(rec, fh, indent=1, sort_keys=True)
+        print("audit_smoke snapshot %s -> %s" % (lab, out))
+        print(json.dumps(rec, indent=1, sort_keys=True))
     return 0
 
 
 # ----------------------------------------------------------------- monitor parse
 def parse_monitor(basedir):
+    """Per-stage and per-(phase, stage) thread/RSS peaks, attributed per PID.
+
+    Scope repair after job 298712: the pre-repair sampler used a node-wide `ps -e` on a
+    SHARED b200 node, so foreign processes whose command line contains "train.py" landed
+    on the `train` stage (three of them, nlwp 36, from before leg A to the end of leg E,
+    against our own trainer's 14). The repaired sampler writes a 7th column, the ppid,
+    and only records descendants of the job script; a 7-column file therefore needs no
+    exclusion. For a 6-column file the exclusion rule is provable rather than heuristic:
+    leg A runs only codes/eval/check_cfg_9x9.sh, which starts `katago selfplay` and no
+    trainer at all, so ANY pid classified `train` during phase legA is foreign to this
+    job and is dropped everywhere. Excluded pids are reported, never silently removed.
+    """
     path = os.path.join(basedir, "monitor", "ps_samples.tsv")
-    per_stage, per_ps, span, samples = {}, {}, {}, 0
+    rows, ncols = [], 0
     if os.path.exists(path):
         with open(path, "r", errors="replace") as fh:
             for line in fh:
                 parts = line.rstrip("\n").split("\t")
-                if len(parts) != 6:
+                if len(parts) < 6:
                     continue
+                ncols = max(ncols, len(parts))
                 try:
                     t = float(parts[0])
+                    pid = int(parts[3])
                     nlwp = int(parts[4])
                     rss = int(parts[5])
                 except ValueError:
                     continue
-                phase, stage = parts[1], parts[2]
+                rows.append((t, parts[1], parts[2], pid, nlwp, rss))
+
+    foreign = sorted({pid for (_t, ph, st, pid, _n, _r) in rows
+                      if ncols < 7 and st == "train" and ph == "legA"})
+    per_pid = {}
+    for (t, ph, st, pid, nlwp, rss) in rows:
+        e = per_pid.setdefault(pid, {"pid": pid, "stage": st, "phases": set(),
+                                     "nlwp_max": 0, "rss_kb_max": 0, "samples": 0,
+                                     "t_min": t, "t_max": t,
+                                     "foreign": pid in foreign})
+        e["phases"].add(ph)
+        e["nlwp_max"] = max(e["nlwp_max"], nlwp)
+        e["rss_kb_max"] = max(e["rss_kb_max"], rss)
+        e["samples"] += 1
+        e["t_min"] = min(e["t_min"], t)
+        e["t_max"] = max(e["t_max"], t)
+    for e in per_pid.values():
+        e["elapsed_s"] = round(e["t_max"] - e["t_min"], 2)
+        e["phases"] = sorted(e["phases"])
+        e.pop("t_min", None)
+        e.pop("t_max", None)
+
+    per_stage, per_ps, samples = {}, {}, 0
+    if True:
+        if True:
+            for (t, phase, stage, pid, nlwp, rss) in rows:
+                if pid in foreign:
+                    continue
                 samples += 1
                 for key, table in ((stage, per_stage), ("%s/%s" % (phase, stage), per_ps)):
                     e = table.setdefault(key, {"nlwp_max": 0, "rss_kb_max": 0,
@@ -232,7 +311,14 @@ def parse_monitor(basedir):
             gpu["util_over_50_frac"] = round(sum(1 for u in utils if u > 50) / len(utils), 3)
         if mems:
             gpu["mem_used_mib_max"] = max(mems)
-    return {"ps_samples": samples, "per_stage": per_stage,
+    return {"ps_samples": samples,
+            "ps_sample_columns": ncols,
+            "ps_scope": ("descendants of the job script (ppid-filtered sampler)"
+                         if ncols >= 7 else
+                         "node-wide ps -e (pre-repair sampler); foreign pids excluded by the legA rule"),
+            "foreign_pids_excluded": foreign,
+            "per_pid": sorted(per_pid.values(), key=lambda e: e["pid"]),
+            "per_stage": per_stage,
             "per_phase_stage": per_ps, "gpu": gpu}
 
 
@@ -361,8 +447,22 @@ def audit(basedir, evidence, trainingname, strict):
     add("S6_global_step_samples_increases", True,
         isinstance(g1, (int, float)) and isinstance(g2, (int, float)) and g2 > g1,
         "global_step_samples cycle1=%s -> cycle2=%s" % (g1, g2))
-    add("S6_metrics_finite", True, nlines >= 1 and not nonfinite,
-        "metrics_train.json lines=%d nonfinite=%s" % (nlines, nonfinite or "none"))
+    # S6 "metrics_train.json all terms finite": at the smoke scale that file is EMPTY by
+    # construction -- train.py:1379 sets print_train_loss_every_batches = 100 and only
+    # then calls log_metrics (:1661,:1694), while an epoch here is 38 batches. The same
+    # accumulator is carried in the checkpoint as running_metrics, so the finiteness
+    # measurement is taken there and the empty file is reported, not counted against.
+    rm_terms = (snap2.get("running_metrics_terms") or 0) + (snap1.get("running_metrics_terms") or 0)
+    rm_nonfinite = list(snap1.get("running_metrics_nonfinite") or []) + \
+                   list(snap2.get("running_metrics_nonfinite") or [])
+    r["S6"]["running_metrics_terms"] = rm_terms
+    r["S6"]["running_metrics_nonfinite"] = rm_nonfinite
+    r["S6"]["metrics_train_json_empty_reason"] = (
+        "print_train_loss_every_batches = 100 (train.py:1379) > batches per epoch at the "
+        "smoke knobs; log_metrics never fires, so the file is 0 bytes. Not a defect.")
+    add("S6_metrics_finite", True, rm_terms >= 1 and not rm_nonfinite,
+        "running_metrics numeric terms=%d nonfinite=%s (metrics_train.json lines=%d, empty by scale)"
+        % (rm_terms, rm_nonfinite or "none", nlines))
     add("S6_no_reinit_in_cycle2", True, reinit_cycle2 == 0,
         "'Initializing new model!' in the cycle-2 log = %s (train stdout total over both cycles = %d, 1 expected from cycle 1)"
         % (reinit_cycle2, reinit_total))
@@ -374,8 +474,8 @@ def audit(basedir, evidence, trainingname, strict):
     over = {k: v for k, v in stage_max.items() if v > cpus}
     add("S9_nlwp_max_within_cpus", True,
         bool(stage_max) and not over,
-        "nlwp_max per stage = %s, cpus_per_task = %d, over budget = %s"
-        % (stage_max, cpus, over or "none"))
+        "nlwp_max per stage = %s, cpus_per_task = %d, over budget = %s (scope: %s; foreign pids excluded: %s)"
+        % (stage_max, cpus, over or "none", mon["ps_scope"], mon["foreign_pids_excluded"] or "none"))
 
     # ---- S7 / S11 / S12 probe results ---------------------------------------
     ktg_root = os.environ.get("KTG_ROOT", "/scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train")
@@ -477,6 +577,9 @@ def audit(basedir, evidence, trainingname, strict):
         "peak_rss_kb_per_stage": {k: v["rss_kb_max"] for k, v in mon["per_stage"].items()},
         "nlwp_max_per_stage": stage_max,
         "nlwp_max_per_phase_stage": {k: v["nlwp_max"] for k, v in mon["per_phase_stage"].items()},
+        "nlwp_per_pid": mon["per_pid"],
+        "ps_scope": mon["ps_scope"],
+        "foreign_pids_excluded": mon["foreign_pids_excluded"],
         "tdata_bytes_on_disk": tdata_bytes,
         "bytes_per_row_on_disk": round(tdata_bytes / total_rows, 2) if total_rows else None,
         "row_bytes_uncompressed": EXPECTED_ROW_BYTES,
@@ -529,6 +632,14 @@ def audit(basedir, evidence, trainingname, strict):
         for k, v in sorted(mon["per_phase_stage"].items()):
             fh.write("  %-28s nlwp_max=%-4d rss_kb_max=%-10d samples=%-7d elapsed_s=%s\n"
                      % (k, v["nlwp_max"], v["rss_kb_max"], v["samples"], v["elapsed_s"]))
+        fh.write("\nsampling scope: %s\n" % mon["ps_scope"])
+        fh.write("foreign pids excluded: %s\n" % (mon["foreign_pids_excluded"] or "none"))
+        fh.write("\nper process (the attribution the stage numbers are built from):\n")
+        for e in mon["per_pid"]:
+            fh.write("  pid=%-8d %-11s nlwp_max=%-4d rss_kb_max=%-10d samples=%-6d elapsed_s=%-8s phases=%s%s\n"
+                     % (e["pid"], e["stage"], e["nlwp_max"], e["rss_kb_max"], e["samples"],
+                        e["elapsed_s"], ",".join(e["phases"]),
+                        "   [EXCLUDED: foreign to this job]" if e["foreign"] else ""))
 
     # ---- print --------------------------------------------------------------
     print("audit_smoke -- node arxiv-1902.10565::synchronous_loop_smoke")

@@ -10,13 +10,14 @@
 # It never asserts. The thresholds live in audit_smoke.py; this script only records.
 #
 # usage:
-#   stage_monitor.sh start <outdir>          begin sampling (ps 0.2 s, nvidia-smi 2 s)
+#   stage_monitor.sh start <outdir> [rootpid] begin sampling (ps 0.2 s, nvidia-smi 2 s);
+#                                            rootpid defaults to the caller's PPID
 #   stage_monitor.sh phase <outdir> <label>  retag subsequent samples (cycle1, cycle2,
 #                                            probe_search, probe_train, ...)
 #   stage_monitor.sh stop  <outdir>          stop both samplers
 #
 # outputs under <outdir>:
-#   ps_samples.tsv   epoch_s \t phase \t stage \t pid \t nlwp \t rss_kb
+#   ps_samples.tsv   epoch_s \t phase \t stage \t pid \t nlwp \t rss_kb \t ppid
 #   gpu_samples.csv  timestamp, index, utilization.gpu [%], memory.used [MiB]
 #   phase            the current phase label
 #   monitor.pids     sampler pids
@@ -25,11 +26,21 @@
 # the random bootstrap (no CUDA context, cpp/program/setup.cpp:126), while probe_search
 # and -- if the gate accepted -- cycle2 selfplay run an exported net with a live CUDA
 # context. audit_smoke.py reports nlwp_max per (phase, stage) as well as per stage.
+#
+# SCOPE (repair after job 298712): `ps -e` lists EVERY process on the node, and a b200
+# node is shared. In 298712 three foreign PIDs (317109, 322317, 323223) whose command
+# lines contain "train.py" were sampled from before leg A to the end of leg E and put
+# nlwp_max=36 on the `train` stage, which our own trainer never reached (14, PIDs 325065
+# and 331077). The sampler now walks each candidate's ppid chain and keeps only
+# processes descended from ROOT_PID -- the job script itself -- so no other tenant's
+# process can enter the measurement. The raw ps_samples.tsv carries the ppid too, so
+# the attribution is re-checkable after the fact.
 
 set -u
 
 ACTION="${1:-}"
 OUT="${2:-}"
+ROOT_PID_ARG="${3:-}"
 
 if [ -z "$ACTION" ] || [ -z "$OUT" ]; then
   echo "usage: $0 start|phase|stop <outdir> [label]" >&2
@@ -41,24 +52,43 @@ GPU_FILE="$OUT/gpu_samples.csv"
 RUN_FILE="$OUT/monitor.run"
 PID_FILE="$OUT/monitor.pids"
 PHASE_FILE="$OUT/phase"
+ROOT_FILE="$OUT/monitor.rootpid"
 
 sample_ps() {
   # One ps sweep per 0.2 s. Classification is on the command line, so it catches the
   # engine both as ./bin/katago (loop, run out of the dated archive) and as an absolute
-  # $KATAGO_BIN path (the probes).
+  # $KATAGO_BIN path (the probes). Only descendants of ROOT_PID are recorded.
+  local root
+  root="$(cat "$ROOT_FILE" 2>/dev/null || echo 1)"
   while [ -e "$RUN_FILE" ]; do
     now="$(date +%s.%N)"
     ph="$(cat "$PHASE_FILE" 2>/dev/null || echo unknown)"
-    ps -eo pid=,nlwp=,rss=,args= 2>/dev/null | while read -r pid nlwp rss args; do
-      case "$args" in
-        *"katago selfplay"*)   stage=selfplay ;;
-        *"katago gatekeeper"*) stage=gatekeeper ;;
-        *train.py*)            stage=train ;;
-        *shuffle.py*)          stage=shuffle ;;
-        *)                     continue ;;
-      esac
-      printf '%s\t%s\t%s\t%s\t%s\t%s\n' "$now" "$ph" "$stage" "$pid" "$nlwp" "$rss"
-    done >> "$PS_FILE"
+    ps -eo pid=,ppid=,nlwp=,rss=,args= 2>/dev/null | awk -v now="$now" -v ph="$ph" -v root="$root" '
+      {
+        pid = $1; ppid = $2; nlwp = $3; rss = $4
+        parent[pid] = ppid
+        args = ""
+        for (i = 5; i <= NF; i++) args = args $i " "
+        if (index(args, "katago selfplay"))        stage = "selfplay"
+        else if (index(args, "katago gatekeeper")) stage = "gatekeeper"
+        else if (index(args, "train.py"))          stage = "train"
+        else if (index(args, "shuffle.py"))        stage = "shuffle"
+        else next
+        n_pid[++n] = pid; n_ppid[n] = ppid; n_nlwp[n] = nlwp; n_rss[n] = rss; n_stage[n] = stage
+      }
+      END {
+        for (i = 1; i <= n; i++) {
+          # walk the ppid chain up to root; bounded so a cycle cannot hang the sweep
+          p = n_pid[i]; ours = 0
+          for (hops = 0; hops < 64; hops++) {
+            if (p == root) { ours = 1; break }
+            if (p == 1 || p == 0 || !(p in parent)) break
+            p = parent[p]
+          }
+          if (ours)
+            printf "%s\t%s\t%s\t%s\t%s\t%s\t%s\n", now, ph, n_stage[i], n_pid[i], n_nlwp[i], n_rss[i], n_ppid[i]
+        }
+      }' >> "$PS_FILE"
     sleep 0.2
   done
 }
@@ -74,6 +104,10 @@ sample_gpu() {
 case "$ACTION" in
   start)
     mkdir -p "$OUT"
+    # Default root: the process that invoked this script (the job script), so every
+    # stage the job starts is a descendant and nothing else is.
+    if [ -n "$ROOT_PID_ARG" ]; then echo "$ROOT_PID_ARG" > "$ROOT_FILE"; else echo "$PPID" > "$ROOT_FILE"; fi
+    echo "stage_monitor: root pid = $(cat "$ROOT_FILE") (only its descendants are sampled)"
     : > "$RUN_FILE"
     echo "boot" > "$PHASE_FILE"
     touch "$PS_FILE" "$GPU_FILE"

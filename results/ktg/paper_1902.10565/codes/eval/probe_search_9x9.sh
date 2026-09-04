@@ -2,7 +2,7 @@
 # probe_search_9x9.sh -- mission ktg-train, task paper_code_map_search section 2.
 # Leg D1 of codes/loop/smoke_loop.sbatch. No job of its own (section 13 of that task).
 #
-#   usage: probe_search_9x9.sh [NGAMES]        default 20
+#   usage: probe_search_9x9.sh [NGAMES] [nofork]   default 20, forks left at cfg values
 #
 # Runs NGAMES selfplay games with the mission 9x9 config and the six -override-config
 # keys that make the two visit regimes distinguishable in the log, against a REAL
@@ -30,6 +30,7 @@ set -u
 set -o pipefail
 
 NGAMES="${1:-20}"
+NOFORK="${2:-}"
 
 KTG_ROOT="${KTG_ROOT:-/scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train}"
 AZ_ROOT="${AZ_ROOT:-/home/schmidt/ssci-haiyangw/az}"
@@ -83,6 +84,17 @@ mkdir -p "$WP/selfplay" "$WP/models/$MODEL_NAME" "$WP/logs"
 ln -sfn "$MODEL_SRC" "$WP/models/$MODEL_NAME/model.bin.gz"
 
 OVERRIDES='logSearchInfo=true,logGamesEvery=1,reduceVisits=false,normalAsymmetricPlayoutProb=0.0,handicapAsymmetricPlayoutProb=0.0,estimateLeadProb=0.0'
+if [ "$NOFORK" = "nofork" ]; then
+  # tasks/paper_code_map_search section 11: a fork halves cheapSearchProb for six turns
+  # (cpp/program/play.cpp:1127-1129), which biases full_frac UPWARD. Job 298712 measured
+  # full_frac = 0.3330 with forks at their cfg values (earlyForkGameProb = 0.04,
+  # forkGameProb = 0.04), above the [0.20, 0.30] band; the risk table's prescribed second
+  # recorded row switches forks off so the measurement isolates cheapSearchProb alone.
+  # The four MEASURED keys (cheapSearchProb, cheapSearchVisits, maxVisits,
+  # rootDesiredPerChildVisitsCoeff) are still never touched.
+  OVERRIDES="$OVERRIDES,earlyForkGameProb=0.0,forkGameProb=0.0"
+  echo "  fork-free variant: earlyForkGameProb and forkGameProb forced to 0 (only keys the cfg defines are overridden)"
+fi
 LOG="$WP/logs/probe_search.log"
 
 echo "  overrides  = $OVERRIDES"
@@ -105,7 +117,9 @@ if [ "$RC" -ne 0 ]; then
 fi
 
 echo
-python3 "$KTG_CODES/eval/probe_search_9x9.py" "$WP/selfplay" "$LOG" --json "$WP/probe_search.json"
+JSON_OUT="$WP/probe_search.json"
+[ "$NOFORK" = "nofork" ] && JSON_OUT="$WP/probe_search_nofork.json"
+python3 "$KTG_CODES/eval/probe_search_9x9.py" "$WP/selfplay" "$LOG" --json "$JSON_OUT"
 PYRC=$?
 
 # section 13: never keep the logSearchInfo log.

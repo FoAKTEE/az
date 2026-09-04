@@ -87,7 +87,10 @@ def main(argv):
     # ---- assertion 1: no trunk gpool ---------------------------------------
     config = modelconfigs.config_of_name[MODEL_KIND]
     model = Model(config, pos_len=POS_LEN)
-    trunk_gpool_count = sum(1 for m in model.trunk.modules()
+    # The trunk block container is Model.blocks (model_pytorch.py:3153, a ModuleList);
+    # there is no Model.trunk attribute at v1.18.2 -- job 298712 leg D2 died on that
+    # assumption with AttributeError: 'Model' object has no attribute 'trunk'.
+    trunk_gpool_count = sum(1 for m in model.blocks.modules()
                             if type(m).__name__ == "KataConvAndGPool")
     all_gpool_count = sum(1 for m in model.modules()
                           if type(m).__name__ == "KataConvAndGPool")
@@ -95,6 +98,8 @@ def main(argv):
                             if type(m).__name__ == "KataValueHeadGPool")
     block_kinds = [bk[1] for bk in config["block_kind"]]
     result.update({
+        "trunk_block_container": "Model.blocks (model_pytorch.py:3153)",
+        "trunk_blocks": len(model.blocks),
         "trunk_gpool_count": trunk_gpool_count,
         "model_gpool_count": all_gpool_count,
         "value_head_gpool_count": value_gpool_count,

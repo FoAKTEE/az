@@ -1,0 +1,17 @@
+{
+ "checkpoint": "/scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/runs/smoke/train/t9/checkpoint_prev0.ckpt",
+ "checkpoint_bytes": 10021767,
+ "exists": true,
+ "export_cycle_counter": 0,
+ "global_step_samples": 1216,
+ "label": "cycle1",
+ "running_metrics_nonfinite": [],
+ "running_metrics_nsamp": 1216.0,
+ "running_metrics_terms": 86,
+ "source": "checkpoint_prev0.ckpt (rotated cycle-1 save)",
+ "total_num_data_rows": 1221,
+ "train_bucket_level": 0,
+ "train_bucket_level_at_row": 1221,
+ "train_steps_since_last_reload": 1216,
+ "window_start_data_row_idx": 0
+}

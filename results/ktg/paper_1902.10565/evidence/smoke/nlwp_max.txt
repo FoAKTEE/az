@@ -1,0 +1,61 @@
+nlwp_max -- node arxiv-1902.10565::synchronous_loop_smoke, S9; obligation o03, claim c06
+cpus_per_task = 24   ps samples = 1114
+
+per stage:
+  gatekeeper   nlwp_max=25   rss_kb_max=4549468    samples=273     elapsed_s=209.48
+  selfplay     nlwp_max=25   rss_kb_max=1760412    samples=203     elapsed_s=315.43
+  shuffle      nlwp_max=4    rss_kb_max=39936      samples=44      elapsed_s=213.01
+  train        nlwp_max=14   rss_kb_max=3434752    samples=594     elapsed_s=335.64
+
+per phase/stage (phase 'cycle1' = random-net bootstrap, no CUDA context;
+'probe_search' and an accepted-net 'cycle2' are real-net with a live CUDA context):
+  cycle1/gatekeeper            nlwp_max=2    rss_kb_max=221916     samples=3       elapsed_s=0.52
+  cycle1/selfplay              nlwp_max=22   rss_kb_max=1497288    samples=25      elapsed_s=6.25
+  cycle1/shuffle               nlwp_max=4    rss_kb_max=39936      samples=22      elapsed_s=3.35
+  cycle1/train                 nlwp_max=14   rss_kb_max=3434752    samples=396     elapsed_s=125.62
+  cycle2/gatekeeper            nlwp_max=25   rss_kb_max=4549468    samples=270     elapsed_s=70.19
+  cycle2/selfplay              nlwp_max=22   rss_kb_max=1537412    samples=28      elapsed_s=6.95
+  cycle2/shuffle               nlwp_max=4    rss_kb_max=38912      samples=22      elapsed_s=3.35
+  cycle2/train                 nlwp_max=14   rss_kb_max=3160008    samples=113     elapsed_s=29.6
+  legA/selfplay                nlwp_max=22   rss_kb_max=1402512    samples=30      elapsed_s=7.76
+  probe_search/selfplay        nlwp_max=25   rss_kb_max=1760412    samples=120     elapsed_s=30.75
+  probe_train/train            nlwp_max=10   rss_kb_max=1909032    samples=85      elapsed_s=22.27
+
+sampling scope: node-wide ps -e (pre-repair sampler); foreign pids excluded by the legA rule
+foreign pids excluded: [317109, 322317, 323223]
+
+per process (the attribution the stage numbers are built from):
+  pid=317109   train       nlwp_max=36   rss_kb_max=2621608    samples=1331   elapsed_s=345.47   phases=cycle1,cycle2,legA,probe_search,probe_train   [EXCLUDED: foreign to this job]
+  pid=322317   train       nlwp_max=36   rss_kb_max=2654396    samples=85     elapsed_s=21.75    phases=cycle1,legA   [EXCLUDED: foreign to this job]
+  pid=323223   train       nlwp_max=36   rss_kb_max=2656448    samples=1331   elapsed_s=345.47   phases=cycle1,cycle2,legA,probe_search,probe_train   [EXCLUDED: foreign to this job]
+  pid=323672   selfplay    nlwp_max=5    rss_kb_max=304492     samples=6      elapsed_s=1.32     phases=legA
+  pid=323745   selfplay    nlwp_max=22   rss_kb_max=1402512    samples=24     elapsed_s=5.93     phases=legA
+  pid=324287   train       nlwp_max=1    rss_kb_max=2048       samples=1      elapsed_s=0.0      phases=cycle1
+  pid=324381   gatekeeper  nlwp_max=2    rss_kb_max=221916     samples=3      elapsed_s=0.52     phases=cycle1
+  pid=324406   selfplay    nlwp_max=22   rss_kb_max=1497288    samples=25     elapsed_s=6.25     phases=cycle1
+  pid=324615   shuffle     nlwp_max=4    rss_kb_max=39936      samples=14     elapsed_s=3.35     phases=cycle1
+  pid=324712   shuffle     nlwp_max=1    rss_kb_max=29100      samples=1      elapsed_s=0.0      phases=cycle1
+  pid=324713   shuffle     nlwp_max=1    rss_kb_max=33940      samples=1      elapsed_s=0.0      phases=cycle1
+  pid=324714   shuffle     nlwp_max=1    rss_kb_max=24728      samples=1      elapsed_s=0.0      phases=cycle1
+  pid=324715   shuffle     nlwp_max=1    rss_kb_max=24728      samples=1      elapsed_s=0.0      phases=cycle1
+  pid=324716   shuffle     nlwp_max=1    rss_kb_max=24728      samples=1      elapsed_s=0.0      phases=cycle1
+  pid=324717   shuffle     nlwp_max=1    rss_kb_max=24728      samples=1      elapsed_s=0.0      phases=cycle1
+  pid=324718   shuffle     nlwp_max=1    rss_kb_max=24732      samples=1      elapsed_s=0.0      phases=cycle1
+  pid=324719   shuffle     nlwp_max=1    rss_kb_max=24732      samples=1      elapsed_s=0.0      phases=cycle1
+  pid=325065   train       nlwp_max=14   rss_kb_max=3434752    samples=395    elapsed_s=102.4    phases=cycle1
+  pid=328662   gatekeeper  nlwp_max=25   rss_kb_max=4549468    samples=270    elapsed_s=70.19    phases=cycle2
+  pid=330480   selfplay    nlwp_max=22   rss_kb_max=1537412    samples=28     elapsed_s=6.95     phases=cycle2
+  pid=330702   shuffle     nlwp_max=4    rss_kb_max=38912      samples=14     elapsed_s=3.35     phases=cycle2
+  pid=330794   shuffle     nlwp_max=1    rss_kb_max=28892      samples=1      elapsed_s=0.0      phases=cycle2
+  pid=330795   shuffle     nlwp_max=1    rss_kb_max=34880      samples=1      elapsed_s=0.0      phases=cycle2
+  pid=330796   shuffle     nlwp_max=1    rss_kb_max=24644      samples=1      elapsed_s=0.0      phases=cycle2
+  pid=330797   shuffle     nlwp_max=1    rss_kb_max=24644      samples=1      elapsed_s=0.0      phases=cycle2
+  pid=330798   shuffle     nlwp_max=1    rss_kb_max=24644      samples=1      elapsed_s=0.0      phases=cycle2
+  pid=330799   shuffle     nlwp_max=1    rss_kb_max=24648      samples=1      elapsed_s=0.0      phases=cycle2
+  pid=330800   shuffle     nlwp_max=1    rss_kb_max=24648      samples=1      elapsed_s=0.0      phases=cycle2
+  pid=330801   shuffle     nlwp_max=1    rss_kb_max=24648      samples=1      elapsed_s=0.0      phases=cycle2
+  pid=331077   train       nlwp_max=14   rss_kb_max=3160008    samples=113    elapsed_s=29.6     phases=cycle2
+  pid=332406   selfplay    nlwp_max=25   rss_kb_max=1760412    samples=120    elapsed_s=30.75    phases=probe_search
+  pid=333416   train       nlwp_max=10   rss_kb_max=1909032    samples=28     elapsed_s=7.03     phases=probe_train
+  pid=333823   train       nlwp_max=1    rss_kb_max=1024       samples=29     elapsed_s=7.26     phases=probe_train
+  pid=333824   train       nlwp_max=10   rss_kb_max=1908964    samples=28     elapsed_s=7.0      phases=probe_train

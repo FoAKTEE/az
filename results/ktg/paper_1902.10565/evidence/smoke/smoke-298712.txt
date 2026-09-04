@@ -1,0 +1,1804 @@
+======================================================================
+ktg-smoke  job=298712  host=gb207  start=2026-09-04T09:20:48Z
+  basedir       = /scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/runs/smoke
+  codes         = /home/schmidt/ssci-haiyangw/az/results/ktg/paper_1902.10565/codes
+  evidence      = /home/schmidt/ssci-haiyangw/az/results/ktg/paper_1902.10565/evidence/smoke
+  cpus_per_task = 24   mem = 65536   gres = gpu:1
+======================================================================
+JobId=298712 JobName=ktg-smoke
+   UserId=ssci-haiyangw(30154) GroupId=users(30000) MCS_label=N/A
+   Priority=18287 Nice=0 Account=ssci-anima QOS=scavenger
+   JobState=RUNNING Reason=Prolog Dependency=(null)
+   Requeue=1 Restarts=0 BatchFlag=1 Reboot=0 ExitCode=0:0
+   RunTime=00:00:02 TimeLimit=03:00:00 TimeMin=N/A
+   SubmitTime=2026-09-04T01:26:11 EligibleTime=2026-09-04T01:26:11
+   AccrueTime=2026-09-04T01:26:11
+   StartTime=2026-09-04T05:20:47 EndTime=2026-09-04T08:20:47 Deadline=N/A
+   PreemptEligibleTime=2026-09-04T05:20:47 PreemptTime=None
+   SuspendTime=None SecsPreSuspend=0 LastSchedEval=2026-09-04T05:20:47 Scheduler=Backfill
+   Partition=b200 AllocNode:Sid=login03:1442284
+0, NVIDIA B200, 183359 MiB
+stage_monitor: started (ps pid 323522, gpu pid 323523) -> /scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/runs/smoke/monitor
+
+=== leg A: START  2026-09-04T09:20:49Z  (hard)
+rendered leg-A row -> /scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/runs/smoke/cfg_9x9_reappend_row.rendered.json (job 298712, node gb207)
+--- knowledge_database.py append (CHANDRA_ROLE=worker, no --skip-exec)
+{"appended": true, "git_commit": "9fdeb6b", "timestamp": "2026-09-04T09:20:49.697957+00:00", "paper": "arxiv-1902.10565", "node_id": "arxiv-1902.10565::cfg_9x9_override", "status": "preliminary", "evidence_sha256": "e39348bf760d7ef64980beb71117aa1c1d639c858ce31d64078fb5fc0629ddd3"}
+=== leg A: END    2026-09-04T09:20:58Z  exit=0  elapsed_s=9
+
+=== leg B: START  2026-09-04T09:20:58Z  (hard)
+smoke_one_cycle: label=cycle1 basedir=/scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/runs/smoke
+smoke_one_cycle: katago=/scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/build/KataGo/cpp/build/katago src=/scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/build/KataGo
+smoke_one_cycle: knobs games=40 samples_per_epoch=256 batch=32 reuse=8 minrows=200 keeprows=5000 cap=4000 taper=200 swa=128 epochs_per_export=1
+smoke_one_cycle: cycle log -> /scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/runs/smoke/logs/smoke_cycle1.txt
++ true
++ '[' -e /weka/scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/runs/smoke/STOP ']'
++ CYCLE_INDEX=1
++ set +x
+== scratch_guard 2026-09-04T05:20:59-04:00 [cycle 1 pre-gatekeeper] ==
+constants            : /weka/home/schmidt/ssci-haiyangw/az/results/ktg/paper_1902.10565/codes/data_budget/budget.env
+root                 : /scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train
+du -sb               : 7596906174	/scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train
+df -B1               : wekafs1/scratchssci 40000000000000 37102972456960 2897027543040 93% /weka/scratch/schmidt
+scratch_guard: WARNING quotas.py unreadable or unparseable at /apps/helpers/quotas.py; using df -B1 on the same pool
+projected write      : 21474836480 B
+projected root total : 29071742654 B   (hard cap 536870912000 B = 500 GiB)
+group scratch free   : 2897027543040 B   (source: df (quotas.py unavailable); fail floor 1099511627776 B, warn floor 1649267441664 B)
+scratch_guard: OK  used=7596906174 B  projected_total=29071742654 B  group_free=2897027543040 B
++ echo Gatekeeper
+Gatekeeper
++ ./bin/katago gatekeeper -rejected-models-dir /weka/scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/runs/smoke/rejectedmodels -accepted-models-dir /weka/scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/runs/smoke/models/ -sgf-output-dir /weka/scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/runs/smoke/gatekeepersgf/ -test-models-dir /weka/scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/runs/smoke/modelstobetested/ -config /weka/scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/runs/smoke/scripts/dated/20260904-052058/gatekeeper.cfg -quit-if-no-nets-to-test
++ tee -a /weka/scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/runs/smoke/gatekeepersgf/stdout.txt
+2026-09-04 05:21:00-0400: Running with following config:
+allowRectangleProb = 0
+allowResignation = true
+bSizeRelProbs = 1
+bSizes = 9
+chosenMovePrune = 1
+chosenMoveSubtract = 0
+chosenMoveTemperature = 0.2
+chosenMoveTemperatureEarly = 0.5
+chosenMoveTemperatureHalflife = 19
+cpuctExploration = 1.1
+cpuctExplorationLog = 0.0
+cudaUseFP16 = auto
+cudaUseNHWC = auto
+drawEquivalentWinsForWhite = 0.5
+dynamicScoreCenterScale = 0.50
+dynamicScoreCenterZeroWeight = 0.25
+dynamicScoreUtilityFactor = 0.25
+fpuReductionMax = 0.2
+handicapCompensateKomiProb = 1.0
+handicapProb = 0.0
+hasButtons = false,false,true
+koRules = SIMPLE,POSITIONAL,SITUATIONAL
+komiAuto = True
+lcbStdevs = 5.0
+logGamesEvery = 10
+logMoves = false
+logSearchInfo = false
+logToStdout = true
+maxMovesPerGame = 1600
+maxVisits = 150
+minVisitPropForLCB = 0.15
+multiStoneSuicideLegals = false,true
+nnCacheSizePowerOfTwo = 21
+nnMaxBatchSize = 128
+nnMutexPoolSizePowerOfTwo = 15
+nnRandomize = true
+noResultUtilityForWhite = 0.0
+numGameThreads = 18
+numGamesPerGating = 200
+numNNServerThreadsPerModel = 1
+numSearchThreads = 1
+numVirtualLossesPerThread = 1
+policyOptimism = 1.0
+resignConsecTurns = 5
+resignThreshold = -0.90
+rootEndingBonusPoints = 0.5
+rootFpuReductionMax = 0.1
+rootPolicyOptimism = 0.0
+rootPruneUselessMoves = true
+scoringRules = AREA,TERRITORY
+staticScoreUtilityFactor = 0.00
+subtreeValueBiasFactor = 0.35
+subtreeValueBiasWeightExponent = 0.8
+taxRules = NONE,NONE,SEKI,SEKI,ALL
+uncertaintyCoeff = 0.25
+uncertaintyExponent = 1.0
+useGraphSearch = true
+useLcbForSelection = true
+useNonBuggyLcb = true
+useUncertainty = true
+valueWeightExponent = 0.5
+winLossUtilityFactor = 1.0
+
+2026-09-04 05:21:01-0400: Gatekeeper Engine starting...
+2026-09-04 05:21:01-0400: Git revision: fd0723fdbc0e9d82cf269c9630af8c27c57c07c4-dirty
+2026-09-04 05:21:01-0400: Required candidate win prop: 0.5
+2026-09-04 05:21:01-0400: Loaded all config stuff, watching for new neural nets in /weka/scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/runs/smoke/modelstobetested/
+2026-09-04 05:21:01-0400: All cleaned up, quitting
+
+real	0m0.841s
+user	0m0.061s
+sys	0m0.748s
++ echo Selfplay
+Selfplay
++ ./bin/katago selfplay -max-games-total 40 -output-dir /weka/scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/runs/smoke/selfplay -models-dir /weka/scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/runs/smoke/models -config /weka/scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/runs/smoke/scripts/dated/20260904-052058/selfplay.cfg
++ tee -a /weka/scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/runs/smoke/selfplay/stdout.txt
+2026-09-04 05:21:01-0400: Running with following config:
+allowRectangleProb = 0
+bSizeRelProbs = 1
+bSizes = 9
+cheapSearchProb = 0.75
+cheapSearchTargetWeight = 0.0
+cheapSearchVisits = 100
+chosenMovePrune = 1
+chosenMoveSubtract = 0
+chosenMoveTemperature = 0.15
+chosenMoveTemperatureEarly = 0.75
+chosenMoveTemperatureHalflife = 19
+compensateAfterPolicyInitProb = 0.2
+cpuctExploration = 1.1
+cpuctExplorationLog = 0.0
+cudaUseFP16 = auto
+cudaUseNHWC = auto
+dataBoardLen = 9
+drawEquivalentWinsForWhite = 0.5
+drawRandRadius = 0.5
+dynamicScoreCenterScale = 0.50
+dynamicScoreCenterZeroWeight = 0.25
+dynamicScoreUtilityFactor = 0.40
+earlyForkGameExpectedMoveProp = 0.025
+earlyForkGameMaxChoices = 12
+earlyForkGameProb = 0.04
+estimateLeadProb = 0.05
+fancyKomiVarying = true
+firstFileRandMinProp = 0.15
+forkCompensateKomiProb = 0.80
+forkGameMaxChoices = 36
+forkGameMinChoices = 3
+forkGameProb = 0.01
+fpuParentWeightByVisitedPolicy = true
+fpuParentWeightByVisitedPolicyPow = 2.0
+fpuReductionMax = 0.2
+handicapAsymmetricPlayoutProb = 0.5
+handicapCompensateKomiProb = 0.50
+handicapProb = 0.10
+hasButtons = false,false,true
+initGamesWithPolicy = true
+koRules = SIMPLE,POSITIONAL,SITUATIONAL
+komiAuto = True
+komiBigStdev = 12.0
+komiBigStdevProb = 0.06
+komiStdev = 1.0
+lcbStdevs = 5.0
+logGamesEvery = 10
+logMoves = false
+logSearchInfo = false
+logToStdout = true
+maxAsymmetricRatio = 8.0
+maxDataQueueSize = 2000
+maxMovesPerGame = 1600
+maxRowsPerTrainFile = 10000
+maxVisits = 600
+minAsymmetricCompensateKomiProb = 0.4
+minVisitPropForLCB = 0.15
+multiStoneSuicideLegals = false,true
+nnCacheSizePowerOfTwo = 21
+nnMaxBatchSize = 128
+nnMutexPoolSizePowerOfTwo = 15
+nnRandomize = true
+noResultStdev = 0.166666666
+noResultUtilityForWhite = 0.0
+normalAsymmetricPlayoutProb = 0.01
+numGameThreads = 18
+numNNServerThreadsPerModel = 1
+numSearchThreads = 1
+numVirtualLossesPerThread = 1
+policyInitAreaProp = 0.04
+policySurpriseDataWeight = 0.5
+reduceVisits = true
+reduceVisitsThreshold = 0.9
+reduceVisitsThresholdLookback = 3
+reducedVisitsMin = 100
+reducedVisitsWeight = 0.1
+rootDesiredPerChildVisitsCoeff = 2
+rootDirichletNoiseTotalConcentration = 10.83
+rootDirichletNoiseWeight = 0.25
+rootEndingBonusPoints = 0.5
+rootFpuReductionMax = 0.0
+rootNoiseEnabled = true
+rootNumSymmetriesToSample = 4
+rootPolicyTemperature = 1.1
+rootPolicyTemperatureEarly = 1.25
+rootPruneUselessMoves = true
+scoringRules = AREA,TERRITORY
+sekiForkHackProb = 0.02
+sgfCompensateKomiProb = 0.90
+sidePositionProb = 0.020
+staticScoreUtilityFactor = 0.00
+subtreeValueBiasFactor = 0.30
+subtreeValueBiasWeightExponent = 0.8
+switchNetsMidGame = true
+taxRules = NONE,NONE,SEKI,SEKI,ALL
+useGraphSearch = true
+useLcbForSelection = true
+useNonBuggyLcb = true
+valueSurpriseDataWeight = 0.1
+valueWeightExponent = 0.5
+winLossUtilityFactor = 1.0
+
+2026-09-04 05:21:01-0400: Self Play Engine starting...
+2026-09-04 05:21:01-0400: Git revision: fd0723fdbc0e9d82cf269c9630af8c27c57c07c4-dirty
+2026-09-04 05:21:01-0400: Loaded all config stuff, starting self play
+2026-09-04 05:21:01-0400: Found new neural net random
+2026-09-04 05:21:01-0400: nnRandSeed0 = 6927690622871813980
+2026-09-04 05:21:01-0400: After dedups: nnModelFile0 = /dev/null useFP16 auto
+2026-09-04 05:21:01-0400: Initializing neural net buffer to be size 9 * 9 exactly
+2026-09-04 05:21:01-0400: Loaded latest neural net random from: /dev/null
+2026-09-04 05:21:01-0400: Model loading loop thread loaded new neural net random
+2026-09-04 05:21:01-0400: --------------
+2026-09-04 05:21:01-0400: WARNING: Config had unused keys! You may have a typo, an option you specified is being unused from /weka/scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/runs/smoke/scripts/dated/20260904-052058/selfplay.cfg
+2026-09-04 05:21:01-0400: WARNING: Unused key 'cudaUseNHWC' in /weka/scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/runs/smoke/scripts/dated/20260904-052058/selfplay.cfg
+2026-09-04 05:21:01-0400: --------------
+--------------
+WARNING: Config had unused keys! You may have a typo, an option you specified is being unused from /weka/scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/runs/smoke/scripts/dated/20260904-052058/selfplay.cfg
+WARNING: Unused key 'cudaUseNHWC' in /weka/scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/runs/smoke/scripts/dated/20260904-052058/selfplay.cfg
+--------------
+2026-09-04 05:21:01-0400: Data write loop starting for neural net: random
+2026-09-04 05:21:01-0400: Game loop thread 0 starting game on new neural net: random
+2026-09-04 05:21:01-0400: Game loop thread 1 starting game on new neural net: random
+2026-09-04 05:21:01-0400: Game loop thread 2 starting game on new neural net: random
+2026-09-04 05:21:01-0400: Game loop thread 3 starting game on new neural net: random
+2026-09-04 05:21:01-0400: Game loop thread 4 starting game on new neural net: random
+2026-09-04 05:21:01-0400: Game loop thread 5 starting game on new neural net: random
+2026-09-04 05:21:01-0400: Game loop thread 6 starting game on new neural net: random
+2026-09-04 05:21:01-0400: Game loop thread 7 starting game on new neural net: random
+2026-09-04 05:21:01-0400: Game loop thread 8 starting game on new neural net: random
+2026-09-04 05:21:01-0400: Game loop thread 9 starting game on new neural net: random
+2026-09-04 05:21:01-0400: Started 10 games with random
+2026-09-04 05:21:01-0400: Game loop thread 14 starting game on new neural net: random
+2026-09-04 05:21:01-0400: Game loop thread 15 starting game on new neural net: random
+2026-09-04 05:21:01-0400: Game loop thread 10 starting game on new neural net: random
+2026-09-04 05:21:01-0400: Game loop thread 11 starting game on new neural net: random
+2026-09-04 05:21:01-0400: Game loop thread 16 starting game on new neural net: random
+2026-09-04 05:21:01-0400: Game loop thread 17 starting game on new neural net: random
+2026-09-04 05:21:01-0400: Model loading loop thread starting
+2026-09-04 05:21:01-0400: Game loop thread 12 starting game on new neural net: random
+2026-09-04 05:21:01-0400: Game loop thread 13 starting game on new neural net: random
+2026-09-04 05:21:03-0400: Started 20 games with random
+2026-09-04 05:21:04-0400: Started 30 games with random
+2026-09-04 05:21:05-0400: Started 40 games with random
+2026-09-04 05:21:05-0400: Game loop thread 5 terminating
+2026-09-04 05:21:05-0400: Game loop thread 9 terminating
+2026-09-04 05:21:05-0400: Game loop thread 2 terminating
+2026-09-04 05:21:05-0400: Game loop thread 8 terminating
+2026-09-04 05:21:05-0400: Game loop thread 16 terminating
+2026-09-04 05:21:05-0400: Game loop thread 10 terminating
+2026-09-04 05:21:05-0400: Game loop thread 4 terminating
+2026-09-04 05:21:05-0400: Game loop thread 1 terminating
+2026-09-04 05:21:05-0400: Game loop thread 12 terminating
+2026-09-04 05:21:05-0400: Game loop thread 17 terminating
+2026-09-04 05:21:05-0400: Game loop thread 14 terminating
+2026-09-04 05:21:05-0400: Game loop thread 13 terminating
+2026-09-04 05:21:06-0400: Game loop thread 11 terminating
+2026-09-04 05:21:06-0400: Game loop thread 7 terminating
+2026-09-04 05:21:06-0400: Game loop thread 6 terminating
+2026-09-04 05:21:06-0400: Game loop thread 15 terminating
+2026-09-04 05:21:06-0400: Game loop thread 3 terminating
+2026-09-04 05:21:06-0400: Game loop thread 0 terminating
+2026-09-04 05:21:06-0400: Model loading loop thread terminating
+2026-09-04 05:21:07-0400: Data write loop finishing for neural net: random
+2026-09-04 05:21:07-0400: Final cleanup of net: /dev/null
+2026-09-04 05:21:07-0400: Final games finished: 40
+2026-09-04 05:21:07-0400: Final moves played: 4509
+2026-09-04 05:21:07-0400: Final data rows: 1221
+2026-09-04 05:21:07-0400: Final NN rows: 0
+2026-09-04 05:21:07-0400: Final NN batches: 0
+2026-09-04 05:21:07-0400: Final NN avg batch size: -nan
+2026-09-04 05:21:07-0400: Final NN cache hits: 55116
+2026-09-04 05:21:07-0400: GPU -1 finishing, processed 0 rows 0 batches
+2026-09-04 05:21:07-0400: Data write loop cleaned up and terminating for random
+2026-09-04 05:21:07-0400: Total games: 58
+2026-09-04 05:21:07-0400: Total selfplay runtime (seconds): 5.82809
+2026-09-04 05:21:08-0400: All cleaned up, quitting
+
+real	0m6.643s
+user	0m19.139s
+sys	0m4.996s
++ echo Shuffle
+Shuffle
++ SKIP_VALIDATE=1
++ ./shuffle.sh /weka/scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/runs/smoke /weka/scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/runs/smoke/shufflescratch 8 -min-rows 200 -keep-target-rows 5000 -taper-window-scale 200
++ tee -a /weka/scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/runs/smoke/logs/outshuffle.txt
+Beginning shuffle at 2026-09-04 05:21:08
+Command: ./shuffle.py /weka/scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/runs/smoke/selfplay/ -expand-window-per-row 0.4 -taper-window-exponent 0.65 -out-dir /weka/scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/runs/smoke/shuffleddata/20260904-052108.tmp/train -out-tmp-dir /weka/scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/runs/smoke/shufflescratch/train -approx-rows-per-out-file 70000 -num-processes 8 -keep-target-rows 20000000 -only-include-md5-path-prop-lbound 0.00 -only-include-md5-path-prop-ubound 1.00 -min-rows 200 -keep-target-rows 5000 -taper-window-scale 200
+Beginning: Finding files
+Finished: Finding files in 0.004468441009521484 seconds
+Total number of files: 1
+Total number of files with unknown row count: 1
+Excluded count: 0
+Excluded count due to looking like temp file: 0
+Excluded count due to cmdline excludes file: 0
+GC collect
+Beginning: Sorting
+Finished: Sorting in 3.5762786865234375e-06 seconds
+Beginning: Computing rows for unsummarized files
+Finished: Computing rows for unsummarized files in 0.02762770652770996 seconds
+Beginning: Processing found files
+Finished: Processing found files in 4.0531158447265625e-06 seconds
+Total rows found: 1221 (200 usable)
+Desired num rows: 200 / 1221
+Beginning: Computing desired rows
+Using: /weka/scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/runs/smoke/selfplay/random/tdata/33785D4998C6F9A3.npz (0-1221) (1221/200 desired rows)
+Finished: Computing desired rows in 8.58306884765625e-06 seconds
+Finally, using: (0-1221) (1221/200 desired rows)
+GC collect
+Due to only_include_md5, filtering down to 1/1 files
+==================================================================
+RESOURCE COST ESTIMATE (estimate for this run)
+  ROUGH estimate, assumes 19x19 data and typical measured per-row sizes.
+  Final input rows to shuffle: 1.2K
+  Per-row uncompressed size: 7.50 KB
+  Per-row final compressed size: 921.02 B
+  Final compressed dataset size: 1.07 MB
+  Output: ~1.2K rows in ~1 files (1 buckets x 1 files/bucket)
+  Sharding groups: ~1
+  Peak intermediate shard files: ~1 (1 groups x 1 buckets)
+  Avg rows per shard file: ~1221.0, per row compressed size 922.35 B, ~1.0x ideal (overly small shard files may compress less well)
+  Peak intermediate temp disk: ~1.07 MB
+  Peak memory, shardify: ~1.72 GB/worker x 8 = ~13.72 GB
+  Peak memory, merge:    ~1.50 GB/worker x 8 = ~12.01 GB
+==================================================================
+Writing ~1 output files (1 buckets x 1 files/bucket), approx 1221 kept rows (keep_prob 1.0000 of 1221 desired rows, 200 pre-md5 rows)
+[whole] Grouping 1 input files into 1 sharding groups, 1 buckets, 1 output files/bucket
+Beginning: [whole] Sharding
+Finished: [whole] Sharding in 0.0707709789276123 seconds
+Beginning: [whole] Merging
+Finished: [whole] Merging in 0.09014701843261719 seconds
+Number of rows by output file:
+[('/weka/scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/runs/smoke/shuffleddata/20260904-052108.tmp/train/data0_0.npz', 1221)]
+
+real	0m3.553s
+user	0m0.668s
+sys	0m0.126s
+Cleaning up any old dirs
+Finished shuffle at 2026-09-04 05:21:22
+
+
+
+real	0m13.779s
+user	0m0.689s
+sys	0m0.178s
++ echo Train
+Train
++ ./train_9x9.sh /weka/scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/runs/smoke t9 b7c96h3tfrs 32 main -samples-per-epoch 256 -swa-period-samples 128 -epochs-per-export 1 -max-epochs-this-instance 1 -quit-if-no-data -stop-when-train-bucket-limited -no-repeat-files -max-train-bucket-per-new-data 8 -max-train-bucket-size 4000
++ mkdir -p /weka/scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/runs/smoke/train/t9
+++ pwd
+++ grep '^/weka/scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/runs/smoke/scripts/'
++ [[ -n /weka/scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/runs/smoke/scripts/dated/20260904-052058 ]]
++ echo 'Already running out of snapshotted scripts directory, not snapshotting again'
+Already running out of snapshotted scripts directory, not snapshotting again
++ '[' main == main ']'
++ EXPORT_SUBDIR=torchmodels_toexport
++ EXTRAFLAG=
++ python3 ./train.py -traindir /weka/scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/runs/smoke/train/t9 -latestdatadir /weka/scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/runs/smoke/shuffleddata/ -exportdir /weka/scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/runs/smoke/torchmodels_toexport -exportprefix t9 -pos-len 9 -batch-size 32 -model-kind b7c96h3tfrs -samples-per-epoch 256 -swa-period-samples 128 -epochs-per-export 1 -max-epochs-this-instance 1 -quit-if-no-data -stop-when-train-bucket-limited -no-repeat-files -max-train-bucket-per-new-data 8 -max-train-bucket-size 4000
++ tee -a /weka/scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/runs/smoke/train/t9/stdout.txt
+['./train.py', '-traindir', '/weka/scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/runs/smoke/train/t9', '-latestdatadir', '/weka/scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/runs/smoke/shuffleddata/', '-exportdir', '/weka/scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/runs/smoke/torchmodels_toexport', '-exportprefix', 't9', '-pos-len', '9', '-batch-size', '32', '-model-kind', 'b7c96h3tfrs', '-samples-per-epoch', '256', '-swa-period-samples', '128', '-epochs-per-export', '1', '-max-epochs-this-instance', '1', '-quit-if-no-data', '-stop-when-train-bucket-limited', '-no-repeat-files', '-max-train-bucket-per-new-data', '8', '-max-train-bucket-size', '4000']
+Using GPU device: NVIDIA B200
+Seeding torch with 67289711629923129
+No preexisting checkpoint found at: /weka/scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/runs/smoke/train/t9/checkpoint.ckpt
+Initializing new model!
+{'version': 17, 'norm_kind': 'fixup', 'bnorm_epsilon': 0.0001, 'bnorm_running_avg_momentum': 0.001, 'initial_conv_1x1': False, 'gamma_weight_decay_center_1': True, 'trunk_num_channels': 96, 'mid_num_channels': 96, 'gpool_num_channels': 32, 'transformer_ffn_channels': 256, 'transformer_heads': 3, 'transformer_kv_heads': 3, 'block_kind': [['attn1', 'attnrope'], ['ffn1', 'ffnsg'], ['attn2', 'attnrope'], ['ffn2', 'ffnsg'], ['attn3', 'attnrope'], ['ffn3', 'ffnsg'], ['attn4', 'attnrope'], ['ffn4', 'ffnsg'], ['attn5', 'attnrope'], ['ffn5', 'ffnsg'], ['attn6', 'attnrope'], ['ffn6', 'ffnsg'], ['attn7', 'attnrope'], ['ffn7', 'ffnsg']], 'p1_num_channels': 32, 'g1_num_channels': 32, 'v1_num_channels': 32, 'sbv2_num_channels': 48, 'num_scorebeliefs': 4, 'v2_size': 64}
+Training model wrapper: single GPU, compile=True, compile_mode=default, DDP environment flags ignored
+Model norm normal baseline computed: 37.667118072509766
+Model norm input baseline computed: 13.901227951049805
+swa_period_samples 128.0
+swa_scale 8
+lookahead_alpha 0.5
+lookahead_k 6
+soft_policy_weight_scale 8.0
+disable_optimistic_policy False
+meta_kata_only_soft_policy False
+value_loss_scale 0.6
+td_value_loss_scales [0.6, 0.6, 0.6]
+seki_loss_scale 1.0
+variance_time_loss_scale 1.0
+main_loss_scale None
+intermediate_loss_scale None
+head_lr_factor 0.5
+noreg_lr_factor 1.0
+muon_adam_lr_factor 1.0
+Model norm normal baseline: 37.667118072509766
+Model norm input baseline: 13.901227951049805
+Parameters in model:
+conv_spatial.weight, [96, 22, 3, 3], 19008 params
+linear_global.weight, [96, 19], 1824 params
+blocks.0.q_proj.weight, [96, 96], 9216 params
+blocks.0.k_proj.weight, [96, 96], 9216 params
+blocks.0.v_proj.weight, [96, 96], 9216 params
+blocks.0.out_proj.weight, [96, 96], 9216 params
+blocks.0.norm1.weight, [96], 96 params
+blocks.1.ffn_linear1.weight, [256, 96], 24576 params
+blocks.1.ffn_linear_gate.weight, [256, 96], 24576 params
+blocks.1.ffn_linear2.weight, [96, 256], 24576 params
+blocks.1.norm.weight, [96], 96 params
+blocks.2.q_proj.weight, [96, 96], 9216 params
+blocks.2.k_proj.weight, [96, 96], 9216 params
+blocks.2.v_proj.weight, [96, 96], 9216 params
+blocks.2.out_proj.weight, [96, 96], 9216 params
+blocks.2.norm1.weight, [96], 96 params
+blocks.3.ffn_linear1.weight, [256, 96], 24576 params
+blocks.3.ffn_linear_gate.weight, [256, 96], 24576 params
+blocks.3.ffn_linear2.weight, [96, 256], 24576 params
+blocks.3.norm.weight, [96], 96 params
+blocks.4.q_proj.weight, [96, 96], 9216 params
+blocks.4.k_proj.weight, [96, 96], 9216 params
+blocks.4.v_proj.weight, [96, 96], 9216 params
+blocks.4.out_proj.weight, [96, 96], 9216 params
+blocks.4.norm1.weight, [96], 96 params
+blocks.5.ffn_linear1.weight, [256, 96], 24576 params
+blocks.5.ffn_linear_gate.weight, [256, 96], 24576 params
+blocks.5.ffn_linear2.weight, [96, 256], 24576 params
+blocks.5.norm.weight, [96], 96 params
+blocks.6.q_proj.weight, [96, 96], 9216 params
+blocks.6.k_proj.weight, [96, 96], 9216 params
+blocks.6.v_proj.weight, [96, 96], 9216 params
+blocks.6.out_proj.weight, [96, 96], 9216 params
+blocks.6.norm1.weight, [96], 96 params
+blocks.7.ffn_linear1.weight, [256, 96], 24576 params
+blocks.7.ffn_linear_gate.weight, [256, 96], 24576 params
+blocks.7.ffn_linear2.weight, [96, 256], 24576 params
+blocks.7.norm.weight, [96], 96 params
+blocks.8.q_proj.weight, [96, 96], 9216 params
+blocks.8.k_proj.weight, [96, 96], 9216 params
+blocks.8.v_proj.weight, [96, 96], 9216 params
+blocks.8.out_proj.weight, [96, 96], 9216 params
+blocks.8.norm1.weight, [96], 96 params
+blocks.9.ffn_linear1.weight, [256, 96], 24576 params
+blocks.9.ffn_linear_gate.weight, [256, 96], 24576 params
+blocks.9.ffn_linear2.weight, [96, 256], 24576 params
+blocks.9.norm.weight, [96], 96 params
+blocks.10.q_proj.weight, [96, 96], 9216 params
+blocks.10.k_proj.weight, [96, 96], 9216 params
+blocks.10.v_proj.weight, [96, 96], 9216 params
+blocks.10.out_proj.weight, [96, 96], 9216 params
+blocks.10.norm1.weight, [96], 96 params
+blocks.11.ffn_linear1.weight, [256, 96], 24576 params
+blocks.11.ffn_linear_gate.weight, [256, 96], 24576 params
+blocks.11.ffn_linear2.weight, [96, 256], 24576 params
+blocks.11.norm.weight, [96], 96 params
+blocks.12.q_proj.weight, [96, 96], 9216 params
+blocks.12.k_proj.weight, [96, 96], 9216 params
+blocks.12.v_proj.weight, [96, 96], 9216 params
+blocks.12.out_proj.weight, [96, 96], 9216 params
+blocks.12.norm1.weight, [96], 96 params
+blocks.13.ffn_linear1.weight, [256, 96], 24576 params
+blocks.13.ffn_linear_gate.weight, [256, 96], 24576 params
+blocks.13.ffn_linear2.weight, [96, 256], 24576 params
+blocks.13.norm.weight, [96], 96 params
+norm_trunkfinal.beta, [1, 96, 1, 1], 96 params
+policy_head.conv1p.weight, [32, 96, 1, 1], 3072 params
+policy_head.conv1g.weight, [32, 96, 1, 1], 3072 params
+policy_head.biasg.beta, [1, 32, 1, 1], 32 params
+policy_head.linear_g.weight, [32, 96], 3072 params
+policy_head.linear_pass.weight, [32, 96], 3072 params
+policy_head.linear_pass.bias, [32], 32 params
+policy_head.linear_pass2.weight, [6, 32], 192 params
+policy_head.bias2.beta, [1, 32, 1, 1], 32 params
+policy_head.conv2p.weight, [6, 32, 1, 1], 192 params
+value_head.conv1.weight, [32, 96, 1, 1], 3072 params
+value_head.bias1.beta, [1, 32, 1, 1], 32 params
+value_head.linear2.weight, [64, 96], 6144 params
+value_head.linear2.bias, [64], 64 params
+value_head.linear_valuehead.weight, [3, 64], 192 params
+value_head.linear_valuehead.bias, [3], 3 params
+value_head.linear_miscvaluehead.weight, [10, 64], 640 params
+value_head.linear_miscvaluehead.bias, [10], 10 params
+value_head.linear_moremiscvaluehead.weight, [8, 64], 512 params
+value_head.linear_moremiscvaluehead.bias, [8], 8 params
+value_head.conv_ownership.weight, [1, 32, 1, 1], 32 params
+value_head.conv_scoring.weight, [1, 32, 1, 1], 32 params
+value_head.conv_futurepos.weight, [2, 96, 1, 1], 192 params
+value_head.conv_seki.weight, [4, 96, 1, 1], 384 params
+value_head.linear_s2.weight, [48, 96], 4608 params
+value_head.linear_s2.bias, [48], 48 params
+value_head.linear_s2off.weight, [48, 1], 48 params
+value_head.linear_s2par.weight, [48, 1], 48 params
+value_head.linear_s3.weight, [4, 48], 192 params
+value_head.linear_s3.bias, [4], 4 params
+value_head.linear_smix.weight, [4, 96], 384 params
+value_head.linear_smix.bias, [4], 4 params
+Total num params: 825837
+Total trainable params: 825837
+Optimizer: SGD
+Using lookahead optimizer 0.5 6
+model_norms_only_at_print True
+Compiling training loss with mode=default
+Training in FP32.
+Using torch.compile mode=default
+float32 matmul precision: default
+Updated training data: /weka/scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/runs/smoke/shuffleddata/20260904-052108
+Train steps since last reload: 0 -> 0
+Dropping 0/1 already-used files in: /weka/scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/runs/smoke/shuffleddata/20260904-052108/train (no_repeat_files=True, never reused)
+Consuming 256 rows from train bucket (256 -> 0)
+GC collect
+=========================================================================
+BEGINNING NEXT EPOCH 0
+=========================================================================
+Current time: 2026-09-04 05:21:30.770486
+Global step: 0 samples
+Currently up to data row 1221
+Training dir: /weka/scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/runs/smoke/train/t9
+Export dir: /weka/scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/runs/smoke/torchmodels_toexport
+Export cycle counter = 0
+Param group input lr 3e-06 weight_decay 1.25e-07
+Param group normal lr 3e-06 weight_decay 1.25e-07
+Param group normal_attn lr 3e-06 weight_decay 6.25e-08
+Param group noreg lr 3e-06 weight_decay 1.25e-09
+Param group output lr 1.5e-06 weight_decay 1.25e-07
+Param group output_noreg lr 1.5e-06 weight_decay 1.25e-09
+Yielding training file for dataset: /weka/scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/runs/smoke/shuffleddata/20260904-052108/train/data0_0.npz
+Beginning training subepoch!
+This subepoch, using files: ['/weka/scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/runs/smoke/shuffleddata/20260904-052108/train/data0_0.npz']
+Currently up to data row 1221
+Beginning /weka/scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/runs/smoke/shuffleddata/20260904-052108/train/data0_0.npz with 38 usable batches, my rank is 0
+/scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/venv/lib/python3.11/site-packages/torch/_inductor/compile_fx.py:322: UserWarning: TensorFloat32 tensor cores for float32 matrix multiplication available but not enabled. Consider setting `torch.set_float32_matmul_precision('high')` for better performance.
+  warnings.warn(
+/scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/venv/lib/python3.11/site-packages/torch/_inductor/lowering.py:7836: UserWarning: 
+Online softmax is disabled on the fly since Inductor decides to
+split the reduction. Cut an issue to PyTorch if this is an
+important use case and you want to speed it up with online
+softmax.
+
+  warnings.warn(
+/scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/venv/lib/python3.11/site-packages/torch/_inductor/lowering.py:7836: UserWarning: 
+Online softmax is disabled on the fly since Inductor decides to
+split the reduction. Cut an issue to PyTorch if this is an
+important use case and you want to speed it up with online
+softmax.
+
+  warnings.warn(
+Accumulating SWA
+Accumulating SWA
+Accumulating SWA
+Accumulating SWA
+Accumulating SWA
+Accumulating SWA
+Finished training subepoch!
+Beginning validation after epoch!
+No validation files, skipping validation step
+Export cycle counter = 1
+SAVING MODEL FOR EXPORT TO: /weka/scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/runs/smoke/torchmodels_toexport/t9-s1216-d1221
+Saving checkpoint: /weka/scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/runs/smoke/torchmodels_toexport/t9-s1216-d1221.tmp/model.ckpt
+Saving checkpoint: /weka/scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/runs/smoke/train/t9/checkpoint.ckpt
+Hit max epochs this instance, done
+Exiting with code exit_code=0
+
+real	1m43.136s
+user	2m22.676s
+sys	0m11.633s
++ exit 0
+
+real	1m43.175s
+user	2m22.680s
+sys	0m11.642s
++ echo Export
+Export
++ ./export_model_for_selfplay_9x9.sh ktgsmoke9 /weka/scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/runs/smoke 1
++ tee -a /weka/scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/runs/smoke/logs/outexport.txt
+Found model to export: /weka/scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/runs/smoke/torchmodels_toexport/t9-s1216-d1221
++ set +e
++ python3 ./export_model_pytorch.py -checkpoint /weka/scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/runs/smoke/torchmodels_toexport/t9-s1216-d1221/model.ckpt -export-dir /weka/scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/runs/smoke/torchmodels_toexport/t9-s1216-d1221.exported -model-name ktgsmoke9-t9-s1216-d1221 -filename-prefix model -use-swa
+['./export_model_pytorch.py', '-checkpoint', '/weka/scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/runs/smoke/torchmodels_toexport/t9-s1216-d1221/model.ckpt', '-export-dir', '/weka/scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/runs/smoke/torchmodels_toexport/t9-s1216-d1221.exported', '-model-name', 'ktgsmoke9-t9-s1216-d1221', '-filename-prefix', 'model', '-use-swa']
+{'version': 17, 'norm_kind': 'fixup', 'bnorm_epsilon': 0.0001, 'bnorm_running_avg_momentum': 0.001, 'initial_conv_1x1': False, 'gamma_weight_decay_center_1': True, 'trunk_num_channels': 96, 'mid_num_channels': 96, 'gpool_num_channels': 32, 'transformer_ffn_channels': 256, 'transformer_heads': 3, 'transformer_kv_heads': 3, 'block_kind': [['attn1', 'attnrope'], ['ffn1', 'ffnsg'], ['attn2', 'attnrope'], ['ffn2', 'ffnsg'], ['attn3', 'attnrope'], ['ffn3', 'ffnsg'], ['attn4', 'attnrope'], ['ffn4', 'ffnsg'], ['attn5', 'attnrope'], ['ffn5', 'ffnsg'], ['attn6', 'attnrope'], ['ffn6', 'ffnsg'], ['attn7', 'attnrope'], ['ffn7', 'ffnsg']], 'p1_num_channels': 32, 'g1_num_channels': 32, 'v1_num_channels': 32, 'sbv2_num_channels': 48, 'num_scorebeliefs': 4, 'v2_size': 64}
+Parameters in model:
+conv_spatial.weight, [96, 22, 3, 3], 19008 params
+linear_global.weight, [96, 19], 1824 params
+blocks.0.q_proj.weight, [96, 96], 9216 params
+blocks.0.k_proj.weight, [96, 96], 9216 params
+blocks.0.v_proj.weight, [96, 96], 9216 params
+blocks.0.out_proj.weight, [96, 96], 9216 params
+blocks.0.norm1.weight, [96], 96 params
+blocks.1.ffn_linear1.weight, [256, 96], 24576 params
+blocks.1.ffn_linear_gate.weight, [256, 96], 24576 params
+blocks.1.ffn_linear2.weight, [96, 256], 24576 params
+blocks.1.norm.weight, [96], 96 params
+blocks.2.q_proj.weight, [96, 96], 9216 params
+blocks.2.k_proj.weight, [96, 96], 9216 params
+blocks.2.v_proj.weight, [96, 96], 9216 params
+blocks.2.out_proj.weight, [96, 96], 9216 params
+blocks.2.norm1.weight, [96], 96 params
+blocks.3.ffn_linear1.weight, [256, 96], 24576 params
+blocks.3.ffn_linear_gate.weight, [256, 96], 24576 params
+blocks.3.ffn_linear2.weight, [96, 256], 24576 params
+blocks.3.norm.weight, [96], 96 params
+blocks.4.q_proj.weight, [96, 96], 9216 params
+blocks.4.k_proj.weight, [96, 96], 9216 params
+blocks.4.v_proj.weight, [96, 96], 9216 params
+blocks.4.out_proj.weight, [96, 96], 9216 params
+blocks.4.norm1.weight, [96], 96 params
+blocks.5.ffn_linear1.weight, [256, 96], 24576 params
+blocks.5.ffn_linear_gate.weight, [256, 96], 24576 params
+blocks.5.ffn_linear2.weight, [96, 256], 24576 params
+blocks.5.norm.weight, [96], 96 params
+blocks.6.q_proj.weight, [96, 96], 9216 params
+blocks.6.k_proj.weight, [96, 96], 9216 params
+blocks.6.v_proj.weight, [96, 96], 9216 params
+blocks.6.out_proj.weight, [96, 96], 9216 params
+blocks.6.norm1.weight, [96], 96 params
+blocks.7.ffn_linear1.weight, [256, 96], 24576 params
+blocks.7.ffn_linear_gate.weight, [256, 96], 24576 params
+blocks.7.ffn_linear2.weight, [96, 256], 24576 params
+blocks.7.norm.weight, [96], 96 params
+blocks.8.q_proj.weight, [96, 96], 9216 params
+blocks.8.k_proj.weight, [96, 96], 9216 params
+blocks.8.v_proj.weight, [96, 96], 9216 params
+blocks.8.out_proj.weight, [96, 96], 9216 params
+blocks.8.norm1.weight, [96], 96 params
+blocks.9.ffn_linear1.weight, [256, 96], 24576 params
+blocks.9.ffn_linear_gate.weight, [256, 96], 24576 params
+blocks.9.ffn_linear2.weight, [96, 256], 24576 params
+blocks.9.norm.weight, [96], 96 params
+blocks.10.q_proj.weight, [96, 96], 9216 params
+blocks.10.k_proj.weight, [96, 96], 9216 params
+blocks.10.v_proj.weight, [96, 96], 9216 params
+blocks.10.out_proj.weight, [96, 96], 9216 params
+blocks.10.norm1.weight, [96], 96 params
+blocks.11.ffn_linear1.weight, [256, 96], 24576 params
+blocks.11.ffn_linear_gate.weight, [256, 96], 24576 params
+blocks.11.ffn_linear2.weight, [96, 256], 24576 params
+blocks.11.norm.weight, [96], 96 params
+blocks.12.q_proj.weight, [96, 96], 9216 params
+blocks.12.k_proj.weight, [96, 96], 9216 params
+blocks.12.v_proj.weight, [96, 96], 9216 params
+blocks.12.out_proj.weight, [96, 96], 9216 params
+blocks.12.norm1.weight, [96], 96 params
+blocks.13.ffn_linear1.weight, [256, 96], 24576 params
+blocks.13.ffn_linear_gate.weight, [256, 96], 24576 params
+blocks.13.ffn_linear2.weight, [96, 256], 24576 params
+blocks.13.norm.weight, [96], 96 params
+norm_trunkfinal.beta, [1, 96, 1, 1], 96 params
+policy_head.conv1p.weight, [32, 96, 1, 1], 3072 params
+policy_head.conv1g.weight, [32, 96, 1, 1], 3072 params
+policy_head.biasg.beta, [1, 32, 1, 1], 32 params
+policy_head.linear_g.weight, [32, 96], 3072 params
+policy_head.linear_pass.weight, [32, 96], 3072 params
+policy_head.linear_pass.bias, [32], 32 params
+policy_head.linear_pass2.weight, [6, 32], 192 params
+policy_head.bias2.beta, [1, 32, 1, 1], 32 params
+policy_head.conv2p.weight, [6, 32, 1, 1], 192 params
+value_head.conv1.weight, [32, 96, 1, 1], 3072 params
+value_head.bias1.beta, [1, 32, 1, 1], 32 params
+value_head.linear2.weight, [64, 96], 6144 params
+value_head.linear2.bias, [64], 64 params
+value_head.linear_valuehead.weight, [3, 64], 192 params
+value_head.linear_valuehead.bias, [3], 3 params
+value_head.linear_miscvaluehead.weight, [10, 64], 640 params
+value_head.linear_miscvaluehead.bias, [10], 10 params
+value_head.linear_moremiscvaluehead.weight, [8, 64], 512 params
+value_head.linear_moremiscvaluehead.bias, [8], 8 params
+value_head.conv_ownership.weight, [1, 32, 1, 1], 32 params
+value_head.conv_scoring.weight, [1, 32, 1, 1], 32 params
+value_head.conv_futurepos.weight, [2, 96, 1, 1], 192 params
+value_head.conv_seki.weight, [4, 96, 1, 1], 384 params
+value_head.linear_s2.weight, [48, 96], 4608 params
+value_head.linear_s2.bias, [48], 48 params
+value_head.linear_s2off.weight, [48, 1], 48 params
+value_head.linear_s2par.weight, [48, 1], 48 params
+value_head.linear_s3.weight, [4, 48], 192 params
+value_head.linear_s3.bias, [4], 4 params
+value_head.linear_smix.weight, [4, 96], 384 params
+value_head.linear_smix.bias, [4], 4 params
+Total num params: 825837
+Total trainable params: 825837
+Data-free attention logit bound, max over 7 layers: attn6=14, attn2=13, attn3=13, attn5=13, attn4=13
+Writing SWA model
+Exported at: 
+2026-09-04 09:23:09.473032 UTC
++ EXPORT_RC=0
++ set -e
++ set +x
++ set +e
++ python3 ./clean_checkpoint.py -checkpoint /weka/scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/runs/smoke/torchmodels_toexport/t9-s1216-d1221/model.ckpt -output /weka/scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/runs/smoke/torchmodels_toexport/t9-s1216-d1221.exported/model.ckpt
+Cleaned /weka/scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/runs/smoke/torchmodels_toexport/t9-s1216-d1221/model.ckpt -> /weka/scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/runs/smoke/torchmodels_toexport/t9-s1216-d1221.exported/model.ckpt for release
++ CLEAN_RC=0
++ set -e
++ set +x
+Done exporting: t9-s1216-d1221 to /weka/scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/runs/smoke/modelstobetested/t9-s1216-d1221
+
+real	0m12.344s
+user	0m6.290s
+sys	0m0.971s
++ set +x
+cycle 1 complete -- 1 cycle(s) recorded in /weka/scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/runs/smoke/.cycles_completed
++ '[' 1 = 1 ']'
++ set +x
+KTG_ONE_CYCLE=1 -- one cycle done, exiting 0.
+smoke_one_cycle: label=cycle1 loop exit=0
+leg cycle1: loop exit=0, 'one cycle done' lines in /scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/runs/smoke/logs/smoke_cycle1.txt = 1
+=== leg B: END    2026-09-04T09:23:17Z  exit=0  elapsed_s=139
+
+=== leg C: START  2026-09-04T09:23:17Z  (hard)
+smoke_one_cycle: label=cycle2 basedir=/scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/runs/smoke
+smoke_one_cycle: katago=/scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/build/KataGo/cpp/build/katago src=/scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/build/KataGo
+smoke_one_cycle: knobs games=40 samples_per_epoch=256 batch=32 reuse=8 minrows=200 keeprows=5000 cap=4000 taper=200 swa=128 epochs_per_export=1
+smoke_one_cycle: cycle log -> /scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/runs/smoke/logs/smoke_cycle2.txt
++ true
++ '[' -e /weka/scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/runs/smoke/STOP ']'
++ CYCLE_INDEX=1
++ set +x
+== scratch_guard 2026-09-04T05:23:18-04:00 [cycle 1 pre-gatekeeper] ==
+constants            : /weka/home/schmidt/ssci-haiyangw/az/results/ktg/paper_1902.10565/codes/data_budget/budget.env
+root                 : /scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train
+du -sb               : 7646830852	/scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train
+df -B1               : wekafs1/scratchssci 40000000000000 37089946521600 2910053478400 93% /weka/scratch/schmidt
+scratch_guard: WARNING quotas.py unreadable or unparseable at /apps/helpers/quotas.py; using df -B1 on the same pool
+projected write      : 21474836480 B
+projected root total : 29121667332 B   (hard cap 536870912000 B = 500 GiB)
+group scratch free   : 2910053478400 B   (source: df (quotas.py unavailable); fail floor 1099511627776 B, warn floor 1649267441664 B)
+scratch_guard: OK  used=7646830852 B  projected_total=29121667332 B  group_free=2910053478400 B
++ echo Gatekeeper
+Gatekeeper
++ ./bin/katago gatekeeper -rejected-models-dir /weka/scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/runs/smoke/rejectedmodels -accepted-models-dir /weka/scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/runs/smoke/models/ -sgf-output-dir /weka/scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/runs/smoke/gatekeepersgf/ -test-models-dir /weka/scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/runs/smoke/modelstobetested/ -config /weka/scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/runs/smoke/scripts/dated/20260904-052318/gatekeeper.cfg -quit-if-no-nets-to-test
++ tee -a /weka/scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/runs/smoke/gatekeepersgf/stdout.txt
+2026-09-04 05:23:20-0400: Running with following config:
+allowRectangleProb = 0
+allowResignation = true
+bSizeRelProbs = 1
+bSizes = 9
+chosenMovePrune = 1
+chosenMoveSubtract = 0
+chosenMoveTemperature = 0.2
+chosenMoveTemperatureEarly = 0.5
+chosenMoveTemperatureHalflife = 19
+cpuctExploration = 1.1
+cpuctExplorationLog = 0.0
+cudaUseFP16 = auto
+cudaUseNHWC = auto
+drawEquivalentWinsForWhite = 0.5
+dynamicScoreCenterScale = 0.50
+dynamicScoreCenterZeroWeight = 0.25
+dynamicScoreUtilityFactor = 0.25
+fpuReductionMax = 0.2
+handicapCompensateKomiProb = 1.0
+handicapProb = 0.0
+hasButtons = false,false,true
+koRules = SIMPLE,POSITIONAL,SITUATIONAL
+komiAuto = True
+lcbStdevs = 5.0
+logGamesEvery = 10
+logMoves = false
+logSearchInfo = false
+logToStdout = true
+maxMovesPerGame = 1600
+maxVisits = 150
+minVisitPropForLCB = 0.15
+multiStoneSuicideLegals = false,true
+nnCacheSizePowerOfTwo = 21
+nnMaxBatchSize = 128
+nnMutexPoolSizePowerOfTwo = 15
+nnRandomize = true
+noResultUtilityForWhite = 0.0
+numGameThreads = 18
+numGamesPerGating = 200
+numNNServerThreadsPerModel = 1
+numSearchThreads = 1
+numVirtualLossesPerThread = 1
+policyOptimism = 1.0
+resignConsecTurns = 5
+resignThreshold = -0.90
+rootEndingBonusPoints = 0.5
+rootFpuReductionMax = 0.1
+rootPolicyOptimism = 0.0
+rootPruneUselessMoves = true
+scoringRules = AREA,TERRITORY
+staticScoreUtilityFactor = 0.00
+subtreeValueBiasFactor = 0.35
+subtreeValueBiasWeightExponent = 0.8
+taxRules = NONE,NONE,SEKI,SEKI,ALL
+uncertaintyCoeff = 0.25
+uncertaintyExponent = 1.0
+useGraphSearch = true
+useLcbForSelection = true
+useNonBuggyLcb = true
+useUncertainty = true
+valueWeightExponent = 0.5
+winLossUtilityFactor = 1.0
+
+2026-09-04 05:23:20-0400: Gatekeeper Engine starting...
+2026-09-04 05:23:20-0400: Git revision: fd0723fdbc0e9d82cf269c9630af8c27c57c07c4-dirty
+2026-09-04 05:23:20-0400: Required candidate win prop: 0.5
+2026-09-04 05:23:20-0400: Loaded all config stuff, watching for new neural nets in /weka/scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/runs/smoke/modelstobetested/
+2026-09-04 05:23:20-0400: Found new candidate neural net t9-s1216-d1221
+2026-09-04 05:23:20-0400: nnRandSeed0 = 8740041035190715767
+2026-09-04 05:23:20-0400: After dedups: nnModelFile0 = /weka/scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/runs/smoke/modelstobetested/t9-s1216-d1221/model.bin.gz useFP16 auto
+2026-09-04 05:23:20-0400: Initializing neural net buffer to be size 9 * 9 exactly
+2026-09-04 05:23:20-0400: Cuda backend thread 0: Found GPU NVIDIA B200 memory 191495471104 compute capability major 10 minor 0
+2026-09-04 05:23:20-0400: Cuda backend thread 0: Model version 17 useFP16 = true useNHWC = true
+2026-09-04 05:23:20-0400: Cuda backend thread 0: Model name: ktgsmoke9-t9-s1216-d1221 (transformer, 818857 params)
+2026-09-04 05:23:20-0400: Cuda backend: using combined QKV projection for attention
+2026-09-04 05:23:20-0400: Cuda backend: using CUTLASS fused FFN kernel
+2026-09-04 05:23:20-0400: CUDA backend: running 1x1 NHWC convolutions as a GEMM
+2026-09-04 05:23:21-0400: Cuda backend thread 0: warming up transformer graphs for batch sizes 1..128
+2026-09-04 05:23:21-0400: Cuda backend: using tensor-core mma flash attention kernel
+2026-09-04 05:23:21-0400: Loaded candidate neural net t9-s1216-d1221 from: /weka/scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/runs/smoke/modelstobetested/t9-s1216-d1221/model.bin.gz
+2026-09-04 05:23:21-0400: nnRandSeed0 = 13573466120265460668
+2026-09-04 05:23:21-0400: After dedups: nnModelFile0 = /dev/null useFP16 auto
+2026-09-04 05:23:21-0400: Initializing neural net buffer to be size 9 * 9 exactly
+2026-09-04 05:23:21-0400: Loaded accepted neural net random from: /dev/null
+2026-09-04 05:23:21-0400: Data write loop starting for neural net: random vs t9-s1216-d1221
+2026-09-04 05:23:21-0400: Game loop thread 0 starting game testing candidate: t9-s1216-d1221
+2026-09-04 05:23:21-0400: Game loop thread 1 starting game testing candidate: t9-s1216-d1221
+2026-09-04 05:23:21-0400: Game loop thread 2 starting game testing candidate: t9-s1216-d1221
+2026-09-04 05:23:21-0400: Game loop thread 3 starting game testing candidate: t9-s1216-d1221
+2026-09-04 05:23:21-0400: Game loop thread 4 starting game testing candidate: t9-s1216-d1221
+2026-09-04 05:23:21-0400: Game loop thread 6 starting game testing candidate: t9-s1216-d1221
+2026-09-04 05:23:21-0400: Game loop thread 8 starting game testing candidate: t9-s1216-d1221
+2026-09-04 05:23:21-0400: Game loop thread 10 starting game testing candidate: t9-s1216-d1221
+2026-09-04 05:23:21-0400: Game loop thread 11 starting game testing candidate: t9-s1216-d1221
+2026-09-04 05:23:21-0400: Game loop thread 5 starting game testing candidate: t9-s1216-d1221
+2026-09-04 05:23:21-0400: Started 10 games
+2026-09-04 05:23:21-0400: Game loop thread 13 starting game testing candidate: t9-s1216-d1221
+2026-09-04 05:23:21-0400: Game loop thread 15 starting game testing candidate: t9-s1216-d1221
+2026-09-04 05:23:21-0400: Game loop thread 9 starting game testing candidate: t9-s1216-d1221
+2026-09-04 05:23:21-0400: Game loop thread 12 starting game testing candidate: t9-s1216-d1221
+2026-09-04 05:23:21-0400: Game loop thread 17 starting game testing candidate: t9-s1216-d1221
+2026-09-04 05:23:21-0400: Game loop thread 14 starting game testing candidate: t9-s1216-d1221
+2026-09-04 05:23:21-0400: Game loop thread 16 starting game testing candidate: t9-s1216-d1221
+2026-09-04 05:23:21-0400: Game loop thread 7 starting game testing candidate: t9-s1216-d1221
+2026-09-04 05:23:22-0400: Game 0: winner black t9-s1216-d1221 RE[B+1]
+2026-09-04 05:23:26-0400: Started 20 games
+2026-09-04 05:23:26-0400: Game 1: winner white t9-s1216-d1221 RE[W+3]
+2026-09-04 05:23:26-0400: Game 2: winner white t9-s1216-d1221 RE[W+2]
+2026-09-04 05:23:27-0400: Game 3: winner black t9-s1216-d1221 RE[B+0.5]
+2026-09-04 05:23:27-0400: Game 4: winner white random RE[W+4.5]
+2026-09-04 05:23:27-0400: Game 5: winner white t9-s1216-d1221 RE[W+4]
+2026-09-04 05:23:27-0400: Game 6: winner black t9-s1216-d1221 RE[B+1]
+2026-09-04 05:23:28-0400: Game 7: winner black random RE[B+49]
+2026-09-04 05:23:29-0400: Game 8: winner black t9-s1216-d1221 RE[B+6]
+2026-09-04 05:23:29-0400: Game 9: winner white random RE[W+18.5]
+2026-09-04 05:23:29-0400: Game 10: winner white random RE[W+53.5]
+2026-09-04 05:23:29-0400: Started 30 games
+2026-09-04 05:23:29-0400: Game 11: winner black random RE[B+56.5]
+2026-09-04 05:23:29-0400: Game 12: winner white t9-s1216-d1221 RE[W+1]
+2026-09-04 05:23:30-0400: Game 13: winner white t9-s1216-d1221 RE[W+1]
+2026-09-04 05:23:31-0400: Game 14: winner white t9-s1216-d1221 RE[W+23.5]
+2026-09-04 05:23:31-0400: Game 15: winner white random RE[W+59.5]
+2026-09-04 05:23:31-0400: Game 16: winner black t9-s1216-d1221 RE[B+1]
+2026-09-04 05:23:31-0400: Game 17: winner black random RE[B+1]
+2026-09-04 05:23:31-0400: Game 18: winner black random RE[B+45.5]
+2026-09-04 05:23:31-0400: Game 19: winner black random RE[B+9.5]
+2026-09-04 05:23:32-0400: Game 20: winner white random RE[W+52.5]
+2026-09-04 05:23:33-0400: Started 40 games
+2026-09-04 05:23:33-0400: Game 21: winner white t9-s1216-d1221 RE[W+1.5]
+2026-09-04 05:23:33-0400: Game 22: winner white t9-s1216-d1221 RE[W+7]
+2026-09-04 05:23:34-0400: Game 23: winner black random RE[B+25.5]
+2026-09-04 05:23:34-0400: Game 24: winner black t9-s1216-d1221 RE[B+0.5]
+2026-09-04 05:23:35-0400: Game 25: winner white random RE[W+30.5]
+2026-09-04 05:23:36-0400: Game 26: winner black random RE[B+47.5]
+2026-09-04 05:23:37-0400: Game 27: winner white random RE[W+47.5]
+2026-09-04 05:23:37-0400: Game 28: winner black random RE[B+2.5]
+2026-09-04 05:23:37-0400: Game 29: winner black t9-s1216-d1221 RE[B+1]
+2026-09-04 05:23:37-0400: Game 30: winner black t9-s1216-d1221 RE[B+96.5]
+2026-09-04 05:23:37-0400: Started 50 games
+2026-09-04 05:23:37-0400: Game 31: winner black random RE[B+20]
+2026-09-04 05:23:37-0400: Game 32: winner black random RE[B+32]
+2026-09-04 05:23:37-0400: Game 33: winner black t9-s1216-d1221 RE[B+1.5]
+2026-09-04 05:23:38-0400: Game 34: winner white random RE[W+32]
+2026-09-04 05:23:38-0400: Game 35: winner white random RE[W+4.5]
+2026-09-04 05:23:38-0400: Game 36: winner black random RE[B+22.5]
+2026-09-04 05:23:38-0400: Game 37: winner black t9-s1216-d1221 RE[B+3.5]
+2026-09-04 05:23:38-0400: Game 38: winner black t9-s1216-d1221 RE[B+1]
+2026-09-04 05:23:39-0400: Game 39: winner white t9-s1216-d1221 RE[W+3.5]
+2026-09-04 05:23:39-0400: Game 40: winner white random RE[W+R]
+2026-09-04 05:23:39-0400: Started 60 games
+2026-09-04 05:23:39-0400: Game 41: winner white random RE[W+33]
+2026-09-04 05:23:39-0400: Game 42: winner black random RE[B+24.5]
+2026-09-04 05:23:39-0400: Game 43: winner black random RE[B+50]
+2026-09-04 05:23:39-0400: Game 44: winner black t9-s1216-d1221 RE[B+20.5]
+2026-09-04 05:23:40-0400: Game 45: draw RE[0]
+2026-09-04 05:23:40-0400: Game 46: winner black t9-s1216-d1221 RE[B+1.5]
+2026-09-04 05:23:40-0400: Game 47: winner black random RE[B+22.5]
+2026-09-04 05:23:41-0400: Game 48: winner white t9-s1216-d1221 RE[W+2]
+2026-09-04 05:23:42-0400: Game 49: winner black t9-s1216-d1221 RE[B+3]
+2026-09-04 05:23:43-0400: Game 50: winner white random RE[W+23]
+2026-09-04 05:23:43-0400: Started 70 games
+2026-09-04 05:23:43-0400: Game 51: winner black random RE[B+67.5]
+2026-09-04 05:23:44-0400: Game 52: winner white random RE[W+26.5]
+2026-09-04 05:23:44-0400: Game 53: winner black random RE[B+1.5]
+2026-09-04 05:23:44-0400: Game 54: winner white t9-s1216-d1221 RE[W+7.5]
+2026-09-04 05:23:44-0400: Game 55: winner black random RE[B+58]
+2026-09-04 05:23:45-0400: Game 56: winner white t9-s1216-d1221 RE[W+8.5]
+2026-09-04 05:23:45-0400: Game 57: winner white t9-s1216-d1221 RE[W+1]
+2026-09-04 05:23:46-0400: Game 58: winner black t9-s1216-d1221 RE[B+5.5]
+2026-09-04 05:23:46-0400: Game 59: winner white random RE[W+62.5]
+2026-09-04 05:23:47-0400: Game 60: winner black random RE[B+58]
+2026-09-04 05:23:47-0400: Started 80 games
+2026-09-04 05:23:47-0400: Game 61: winner black t9-s1216-d1221 RE[B+1]
+2026-09-04 05:23:47-0400: Game 62: winner black random RE[B+81.5]
+2026-09-04 05:23:48-0400: Game 63: winner black random RE[B+69]
+2026-09-04 05:23:48-0400: Game 64: winner white random RE[W+53]
+2026-09-04 05:23:48-0400: Game 65: winner black random RE[B+48]
+2026-09-04 05:23:49-0400: Game 66: winner black random RE[B+38]
+2026-09-04 05:23:49-0400: Game 67: winner black t9-s1216-d1221 RE[B+29.5]
+2026-09-04 05:23:50-0400: Game 68: winner black random RE[B+43.5]
+2026-09-04 05:23:50-0400: Game 69: winner black t9-s1216-d1221 RE[B+12]
+2026-09-04 05:23:50-0400: Game 70: winner black t9-s1216-d1221 RE[B+44]
+2026-09-04 05:23:51-0400: Started 90 games
+2026-09-04 05:23:51-0400: Game 71: winner white t9-s1216-d1221 RE[W+2]
+2026-09-04 05:23:51-0400: Game 72: winner black t9-s1216-d1221 RE[B+14]
+2026-09-04 05:23:51-0400: Game 73: winner black random RE[B+52]
+2026-09-04 05:23:51-0400: Game 74: winner white random RE[W+1]
+2026-09-04 05:23:52-0400: Game 75: winner white t9-s1216-d1221 RE[W+7]
+2026-09-04 05:23:52-0400: Game 76: winner white random RE[W+0.5]
+2026-09-04 05:23:53-0400: Game 77: winner black t9-s1216-d1221 RE[B+25]
+2026-09-04 05:23:53-0400: Game 78: winner white random RE[W+55.5]
+2026-09-04 05:23:54-0400: Game 79: winner black t9-s1216-d1221 RE[B+9.5]
+2026-09-04 05:23:54-0400: Game 80: winner black random RE[B+44.5]
+2026-09-04 05:23:55-0400: Started 100 games
+2026-09-04 05:23:55-0400: Game 81: winner white random RE[W+28]
+2026-09-04 05:23:55-0400: Game 82: winner black random RE[B+63.5]
+2026-09-04 05:23:56-0400: Game 83: winner black random RE[B+R]
+2026-09-04 05:23:56-0400: Game 84: winner black t9-s1216-d1221 RE[B+4.5]
+2026-09-04 05:23:56-0400: Game 85: winner black random RE[B+50.5]
+2026-09-04 05:23:57-0400: Game 86: winner black random RE[B+68.5]
+2026-09-04 05:23:57-0400: Game 87: winner black random RE[B+53]
+2026-09-04 05:23:58-0400: Game 88: winner white random RE[W+81]
+2026-09-04 05:23:58-0400: Game 89: winner white random RE[W+R]
+2026-09-04 05:23:58-0400: Game 90: winner black random RE[B+61.5]
+2026-09-04 05:23:59-0400: Started 110 games
+2026-09-04 05:23:59-0400: Game 91: winner black random RE[B+25]
+2026-09-04 05:23:59-0400: Game 92: winner white random RE[W+31.5]
+2026-09-04 05:23:59-0400: Game 93: winner white random RE[W+32.5]
+2026-09-04 05:23:59-0400: Game 94: winner white random RE[W+20.5]
+2026-09-04 05:24:00-0400: Game 95: winner black random RE[B+54.5]
+2026-09-04 05:24:00-0400: Game 96: winner black random RE[B+67.5]
+2026-09-04 05:24:00-0400: Game 97: winner black random RE[B+26]
+2026-09-04 05:24:01-0400: Game 98: winner white random RE[W+39.5]
+2026-09-04 05:24:01-0400: Game 99: winner black t9-s1216-d1221 RE[B+1.5]
+2026-09-04 05:24:01-0400: Game 100: winner black random RE[B+64]
+2026-09-04 05:24:02-0400: Started 120 games
+2026-09-04 05:24:02-0400: Game 101: winner white t9-s1216-d1221 RE[W+1]
+2026-09-04 05:24:02-0400: Game 102: winner black random RE[B+12.5]
+2026-09-04 05:24:04-0400: Game 103: winner black t9-s1216-d1221 RE[B+11]
+2026-09-04 05:24:04-0400: Game 104: winner black random RE[B+59]
+2026-09-04 05:24:04-0400: Game 105: winner black t9-s1216-d1221 RE[B+5]
+2026-09-04 05:24:05-0400: Game 106: winner black t9-s1216-d1221 RE[B+0.5]
+2026-09-04 05:24:06-0400: Game 107: winner black random RE[B+49]
+2026-09-04 05:24:06-0400: Game 108: winner white random RE[W+32]
+2026-09-04 05:24:07-0400: Game 109: winner white random RE[W+R]
+2026-09-04 05:24:07-0400: Game 110: winner black random RE[B+60.5]
+2026-09-04 05:24:07-0400: Started 130 games
+2026-09-04 05:24:07-0400: Game 111: winner white random RE[W+4.5]
+2026-09-04 05:24:08-0400: Game 112: winner white t9-s1216-d1221 RE[W+R]
+2026-09-04 05:24:08-0400: Game 113: winner black random RE[B+102.5]
+2026-09-04 05:24:08-0400: Game 114: winner black t9-s1216-d1221 RE[B+134.5]
+2026-09-04 05:24:09-0400: Game 115: winner white random RE[W+25]
+2026-09-04 05:24:09-0400: Game 116: winner black t9-s1216-d1221 RE[B+2]
+2026-09-04 05:24:09-0400: Game 117: winner white random RE[W+61]
+2026-09-04 05:24:09-0400: Game 118: winner black random RE[B+54]
+2026-09-04 05:24:09-0400: Game 119: winner black random RE[B+105]
+2026-09-04 05:24:10-0400: Game 120: winner white random RE[W+10]
+2026-09-04 05:24:11-0400: Started 140 games
+2026-09-04 05:24:11-0400: Game 121: winner white t9-s1216-d1221 RE[W+17.5]
+2026-09-04 05:24:11-0400: Game 122: winner white random RE[W+10]
+2026-09-04 05:24:12-0400: Game 123: winner black t9-s1216-d1221 RE[B+1.5]
+2026-09-04 05:24:12-0400: Game 124: winner white random RE[W+0.5]
+2026-09-04 05:24:13-0400: Game 125: winner white t9-s1216-d1221 RE[W+6]
+2026-09-04 05:24:14-0400: Game 126: winner black random RE[B+79.5]
+2026-09-04 05:24:14-0400: Game 127: winner white t9-s1216-d1221 RE[W+10.5]
+2026-09-04 05:24:14-0400: Game 128: winner white t9-s1216-d1221 RE[W+1]
+2026-09-04 05:24:14-0400: Game 129: winner black t9-s1216-d1221 RE[B+44]
+2026-09-04 05:24:16-0400: Game 130: winner black t9-s1216-d1221 RE[B+5]
+2026-09-04 05:24:16-0400: Started 150 games
+2026-09-04 05:24:16-0400: Game 131: winner black random RE[B+55.5]
+2026-09-04 05:24:16-0400: Game 132: winner white random RE[W+4]
+2026-09-04 05:24:17-0400: Game 133: winner black random RE[B+59.5]
+2026-09-04 05:24:18-0400: Game 134: winner black random RE[B+49]
+2026-09-04 05:24:18-0400: Game 135: winner black random RE[B+69.5]
+2026-09-04 05:24:18-0400: Game 136: winner white random RE[W+60.5]
+2026-09-04 05:24:18-0400: Game 137: winner white random RE[W+95]
+2026-09-04 05:24:19-0400: Game 138: winner white random RE[W+19.5]
+2026-09-04 05:24:19-0400: Game 139: winner black random RE[B+41]
+2026-09-04 05:24:19-0400: Game 140: winner white random RE[W+20]
+2026-09-04 05:24:20-0400: Started 160 games
+2026-09-04 05:24:20-0400: Game 141: winner white t9-s1216-d1221 RE[W+1]
+2026-09-04 05:24:20-0400: Game 142: winner white random RE[W+19]
+2026-09-04 05:24:21-0400: Game 143: winner black random RE[B+71.5]
+2026-09-04 05:24:22-0400: Game 144: winner white random RE[W+26.5]
+2026-09-04 05:24:22-0400: Game 145: winner black random RE[B+9]
+2026-09-04 05:24:23-0400: Game 146: winner white random RE[W+57]
+2026-09-04 05:24:23-0400: Game 147: winner black random RE[B+33]
+2026-09-04 05:24:23-0400: Game 148: winner white random RE[W+65]
+2026-09-04 05:24:23-0400: Game 149: winner black random RE[B+23]
+2026-09-04 05:24:25-0400: Game 150: winner white random RE[W+22.5]
+2026-09-04 05:24:25-0400: Started 170 games
+2026-09-04 05:24:25-0400: Game 151: winner black random RE[B+25.5]
+2026-09-04 05:24:26-0400: Game 152: winner black random RE[B+21]
+2026-09-04 05:24:26-0400: Game 153: winner white random RE[W+10]
+2026-09-04 05:24:26-0400: Game 154: winner white t9-s1216-d1221 RE[W+1.5]
+2026-09-04 05:24:26-0400: Game 155: winner white random RE[W+50.5]
+2026-09-04 05:24:26-0400: Candidate has already lost too many games, terminating remaning games
+2026-09-04 05:24:26-0400: Game loop thread 8 terminating
+2026-09-04 05:24:26-0400: Game loop thread 2 terminating
+2026-09-04 05:24:26-0400: Game loop thread 12 terminating
+2026-09-04 05:24:26-0400: Game loop thread 4 terminating
+2026-09-04 05:24:26-0400: Game loop thread 13 terminating
+2026-09-04 05:24:26-0400: Game loop thread 15 terminating
+2026-09-04 05:24:26-0400: Game loop thread 9 terminating
+2026-09-04 05:24:26-0400: Game loop thread 3 terminating
+2026-09-04 05:24:26-0400: Game loop thread 11 terminating
+2026-09-04 05:24:26-0400: Game loop thread 7 terminating
+2026-09-04 05:24:26-0400: Game loop thread 0 terminating
+2026-09-04 05:24:26-0400: Game loop thread 6 terminating
+2026-09-04 05:24:26-0400: Game loop thread 14 terminating
+2026-09-04 05:24:26-0400: Game loop thread 10 terminating
+2026-09-04 05:24:26-0400: Game loop thread 16 terminating
+2026-09-04 05:24:26-0400: Game loop thread 17 terminating
+2026-09-04 05:24:26-0400: Game loop thread 1 terminating
+2026-09-04 05:24:26-0400: Game loop thread 5 terminating
+2026-09-04 05:24:26-0400: Data write loop finishing for neural net: random vs t9-s1216-d1221
+2026-09-04 05:24:26-0400: Data write loop cleaned up and terminating for random vs t9-s1216-d1221
+2026-09-04 05:24:26-0400: Candidate lost match, score 55.500 to 100.500 in 156 games, rejecting candidate t9-s1216-d1221
+2026-09-04 05:24:26-0400: Moving /weka/scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/runs/smoke/modelstobetested/t9-s1216-d1221 to /weka/scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/runs/smoke/rejectedmodels/t9-s1216-d1221
+2026-09-04 05:24:27-0400: GPU -1 finishing, processed 1271571 rows 156227 batches
+2026-09-04 05:24:27-0400: GPU -1 finishing, processed 0 rows 0 batches
+2026-09-04 05:24:30-0400: All cleaned up, quitting
+
+real	1m10.696s
+user	2m27.237s
+sys	0m20.039s
++ echo Selfplay
+Selfplay
++ ./bin/katago selfplay -max-games-total 40 -output-dir /weka/scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/runs/smoke/selfplay -models-dir /weka/scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/runs/smoke/models -config /weka/scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/runs/smoke/scripts/dated/20260904-052318/selfplay.cfg
++ tee -a /weka/scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/runs/smoke/selfplay/stdout.txt
+2026-09-04 05:24:30-0400: Running with following config:
+allowRectangleProb = 0
+bSizeRelProbs = 1
+bSizes = 9
+cheapSearchProb = 0.75
+cheapSearchTargetWeight = 0.0
+cheapSearchVisits = 100
+chosenMovePrune = 1
+chosenMoveSubtract = 0
+chosenMoveTemperature = 0.15
+chosenMoveTemperatureEarly = 0.75
+chosenMoveTemperatureHalflife = 19
+compensateAfterPolicyInitProb = 0.2
+cpuctExploration = 1.1
+cpuctExplorationLog = 0.0
+cudaUseFP16 = auto
+cudaUseNHWC = auto
+dataBoardLen = 9
+drawEquivalentWinsForWhite = 0.5
+drawRandRadius = 0.5
+dynamicScoreCenterScale = 0.50
+dynamicScoreCenterZeroWeight = 0.25
+dynamicScoreUtilityFactor = 0.40
+earlyForkGameExpectedMoveProp = 0.025
+earlyForkGameMaxChoices = 12
+earlyForkGameProb = 0.04
+estimateLeadProb = 0.05
+fancyKomiVarying = true
+firstFileRandMinProp = 0.15
+forkCompensateKomiProb = 0.80
+forkGameMaxChoices = 36
+forkGameMinChoices = 3
+forkGameProb = 0.01
+fpuParentWeightByVisitedPolicy = true
+fpuParentWeightByVisitedPolicyPow = 2.0
+fpuReductionMax = 0.2
+handicapAsymmetricPlayoutProb = 0.5
+handicapCompensateKomiProb = 0.50
+handicapProb = 0.10
+hasButtons = false,false,true
+initGamesWithPolicy = true
+koRules = SIMPLE,POSITIONAL,SITUATIONAL
+komiAuto = True
+komiBigStdev = 12.0
+komiBigStdevProb = 0.06
+komiStdev = 1.0
+lcbStdevs = 5.0
+logGamesEvery = 10
+logMoves = false
+logSearchInfo = false
+logToStdout = true
+maxAsymmetricRatio = 8.0
+maxDataQueueSize = 2000
+maxMovesPerGame = 1600
+maxRowsPerTrainFile = 10000
+maxVisits = 600
+minAsymmetricCompensateKomiProb = 0.4
+minVisitPropForLCB = 0.15
+multiStoneSuicideLegals = false,true
+nnCacheSizePowerOfTwo = 21
+nnMaxBatchSize = 128
+nnMutexPoolSizePowerOfTwo = 15
+nnRandomize = true
+noResultStdev = 0.166666666
+noResultUtilityForWhite = 0.0
+normalAsymmetricPlayoutProb = 0.01
+numGameThreads = 18
+numNNServerThreadsPerModel = 1
+numSearchThreads = 1
+numVirtualLossesPerThread = 1
+policyInitAreaProp = 0.04
+policySurpriseDataWeight = 0.5
+reduceVisits = true
+reduceVisitsThreshold = 0.9
+reduceVisitsThresholdLookback = 3
+reducedVisitsMin = 100
+reducedVisitsWeight = 0.1
+rootDesiredPerChildVisitsCoeff = 2
+rootDirichletNoiseTotalConcentration = 10.83
+rootDirichletNoiseWeight = 0.25
+rootEndingBonusPoints = 0.5
+rootFpuReductionMax = 0.0
+rootNoiseEnabled = true
+rootNumSymmetriesToSample = 4
+rootPolicyTemperature = 1.1
+rootPolicyTemperatureEarly = 1.25
+rootPruneUselessMoves = true
+scoringRules = AREA,TERRITORY
+sekiForkHackProb = 0.02
+sgfCompensateKomiProb = 0.90
+sidePositionProb = 0.020
+staticScoreUtilityFactor = 0.00
+subtreeValueBiasFactor = 0.30
+subtreeValueBiasWeightExponent = 0.8
+switchNetsMidGame = true
+taxRules = NONE,NONE,SEKI,SEKI,ALL
+useGraphSearch = true
+useLcbForSelection = true
+useNonBuggyLcb = true
+valueSurpriseDataWeight = 0.1
+valueWeightExponent = 0.5
+winLossUtilityFactor = 1.0
+
+2026-09-04 05:24:30-0400: Self Play Engine starting...
+2026-09-04 05:24:30-0400: Git revision: fd0723fdbc0e9d82cf269c9630af8c27c57c07c4-dirty
+2026-09-04 05:24:30-0400: Loaded all config stuff, starting self play
+2026-09-04 05:24:30-0400: Found new neural net random
+2026-09-04 05:24:30-0400: nnRandSeed0 = 15487196939758019966
+2026-09-04 05:24:30-0400: After dedups: nnModelFile0 = /dev/null useFP16 auto
+2026-09-04 05:24:30-0400: Initializing neural net buffer to be size 9 * 9 exactly
+2026-09-04 05:24:30-0400: Loaded latest neural net random from: /dev/null
+2026-09-04 05:24:30-0400: Model loading loop thread loaded new neural net random
+2026-09-04 05:24:30-0400: --------------
+2026-09-04 05:24:30-0400: WARNING: Config had unused keys! You may have a typo, an option you specified is being unused from /weka/scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/runs/smoke/scripts/dated/20260904-052318/selfplay.cfg
+2026-09-04 05:24:30-0400: WARNING: Unused key 'cudaUseNHWC' in /weka/scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/runs/smoke/scripts/dated/20260904-052318/selfplay.cfg
+2026-09-04 05:24:30-0400: --------------
+--------------
+WARNING: Config had unused keys! You may have a typo, an option you specified is being unused from /weka/scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/runs/smoke/scripts/dated/20260904-052318/selfplay.cfg
+WARNING: Unused key 'cudaUseNHWC' in /weka/scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/runs/smoke/scripts/dated/20260904-052318/selfplay.cfg
+--------------
+2026-09-04 05:24:30-0400: Data write loop starting for neural net: random
+2026-09-04 05:24:30-0400: Game loop thread 0 starting game on new neural net: random
+2026-09-04 05:24:30-0400: Game loop thread 1 starting game on new neural net: random
+2026-09-04 05:24:30-0400: Game loop thread 2 starting game on new neural net: random
+2026-09-04 05:24:30-0400: Game loop thread 3 starting game on new neural net: random
+2026-09-04 05:24:30-0400: Game loop thread 4 starting game on new neural net: random
+2026-09-04 05:24:30-0400: Game loop thread 6 starting game on new neural net: random
+2026-09-04 05:24:30-0400: Game loop thread 12 starting game on new neural net: random
+2026-09-04 05:24:30-0400: Game loop thread 13 starting game on new neural net: random
+2026-09-04 05:24:30-0400: Game loop thread 14 starting game on new neural net: random
+2026-09-04 05:24:30-0400: Game loop thread 15 starting game on new neural net: random
+2026-09-04 05:24:30-0400: Started 10 games with random
+2026-09-04 05:24:30-0400: Game loop thread 16 starting game on new neural net: random
+2026-09-04 05:24:30-0400: Game loop thread 17 starting game on new neural net: random
+2026-09-04 05:24:30-0400: Model loading loop thread starting
+2026-09-04 05:24:30-0400: Game loop thread 7 starting game on new neural net: random
+2026-09-04 05:24:30-0400: Game loop thread 9 starting game on new neural net: random
+2026-09-04 05:24:30-0400: Game loop thread 8 starting game on new neural net: random
+2026-09-04 05:24:30-0400: Game loop thread 5 starting game on new neural net: random
+2026-09-04 05:24:30-0400: Game loop thread 10 starting game on new neural net: random
+2026-09-04 05:24:30-0400: Game loop thread 11 starting game on new neural net: random
+2026-09-04 05:24:32-0400: Started 20 games with random
+2026-09-04 05:24:33-0400: Started 30 games with random
+2026-09-04 05:24:34-0400: Started 40 games with random
+2026-09-04 05:24:34-0400: Game loop thread 13 terminating
+2026-09-04 05:24:34-0400: Game loop thread 12 terminating
+2026-09-04 05:24:34-0400: Game loop thread 14 terminating
+2026-09-04 05:24:34-0400: Game loop thread 10 terminating
+2026-09-04 05:24:35-0400: Game loop thread 11 terminating
+2026-09-04 05:24:35-0400: Game loop thread 1 terminating
+2026-09-04 05:24:35-0400: Game loop thread 0 terminating
+2026-09-04 05:24:35-0400: Game loop thread 2 terminating
+2026-09-04 05:24:35-0400: Game loop thread 9 terminating
+2026-09-04 05:24:35-0400: Game loop thread 16 terminating
+2026-09-04 05:24:35-0400: Game loop thread 7 terminating
+2026-09-04 05:24:35-0400: Game loop thread 5 terminating
+2026-09-04 05:24:35-0400: Game loop thread 17 terminating
+2026-09-04 05:24:35-0400: Game loop thread 6 terminating
+2026-09-04 05:24:35-0400: Game loop thread 8 terminating
+2026-09-04 05:24:35-0400: Game loop thread 3 terminating
+2026-09-04 05:24:36-0400: Game loop thread 4 terminating
+2026-09-04 05:24:36-0400: Game loop thread 15 terminating
+2026-09-04 05:24:36-0400: Model loading loop thread terminating
+2026-09-04 05:24:37-0400: Data write loop finishing for neural net: random
+2026-09-04 05:24:37-0400: Final cleanup of net: /dev/null
+2026-09-04 05:24:37-0400: Final games finished: 40
+2026-09-04 05:24:37-0400: Final moves played: 4702
+2026-09-04 05:24:37-0400: Final data rows: 1313
+2026-09-04 05:24:37-0400: Final NN rows: 0
+2026-09-04 05:24:37-0400: Final NN batches: 0
+2026-09-04 05:24:37-0400: Final NN avg batch size: -nan
+2026-09-04 05:24:37-0400: Final NN cache hits: 66568
+2026-09-04 05:24:37-0400: GPU -1 finishing, processed 0 rows 0 batches
+2026-09-04 05:24:37-0400: Data write loop cleaned up and terminating for random
+2026-09-04 05:24:37-0400: Total games: 58
+2026-09-04 05:24:37-0400: Total selfplay runtime (seconds): 6.58229
+2026-09-04 05:24:37-0400: All cleaned up, quitting
+
+real	0m7.314s
+user	0m20.635s
+sys	0m5.849s
++ echo Shuffle
+Shuffle
++ SKIP_VALIDATE=1
++ ./shuffle.sh /weka/scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/runs/smoke /weka/scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/runs/smoke/shufflescratch 8 -min-rows 200 -keep-target-rows 5000 -taper-window-scale 200
++ tee -a /weka/scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/runs/smoke/logs/outshuffle.txt
+Beginning shuffle at 2026-09-04 05:24:38
+Command: ./shuffle.py /weka/scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/runs/smoke/selfplay/ -expand-window-per-row 0.4 -taper-window-exponent 0.65 -out-dir /weka/scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/runs/smoke/shuffleddata/20260904-052438.tmp/train -out-tmp-dir /weka/scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/runs/smoke/shufflescratch/train -approx-rows-per-out-file 70000 -num-processes 8 -keep-target-rows 20000000 -only-include-md5-path-prop-lbound 0.00 -only-include-md5-path-prop-ubound 1.00 -min-rows 200 -keep-target-rows 5000 -taper-window-scale 200
+Beginning: Finding files
+Finished: Finding files in 0.003353595733642578 seconds
+Total number of files: 2
+Total number of files with unknown row count: 2
+Excluded count: 0
+Excluded count due to looking like temp file: 0
+Excluded count due to cmdline excludes file: 0
+GC collect
+Beginning: Sorting
+Finished: Sorting in 3.5762786865234375e-06 seconds
+Beginning: Computing rows for unsummarized files
+Finished: Computing rows for unsummarized files in 0.025879859924316406 seconds
+Beginning: Processing found files
+Finished: Processing found files in 5.9604644775390625e-06 seconds
+Total rows found: 2534 (200 usable)
+Desired num rows: 200 / 2534
+Beginning: Computing desired rows
+Using: /weka/scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/runs/smoke/selfplay/random/tdata/F0492CFB0FE6A83C.npz (1221-2534) (1313/200 desired rows)
+Finished: Computing desired rows in 7.867813110351562e-06 seconds
+Finally, using: (1221-2534) (1313/200 desired rows)
+GC collect
+Due to only_include_md5, filtering down to 1/1 files
+==================================================================
+RESOURCE COST ESTIMATE (estimate for this run)
+  ROUGH estimate, assumes 19x19 data and typical measured per-row sizes.
+  Final input rows to shuffle: 1.3K
+  Per-row uncompressed size: 7.50 KB
+  Per-row final compressed size: 921.02 B
+  Final compressed dataset size: 1.15 MB
+  Output: ~1.3K rows in ~1 files (1 buckets x 1 files/bucket)
+  Sharding groups: ~1
+  Peak intermediate shard files: ~1 (1 groups x 1 buckets)
+  Avg rows per shard file: ~1313.0, per row compressed size 922.26 B, ~1.0x ideal (overly small shard files may compress less well)
+  Peak intermediate temp disk: ~1.15 MB
+  Peak memory, shardify: ~1.72 GB/worker x 8 = ~13.72 GB
+  Peak memory, merge:    ~1.50 GB/worker x 8 = ~12.01 GB
+==================================================================
+Writing ~1 output files (1 buckets x 1 files/bucket), approx 1313 kept rows (keep_prob 1.0000 of 1313 desired rows, 200 pre-md5 rows)
+[whole] Grouping 1 input files into 1 sharding groups, 1 buckets, 1 output files/bucket
+Beginning: [whole] Sharding
+Finished: [whole] Sharding in 0.07409381866455078 seconds
+Beginning: [whole] Merging
+Finished: [whole] Merging in 0.10349822044372559 seconds
+Number of rows by output file:
+[('/weka/scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/runs/smoke/shuffleddata/20260904-052438.tmp/train/data0_0.npz', 1313)]
+
+real	0m3.497s
+user	0m0.695s
+sys	0m0.099s
+Cleaning up any old dirs
+Finished shuffle at 2026-09-04 05:24:51
+
+
+
+real	0m13.725s
+user	0m0.719s
+sys	0m0.149s
++ echo Train
+Train
++ ./train_9x9.sh /weka/scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/runs/smoke t9 b7c96h3tfrs 32 main -samples-per-epoch 256 -swa-period-samples 128 -epochs-per-export 1 -max-epochs-this-instance 1 -quit-if-no-data -stop-when-train-bucket-limited -no-repeat-files -max-train-bucket-per-new-data 8 -max-train-bucket-size 4000
++ mkdir -p /weka/scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/runs/smoke/train/t9
+++ pwd
+++ grep '^/weka/scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/runs/smoke/scripts/'
++ [[ -n /weka/scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/runs/smoke/scripts/dated/20260904-052318 ]]
++ echo 'Already running out of snapshotted scripts directory, not snapshotting again'
+Already running out of snapshotted scripts directory, not snapshotting again
++ '[' main == main ']'
++ EXPORT_SUBDIR=torchmodels_toexport
++ EXTRAFLAG=
++ python3 ./train.py -traindir /weka/scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/runs/smoke/train/t9 -latestdatadir /weka/scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/runs/smoke/shuffleddata/ -exportdir /weka/scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/runs/smoke/torchmodels_toexport -exportprefix t9 -pos-len 9 -batch-size 32 -model-kind b7c96h3tfrs -samples-per-epoch 256 -swa-period-samples 128 -epochs-per-export 1 -max-epochs-this-instance 1 -quit-if-no-data -stop-when-train-bucket-limited -no-repeat-files -max-train-bucket-per-new-data 8 -max-train-bucket-size 4000
++ tee -a /weka/scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/runs/smoke/train/t9/stdout.txt
+['./train.py', '-traindir', '/weka/scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/runs/smoke/train/t9', '-latestdatadir', '/weka/scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/runs/smoke/shuffleddata/', '-exportdir', '/weka/scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/runs/smoke/torchmodels_toexport', '-exportprefix', 't9', '-pos-len', '9', '-batch-size', '32', '-model-kind', 'b7c96h3tfrs', '-samples-per-epoch', '256', '-swa-period-samples', '128', '-epochs-per-export', '1', '-max-epochs-this-instance', '1', '-quit-if-no-data', '-stop-when-train-bucket-limited', '-no-repeat-files', '-max-train-bucket-per-new-data', '8', '-max-train-bucket-size', '4000']
+Using GPU device: NVIDIA B200
+Seeding torch with 1841649819733029
+{'version': 17, 'norm_kind': 'fixup', 'bnorm_epsilon': 0.0001, 'bnorm_running_avg_momentum': 0.001, 'initial_conv_1x1': False, 'gamma_weight_decay_center_1': True, 'trunk_num_channels': 96, 'mid_num_channels': 96, 'gpool_num_channels': 32, 'transformer_ffn_channels': 256, 'transformer_heads': 3, 'transformer_kv_heads': 3, 'block_kind': [['attn1', 'attnrope'], ['ffn1', 'ffnsg'], ['attn2', 'attnrope'], ['ffn2', 'ffnsg'], ['attn3', 'attnrope'], ['ffn3', 'ffnsg'], ['attn4', 'attnrope'], ['ffn4', 'ffnsg'], ['attn5', 'attnrope'], ['ffn5', 'ffnsg'], ['attn6', 'attnrope'], ['ffn6', 'ffnsg'], ['attn7', 'attnrope'], ['ffn7', 'ffnsg']], 'p1_num_channels': 32, 'g1_num_channels': 32, 'v1_num_channels': 32, 'sbv2_num_channels': 48, 'num_scorebeliefs': 4, 'v2_size': 64}
+Training model wrapper: single GPU, compile=True, compile_mode=default, DDP environment flags ignored
+swa_period_samples 128.0
+swa_scale 8
+lookahead_alpha 0.5
+lookahead_k 6
+soft_policy_weight_scale 8.0
+disable_optimistic_policy False
+meta_kata_only_soft_policy False
+value_loss_scale 0.6
+td_value_loss_scales [0.6, 0.6, 0.6]
+seki_loss_scale 1.0
+variance_time_loss_scale 1.0
+main_loss_scale None
+intermediate_loss_scale None
+head_lr_factor 0.5
+noreg_lr_factor 1.0
+muon_adam_lr_factor 1.0
+Model norm normal baseline: 37.667118072509766
+Model norm input baseline: 13.901227951049805
+Parameters in model:
+conv_spatial.weight, [96, 22, 3, 3], 19008 params
+linear_global.weight, [96, 19], 1824 params
+blocks.0.q_proj.weight, [96, 96], 9216 params
+blocks.0.k_proj.weight, [96, 96], 9216 params
+blocks.0.v_proj.weight, [96, 96], 9216 params
+blocks.0.out_proj.weight, [96, 96], 9216 params
+blocks.0.norm1.weight, [96], 96 params
+blocks.1.ffn_linear1.weight, [256, 96], 24576 params
+blocks.1.ffn_linear_gate.weight, [256, 96], 24576 params
+blocks.1.ffn_linear2.weight, [96, 256], 24576 params
+blocks.1.norm.weight, [96], 96 params
+blocks.2.q_proj.weight, [96, 96], 9216 params
+blocks.2.k_proj.weight, [96, 96], 9216 params
+blocks.2.v_proj.weight, [96, 96], 9216 params
+blocks.2.out_proj.weight, [96, 96], 9216 params
+blocks.2.norm1.weight, [96], 96 params
+blocks.3.ffn_linear1.weight, [256, 96], 24576 params
+blocks.3.ffn_linear_gate.weight, [256, 96], 24576 params
+blocks.3.ffn_linear2.weight, [96, 256], 24576 params
+blocks.3.norm.weight, [96], 96 params
+blocks.4.q_proj.weight, [96, 96], 9216 params
+blocks.4.k_proj.weight, [96, 96], 9216 params
+blocks.4.v_proj.weight, [96, 96], 9216 params
+blocks.4.out_proj.weight, [96, 96], 9216 params
+blocks.4.norm1.weight, [96], 96 params
+blocks.5.ffn_linear1.weight, [256, 96], 24576 params
+blocks.5.ffn_linear_gate.weight, [256, 96], 24576 params
+blocks.5.ffn_linear2.weight, [96, 256], 24576 params
+blocks.5.norm.weight, [96], 96 params
+blocks.6.q_proj.weight, [96, 96], 9216 params
+blocks.6.k_proj.weight, [96, 96], 9216 params
+blocks.6.v_proj.weight, [96, 96], 9216 params
+blocks.6.out_proj.weight, [96, 96], 9216 params
+blocks.6.norm1.weight, [96], 96 params
+blocks.7.ffn_linear1.weight, [256, 96], 24576 params
+blocks.7.ffn_linear_gate.weight, [256, 96], 24576 params
+blocks.7.ffn_linear2.weight, [96, 256], 24576 params
+blocks.7.norm.weight, [96], 96 params
+blocks.8.q_proj.weight, [96, 96], 9216 params
+blocks.8.k_proj.weight, [96, 96], 9216 params
+blocks.8.v_proj.weight, [96, 96], 9216 params
+blocks.8.out_proj.weight, [96, 96], 9216 params
+blocks.8.norm1.weight, [96], 96 params
+blocks.9.ffn_linear1.weight, [256, 96], 24576 params
+blocks.9.ffn_linear_gate.weight, [256, 96], 24576 params
+blocks.9.ffn_linear2.weight, [96, 256], 24576 params
+blocks.9.norm.weight, [96], 96 params
+blocks.10.q_proj.weight, [96, 96], 9216 params
+blocks.10.k_proj.weight, [96, 96], 9216 params
+blocks.10.v_proj.weight, [96, 96], 9216 params
+blocks.10.out_proj.weight, [96, 96], 9216 params
+blocks.10.norm1.weight, [96], 96 params
+blocks.11.ffn_linear1.weight, [256, 96], 24576 params
+blocks.11.ffn_linear_gate.weight, [256, 96], 24576 params
+blocks.11.ffn_linear2.weight, [96, 256], 24576 params
+blocks.11.norm.weight, [96], 96 params
+blocks.12.q_proj.weight, [96, 96], 9216 params
+blocks.12.k_proj.weight, [96, 96], 9216 params
+blocks.12.v_proj.weight, [96, 96], 9216 params
+blocks.12.out_proj.weight, [96, 96], 9216 params
+blocks.12.norm1.weight, [96], 96 params
+blocks.13.ffn_linear1.weight, [256, 96], 24576 params
+blocks.13.ffn_linear_gate.weight, [256, 96], 24576 params
+blocks.13.ffn_linear2.weight, [96, 256], 24576 params
+blocks.13.norm.weight, [96], 96 params
+norm_trunkfinal.beta, [1, 96, 1, 1], 96 params
+policy_head.conv1p.weight, [32, 96, 1, 1], 3072 params
+policy_head.conv1g.weight, [32, 96, 1, 1], 3072 params
+policy_head.biasg.beta, [1, 32, 1, 1], 32 params
+policy_head.linear_g.weight, [32, 96], 3072 params
+policy_head.linear_pass.weight, [32, 96], 3072 params
+policy_head.linear_pass.bias, [32], 32 params
+policy_head.linear_pass2.weight, [6, 32], 192 params
+policy_head.bias2.beta, [1, 32, 1, 1], 32 params
+policy_head.conv2p.weight, [6, 32, 1, 1], 192 params
+value_head.conv1.weight, [32, 96, 1, 1], 3072 params
+value_head.bias1.beta, [1, 32, 1, 1], 32 params
+value_head.linear2.weight, [64, 96], 6144 params
+value_head.linear2.bias, [64], 64 params
+value_head.linear_valuehead.weight, [3, 64], 192 params
+value_head.linear_valuehead.bias, [3], 3 params
+value_head.linear_miscvaluehead.weight, [10, 64], 640 params
+value_head.linear_miscvaluehead.bias, [10], 10 params
+value_head.linear_moremiscvaluehead.weight, [8, 64], 512 params
+value_head.linear_moremiscvaluehead.bias, [8], 8 params
+value_head.conv_ownership.weight, [1, 32, 1, 1], 32 params
+value_head.conv_scoring.weight, [1, 32, 1, 1], 32 params
+value_head.conv_futurepos.weight, [2, 96, 1, 1], 192 params
+value_head.conv_seki.weight, [4, 96, 1, 1], 384 params
+value_head.linear_s2.weight, [48, 96], 4608 params
+value_head.linear_s2.bias, [48], 48 params
+value_head.linear_s2off.weight, [48, 1], 48 params
+value_head.linear_s2par.weight, [48, 1], 48 params
+value_head.linear_s3.weight, [4, 48], 192 params
+value_head.linear_s3.bias, [4], 4 params
+value_head.linear_smix.weight, [4, 96], 384 params
+value_head.linear_smix.bias, [4], 4 params
+Total num params: 825837
+Total trainable params: 825837
+Optimizer: SGD
+Using lookahead optimizer 0.5 6
+model_norms_only_at_print True
+Compiling training loss with mode=default
+Training in FP32.
+Using torch.compile mode=default
+float32 matmul precision: default
+Updated training data: /weka/scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/runs/smoke/shuffleddata/20260904-052438
+Advancing trainbucket row 1221 to 2534, 1313 new rows
+Fill per data 8.000, Max bucket size 4000
+Old rows in bucket: 0
+New rows in bucket: 4000
+Train steps since last reload: 1216 -> 0
+Dropping 0/1 already-used files in: /weka/scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/runs/smoke/shuffleddata/20260904-052438/train (no_repeat_files=True, never reused)
+Consuming 256 rows from train bucket (4000 -> 3744)
+GC collect
+=========================================================================
+BEGINNING NEXT EPOCH 0
+=========================================================================
+Current time: 2026-09-04 05:24:59.224558
+Global step: 1216 samples
+Currently up to data row 2534
+Training dir: /weka/scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/runs/smoke/train/t9
+Export dir: /weka/scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/runs/smoke/torchmodels_toexport
+Export cycle counter = 0
+Param group input lr 3e-06 weight_decay 1.25e-07
+Param group normal lr 3e-06 weight_decay 1.25e-07
+Param group normal_attn lr 3e-06 weight_decay 6.25e-08
+Param group noreg lr 3e-06 weight_decay 1.25e-09
+Param group output lr 1.5e-06 weight_decay 1.25e-07
+Param group output_noreg lr 1.5e-06 weight_decay 1.25e-09
+Yielding training file for dataset: /weka/scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/runs/smoke/shuffleddata/20260904-052438/train/data0_0.npz
+Beginning training subepoch!
+This subepoch, using files: ['/weka/scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/runs/smoke/shuffleddata/20260904-052438/train/data0_0.npz']
+Currently up to data row 2534
+Beginning /weka/scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/runs/smoke/shuffleddata/20260904-052438/train/data0_0.npz with 41 usable batches, my rank is 0
+Accumulating SWA
+Accumulating SWA
+Accumulating SWA
+Accumulating SWA
+Accumulating SWA
+Accumulating SWA
+Finished training subepoch!
+Beginning validation after epoch!
+No validation files, skipping validation step
+Export cycle counter = 1
+SAVING MODEL FOR EXPORT TO: /weka/scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/runs/smoke/torchmodels_toexport/t9-s2528-d2534
+Saving checkpoint: /weka/scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/runs/smoke/torchmodels_toexport/t9-s2528-d2534.tmp/model.ckpt
+Saving checkpoint: /weka/scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/runs/smoke/train/t9/checkpoint.ckpt
+Hit max epochs this instance, done
+Exiting with code exit_code=0
+
+real	0m30.374s
+user	0m19.781s
+sys	0m3.657s
++ exit 0
+
+real	0m30.408s
+user	0m19.783s
+sys	0m3.666s
++ echo Export
+Export
++ ./export_model_for_selfplay_9x9.sh ktgsmoke9 /weka/scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/runs/smoke 1
++ tee -a /weka/scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/runs/smoke/logs/outexport.txt
+Found model to export: /weka/scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/runs/smoke/torchmodels_toexport/t9-s2528-d2534
++ set +e
++ python3 ./export_model_pytorch.py -checkpoint /weka/scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/runs/smoke/torchmodels_toexport/t9-s2528-d2534/model.ckpt -export-dir /weka/scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/runs/smoke/torchmodels_toexport/t9-s2528-d2534.exported -model-name ktgsmoke9-t9-s2528-d2534 -filename-prefix model -use-swa
+['./export_model_pytorch.py', '-checkpoint', '/weka/scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/runs/smoke/torchmodels_toexport/t9-s2528-d2534/model.ckpt', '-export-dir', '/weka/scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/runs/smoke/torchmodels_toexport/t9-s2528-d2534.exported', '-model-name', 'ktgsmoke9-t9-s2528-d2534', '-filename-prefix', 'model', '-use-swa']
+{'version': 17, 'norm_kind': 'fixup', 'bnorm_epsilon': 0.0001, 'bnorm_running_avg_momentum': 0.001, 'initial_conv_1x1': False, 'gamma_weight_decay_center_1': True, 'trunk_num_channels': 96, 'mid_num_channels': 96, 'gpool_num_channels': 32, 'transformer_ffn_channels': 256, 'transformer_heads': 3, 'transformer_kv_heads': 3, 'block_kind': [['attn1', 'attnrope'], ['ffn1', 'ffnsg'], ['attn2', 'attnrope'], ['ffn2', 'ffnsg'], ['attn3', 'attnrope'], ['ffn3', 'ffnsg'], ['attn4', 'attnrope'], ['ffn4', 'ffnsg'], ['attn5', 'attnrope'], ['ffn5', 'ffnsg'], ['attn6', 'attnrope'], ['ffn6', 'ffnsg'], ['attn7', 'attnrope'], ['ffn7', 'ffnsg']], 'p1_num_channels': 32, 'g1_num_channels': 32, 'v1_num_channels': 32, 'sbv2_num_channels': 48, 'num_scorebeliefs': 4, 'v2_size': 64}
+Parameters in model:
+conv_spatial.weight, [96, 22, 3, 3], 19008 params
+linear_global.weight, [96, 19], 1824 params
+blocks.0.q_proj.weight, [96, 96], 9216 params
+blocks.0.k_proj.weight, [96, 96], 9216 params
+blocks.0.v_proj.weight, [96, 96], 9216 params
+blocks.0.out_proj.weight, [96, 96], 9216 params
+blocks.0.norm1.weight, [96], 96 params
+blocks.1.ffn_linear1.weight, [256, 96], 24576 params
+blocks.1.ffn_linear_gate.weight, [256, 96], 24576 params
+blocks.1.ffn_linear2.weight, [96, 256], 24576 params
+blocks.1.norm.weight, [96], 96 params
+blocks.2.q_proj.weight, [96, 96], 9216 params
+blocks.2.k_proj.weight, [96, 96], 9216 params
+blocks.2.v_proj.weight, [96, 96], 9216 params
+blocks.2.out_proj.weight, [96, 96], 9216 params
+blocks.2.norm1.weight, [96], 96 params
+blocks.3.ffn_linear1.weight, [256, 96], 24576 params
+blocks.3.ffn_linear_gate.weight, [256, 96], 24576 params
+blocks.3.ffn_linear2.weight, [96, 256], 24576 params
+blocks.3.norm.weight, [96], 96 params
+blocks.4.q_proj.weight, [96, 96], 9216 params
+blocks.4.k_proj.weight, [96, 96], 9216 params
+blocks.4.v_proj.weight, [96, 96], 9216 params
+blocks.4.out_proj.weight, [96, 96], 9216 params
+blocks.4.norm1.weight, [96], 96 params
+blocks.5.ffn_linear1.weight, [256, 96], 24576 params
+blocks.5.ffn_linear_gate.weight, [256, 96], 24576 params
+blocks.5.ffn_linear2.weight, [96, 256], 24576 params
+blocks.5.norm.weight, [96], 96 params
+blocks.6.q_proj.weight, [96, 96], 9216 params
+blocks.6.k_proj.weight, [96, 96], 9216 params
+blocks.6.v_proj.weight, [96, 96], 9216 params
+blocks.6.out_proj.weight, [96, 96], 9216 params
+blocks.6.norm1.weight, [96], 96 params
+blocks.7.ffn_linear1.weight, [256, 96], 24576 params
+blocks.7.ffn_linear_gate.weight, [256, 96], 24576 params
+blocks.7.ffn_linear2.weight, [96, 256], 24576 params
+blocks.7.norm.weight, [96], 96 params
+blocks.8.q_proj.weight, [96, 96], 9216 params
+blocks.8.k_proj.weight, [96, 96], 9216 params
+blocks.8.v_proj.weight, [96, 96], 9216 params
+blocks.8.out_proj.weight, [96, 96], 9216 params
+blocks.8.norm1.weight, [96], 96 params
+blocks.9.ffn_linear1.weight, [256, 96], 24576 params
+blocks.9.ffn_linear_gate.weight, [256, 96], 24576 params
+blocks.9.ffn_linear2.weight, [96, 256], 24576 params
+blocks.9.norm.weight, [96], 96 params
+blocks.10.q_proj.weight, [96, 96], 9216 params
+blocks.10.k_proj.weight, [96, 96], 9216 params
+blocks.10.v_proj.weight, [96, 96], 9216 params
+blocks.10.out_proj.weight, [96, 96], 9216 params
+blocks.10.norm1.weight, [96], 96 params
+blocks.11.ffn_linear1.weight, [256, 96], 24576 params
+blocks.11.ffn_linear_gate.weight, [256, 96], 24576 params
+blocks.11.ffn_linear2.weight, [96, 256], 24576 params
+blocks.11.norm.weight, [96], 96 params
+blocks.12.q_proj.weight, [96, 96], 9216 params
+blocks.12.k_proj.weight, [96, 96], 9216 params
+blocks.12.v_proj.weight, [96, 96], 9216 params
+blocks.12.out_proj.weight, [96, 96], 9216 params
+blocks.12.norm1.weight, [96], 96 params
+blocks.13.ffn_linear1.weight, [256, 96], 24576 params
+blocks.13.ffn_linear_gate.weight, [256, 96], 24576 params
+blocks.13.ffn_linear2.weight, [96, 256], 24576 params
+blocks.13.norm.weight, [96], 96 params
+norm_trunkfinal.beta, [1, 96, 1, 1], 96 params
+policy_head.conv1p.weight, [32, 96, 1, 1], 3072 params
+policy_head.conv1g.weight, [32, 96, 1, 1], 3072 params
+policy_head.biasg.beta, [1, 32, 1, 1], 32 params
+policy_head.linear_g.weight, [32, 96], 3072 params
+policy_head.linear_pass.weight, [32, 96], 3072 params
+policy_head.linear_pass.bias, [32], 32 params
+policy_head.linear_pass2.weight, [6, 32], 192 params
+policy_head.bias2.beta, [1, 32, 1, 1], 32 params
+policy_head.conv2p.weight, [6, 32, 1, 1], 192 params
+value_head.conv1.weight, [32, 96, 1, 1], 3072 params
+value_head.bias1.beta, [1, 32, 1, 1], 32 params
+value_head.linear2.weight, [64, 96], 6144 params
+value_head.linear2.bias, [64], 64 params
+value_head.linear_valuehead.weight, [3, 64], 192 params
+value_head.linear_valuehead.bias, [3], 3 params
+value_head.linear_miscvaluehead.weight, [10, 64], 640 params
+value_head.linear_miscvaluehead.bias, [10], 10 params
+value_head.linear_moremiscvaluehead.weight, [8, 64], 512 params
+value_head.linear_moremiscvaluehead.bias, [8], 8 params
+value_head.conv_ownership.weight, [1, 32, 1, 1], 32 params
+value_head.conv_scoring.weight, [1, 32, 1, 1], 32 params
+value_head.conv_futurepos.weight, [2, 96, 1, 1], 192 params
+value_head.conv_seki.weight, [4, 96, 1, 1], 384 params
+value_head.linear_s2.weight, [48, 96], 4608 params
+value_head.linear_s2.bias, [48], 48 params
+value_head.linear_s2off.weight, [48, 1], 48 params
+value_head.linear_s2par.weight, [48, 1], 48 params
+value_head.linear_s3.weight, [4, 48], 192 params
+value_head.linear_s3.bias, [4], 4 params
+value_head.linear_smix.weight, [4, 96], 384 params
+value_head.linear_smix.bias, [4], 4 params
+Total num params: 825837
+Total trainable params: 825837
+Data-free attention logit bound, max over 7 layers: attn6=14, attn2=13, attn3=13, attn5=13, attn4=13
+Writing SWA model
+Exported at: 
+2026-09-04 09:25:26.425803 UTC
++ EXPORT_RC=0
++ set -e
++ set +x
++ set +e
++ python3 ./clean_checkpoint.py -checkpoint /weka/scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/runs/smoke/torchmodels_toexport/t9-s2528-d2534/model.ckpt -output /weka/scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/runs/smoke/torchmodels_toexport/t9-s2528-d2534.exported/model.ckpt
+Cleaned /weka/scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/runs/smoke/torchmodels_toexport/t9-s2528-d2534/model.ckpt -> /weka/scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/runs/smoke/torchmodels_toexport/t9-s2528-d2534.exported/model.ckpt for release
++ CLEAN_RC=0
++ set -e
++ set +x
+Done exporting: t9-s2528-d2534 to /weka/scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/runs/smoke/modelstobetested/t9-s2528-d2534
+
+real	0m12.323s
+user	0m6.219s
+sys	0m1.039s
++ set +x
+cycle 1 complete -- 2 cycle(s) recorded in /weka/scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/runs/smoke/.cycles_completed
++ '[' 1 = 1 ']'
++ set +x
+KTG_ONE_CYCLE=1 -- one cycle done, exiting 0.
+smoke_one_cycle: label=cycle2 loop exit=0
+leg cycle2: loop exit=0, 'one cycle done' lines in /scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/runs/smoke/logs/smoke_cycle2.txt = 1
+=== leg C: END    2026-09-04T09:25:34Z  exit=0  elapsed_s=137
+
+=== leg D1: START  2026-09-04T09:25:34Z  (soft)
+probe_search_9x9.sh
+  ngames     = 20
+  basedir    = /scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/runs/smoke
+  probe dir  = /scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/runs/smoke_probe/search
+  katago_bin = /scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/build/KataGo/cpp/build/katago
+  config     = /home/schmidt/ssci-haiyangw/az/results/ktg/paper_1902.10565/codes/cfg/selfplay_9x9.cfg
+  model      = /scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/runs/smoke/rejectedmodels/t9-s1216-d1221/model.bin.gz  (name t9-s1216-d1221)
+  overrides  = logSearchInfo=true,logGamesEvery=1,reduceVisits=false,normalAsymmetricPlayoutProb=0.0,handicapAsymmetricPlayoutProb=0.0,estimateLeadProb=0.0
+  running selfplay ...
+  selfplay exit_code = 0   elapsed_s = 31   log_bytes = 3810586
+  --- last 8 log lines:
+    2026-09-04 05:26:05-0400: Final NN batches: 68997
+    2026-09-04 05:26:05-0400: Final NN avg batch size: 6.02965
+    2026-09-04 05:26:05-0400: Final NN cache hits: 36241
+    2026-09-04 05:26:05-0400: GPU -1 finishing, processed 416028 rows 68997 batches
+    2026-09-04 05:26:06-0400: Data write loop cleaned up and terminating for t9-s1216-d1221
+    2026-09-04 05:26:06-0400: Total games: 38
+    2026-09-04 05:26:06-0400: Total selfplay runtime (seconds): 30.8523
+    2026-09-04 05:26:06-0400: All cleaned up, quitting
+
+probe_search_9x9
+  selfplay_dir      = /scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/runs/smoke_probe/search/selfplay
+  log_files         = 1
+  searched_turns    = 2312  (full 770 / cheap 1542)
+  root_visits_range = [100, 600]  (cfg cheap=100 max=600)
+  FULL_FRAC         = 0.3330   expected 0.25, band [0.20, 0.30]
+  games (.sgfs lines) = 20   sz9 = 20   SZ_OTHER = 0   rectangular = 0
+  rows              = 646 over 1 npz
+  ROWS_PER_GAME     = 32.300   band [12, 35]
+  ok     searched_turns_sufficient    searched_turns=2312 >= 500
+  FAIL   a_full_frac_in_band          full_frac=0.33304498269896193 band=[0.2, 0.3]
+  ok     b_rows_per_game_in_band      rows_per_game=32.3 band=[12, 35]
+  ok     c_sz_other_zero              games=20 sz_other=0 rectangular=0
+PROBE_SEARCH_9X9: FAIL
+  json -> /scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/runs/smoke_probe/search/probe_search.json
+  deleted /scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/runs/smoke_probe/search/logs/probe_search.log (3810586 bytes); kept the first 400 lines at /scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/runs/smoke_probe/search/logs/probe_search_head.txt
+leg D1: probe_search exit=1 searched_turns=2312
+
+probe_gate_9x9.sh
+  gatekeeper log = /scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/runs/smoke/gatekeepersgf/stdout.txt
+  GATE_RANDOM       = 1   (Loaded accepted neural net random)
+  gate_candidate    = 1
+  CANDIDATE_GATED   = 1   (won 0 / lost 1)
+  numGamesPerGating_200_lines = 2
+  --- matching lines:
+    150:2026-09-04 05:23:21-0400: Loaded candidate neural net t9-s1216-d1221 from: /weka/scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/runs/smoke/modelstobetested/t9-s1216-d1221/model.bin.gz
+    154:2026-09-04 05:23:21-0400: Loaded accepted neural net random from: /dev/null
+    347:2026-09-04 05:24:26-0400: Candidate has already lost too many games, terminating remaning games
+    368:2026-09-04 05:24:26-0400: Candidate lost match, score 55.500 to 100.500 in 156 games, rejecting candidate t9-s1216-d1221
+  FAILURES = 0
+PROBE_GATE_9X9: PASS
+leg D1: probe_gate exit=0
+=== leg D1: END    2026-09-04T09:26:06Z  exit=1  elapsed_s=32
+
+=== leg D2: START  2026-09-04T09:26:06Z  (soft)
+probe_train_9x9.sh
+  npz dir     = /scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/runs/smoke/selfplay/random/tdata
+  probe dir   = /scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/runs/smoke_probe/train
+  OMP/MKL     = 4 / 4
+
+=== assertions 1-3 (+ scorebelief_len): probe_train_9x9.py
+probe_train_9x9
+  torch      = 2.11.0+cu128
+  model_kind = b7c96h3tfrs   pos_len = 9
+  probe_train_9x9.py exit = 1
+
+=== assertion 4: probe_resume_9x9.sh
+probe_resume_9x9.sh
+  src npz dir = /scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/runs/smoke/selfplay/random/tdata
+  probe dir   = /scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/runs/smoke_probe/train
+  katago_src  = /scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/build/KataGo
+source rows = 2534 over 2 file(s)
+synthetic rows = 5068 in 4 files (tiled x2); train.json range = [0, 5068]
+  command = python3 /scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/build/KataGo/python/train.py -traindir /scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/runs/smoke_probe/train/traindir -datadir /scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/runs/smoke_probe/train/data -exportdir /scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/runs/smoke_probe/train/export -exportprefix proberesume -pos-len 9 -batch-size 32 -model-kind b7c96h3tfrs -samples-per-epoch 2048 -swa-period-samples 1024 -max-epochs-this-instance 6 -no-compile
+
+=== phase 1: train, then SIGKILL after >= 4096 samples
+  phase1 pid = 333416
+  phase1 elapsed_s = 10
+  state_at_kill = {}
+  --- phase 1 log tail:
+                             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+      File "/scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/build/KataGo/python/train.py", line 235, in get_npz_num_rows
+        with open(jsonpath) as f:
+             ^^^^^^^^^^^^^^
+    FileNotFoundError: [Errno 2] No such file or directory: '/weka/scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/runs/smoke_probe/train/data/train/data0.json'
+    
+
+=== phase 2: re-run the identical command (resume from checkpoint.ckpt)
+  phase2 exit_code = 1   elapsed_s = 8
+  state_after = {}
+  --- phase 2 log tail:
+                             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+      File "/scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/build/KataGo/python/train.py", line 235, in get_npz_num_rows
+        with open(jsonpath) as f:
+             ^^^^^^^^^^^^^^
+    FileNotFoundError: [Errno 2] No such file or directory: '/weka/scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/runs/smoke_probe/train/data/train/data3.json'
+    
+
+  GLOBAL_STEP_SAMPLES_AT_KILL = None
+  GLOBAL_STEP_SAMPLES_AFTER   = None
+  TOTAL_NUM_DATA_ROWS         = None -> None
+  FAIL   phase1_reached_two_epochs          global_step_samples_at_kill=None >= 4096
+  ok     phase1_initialized_fresh           'Initializing new model!' in phase 1 log = 1 (expected >= 1)
+  FAIL   4a_samples_increase_after_resume   global_step_samples None -> None
+  FAIL   4b_no_reinitialisation_on_resume   'Initializing new model!' = 1, 'No preexisting checkpoint found' = 1 in phase 2
+  ok     4c_total_num_data_rows_unchanged   total_num_data_rows None -> None
+  FAIL   phase2_exit_zero                   phase 2 exit_code = 1
+PROBE_RESUME_9X9: FAIL
+  json -> /scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/runs/smoke_probe/train/probe_resume.json
+  probe_resume_9x9.sh exit = 1
+
+  FAILURES = 2
+PROBE_TRAIN_PACKET: FAIL
+=== leg D2: END    2026-09-04T09:26:35Z  exit=1  elapsed_s=29
+
+=== leg E: START  2026-09-04T09:26:35Z  (soft)
+stage_monitor: stopped; 3861 ps samples, 170 gpu samples
+
+audit_smoke -- node arxiv-1902.10565::synchronous_loop_smoke
+  basedir       = /scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/runs/smoke
+  evidence      = /home/schmidt/ssci-haiyangw/az/results/ktg/paper_1902.10565/evidence/smoke
+  cpus_per_task = 24   slurm job = 298712
+
+  S1  CYCLES_COMPLETED   = 2   (expected 2)
+  S2  CANDIDATE_EXPORTED = 2   CANDIDATE_GATED = 1 (won 0 / lost 1)
+  S3  GATE_RANDOM        = 1
+  S4  SZ_OTHER           = 0   rectangular = 0   (sgf lines 80 selfplay + 156 gatekeeper)
+  S5  ROW_BYTES raw      = [2145] over 2 npz / 2534 rows;  shuffled = [2145] over 2 npz / 2534 rows
+  S6  GLOBAL_STEP_SAMPLES cycle1 = None -> cycle2 = None;  metrics lines = 0, nonfinite = none;  reinit in cycle-2 log = 0
+  S7  FULL_FRAC          = 0.33304498269896193   band [0.20, 0.30]
+  S8  ROWS_PER_GAME real = 32.3 over 20 games;  random = 31.675 over 80 games;  band [12, 35]
+  S9  NLWP_MAX per stage = {'train': 36, 'selfplay': 25, 'gatekeeper': 25, 'shuffle': 4}   (cpus_per_task 24)
+  S11 probe_train pass   = None   trunk_gpool_count = None
+  S12 probe_resume pass  = False   None -> None
+  S13 peak VRAM = 4094 MiB   gpu util max/mean = 80/21.48 %   bytes/row on disk = 353.8
+
+  ok     hard     S1_cycles_completed_eq_2             'one cycle done' lines = 2, expected 2, over 2 log(s)
+  ok     hard     S2_candidate_exported_ge_1           exported model.bin.gz dirs = 2 (rejectedmodels/t9-s1216-d1221, modelstobetested/t9-s2528-d2534)
+  ok     hard     S2_candidate_gated_ge_1              'Candidate (won|lost) match' lines = 1 (won 0, lost 1)
+  ok     hard     S3_gate_random_ge_1                  'Loaded accepted neural net random' lines = 1 in /scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/runs/smoke/gatekeepersgf/stdout.txt
+  ok     hard     S4_sz_other_eq_0                     sgf lines selfplay=80 gatekeeper=156, sz_other=0, rectangular=0
+  ok     hard     S5_raw_npz_pos_len_9_2145            raw npz files=2 rows=2534 row_bytes=[2145] problems=0
+  ok     hard     S5_shuffled_npz_pos_len_9_2145       shuffled npz files=2 rows=2534 row_bytes=[2145] problems=0
+  FAIL   hard     S6_global_step_samples_increases     global_step_samples cycle1=None -> cycle2=None
+  FAIL   hard     S6_metrics_finite                    metrics_train.json lines=0 nonfinite=none
+  ok     hard     S6_no_reinit_in_cycle2               'Initializing new model!' in the cycle-2 log = 0 (train stdout total over both cycles = 1, 1 expected from cycle 1)
+  FAIL   hard     S9_nlwp_max_within_cpus              nlwp_max per stage = {'train': 36, 'selfplay': 25, 'gatekeeper': 25, 'shuffle': 4}, cpus_per_task = 24, over budget = {'train': 36, 'selfplay': 25, 'gatekeeper': 25}
+  FAIL   recorded S7_full_frac_in_band                 full_frac=0.33304498269896193 band=[0.20, 0.30] searched_turns=2312
+  FAIL   recorded S11_probe_train_pass                 trunk_gpool_count=None res2=None res3=None row_bytes=None
+  FAIL   recorded S12_probe_resume_pass                global_step_samples None -> None, reinit_phase2=1
+  ok     recorded S8_rows_per_game_real_in_band        rows_per_game_real=32.3 over 20 games band=[12, 35] (random-net 31.675 over 80 games)
+
+  wrote /home/schmidt/ssci-haiyangw/az/results/ktg/paper_1902.10565/evidence/smoke/audit.json, rows_per_game.txt, throughput_smoke.json, nlwp_max.txt
+AUDIT_SMOKE: FAIL
+RECORDED FINDINGS (not fatal): S7_full_frac_in_band, S11_probe_train_pass, S12_probe_resume_pass
+
+--- du of /scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/runs/smoke
+97M	/scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/runs/smoke
+5.9M	/scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/runs/smoke_probe
+=== leg E: END    2026-09-04T09:26:38Z  exit=1  elapsed_s=3
+
+======================================================================
+ktg-smoke  job=298712  end=2026-09-04T09:26:40Z
+  legs      : A=0 B=0 C=0 D1=1 D2=1 E=1
+  skipped   : none
+  failed    : D1 D2 E
+  markers   : A.done B.done C.done 
+  overall   = 0
+======================================================================

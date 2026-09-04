@@ -87,13 +87,18 @@ os.makedirs(os.path.join(out_dir, "train"), exist_ok=True)
 written = 0
 for i in range(NUM_FILES):
     lo, hi = i * per, (i + 1) * per
-    np.savez_compressed(os.path.join(out_dir, "train", "data%d.npz" % i),
-                        **{k: v[lo:hi] for k, v in tiled.items()})
+    stem = os.path.join(out_dir, "train", "data%d" % i)
+    np.savez_compressed(stem + ".npz", **{k: v[lo:hi] for k, v in tiled.items()})
+    # train.py:225-236 get_npz_num_rows reads a per-file <basename>.json {"num_rows": n}
+    # whenever the directory has no consolidated index.json. Job 298712 leg D2 died with
+    # FileNotFoundError on data0.json because the probe wrote only the .npz.
+    with open(stem + ".json", "w") as jf:
+        json.dump({"num_rows": int(hi - lo)}, jf)
     written += hi - lo
 with open(os.path.join(out_dir, "train.json"), "w") as fh:
     json.dump({"range": [0, written]}, fh)
-print("synthetic rows = %d in %d files (tiled x%d); train.json range = [0, %d]"
-      % (written, NUM_FILES, reps, written))
+print("synthetic rows = %d in %d files (tiled x%d, each with its num_rows sidecar); "
+      "train.json range = [0, %d]" % (written, NUM_FILES, reps, written))
 PY
 RC=$?
 [ "$RC" -eq 0 ] || { echo "FAIL: could not build synthetic data (exit $RC)" >&2; exit "$RC"; }

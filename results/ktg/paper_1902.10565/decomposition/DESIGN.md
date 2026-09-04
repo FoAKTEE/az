@@ -70,10 +70,10 @@ request):
 
 | stage | OS threads / processes | how | evidence |
 |---|---|---|---|
-| selfplay | 18 game + 1 nnServer + 1 dataWrite + 1 modelLoad + 1 main = 22 (+2 transient at net switch) | `numGameThreads=18`, `numSearchThreads=1`, `numNNServerThreadsPerModel=1` | `selfplay.cpp:359-364`, `setup.cpp:193-203`, `selfplaymanager.cpp:156` |
-| gatekeeper | 18 game + 2 nnServer (2 models) + 1 dataWrite + 1 main = 22 | `numGameThreads=18` (pass 1's 20 gave 24 — the data-write thread was uncounted, leaving no margin under a 24-CPU request) | `gatekeeper.cpp:548-553` |
-| shuffle | 8 worker processes | `-num-processes 8` | `synchronous_loop.sh:58`, `shuffle.py:791` |
-| train | 1 process, `OMP_NUM_THREADS=MKL_NUM_THREADS=4`, prefetch depth 1 | env vars + `-data-prefetch-depth` default | `train.py:126`; obligation `o11` |
+| selfplay | 18 game + 1 nnServer + 1 dataWrite + 1 modelLoad + 1 main = 22 (+2 transient at net switch); **measured 22 random-net, 25 real-net** | `numGameThreads=18`, `numSearchThreads=1`, `numNNServerThreadsPerModel=1` | `selfplay.cpp:359-364`, `setup.cpp:193-203`, `selfplaymanager.cpp:156`; measured `../evidence/smoke/nlwp_max.txt` |
+| gatekeeper | 18 game + 2 nnServer (2 models) + 1 dataWrite + 1 main = 22; **measured 25** with one real net vs the random baseline | `numGameThreads=18` (pass 1's 20 gave 24 — the data-write thread was uncounted, leaving no margin under a 24-CPU request) | `gatekeeper.cpp:548-553`; measured `../evidence/smoke/nlwp_max.txt` |
+| shuffle | 8 worker processes; **measured 8 workers x 1 thread + a 4-thread parent = 12** | `-num-processes 8` | `synchronous_loop.sh:58`, `shuffle.py:791`; measured `../evidence/smoke/nlwp_max.txt` |
+| train | 1 process, `OMP_NUM_THREADS=MKL_NUM_THREADS=4`, prefetch depth 1; **measured 14 threads** | env vars + `-data-prefetch-depth` default | `train.py:126`; obligation `o11`; measured `../evidence/smoke/nlwp_max.txt` |
 | export | 1 process | — | — |
 - [SOLID] Shipped defaults (`numGameThreads=128`) would spawn ~132 threads against a 24-CPU request — a
   declaration that is false by more than 5x, and 128 game threads × 1 search thread each on one node oversubscribes
@@ -85,9 +85,32 @@ request):
   17 of them break at once, `selfplay.cpp:291-293`). Headroom 2 = the mid-run net-switch allowance, unconsumed here
   because one model was loaded and never switched.
   verify: `../evidence/cfg_9x9/check_cfg_9x9-298359.txt` lines `NLWP_SAMPLES = 52`, `NLWP_MAX     = 22`, `CPU_BUDGET   = 24`, `ok   NLWP_MAX 22 <= CPU_BUDGET 24`; claim `c06` (selfplay clause), obligation `o03`.
-- [PRELIMINARY] The gatekeeper, shuffle and train rows of the table are still computed, not measured; they are
-  admitted only from `ps -o nlwp=` on those live processes when their nodes run.
-  verify: claim `c06` for `gatekeeper_stage` / `train_stage`; obligation `o03`.
+- [SOLID] The gatekeeper, shuffle and train rows are now measured, on the live processes of Slurm job 298712
+  (`--cpus-per-task=24`, `ps -o nlwp=` at 0.2 s, per-pid attribution). Random-net **selfplay lands exactly on the
+  arithmetic a third and fourth time: 22** (pids 324406, 330480). **shuffle** confirms the table's
+  8 worker processes (pids 324712-324719 in cycle 1, 330794-330801 in cycle 2) at 1 thread each behind a 4-thread
+  parent, i.e. 12 concurrent threads for the stage. **train 14** threads with `OMP_NUM_THREADS=MKL_NUM_THREADS=4`
+  (pids 325065, 331077), comfortably inside 24. Note the metric's shape: `nlwp_max` is a per-PROCESS peak, so the
+  "declared >= used" comparison for a multi-process stage is the SUM over its concurrent pids (shuffle: 4 + 8 = 12);
+  for selfplay, the gatekeeper and train, one process is the whole stage and the two coincide.
+  verify: `../evidence/smoke/nlwp_max.txt` and `ps_samples-298712.tsv`; claim `c06`, obligation `o03`.
+- [BLOCKING] **The 24-CPU declaration is false for any stage that holds a CUDA context.** Job 298712 measured
+  `nlwp_max = 25` on both real-net stages — the leg-D1 selfplay probe running the exported `t9-s1216-d1221`
+  (pid 332406) and the cycle-2 gatekeeper running that candidate against the random baseline (pid 328662) — against
+  the 22 that every random-net selfplay in the same job measured. The +3 is the CUDA runtime/driver threads that
+  `debugSkipNeuralNet` never creates (`cpp/program/setup.cpp:126`), so the table's headroom of 2 is one short of what
+  a real net costs. The rule this design rests on is "declared >= used", and 25 > 24 breaks it. Two admissible
+  repairs, and picking between them is `derive_cycle_knobs_9x9`'s, not this node's: raise `--cpus-per-task` to at
+  least 25 (28 leaves the net-switch allowance) with `numGameThreads` unchanged, or drop `numGameThreads` to 15.
+  `tasks/synchronous_loop_smoke` § 13 forbids moving either alone. Unblocks when `derive_cycle_knobs_9x9` sets both
+  together and a real-net cycle re-measures `nlwp_max <= --cpus-per-task`.
+  verify: `../evidence/smoke/nlwp_max.txt` rows `probe_search/selfplay nlwp_max=25` and `cycle2/gatekeeper
+  nlwp_max=25` against `cpus_per_task = 24`; obligation `o03`, claim `c06` (real-net clause).
+- [OPEN] A gatekeeper with **two** real nets is still unmeasured. Job 298712's gate ran one exported net against the
+  random baseline, so only one CUDA context existed; the table's "2 nnServer (2 models)" row was never exercised and
+  25 is a lower bound for the two-net case. First measurable at `gatekeeper_stage`, cycle 3 or later, once a
+  candidate has been accepted into `models/`.
+  verify: node `gatekeeper_stage`; claim `c13`.
 - [SOLID] Assumption `a11` (the 20 % policy applies to the *sum* over concurrent jobs) and obligation `o22`
   (per-job vs summed) are both moot: the human withdrew the percentage clause outright on 2026-09-03, so there is
   no quantity to apportion and a second concurrent job no longer needs an answer before it may run. `check.sh`

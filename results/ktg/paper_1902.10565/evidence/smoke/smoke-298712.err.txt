@@ -1,0 +1,29 @@
+Traceback (most recent call last):
+  File "/home/schmidt/ssci-haiyangw/az/results/ktg/paper_1902.10565/codes/eval/audit_smoke.py", line 606, in <module>
+    sys.exit(main(sys.argv))
+  File "/home/schmidt/ssci-haiyangw/az/results/ktg/paper_1902.10565/codes/eval/audit_smoke.py", line 598, in main
+    return snapshot(basedir, snap_label, trainingname)
+  File "/home/schmidt/ssci-haiyangw/az/results/ktg/paper_1902.10565/codes/eval/audit_smoke.py", line 154, in snapshot
+    import torch  # allocation-only
+ModuleNotFoundError: No module named 'torch'
+Traceback (most recent call last):
+  File "/home/schmidt/ssci-haiyangw/az/results/ktg/paper_1902.10565/codes/eval/audit_smoke.py", line 606, in <module>
+    sys.exit(main(sys.argv))
+  File "/home/schmidt/ssci-haiyangw/az/results/ktg/paper_1902.10565/codes/eval/audit_smoke.py", line 598, in main
+    return snapshot(basedir, snap_label, trainingname)
+  File "/home/schmidt/ssci-haiyangw/az/results/ktg/paper_1902.10565/codes/eval/audit_smoke.py", line 154, in snapshot
+    import torch  # allocation-only
+ModuleNotFoundError: No module named 'torch'
+leg D1 failed but is not a prerequisite; continuing so the allocation still yields the other legs.
+Traceback (most recent call last):
+  File "/home/schmidt/ssci-haiyangw/az/results/ktg/paper_1902.10565/codes/eval/probe_train_9x9.py", line 192, in <module>
+    sys.exit(main(sys.argv))
+             ^^^^^^^^^^^^^^
+  File "/home/schmidt/ssci-haiyangw/az/results/ktg/paper_1902.10565/codes/eval/probe_train_9x9.py", line 90, in main
+    trunk_gpool_count = sum(1 for m in model.trunk.modules()
+                                       ^^^^^^^^^^^
+  File "/scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/venv/lib/python3.11/site-packages/torch/nn/modules/module.py", line 1968, in __getattr__
+    raise AttributeError(
+AttributeError: 'Model' object has no attribute 'trunk'. Did you mean: 'c_trunk'?
+leg D2 failed but is not a prerequisite; continuing so the allocation still yields the other legs.
+leg E failed but is not a prerequisite; continuing so the allocation still yields the other legs.

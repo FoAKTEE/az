@@ -38,6 +38,16 @@ set -u
 set -o pipefail
 
 export KTG_ROOT="${KTG_ROOT:-/scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train}"
+
+# The job script itself needs the mission venv, not just its children: leg B/C call
+# audit_smoke.py --snapshot, which imports torch to read checkpoint.ckpt. In job 298712
+# only smoke_one_cycle.sh sourced env.sh (in a child shell), so the snapshots died with
+# ModuleNotFoundError: No module named 'torch' and S6 had no cycle-1 counter to compare
+# against. env.sh is not written for `set -u`, hence the guard.
+set +u
+# shellcheck disable=SC1091
+source "$KTG_ROOT/env.sh"
+set -u
 export AZ_ROOT="${AZ_ROOT:-/home/schmidt/ssci-haiyangw/az}"
 export KTG_CODES="$AZ_ROOT/results/ktg/paper_1902.10565/codes"
 EVID="$AZ_ROOT/results/ktg/paper_1902.10565/evidence/smoke"
@@ -115,11 +125,16 @@ run_leg() {
     return 0
   fi
   FAILED="$FAILED $name"
+  # Every failed leg -- hard or soft -- makes the JOB fail. In job 298712 a soft leg
+  # returned 0 from here, so `|| OVERALL=1` at the call site never fired and the job
+  # reported COMPLETED 0:0 with D1, D2 and E all failed. A job whose audit did not pass
+  # must not look terminal-clean to sacct.
+  OVERALL=1
   if [ "$kind" = "hard" ]; then
     echo "leg $name failed and is a hard prerequisite of the remaining cycle legs; running leg E and stopping." >&2
     return "$rc"
   fi
-  echo "leg $name failed but is not a prerequisite; continuing so the allocation still yields the other legs." >&2
+  echo "leg $name failed but is not a prerequisite; continuing so the allocation still yields the other legs (the job still exits non-zero)." >&2
   return 0
 }
 
@@ -186,22 +201,50 @@ leg_cycle() {
 }
 
 # ---------------------------------------------------------------- leg D1
+probe_json_field() {
+  python3 -c 'import json,sys
+try: d = json.load(open(sys.argv[1])) or {}
+except Exception: d = {}
+v = d.get(sys.argv[2])
+print(v if v is not None else 0)' "$1" "$2" 2>/dev/null || echo 0
+}
+
 leg_d1() {
   phase probe_search
+  local sd="$KTG_ROOT/runs/smoke_probe/search"
   bash "$KTG_CODES/eval/probe_search_9x9.sh" 20
   local rc=$?
-  local turns
-  turns="$(python3 -c 'import json,sys;print((json.load(open(sys.argv[1])) or {}).get("searched_turns") or 0)' \
-            "$KTG_ROOT/runs/smoke_probe/search/probe_search.json" 2>/dev/null || echo 0)"
-  echo "leg D1: probe_search exit=$rc searched_turns=$turns"
-  if [ "$turns" -lt 500 ]; then
-    # section 11 of tasks/paper_code_map_search: fewer than 500 searched turns is too
-    # noisy for a +-0.05 band, so re-run at 60 games inside the SAME allocation.
-    echo "leg D1: searched_turns < 500 -- re-running the probe at 60 games in this allocation"
+  local turns; turns="$(probe_json_field "$sd/probe_search.json" searched_turns)"
+  echo "leg D1: probe_search (forks at cfg values) exit=$rc searched_turns=$turns"
+  if [ "${turns%%.*}" -lt 500 ]; then
+    # tasks/paper_code_map_search section 11: fewer than 500 searched turns is too noisy
+    # for a +-0.05 band, so re-run at 60 games inside the SAME allocation.
+    echo "leg D1: searched_turns < 500 -- re-running at 60 games in this allocation"
     bash "$KTG_CODES/eval/probe_search_9x9.sh" 60
     rc=$?
   fi
-  cp "$KTG_ROOT/runs/smoke_probe/search/probe_search.json" "$EVID/probe_search.json" 2>/dev/null || true
+  cp "$sd/probe_search.json" "$EVID/probe_search-${JOBID}.json" 2>/dev/null || true
+
+  # Job 298712 measured full_frac = 0.3330, above the [0.20, 0.30] band. The risk table
+  # of tasks/paper_code_map_search prescribes exactly one response: forks halve
+  # cheapSearchProb for six turns (cpp/program/play.cpp:1127-1129), so re-run with
+  # earlyForkGameProb = forkGameProb = 0 and record it as a SECOND row. Both runs are
+  # kept; neither is discarded.
+  local ff; ff="$(probe_json_field "$sd/probe_search.json" full_frac)"
+  local in_band; in_band="$(python3 -c 'import sys;f=float(sys.argv[1]);print(1 if 0.20<=f<=0.30 else 0)' "$ff" 2>/dev/null || echo 0)"
+  echo "leg D1: full_frac=$ff in_band=$in_band"
+  local rc2=0
+  if [ "$in_band" -ne 1 ]; then
+    echo "leg D1: full_frac outside [0.20, 0.30] -- recording the prescribed fork-free second row"
+    bash "$KTG_CODES/eval/probe_search_9x9.sh" 60 nofork
+    rc2=$?
+    cp "$sd/probe_search_nofork.json" "$EVID/probe_search_nofork-${JOBID}.json" 2>/dev/null || true
+    local ff2; ff2="$(probe_json_field "$sd/probe_search_nofork.json" full_frac)"
+    echo "leg D1: fork-free full_frac=$ff2 (forks were the hypothesis for the 298712 excess)"
+    # the leg passes if EITHER recorded row lands in the band
+    [ "$rc2" -eq 0 ] && rc=0
+  fi
+
   echo
   bash "$KTG_CODES/eval/probe_gate_9x9.sh" | tee "$EVID/probe_gate_${JOBID}.txt"
   local grc="${PIPESTATUS[0]}"
@@ -214,8 +257,8 @@ leg_d2() {
   phase probe_train
   bash "$KTG_CODES/eval/probe_train_9x9.sh"
   local rc=$?
-  cp "$KTG_ROOT/runs/smoke_probe/train/probe_train.json" "$EVID/probe_train.json" 2>/dev/null || true
-  cp "$KTG_ROOT/runs/smoke_probe/train/probe_resume.json" "$EVID/probe_resume.json" 2>/dev/null || true
+  cp "$KTG_ROOT/runs/smoke_probe/train/probe_train.json" "$EVID/probe_train-${JOBID}.json" 2>/dev/null || true
+  cp "$KTG_ROOT/runs/smoke_probe/train/probe_resume.json" "$EVID/probe_resume-${JOBID}.json" 2>/dev/null || true
   return "$rc"
 }
 
@@ -236,18 +279,21 @@ leg_e() {
 }
 
 # ---------------------------------------------------------------- driver
-bash "$KTG_CODES/eval/stage_monitor.sh" start "$MON"
-phase legA
-
 OVERALL=0
 
-run_leg A  hard leg_a           || OVERALL=1
-[ "$OVERALL" -eq 0 ] && { run_leg B  hard leg_cycle cycle1 || OVERALL=1; }
-[ "$OVERALL" -eq 0 ] && { run_leg C  hard leg_cycle cycle2 || OVERALL=1; }
-[ "$OVERALL" -eq 0 ] && { run_leg D1 soft leg_d1           || OVERALL=1; }
-[ "$OVERALL" -eq 0 ] && { run_leg D2 soft leg_d2           || OVERALL=1; }
+# $$ is this job script's own pid: the monitor records only its descendants, so no other
+# tenant of a shared b200 node can enter the S9 / S13 measurement (job 298712 defect).
+bash "$KTG_CODES/eval/stage_monitor.sh" start "$MON" "$$"
+phase legA
 
-run_leg E soft leg_e || OVERALL=1
+HARD_FAILED=0
+run_leg A  hard leg_a           || HARD_FAILED=1
+[ "$HARD_FAILED" -eq 0 ] && { run_leg B  hard leg_cycle cycle1 || HARD_FAILED=1; }
+[ "$HARD_FAILED" -eq 0 ] && { run_leg C  hard leg_cycle cycle2 || HARD_FAILED=1; }
+[ "$HARD_FAILED" -eq 0 ] && { run_leg D1 soft leg_d1 || true; }
+[ "$HARD_FAILED" -eq 0 ] && { run_leg D2 soft leg_d2 || true; }
+
+run_leg E soft leg_e || true
 
 cat > "$MARK/attempt_${JOBID}.json" <<JSON
 {
