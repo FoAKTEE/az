@@ -1,156 +1,200 @@
-# Summary — arXiv:1902.10565 (*Accelerating Self-Play Learning in Go*)
+# Summary — mission `ktg-train` (code-first)
 
 Stage 1-decompose artifact. Output contract: `pipelines/1-decompose/spec.md` § Output contract.
 Markers per `_common/contracts/markers.md`.
-`l.NNN` = line in `ref-paper/arxiv-1902.10565/src/Accelerating_Self_Play_Learning_In_Go_2020.tex`.
-Statements about the mission regime (9×9-only, transformer trunk `b5c48h3tfr`, ≤4 GPUs,
-≤24 CPUs, 3-day wall) that the paper does not make carry a marker.
+
+**Source of truth = the code mirror** `ref-code/lightvector-KataGo` @ `v1.18.2` (`fd0723fd`);
+arXiv:1902.10565 is background. `l.NNN` = line in
+`ref-paper/arxiv-1902.10565/src/Accelerating_Self_Play_Learning_In_Go_2020.tex`.
+Paths without a `ref-` prefix are inside the code mirror. Mission-regime statements
+(9×9-only, `b5c48h3tfr`, ≤4 GPUs, ≤24 CPUs, 3-day wall) not asserted by paper or code
+carry a marker.
 
 ## Motivation
 
-AlphaZero-class self-play learning works but is priced out of reach: DeepMind's Go run used
-5000 TPUs for several days, ~41 TPU-years (l.33); ELF OpenGo's replication used 2000 V100
-GPUs for 13-14 days, ~74 GPU-years (l.33). The paper's premise is that this cost is not
-intrinsic to the algorithm — a large fraction of it is avoidable through better data
-balance, better targets, and better architecture, most of them not specific to Go (l.44).
-A second motivation is diagnostic: measuring how much of the remaining gap is closed by
-*domain-specific* tricks tells us how far general methods still are from what is possible
-(l.46).
+AlphaZero-class self-play works but is priced out of reach: DeepMind's Go run used 5000
+TPUs for several days, ~41 TPU-years (l.33); ELF OpenGo used 2000 V100 GPUs for 13-14 days,
+~74 GPU-years (l.33). The paper's premise is that most of that cost is not intrinsic — it
+is recoverable through better data balance, richer targets, and global context in the net
+(l.44) — and, diagnostically, that measuring the domain-specific share tells us how far
+general methods still are from what is possible (l.46).
 
 ## Goal
 
-Reach ELF OpenGo's final strength from random initialization, with no human data and no
-external strategic knowledge, on a computation budget roughly 50× smaller, and attribute
-the speedup to individually ablatable components (l.38, l.48).
+Reach ELF OpenGo's final strength from random initialization, no human data, on ~50× less
+computation, with each contributing component individually ablatable (l.38, l.48).
 
 ## Result scope
 
-- **What was measured.** (1) Elo of KataGo's nets through training versus a Leela Zero
-  ladder (LZ30…LZ225) and ELF's final "V2" net, all rated by BayesElo from ~21,000 games
-  (l.232-240). (2) Three direct 400-game matches against ELF's native engine, at fixed
-  playouts and at fixed wall clock (l.261, Table l.268-270). (3) Six 2-day ablation runs —
-  `FixedN`, `NoForcedTP`, `NoGPool`, `NoPAux`, `NoVAux`, `NoGoFeat` — rated over ~147,000
-  games (l.282-293, Table l.332-338).
-- **Board sizes.** *Training* mixes sizes: 37.5→50% of games on 19×19, the rest triangular
-  from 9×9 to 18×18 with weights 1…10 (l.650). *All evaluation* is 19×19 with fixed 7.5
-  komi, 1600 visits, no multithreading (l.240, l.293). No 9×9 result is reported anywhere.
-- **Hardware / time.** Main run: 19 days, max 28 V100 GPUs (averaging 26-27) — 16 for
-  self-play rising to 24, 2 for gating, 1-2 for training (l.81, l.603). Output: 241M
-  training samples over 4.2M games across four net sizes b6c96 → b20c256 (l.71, l.603,
-  Table l.610-613). Ablations: ~2 days each (l.282).
-- **Cost metric.** Compute is reported not in GPU-hours but as equivalent 20-block ×
-  256-channel queries, modelling a `b`-block `c`-channel net as `~ b c^2` per query (l.252).
+- **Measured.** (1) Elo through training versus a Leela Zero ladder (LZ30…LZ225) and ELF's
+  final "V2" net, BayesElo over ~21,000 games (l.232-240). (2) Three 400-game matches versus
+  ELF's native engine (l.261, Table l.268-270). (3) Six 2-day ablation runs — `FixedN`,
+  `NoForcedTP`, `NoGPool`, `NoPAux`, `NoVAux`, `NoGoFeat` — ~147,000 games (l.282-293).
+- **Board sizes.** *Training* mixed: 37.5→50% on 19×19, remainder triangular 9×9…18×18 with
+  weights 1…10 (l.650). *All evaluation* 19×19, fixed 7.5 komi, 1600 visits (l.240, l.293).
+  No 9×9 result is reported anywhere in the paper.
+- **Hardware / time.** 19 days, max 28 V100s (avg 26-27): 16→24 self-play, 2 gating, 1-2
+  training (l.81, l.603). 241M samples over 4.2M games across four sizes b6c96 → b20c256
+  (Table l.610-613). Ablations ~2 days each (l.282).
+- **Cost metric.** Equivalent 20b×256c queries, modelling a `b`-block `c`-channel net as
+  `~ b c^2` per query (l.252) — not implemented in the mirror.
 
 ## Conclusions
 
 - KataGo surpasses ELF's final model after 19 days on <30 GPUs (~1.4 GPU-years), ~50× less
-  computation, and beats Leela Zero's efficiency by ~10× at equal net size (l.38, l.259).
-- The three direct matches all favour KataGo: 239/400, 246/400, 254/400 (Table l.268-270).
-- Every ablated component costs measurable Elo; the product of the individual acceleration
-  factors is ≈9.1× (l.325), which the author calls an *underestimate* because the ablation
-  runs were shorter than the regime where several techniques matter most (l.321, l.325).
-- Domain-specific gains are real but partial: ownership+score targets (1.65×) and Go input
-  features (1.55×) are the two largest single factors (Table l.337-338), so a purely general
-  method still leaves substantial efficiency on the table (l.46, l.323).
-- Playout cap randomization beats *every* fixed playout count tried, which is the signature
-  predicted if it genuinely relieves the policy/value data tension (l.319).
+  computation; ~10× better than Leela Zero at equal net size (l.38, l.259).
+- All three direct matches favour KataGo: 239/400, 246/400, 254/400 (Table l.268-270).
+- Every ablated component costs Elo; the product of the acceleration factors is ≈9.1×
+  (l.325), called an *underestimate* because the runs stopped early (l.321).
+- Domain-specific gains are real but partial: ownership+score targets 1.65× and Go input
+  features 1.55× are the two largest single factors (Table l.337-338).
+- Playout cap randomization beats every fixed playout count tried (l.319).
 
 ## Key challenge
 
 The AlphaZero process contains a structural conflict: the game-outcome value target gets
-exactly one noisy bit per whole game, so value learning wants many cheap games; the policy
-target wants ~800 playouts per move or the search never deviates enough from the prior to
-teach the policy anything (l.92-94). Under a fixed compute budget these demands are
-directly opposed, and no single fixed visit count satisfies both. Every technique in the
-paper is an attack on some version of this data-poverty problem — either by decoupling the
-two budgets (playout cap randomization), by decoupling the policy target from the search
-dynamics that generate it (target pruning), or by extracting more supervised signal per
-game (auxiliary targets).
+one noisy bit per whole game, so value learning wants many cheap games; the policy target
+wants ~800 playouts per move or the search never deviates enough from the prior to teach
+the policy anything (l.92-94). Under fixed compute these demands are opposed and no single
+visit count satisfies both. Every technique attacks a version of this data-poverty problem
+— decoupling the two budgets, decoupling the policy target from the search that generates
+it, or extracting more supervised signal per game.
 
-## Method innovation
+## What the v1.18.2 loop does today
 
-- **Playout cap randomization** (l.89-98). On probability `p = 0.25` of turns run a full
-  search to a cap of `N` nodes and record it for training; otherwise run a cheap search to
-  `n < N` with noise and exploration disabled and record nothing. `(N,n) = (600,100)`
-  annealed to `(1000,200)`. Cheap turns are numerous but individually cheap, so game count
-  rises sharply while good policy samples per unit compute barely fall. Ablation: 1.37×.
-- **Forced playouts + policy target pruning** (l.101-119). Guarantee each root child that
-  got any visits at least `n_forced(c) = (k P(c) sum N)^{1/2}` playouts with `k = 2`, by
-  setting its selection urgency to infinity; then, before recording the policy target,
-  subtract those extra playouts back off (up to the point where PUCT would have chosen them
-  anyway) and drop children reduced to one playout. This buys exploration without training
-  the policy on the noise that caused it. The general lesson stated at l.119 is the
-  decoupling itself, not the specific rule. Ablation: 1.25×.
-- **Global pooling** (l.126-148, l.397-412). A pooling layer emits, per channel, the mean,
-  the mean scaled by `(b - b_avg)/10`, and the max — `3c` values — which a fully connected
-  layer turns into channelwise biases on another tensor. Used in 2-3 trunk residual blocks,
-  in the policy head, and (with a `(b-b_avg)^2 - sigma^2` term instead of the max, so score-like
-  quantities can scale quadratically with board width) in the value head. Ablation: 1.60×,
-  the largest of the general techniques.
-- **Auxiliary policy targets** (l.155-162). One extra policy-head channel predicts the
-  *opponent's* policy target on the following turn, weighted `w_opp = 0.15`; never used for
-  play, purely regularization. Ablation: 1.30×.
-- **Ownership + score targets** (l.167-200, l.557-567). The binary game result is a function
-  of finer variables: per-point ownership `o(l,p)` (weight `1.5/b^2`) and the final score
-  distribution `p_s` (pdf and cdf terms, weight 0.02 each). Mispredicting a region produces
-  a gradient localized to that region, which is the stated mechanism for better credit
-  assignment (l.198). Generalized heuristic: predict subevents whenever the target
-  decomposes into them (l.200). Ablation: 1.65×, the largest single factor.
-- **Score utility** (l.683-705). Search maximizes `u_win + u_score` where
-  `u_score(x) = c_score * (2/pi) arctan((x - x0)/b)`, `x0` re-centred each search on the net's
-  own predicted mean score. Saturation prevents the bot from chasing improbable large score
-  swings. `c_score` 0.5 → 0.4. Not separately ablated.
-- **Game randomization** (l.644-660). Board size, ko/suicide rules, komi (`N(7,1)`, 5% with
-  sd 10), 5% handicap games, exponential-length raw-policy openings, smoothly decaying move
-  temperature `T` 0.8→0.2 with halflife `b`, 2.5% position forks and 5% unusual-opening
-  forks. Games are played to completion with *no resignation*; instead visits are tapered by
-  `lambda = p/0.05` and samples downweighted to `0.1 + 0.9 lambda`, which keeps ownership and
-  score targets computable and unbiased (l.660-662).
-- **Gating** (l.79, l.667-679). A SWA candidate net enters self-play only after winning
-  ≥100/200 games against the incumbent at a 300-node cap (400 after 2 days), with noise,
-  forced playouts, handicap, and branching disabled and komi fixed at 7.5.
+Per pipeline stage, then per surviving paper idea. Every bullet carries a `file:line` anchor.
+
+**Stage 1 — self-play** (`cpp/main.cpp:105` → `MainCmds::selfplay`;
+`synchronous_loop.sh:99`; config `cpp/configs/training/selfplay1_maxsize9.cfg`).
+- Writes training rows at a **fixed edge length** set by `dataBoardLen`
+  (`cpp/command/selfplay.cpp:97`, passed as `dataXLen`/`dataYLen` at `:220`) — `19` in every
+  shipped config including the maxsize9 preset (`selfplay1_maxsize9.cfg:16`).
+- Board size, rules, komi, handicap, and forks are randomized per game
+  (`selfplay1_maxsize9.cfg:89-108`); `allowRectangleProb = 0.50` (`:97`) makes half the games
+  non-square — a code behaviour with no paper counterpart.
+- **Playout cap randomization** survives verbatim: `cheapSearchProb = 0.75`,
+  `cheapSearchVisits = 100`, `cheapSearchTargetWeight = 0.0`, `maxVisits = 600`
+  (`selfplay1_maxsize9.cfg:60-62,115`) = paper's `p = 0.25`, `(N,n) = (600,100)` (l.96).
+- **Forced playouts** survive: `rootDesiredPerChildVisitsCoeff = 2`
+  (`selfplay1_maxsize9.cfg:148`) drives urgency to `1e20` while
+  `childWeight < sqrt(policy * total * coeff)` (`cpp/search/searchexplorehelpers.cpp:166-169`)
+  = paper's `k = 2`, `n_forced = (k P sum N)^{1/2}` (l.105-106).
+- **Policy target pruning** survives as `Search::pruneNoiseWeight`
+  (`cpp/search/searchupdatehelpers.cpp:495`, called at `searchresults.cpp:1116,1491,1696`),
+  plus `chosenMovePrune = 1` (`selfplay1_maxsize9.cfg:142`) = paper l.108.
+- **No resignation in self-play**: visits and sample weight taper instead
+  (`reduceVisits*`, `reducedVisitsWeight = 0.1`, `selfplay1_maxsize9.cfg:64-68`) = paper l.660,
+  though the code triggers after 3 consecutive turns at winrate 0.9, not 5 turns at 5%.
+- **Score utility** survives as `dynamicScoreUtilityFactor = 0.40` with re-centring via
+  `dynamicScoreCenterZeroWeight`/`Scale` (`selfplay1_maxsize9.cfg:159-161`) = paper `c_score`,
+  `x0 = mu_s_hat` (l.690, l.701).
+- Code-only, no paper analogue: `useGraphSearch` (DAG not tree, `:183`),
+  `subtreeValueBiasFactor` (`:180`), `policySurpriseDataWeight`/`valueSurpriseDataWeight`
+  (`:75-76`), `estimateLeadProb` (`:78`), `sidePositionProb` (`:58`).
+
+**Stage 2 — shuffle** (`python/shuffle.py`; driver `shuffle.sh:42,61,78`; `synchronous_loop.sh:105`).
+- The paper's moving-window law `N_window` (l.638) is `compute_desired_num_rows`
+  (`python/shuffle.py:414-430`), parameterized by `-min-rows` (paper `c`),
+  `-taper-window-exponent` (paper `alpha`), `-expand-window-per-row` (paper `beta`)
+  (`shuffle.py:777,780-782`). Upstream advises `alpha` 0.65-0.675 and `beta` 0.4
+  (`shuffle.py:733-734`) versus the paper's 0.75 / 0.4 (l.639).
+- `-num-processes` (`shuffle.py:791`, required) is the shuffler's CPU knob.
+
+**Stage 3 — train** (`python/train.py`; driver `train.sh:83`; `synchronous_loop.sh:109`).
+- `-pos-len` (`train.py:79`, required) fixes the expected row edge length; the shipped driver
+  hard-codes `-pos-len 19` (`train.sh:88`).
+- **Auxiliary policy target** survives: `loss_policy_opponent_samplewise` weight `0.15`
+  (`python/katago/train/metrics_pytorch.py:84-88`) = paper `w_opp = 0.15` (l.555).
+- **Ownership + score targets** survive: `loss_ownership_samplewise` weight `1.5` over
+  on-board points (`metrics_pytorch.py:146-161`), score-belief pdf and cdf at `0.020` each
+  (`:260-273`) = paper `w_o = 1.5/b^2`, `w_spdf` = `w_scdf` = 0.02 (l.559-567).
+- Score-mean self-prediction survives with different constants: weight `0.0015`, Huber
+  `delta = 12.0` (`metrics_pytorch.py:250-253`) versus paper `w_sbreg = 0.004`, `delta = 10.0`
+  (l.570-571). Value loss is `1.20` (`:127`) times `-value-loss-scale` default `0.6`
+  (`train.py:146`) versus paper `c_value = 1.5` (l.547).
+- **SWA** survives as `-swa-period-samples` / `-swa-scale` (`train.py:95-96`, defaults at
+  `:440-443`) = paper's snapshot-EMA candidate generator (l.79).
+- Code-only: optimizer choice among adamw/muon/normuon/aurora (`train.py:101-104`),
+  transformer attention-logit penalty (`train.py:140-142`), TD-value and seki losses
+  (`train.py:147-148`), Q-value targets (`metrics_pytorch.py:90-118`).
+
+**Stage 4 — export** (`python/export_model_pytorch.py`; driver
+`export_model_for_selfplay.sh:77`; `synchronous_loop.sh:113`).
+- Exports the SWA weights (`-use-swa`, `export_model_pytorch.py:39`, passed by the driver).
+- **Refuses to export** when any attention layer's data-free logit bound exceeds
+  `-attn-logit-bound-limit`, default `2.5e4` (`export_model_pytorch.py:42`), overridable by
+  `-ignore-attn-logit-bound` (`:43`). Transformer-only; no paper counterpart.
+- `python/export_model.py` **does not exist** at `v1.18.2`; two upstream docs still name it
+  (`SelfplayTraining.md:9`, `python/README.md:13`).
+
+**Stage 5 — gatekeeper** (`cpp/main.cpp:95`; `synchronous_loop.sh:96`; config
+`cpp/configs/training/gatekeeper1_maxsize9.cfg`).
+- **Gating** survives: `numGamesPerGating = 200` (`gatekeeper1_maxsize9.cfg:20`) and
+  `-required-candidate-win-prop` default `0.5` (`cpp/command/gatekeeper.cpp:271`, enforced at
+  `:184`) = paper's ≥100/200 (l.669). Noise, forced playouts and cheap searches are simply
+  absent from the gate config = paper l.676; resignation is enabled (`:22-24`) = l.678.
+- Gate visit cap is `maxVisits = 150` (`:49`) versus the paper's 300→400 (l.669).
+
+**Global pooling** (l.126-148, l.397-412) survives **only in the heads**: `PolicyHead.gpool`
+(`model_pytorch.py:2647`) and `ValueHead.gpool` (`:2745`) are unconditional, and
+`b5c48h3tfr` sets `gpool_num_channels = 32` (`modelconfigs.py:995`). Paper's `b_avg = 14`
+and `sigma^2 = 10` (l.404) are hard-coded as `- 14.0` (`:505,534`) and `- 0.1` (`:540`).
+
+## Paper ideas superseded by the current code
+
+- **Residual-CNN trunk with global-pooling blocks** (l.414-441). `b5c48h3tfr`'s trunk is
+  5 × (`attnrope`, `ffng`) transformer blocks (`modelconfigs.py:999`) — no residual conv
+  block, no gpool block. Model version 17 introduced transformers (`modelconfigs.py:43`);
+  the paper has no attention architecture at all.
+- **Progressive net resizing** `(b,c)` = (6,96)→(20,256) (l.71). `$MODELKIND` is a single
+  argument (`synchronous_loop.sh:109`); the mission runs one config.
+- **19×19 evaluation against ELF / Leela Zero** (l.240, l.293). No opponent pool, no BayesElo
+  implementation, and no `~ b c^2` cost metric exist in the mirror.
+- **The 27-GPU, 19-day budget** and its hyperparameters (l.603, l.635). The mirror ships no
+  such schedule: LR is `-lr-scale`/`-lr-schedule` (`train.py:83-86`), window parameters are
+  shuffle flags, and the loop's cycle size is `NUM_GAMES_PER_CYCLE`
+  (`synchronous_loop.sh:99`).
+- **Fixed komi 7.5 in gating** (l.672). The code uses `komiAuto = True`
+  (`gatekeeper1_maxsize9.cfg:42`) — komi is set from the net's own fair estimate.
+- **`c_value = 1.5`, `w_sbreg = 0.004`, `delta = 10.0`, root temperature 1.03** (l.547, l.571,
+  l.69). Current values are `1.20 × 0.6`, `0.0015`, `12.0`, and `rootPolicyTemperature = 1.1`
+  (`metrics_pytorch.py:127,253`, `train.py:146`, `selfplay1_maxsize9.cfg:169`).
 
 ## Possible bottleneck
 
 For the mission, not for the paper.
 
-- **Paper regime ≠ 9×9 transformer regime.** `[OPEN] boardsize-gap` (from
-  `results/ktg/sources/paper_arxiv-1902.10565.md`) — every Elo in the paper is 19×19
-  (l.240, l.293) and the training distribution is mixed 9…19 (l.650). No paper number is a
-  target for a 9×9-only run. `[OPEN] success-criterion` — **closes when** a 9×9 criterion is
-  defined that cites no paper Elo figure.
-- **No transformer anywhere in the paper.** `[OPEN] arch-gap` — the trunk described at
-  l.414-441 is pre-activation residual CNN with global-pooling blocks. `b5c48h3tfr` is
-  `attnrope`+`ffng` blocks with **no gpool block in the trunk** (`modelconfigs.py:999`);
-  gpool survives only in the heads. `[HYPOTHESIS] gpool-attn` — the 1.60× global-pooling
-  ablation factor (Table l.335) therefore does not transfer, because attention is already
-  globally receptive. `[HYPOTHESIS] bavg-dead` — with a single board width, the gpool
-  channel scaled by `(b - b_avg)/10` is a constant (`-1.1` at `b=9`, since 14.0 is hard-coded
-  in `model_pytorch.py:505`), so the board-size machinery becomes dead weight rather than a
-  signal. Neither is measured here.
-- **Self-play:train compute ratio.** The paper's main run spends 16-24 GPUs on self-play
-  against 1-2 on training — a 4-40× ratio inside a 26-27 GPU pool (l.603). `[HYPOTHESIS]
-  ratio-4gpu` — on ≤4 GPUs that ratio cannot be reproduced without either starving the
-  trainer or making self-play the whole wall-clock; the loop's cycle time, not its
-  correctness, is what ≤4 GPUs threatens. `[OPEN] hparam-scale` (from the acquire
-  declaration) — **closes when** scaled-down `maxVisits` / `cheapSearchVisits` /
-  `numGamesPerCycle` / batch size are recorded with their derivation or measured on the
-  cluster. `[OPEN] cfg-audit` — every thread count must respect the ≤24-CPU cap.
-- **Scratch storage.** The paper's run produced 241M samples across 4.2M games (l.603) with
-  a sampling window growing to ~22M samples (l.77). `[ASSUMPTION] scratch-only` — mission
-  self-play data goes to `/scratch/…/ktg-train/` and is never committed. `[OPEN]
-  scratch-budget` — the 9×9 per-sample row size and the 3-day accumulation rate are not yet
-  measured, so the window/retention settings for `shuffle.py` (`-min-rows`,
-  `-taper-window-scale`) are unset. **Closes when** one cycle's on-disk row count and byte
+- **Paper regime ≠ 9×9 transformer regime.** `[OPEN] boardsize-gap` — every paper Elo is
+  19×19 (l.240, l.293) and its training distribution is mixed 9…19 (l.650). No paper number
+  is a target. `[OPEN] success-criterion` — **closes when** a 9×9 criterion is defined citing
+  no paper Elo figure.
+- **No transformer in the paper.** `[OPEN] arch-gap` — `[HYPOTHESIS] gpool-attn` the 1.60×
+  global-pooling ablation factor (Table l.335) does not transfer, because the trunk gpool
+  blocks it ablates are absent and attention is already globally receptive.
+  `[HYPOTHESIS] bavg-dead` — with one board width, the `(b−14)/10` pool channel is the
+  constant `-1.1` and the value-head channel `1.11`, i.e. biases rather than size signals.
+- **Two board-size settings must agree.** `dataBoardLen` (`selfplay1_maxsize9.cfg:16`, `19`)
+  and `-pos-len` (`train.sh:88`, `19`) both default to 19. `[HYPOTHESIS] shape-mismatch` —
+  changing one without the other gives 19×19-shaped rows to a 9×9 trainer or the reverse;
+  this is the cheapest way for the mission to burn a full cycle silently.
+- **Self-play:train compute ratio.** The paper spends 16-24 GPUs on self-play against 1-2 on
+  training (l.603) — 4-40× — inside a 26-27 GPU pool. `[HYPOTHESIS] ratio-4gpu` — on ≤4 GPUs
+  that ratio cannot hold without starving the trainer or letting self-play own the wall
+  clock. `[OPEN] hparam-scale` — **closes when** scaled `maxVisits` / `cheapSearchVisits` /
+  `NUM_GAMES_PER_CYCLE` / batch size are recorded with their derivation or measured.
+  `[OPEN] cfg-audit` — `numGameThreads = 128` (`selfplay1_maxsize9.cfg:84`,
+  `gatekeeper1_maxsize9.cfg:18`), `-num-processes` (`shuffle.py:791`): ≤24-CPU cap.
+- **Export can refuse.** `[OPEN] attn-logit` — `-attn-logit-bound-limit` default `2.5e4`
+  (`export_model_pytorch.py:42`) rejects transformer models whose attention logits grow;
+  the training-side counter-measure `-attn-logit-penalty-cap` (`train.py:140`) is off by
+  default. A rejection lands at stage 4 of 5, after self-play has already spent GPU hours.
+  **Closes when** a first `b5c48h3tfr` export succeeds or the penalty is enabled.
+- **Stale export path.** `[HYPOTHESIS] export-stage` — a loop script copied from
+  `SelfplayTraining.md:9` calls the nonexistent `python/export_model.py`, failing at the
+  same late stage.
+- **Scratch storage.** The paper's run produced 241M samples over 4.2M games (l.603) with a
+  window growing to ~22M samples (l.77). `[ASSUMPTION] scratch-only` — self-play data goes to
+  `/scratch/…/ktg-train/`, never committed. `[OPEN] scratch-budget` — the 9×9 per-row byte
+  size and the 3-day accumulation rate are unmeasured, so `-min-rows` / `-taper-window-scale`
+  / `-keep-target-rows` are unset. **Closes when** one cycle's on-disk row count and byte
   size are measured on the cluster.
-- **Loop stage most likely to fail first.** `[HYPOTHESIS] export-stage` — the export step is
-  the one whose upstream documentation is stale: `SelfplayTraining.md:9` names
-  `python/export_model.py`, which does not exist at `v1.18.2`; only
-  `python/export_model_pytorch.py` does (`export_model_for_selfplay.sh:77`). A mission script
-  copied from the docs fails at the fourth of five stages, after self-play has already
-  burned GPU hours.
-- **`-pos-len` wiring.** `[OPEN] poslen-wiring` — `python/selfplay/train.sh:88` hard-codes
-  `-pos-len 19`. Left unchanged, the score head is sized `S = 19*19+60` (l.512) for a 9×9
-  run, wasting most of a 842-wide output and mismatching the data. **Closes when** the
-  mission's train invocation is written with `-pos-len 9` and `scorebelief_len = 282`
-  observed.

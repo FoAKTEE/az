@@ -9,6 +9,10 @@ Citations are transcribed from
 `l.NNN` = line in the `.tex`. "Mission need" is for `ktg-train`
 (9×9-only transformer-trunk self-play run on the `v1.18.2` mirror).
 
+**Primacy.** The decomposition is code-first: `code_lightvector-KataGo` @ `v1.18.2` is the
+source of truth and `paper_arxiv-1902.10565` is secondary background — the paper is cited
+for the ideas the current code still implements, not as a specification.
+
 ## 1. Primary sources of the mission
 
 | id | source | pin | role |
