@@ -126,7 +126,7 @@ sbalance                                      # GPU-hours used vs 200k allocatio
 Waiting on a job non-interactively — poll, never a bare `sleep`:
 
 ```bash
-until sacct -j <jobid> -X -h -o State | grep -qE "COMPLETED|FAILED|CANCELLED|TIMEOUT"; do
+until sacct -j <jobid> -X -n -o State | grep -qE "COMPLETED|FAILED|CANCELLED|TIMEOUT"; do
   sleep 15
 done
 ```
