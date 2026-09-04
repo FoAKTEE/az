@@ -1,0 +1,18 @@
+== claims append o30
+{"appended": true, "paper": "arxiv-1902.10565", "entry_id": "o30_cfg_9x9_knowledge_verify_in_allocation", "kind": "obligation", "status": "open", "timestamp": "2026-09-04T04:49:56.839733+00:00"}
+EXIT=0
+== claims append o01
+{"appended": true, "paper": "arxiv-1902.10565", "entry_id": "o01_bsizes9_override", "kind": "obligation", "status": "discharged", "timestamp": "2026-09-04T04:49:57.034300+00:00"}
+EXIT=0
+== claims append o02
+{"appended": true, "paper": "arxiv-1902.10565", "entry_id": "o02_databoardlen_poslen_9", "kind": "obligation", "status": "open", "timestamp": "2026-09-04T04:49:57.224019+00:00"}
+EXIT=0
+== claims append o03
+{"appended": true, "paper": "arxiv-1902.10565", "entry_id": "o03_thread_budget_24cpu", "kind": "obligation", "status": "open", "timestamp": "2026-09-04T04:49:57.401185+00:00"}
+EXIT=0
+== claims append c04
+{"appended": true, "paper": "arxiv-1902.10565", "entry_id": "c04_9x9_only_games", "kind": "claim", "status": "admitted", "timestamp": "2026-09-04T04:49:57.585435+00:00"}
+EXIT=0
+== claims append c06
+{"appended": true, "paper": "arxiv-1902.10565", "entry_id": "c06_threads_le_24", "kind": "claim", "status": "in_progress", "timestamp": "2026-09-04T04:49:57.776857+00:00"}
+EXIT=0

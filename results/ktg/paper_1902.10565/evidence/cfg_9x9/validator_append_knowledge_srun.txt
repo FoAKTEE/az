@@ -1,0 +1,13 @@
+== validator knowledge-row append, launched 2026-09-04T04:45:48Z from login03
+== srun --account=ssci-anima --partition=b200 --gres=gpu:1 --cpus-per-task=24 --mem=64G --time=00:20:00 --job-name=ktg-cfg9x9-val
+[BILLING] loaded!
+[BILLING] Re-emitting cost at job start!
+srun: job 298524 queued and waiting for resources
+srun: Job has been cancelled
+srun: error: Unable to allocate resources: Job/step already completing or completed
+SRUN_WRAPPER_EXIT=1
+== finished 2026-09-04T04:49:16Z
+== 2026-09-04T04:49:19Z scancel 298524 by the validator on the coordinator's decision: squeue --start estimated 2026-09-04T21:00 (~20 h; b200 free_gpus=0/128), beyond the 25-min pend cap of the brief.
+== sacct -j 298524 -X -n -o JobID,State,ExitCode,Elapsed,NodeList
+298524       CANCELLED+      0:0   00:00:00   None assigned 
+== consequence: the knowledge row is appended from the login node with --skip-exec (recorded in admission_flags); the executed evidence is the worker's job 298359; re-execution inside a GPU job is obligation o30_cfg_9x9_knowledge_verify_in_allocation (owner synchronous_loop_smoke).

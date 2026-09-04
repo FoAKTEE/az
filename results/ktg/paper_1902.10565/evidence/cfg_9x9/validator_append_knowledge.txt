@@ -1,0 +1,1 @@
+{"appended": true, "git_commit": "deb3d19", "timestamp": "2026-09-04T04:49:45.347934+00:00", "paper": "arxiv-1902.10565", "node_id": "arxiv-1902.10565::cfg_9x9_override", "status": "preliminary", "evidence_sha256": "e39348bf760d7ef64980beb71117aa1c1d639c858ce31d64078fb5fc0629ddd3", "admission_flags": ["skip_exec"]}

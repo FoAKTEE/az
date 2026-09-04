@@ -17,10 +17,10 @@ flowchart TD
   n_arxiv_1902_10565__data_format_pos_len["◐ <b>data_format_pos_len</b> · k3<br/>Training-row layout at posLen L: binaryInputNCHWPacked 22…"]:::preliminary
   n_arxiv_1902_10565__training_window_shuffle["◐ <b>training_window_shuffle</b> · k3<br/>shuffle.py window: -keep-target-rows (required; loop pass…"]:::preliminary
   n_arxiv_1902_10565__env_build["● <b>env_build</b> · k2<br/>Toolchain on one B200 node under /scratch/schmidt/ssci-an…"]:::solid
-  n_arxiv_1902_10565__cfg_9x9_override["○ <b>cfg_9x9_override</b> · k2 t1<br/>Mission-owned codes/cfg/selfplay_9x9.cfg, codes/cfg/gatek…"]:::hypothesis
+  n_arxiv_1902_10565__cfg_9x9_override["◐ <b>cfg_9x9_override</b> · k3 t1<br/>Mission-owned codes/cfg/selfplay_9x9.cfg, codes/cfg/gatek…"]:::preliminary
   n_arxiv_1902_10565__tiny_model_export_smoke["◐ <b>tiny_model_export_smoke</b> · k4 t2<br/>Export smoke for the transformer path: codes/eval/export_…"]:::preliminary
   n_arxiv_1902_10565__synchronous_loop_smoke["○ <b>synchronous_loop_smoke</b> · k2<br/>One disposable cycle gatekeeper -> selfplay -> shuffle ->…"]:::hypothesis
-  n_arxiv_1902_10565__loop_resume_under_walltime["◐ <b>loop_resume_under_walltime</b> · k4 t3<br/>Slurm wrapper codes/loop/loop.sbatch (1 GPU / 24 CPU / 12…"]:::preliminary
+  n_arxiv_1902_10565__loop_resume_under_walltime["◐ <b>loop_resume_under_walltime</b> · k4 t4<br/>Slurm wrapper codes/loop/loop.sbatch (1 GPU / 24 CPU / 12…"]:::preliminary
   n_arxiv_1902_10565__selfplay_stage["○ <b>selfplay_stage</b> · k2<br/>katago selfplay -max-games-total N -models-dir BASEDIR/mo…"]:::hypothesis
   n_arxiv_1902_10565__shuffle_stage["○ <b>shuffle_stage</b> · k2<br/>SKIP_VALIDATE=1 ./shuffle.sh BASEDIR TMP 8 -min-rows M -k…"]:::hypothesis
   n_arxiv_1902_10565__train_stage["○ <b>train_stage</b> · k3<br/>codes/loop/train_9x9.sh BASEDIR ktg9 b7c96h3tfrs 128 main…"]:::hypothesis
