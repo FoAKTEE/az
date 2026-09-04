@@ -1,0 +1,1064 @@
+==============================================================================
+phase0_dryrun.txt -- tasks/production_chain_9x9 Phase 0
+  the read-only monitoring / evaluation readers, dry-run against the existing
+  smoke run directory (two cycles, two exports, one gate decision) before the
+  chain has produced anything.
+==============================================================================
+
+$ date -Is
+2026-09-04T11:56:55-04:00
+[exit 0]
+
+$ hostname -s
+login03
+[exit 0]
+
+$ bash -c echo "cwd = $PWD"
+cwd = /home/schmidt/ssci-haiyangw/az/results/ktg/paper_1902.10565
+[exit 0]
+
+$ python3 -V
+Python 3.9.21
+[exit 0]
+
+$ bash --version
+GNU bash, version 5.1.8(1)-release (x86_64-redhat-linux-gnu)
+Copyright (C) 2020 Free Software Foundation, Inc.
+License GPLv3+: GNU GPL version 3 or later <http://gnu.org/licenses/gpl.html>
+
+This is free software; you are free to change and redistribute it.
+There is NO WARRANTY, to the extent permitted by law.
+[exit 0]
+
+$ git -C /home/schmidt/ssci-haiyangw/az rev-parse --short HEAD
+55083ec
+[exit 0]
+
+NO JOB IS SUBMITTED BY THIS PACKET. Every command below is a login-node read.
+Compute policy script, cited per mission.json compute.policyCheck:
+  .claude/skills/compute-budget/check.sh   (not invoked here -- nothing is
+  submitted; Phase 3 runs it before codes/eval/match.sbatch)
+
+FIXTURES
+  smoke  = /scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/runs/smoke    (the real two-cycle smoke run: two exports, one gate
+                  decision that REJECTED, so models/ is empty)
+  fixture= /scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/runtime/phase0_dryrun
+           base/            smoke nets copied into models/ so the write-once
+                            freeze and the declaration have an acceptance to read
+           eval/match-fixture/   the smoke's own gate sgfs with the two bot names
+                            rewritten to the cfg's botName0/botName1 -- real sgf
+                            text, colour-symmetric by construction, so p == 0.5
+           eval/match-synthetic/ 400 one-line SYNTHETIC games, 240 won by 'latest'.
+                            NOT A MEASUREMENT: it exists only to exercise the
+                            'improves' branch and the Wilson arithmetic at a p
+                            whose interval is known to exclude 0.5.
+           escalate/        a synthetic BASEDIR carrying every section-11 signal
+  Nothing under runs/smoke or runs/p1 is written by any command below.
+
+==============================================================================
+0. static checks
+==============================================================================
+
+$ bash -n codes/eval/chain_status.sh
+[exit 0]
+
+$ bash -n codes/eval/match.sbatch
+[exit 0]
+
+$ python3 -m py_compile codes/eval/throughput_report.py
+[exit 0]
+
+$ python3 -m py_compile codes/eval/check_metrics.py
+[exit 0]
+
+$ python3 -m py_compile codes/eval/freeze_baseline.py
+[exit 0]
+
+$ python3 -m py_compile codes/eval/declare.py
+[exit 0]
+
+$ for f in codes/eval/{chain_status.sh,throughput_report.py,check_metrics.py,freeze_baseline.py,declare.py,match.sbatch} codes/cfg/match_first_latest_9.cfg; do sha256sum "$f"; done
+557f7fe96156b81d80b3df47b59b4bcb6fd59d908634fdbe285ff27748fb7672  codes/eval/chain_status.sh
+a5f84ff0d1219afc18355d5dc0c2a31c38d11e4094e324a84ff2d4ec388643da  codes/eval/throughput_report.py
+a3cfb8860ce511d227117521950d574e78baba1721de1ad80cc02dab6ff6ff89  codes/eval/check_metrics.py
+e6a0d65ed6eca92efcd6cb84a2d3df660d4f6fabbe59fe517b086fe0170606a8  codes/eval/freeze_baseline.py
+66cec992214198a16153ed0a72a79b793d285d33b686afd0438b17e20bf7827e  codes/eval/declare.py
+69f5f9232ef4250c8a40b9f0e3ae021f6abc1a81a7381594d2578fc60f8f602c  codes/eval/match.sbatch
+3432c526ae16fc2f5b27014df87ab7c414d8cebd28ac1cf9b2cbcf6f20ba0e3b  codes/cfg/match_first_latest_9.cfg
+[exit 0]
+
+==============================================================================
+1. chain_status.sh -- default append path
+==============================================================================
+
+$ bash codes/eval/chain_status.sh --help | sed -n '1,12p;44,60p'
+# chain_status.sh -- mission ktg-train, task production_chain_9x9.
+#
+# The login-node, READ-ONLY monitoring reader of tasks/production_chain_9x9
+# section 5 ("Monitoring is READ-ONLY on the login node ... every 3 h for the
+# first 24 h, then every 12 h, and at every link boundary; each run appends to
+# $EV/status_log.txt and is the packet's WAL"), built to the section 7 spec:
+#
+#   sacct of the ktg-loop jobs, the chain state files, cycles / exports / gate
+#   lines, bucket-starvation and no-data lines, the last guard triple, du -sb,
+#   nlwp max per stage (tail of ps_samples-<jobid>.tsv), GPU util mean (tail of
+#   gpu_samples), last selfplay games/h.
+#
+#                                "SIGTERM received" line in its log was SIGKILLed (o42:
+#                                tell the coordinator BEFORE the successor starts)
+# Reported, NOT escalated (section 11 says "report only" / "notify at the next status"):
+#   successor PENDING > 24 h, "scratch_guard: WARNING group scratch free space".
+#
+# usage:
+#   chain_status.sh <BASEDIR> [options]
+#     --job ID          restrict sacct/monitor reads to one job id (default: every
+#                       ktg-loop job of this user in the last 14 days)
+#     --log FILE|GLOB   link log(s) to read (repeatable; default
+#                       $KTG_ROOT/logs/loop-*.log plus $BASEDIR/logs/*cycle*.txt)
+#     --append FILE     append the report here (default
+#                       <paper>/evidence/production_chain/status_log.txt)
+#     --no-append       print only
+#     --no-du           skip the du -sb of BASEDIR
+#     --tail-lines N    ps sample rows to read from the tail (default 200000; the
+#                       sampler only ever appends, so the tail is the recent state)
+[exit 0]
+
+==============================================================================
+2. chain_status.sh on the smoke run (full report)
+==============================================================================
+
+$ bash codes/eval/chain_status.sh /scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/runs/smoke --no-append
+==============================================================================
+chain_status  2026-09-04T11:56:55-04:00   host=login03
+BASEDIR   : /scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/runs/smoke
+KTG_ROOT  : /scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train
+logs read : 2 file(s)
+            /scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/runs/smoke/logs/smoke_cycle1.txt
+            /scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/runs/smoke/logs/smoke_cycle2.txt
+==============================================================================
+
+-- A. slurm ---------------------------------------------------------------
+     JobID    JobName   Part            State    Elapsed                Start                  End   Exit
+    299366   ktg-loop   b200 CANCELLED by 30154   00:00:00                 None  2026-09-04T10:39:32    0:0
+    299461   ktg-loop   b200          PENDING   00:00:00              Unknown              Unknown    0:0
+
+pending ktg-loop links (jobid submit_time reason):
+299461 2026-09-04T10:40:24 Priority
+
+-- B. chain state ---------------------------------------------------------
+.cycles_completed : 2
+.chain_depth      : -
+.failcount        : -
+STOP              : absent
+.breaker_tripped  : absent
+
+-- C. cycles / exports / gate ---------------------------------------------
+cycles completed        : 2
+SAVING MODEL FOR EXPORT : 2   (Done exporting: 2)
+first export at cycle   : 1   (P4 tolerance == 5)
+gate decisions          : 1   (won 0, lost 1)
+first gate at cycle     : 2   (P5 tolerance 6 +/- 1)
+models/ (acceptances)   : 0
+rejectedmodels/         : 1
+    rejected  t9-s1216-d1221
+modelstobetested/       : 1 awaiting the gate
+gate scores (last 20):
+    2026-09-04 05:24:26-0400: Candidate lost match, score 55.500 to 100.500 in 156 games, rejecting candidate t9-s1216-d1221
+
+-- D. failure signatures --------------------------------------------------
+  not enough new data rows, terminating          0
+  Not enough data files to fill a subepoch       0
+  Initializing new model!                        1
+  No preexisting checkpoint found                1
+  scratch_guard exit                             0
+  failcount now                                  0
+  circuit breaker tripped                        0
+  SIGTERM received -- scheduler termination      0
+  scheduler termination at walltime              0
+  cancelling queued successor                    0
+  not resubmitting                               0
+  failed with exit                               0
+  longest consecutive-starvation run             0
+  first no-data-exit cycle                       none
+  attn logit bound, max in outexport.txt         14   (export limit 25000)
+
+-- E. storage -------------------------------------------------------------
+last scratch_guard block:
+    == scratch_guard 2026-09-04T05:23:18-04:00 [cycle 1 pre-gatekeeper] ==
+    constants            : /weka/home/schmidt/ssci-haiyangw/az/results/ktg/paper_1902.10565/codes/data_budget/budget.env
+    root                 : /scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train
+    du -sb               : 7646830852	/scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train
+    df -B1               : wekafs1/scratchssci 40000000000000 37089946521600 2910053478400 93% /weka/scratch/schmidt
+    scratch_guard: WARNING quotas.py unreadable or unparseable at /apps/helpers/quotas.py; using df -B1 on the same pool
+    guard blocks [cycle N pre-gatekeeper]: 2    'scratch_guard: OK': 2
+    (P10 wants the two equal, and equal to the cycles started in the link)
+    du -sb /scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/runs/smoke : 100923494 B
+
+-- F. monitor (tail) ------------------------------------------------------
+ps file  : /scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/runs/smoke/monitor/ps_samples-299259.tsv
+gpu file : /scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/runs/smoke/monitor/gpu_samples.csv
+nlwp max per stage (last 200000 sample rows; cap 32):
+    selfplay         25
+    train            14
+    current phase: audit
+gpu (last 315 samples): util_mean 28.20 %  util_max 80 %  mem_used_max 6112 MiB
+newest selfplay net dir : /scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/runs/smoke/selfplay/random/  (80 game lines)
+last selfplay phase     : probe_search, 141.75 s -> 2031.7 games/h (games counted in the newest net dir; the two coincide only while that dir is the one the phase wrote)
+
+-- verdict ----------------------------------------------------------------
+NOTICE:   job 299366 ended CANCELLED by 30154 without ever being allocated (Start None, Elapsed 00:00:00) -- not a link end, no resume evidence either way
+NOTICE:   first export cycle 1 != 5 -- P4 re-opens o40 (below cycle 9 this is a finding, not an abort)
+NOTICE:   first gate decision at cycle 2, outside P5's 6 +/- 1
+chain_status: OK -- no section-11 escalate condition present.
+[exit 0]
+
+==============================================================================
+3. chain_status.sh --first-export-cycle / --first-gate-cycle (P4 / P5)
+==============================================================================
+   The smoke exported in cycle 1 and gated in cycle 2, so these print 1 and 2.
+   On the chain P4 wants 5 and P5 wants 6 +/- 1.
+
+$ bash codes/eval/chain_status.sh /scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/runs/smoke --first-export-cycle
+1
+[exit 0]
+
+$ bash codes/eval/chain_status.sh /scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/runs/smoke --first-gate-cycle
+2
+[exit 0]
+
+   and nothing, exit 1, when the event has not happened:
+
+$ bash codes/eval/chain_status.sh /scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/runtime/phase0_dryrun/escalate --log /scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/runtime/phase0_dryrun/escalate/logs/synthetic_cycle.txt --first-export-cycle
+[exit 1]
+
+==============================================================================
+4. chain_status.sh escalate path -- every section-11 signal at once
+==============================================================================
+
+$ bash codes/eval/chain_status.sh /scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/runtime/phase0_dryrun/escalate --no-append --quiet --log /scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/runtime/phase0_dryrun/escalate/logs/synthetic_cycle.txt
+
+-- verdict ----------------------------------------------------------------
+NOTICE:   job 299366 ended CANCELLED by 30154 without ever being allocated (Start None, Elapsed 00:00:00) -- not a link end, no resume evidence either way
+ESCALATE: breaker trips -- /scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/runtime/phase0_dryrun/escalate/.breaker_tripped exists; collect the link logs and the sacct rows, and do not remove .failcount without the human
+ESCALATE: storage stop / manual brake -- /scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/runtime/phase0_dryrun/escalate/STOP exists; the loop exits cleanly at the top of the next cycle and no successor will run one
+ESCALATE: no export by cycle 8 -- 0 'SAVING MODEL FOR EXPORT' with cycles completed 22; o40 refuted. touch STOP and escalate with the train log's 'Not enough data files' / 'Export cycle counter' lines
+ESCALATE: gate never accepts by cycle 20 -- models/ empty with cycles completed 22; escalate with every 'Candidate lost match, score ...' line, and do NOT touch numGamesPerGating, maxVisits or -required-candidate-win-prop
+ESCALATE: breaker trips -- === [2026-09-04T05:44:01-04:00] circuit breaker tripped after 3 consecutive failures (last ran 600s) ===
+ESCALATE: link fails -- === [2026-09-04T05:44:00-04:00] failure rc=1 -- failcount now 3/3 ===
+ESCALATE: bucket starvation (R14) -- 'not enough new data rows, terminating' in 3 consecutive cycles; attach check_knobs_9x9.py --throughput $EV/throughput.json output
+ESCALATE: no-data exit on a real-net cycle (R16) -- 'Not enough data files to fill a subepoch' first at cycle 22 (>= 6); attach the window sizes from logs/outshuffle.txt
+ESCALATE: threads over the declaration -- nlwp max > 32 on: selfplay=99  (o03 refuted at 32); never lower numGameThreads unilaterally
+chain_status: 9 escalate condition(s) -- exit 1.
+Section 11: escalate with data, never tune. No knob, cfg, gating or search
+parameter change while the chain runs; a finding is an error row plus an
+escalation, never a silent edit.
+[exit 1]
+
+==============================================================================
+5. chain_status.sh --append (the WAL behaviour)
+==============================================================================
+   Appended to a scratch file, NOT to evidence/production_chain/status_log.txt:
+   that file is the live chain's WAL and must not carry smoke rows.
+
+$ rm -f /scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/runtime/phase0_dryrun/out/status_log_dryrun.txt
+[exit 0]
+
+$ bash codes/eval/chain_status.sh /scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/runs/smoke --quiet --append /scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/runtime/phase0_dryrun/out/status_log_dryrun.txt
+
+-- verdict ----------------------------------------------------------------
+NOTICE:   job 299366 ended CANCELLED by 30154 without ever being allocated (Start None, Elapsed 00:00:00) -- not a link end, no resume evidence either way
+NOTICE:   first export cycle 1 != 5 -- P4 re-opens o40 (below cycle 9 this is a finding, not an abort)
+NOTICE:   first gate decision at cycle 2, outside P5's 6 +/- 1
+chain_status: OK -- no section-11 escalate condition present.
+(appended to /scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/runtime/phase0_dryrun/out/status_log_dryrun.txt)
+[exit 0]
+
+$ bash codes/eval/chain_status.sh /scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/runs/smoke --quiet --append /scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/runtime/phase0_dryrun/out/status_log_dryrun.txt
+
+-- verdict ----------------------------------------------------------------
+NOTICE:   job 299366 ended CANCELLED by 30154 without ever being allocated (Start None, Elapsed 00:00:00) -- not a link end, no resume evidence either way
+NOTICE:   first export cycle 1 != 5 -- P4 re-opens o40 (below cycle 9 this is a finding, not an abort)
+NOTICE:   first gate decision at cycle 2, outside P5's 6 +/- 1
+chain_status: OK -- no section-11 escalate condition present.
+(appended to /scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/runtime/phase0_dryrun/out/status_log_dryrun.txt)
+[exit 0]
+
+$ grep -c 'chain_status: OK' '/scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/runtime/phase0_dryrun/out/status_log_dryrun.txt'
+2
+[exit 0]
+
+$ wc -l '/scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/runtime/phase0_dryrun/out/status_log_dryrun.txt'
+166 /scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/runtime/phase0_dryrun/out/status_log_dryrun.txt
+[exit 0]
+
+==============================================================================
+6. throughput_report.py -- reproduces the frozen smoke measurement
+==============================================================================
+   Phase 0's own test: 'throughput_report.py runs/smoke reproduces
+   throughput_smoke-298712.json's train_samples_per_second 14.243 and
+   bytes_per_row_on_disk 353.8'. --job 298712 selects that attempt's o37
+   per-job ps file, which is the file the frozen numbers were measured from.
+
+$ python3 codes/eval/throughput_report.py /scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/runs/smoke --job 298712 --probe-search evidence/smoke/probe_search-298712.json --out /scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/runtime/phase0_dryrun/out/throughput.json --rows-out /scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/runtime/phase0_dryrun/out/rows_per_game.txt
+throughput_report -- node arxiv-1902.10565::measure_stage_throughput
+basedir            : /scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/runs/smoke
+ps file            : /scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/runs/smoke/monitor/ps_samples-298712.tsv  (node-wide ps -e (pre-repair sampler); foreign pids excluded by the legA rule, 1114 rows)
+gpu file           : /scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/runs/smoke/monitor/gpu_samples.csv
+cycles completed   : 2
+
+selfplay games     : 80 (20 real-net, 80 random-net)
+selfplay games/h   : 5569.5   (all nets, over 51.71 s of selfplay)
+selfplay games/h   : None   (real net only)
+rows_per_game      : 32.3 real  /  31.675 random
+bytes_per_row_disk : 353.8 B   (uncompressed row 2145 B)
+train samples      : 2528  (/scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/runs/smoke/modelstobetested/t9-s2528-d2534/metadata.json)
+train samples/s    : 14.243   (over 177.49 s of train)
+gatekeeper games   : 156   (sz_other 0)
+
+stage_elapsed_s    : {"gatekeeper": 70.71, "selfplay": 51.71, "shuffle": 6.7, "train": 177.49}
+per_cycle_wall_s   : {"cycle1": 125.62, "cycle2": 121.36}
+projected_cycle_h  : 0.0343   (max 0.0349; basis: every measured cycle that carries all four stages over ['cycle1', 'cycle2'])
+nlwp_max_per_stage : {"gatekeeper": 25, "selfplay": 25, "shuffle": 4, "train": 14}
+gpu util mean/stage: {"gatekeeper": {"samples": 35, "util_mean_pct": 70.43}, "selfplay": {"samples": 24, "util_mean_pct": 48.04}, "shuffle": {"samples": 2, "util_mean_pct": 0.0}, "train": {"samples": 84, "util_mean_pct": 0.39}}
+gpu util mean      : 28.2 %   max 80 %   peak vram 6112 MiB   (315 samples, 170 unattributed)
+basedir bytes      : 100923494
+
+wrote /scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/runtime/phase0_dryrun/out/throughput.json
+wrote /scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/runtime/phase0_dryrun/out/rows_per_game.txt
+[exit 0]
+
+==============================================================================
+7. key-by-key comparison against evidence/smoke/throughput_smoke-298712.json
+==============================================================================
+
+$ python3 - /scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/runtime/phase0_dryrun/out/throughput.json evidence/smoke/throughput_smoke-298712.json
+key                          throughput_report.py               throughput_smoke-298712.json       same
+train_samples_per_second     14.243                             14.243                             yes
+bytes_per_row_on_disk        353.8                              353.8                              yes
+selfplay_rows_total          2534                               2534                               yes
+selfplay_games_total         80                                 80                                 yes
+selfplay_games_per_hour      5569.5                             5569.5                             yes
+selfplay_rows_per_hour       176414.6                           176414.6                           yes
+train_samples_total          2528                               2528                               yes
+tdata_bytes_on_disk          896536                             896536                             yes
+row_bytes_uncompressed       2145                               2145                               yes
+nlwp_max_per_stage           {"gatekeeper": 25, "selfplay": 25  {"gatekeeper": 25, "selfplay": 25  yes
+stage_elapsed_s              {"gatekeeper": 70.71, "selfplay":  {"gatekeeper": 70.71, "selfplay":  yes
+shuffleddata_bytes           1075349                            1075349                            yes
+gpu_util_max_pct             80                                 80                                 yes
+gpu_util_mean_pct            28.2                               21.48                              NO
+gpu_util_samples             315                                170                                NO
+peak_vram_mib                6112                               4094                               NO
+basedir_bytes                100923494                          100545534                          NO
+
+differing keys: 4  ['gpu_util_mean_pct', 'gpu_util_samples', 'peak_vram_mib', 'basedir_bytes']
+
+Every RATE and every THREAD key matches the frozen measurement exactly. The
+keys that differ are all properties of the DIRECTORY AS IT IS NOW, not of the
+attempt-298712 measurement, and each is a known, named artefact:
+
+  basedir_bytes      100923494 vs 100545534 -- the smoke directory grew after the
+                     audit ran (attempt 299259's probes, and audit_hooks).
+
+  gpu_util_mean_pct  28.2 over 315 samples vs 21.48 over 170. This is obligation
+  gpu_util_samples   o37 in the GPU file: stage_monitor.sh now writes
+  peak_vram_mib      gpu_samples-<jobid>.csv, but the SMOKE ran before that and
+                     both attempts appended to one shared monitor/gpu_samples.csv.
+                     The audit read it while it held attempt 1's 170 samples; it
+                     now holds both attempts' 315. The reader reports the sample
+                     count next to the mean precisely so this is visible rather
+                     than silent, and on the production chain the file is per-job
+                     (loop.sbatch starts one stage_monitor per link), so the
+                     mixture cannot arise. peak_vram_mib 6112 is attempt 2's
+                     larger probe, not a different reading of attempt 1.
+[exit 0]
+
+   The GPU claim above, verified rather than asserted -- split the shared file at
+   the boundary between the two attempts (attempt 1's log ends 05:26, attempt 2
+   starts 05:53):
+
+$ G=/scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/runs/smoke/monitor/gpu_samples.csv
+head -1 $G; tail -1 $G
+awk -F',' '$1 <  "2026/09/04 05:30" {n++; s+=$3+0; if($4+0>m) m=$4+0} END{printf "before 05:30 : %d samples  util_mean %.4f  mem_max %d MiB\n", n, s/n, m}' $G
+awk -F',' '$1 >= "2026/09/04 05:30" {n++; s+=$3+0; if($4+0>m) m=$4+0} END{printf "after  05:30 : %d samples  util_mean %.4f  mem_max %d MiB\n", n, s/n, m}' $G
+2026/09/04 05:20:49.607, 0, 0 %, 0 MiB
+2026/09/04 05:58:36.869, 0, 0 %, 0 MiB
+before 05:30 : 170 samples  util_mean 21.4765  mem_max 4094 MiB
+after  05:30 : 145 samples  util_mean 36.0759  mem_max 6112 MiB
+[exit 0]
+   -> 170 samples, mean 21.4765, mem_max 4094: the frozen audit's three numbers
+      exactly. The reader is reading the same file correctly; the file has since
+      had a second attempt appended to it. stage_monitor.sh:70 writes
+      gpu_samples-$SLURM_JOB_ID.csv, so a production link cannot mix attempts.
+
+==============================================================================
+8. o41 -- the knobs checker consumes the reader's output
+==============================================================================
+
+$ python3 codes/eval/check_knobs_9x9.py --throughput /scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/runtime/phase0_dryrun/out/throughput.json --rows-file /scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/runtime/phase0_dryrun/out/rows_per_game.txt
+check_knobs_9x9 -- node arxiv-1902.10565::derive_cycle_knobs_9x9
+
+INPUTS (content-hashed)
+  14e297d90d4f30acd41408715db23dbf645656489df433c71665a275ffb79977  ../../../../../../../scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/runtime/phase0_dryrun/out/rows_per_game.txt
+  dadcc27807d6b78aad287bf3516614f975d3a5f746ea2c4ee58ffbac830ee899  ../../../../../../../scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/runtime/phase0_dryrun/out/throughput.json
+  646e4ef1a9f295b10926fa10f43172482cf4f1ca7244ca9146919d358d09f282  paper_1902.10565/evidence/smoke/audit-298712.json
+  5ae5358791974ae12dd2e635aa38b825637faf23e1963dae1d96f146fd266d62  paper_1902.10565/codes/loop/knobs_9x9.env
+  6f38681ea6befc64f1e0f0c4faced2ddd1d774ac7f445595997d07e4abf81f62  paper_1902.10565/codes/data_budget/budget.env
+  b5acb1d8ad1a313f8bd439076d0e61598d18f6c7ff7647a6eab672edad3d65f5  paper_1902.10565/codes/loop/synchronous_loop_9x9.sh
+
+MEASURED KEYS PRESENT: train_samples_per_second, bytes_per_row_on_disk, selfplay_rows_total and per_phase_stage cycle2/gatekeeper, cycle2/shuffle
+GATE GAMES (measured, audit-298712.json S4_gatekeeper_sgfs.lines): 156
+
+REAL-NET SELFPLAY games/h: 2341.5 (throughput.json) -> taking 2341.5 (throughput.json)
+TRAIN samples/s:           14.243 (throughput.json) -> taking 14.243 (throughput.json)
+
+derive_knobs.py -- node arxiv-1902.10565::derive_cycle_knobs_9x9
+
+MEASURED INPUTS (Slurm job 298712, commit 5bb85ad)
+  rows/game real      r        = 32.3000     (lower90 25.0775 over 20 games)
+  rows/game random    r0       = 31.6750     (lower90 28.1336 over 80 games)
+  bytes/row on disk            = 353.8
+
+KNOB SET UNDER TEST
+  NUM_GAMES_PER_CYCLE          = 1000
+  NUM_THREADS_FOR_SHUFFLING    = 8
+  NUM_TRAIN_SAMPLES_PER_EPOCH  = 20000
+  MAX_TRAIN_PER_DATA           = 8.0
+  NUM_TRAIN_SAMPLES_PER_SWA    = 10000
+  BATCHSIZE                    = 128
+  SHUFFLE_MINROWS              = 25000
+  MAX_TRAIN_SAMPLES_PER_CYCLE  = 100000
+  TAPER_WINDOW_SCALE           = 50000
+  SHUFFLE_KEEPROWS             = 120000
+  EPOCHS_PER_EXPORT            = 5
+
+DERIVED QUANTITIES
+  rows_per_cycle    = games*r            = 32300.0   (lower90 25077.5)
+  bucket gain       = games*r*reuse      = 258400.0   (lower90 200620.0)
+  bucket cap_eff    = max(cap,E)         = 100000
+  epochs_per_export = max_epochs_this_instance = 5
+  batches_per_epoch = round(E/batch)     = 156
+  samples_per_cycle = epochs*E           = 100000
+  effective reuse   = epochs*E/rows      = 3.096  (lower90 3.988, cap 8.0)
+  first cycle with a full 5-epoch window = 17
+  swa_period_samples                     = 10000
+
+EXPORT RAMP (o40; persistent export counter, window-limited epochs)
+  first_export_cycle                     = 5
+  first_gate_cycle                       = 6
+  first_accept_cycle_assumed             = 6
+  first_exactly_one_cycle                = 16
+  export_cycles                          = [5, 8, 10, 12, 14, 16, 17, 18, 19, 20]
+
+SHUFFLE WINDOW AND EXPORT RAMP BY CYCLE (shuffle.py:414-435 at expand 0.4 / exponent 0.65)
+  cycle  net     usable_rows   desired_window  rows_available  batches  epochs_it counter  export
+  1      random  25000         25000           25000           195      1         1        -
+  2      random  25000         25000           25000           195      1         2        -
+  3      random  25000         25000           25000           195      1         3        -
+  4      random  25000         25000           25000           195      1         4        -
+  5      random  25000         25000           25000           195      1         0        yes
+  6      real    50078         34305           34305           268      1         1        -
+  7      real    75155         42561           42561           332      2         3        -
+  8      real    100233        50116           50116           391      2         0        yes
+  9      real    125310        57156           57156           446      2         2        -
+  10     real    150388        63794           63794           498      3         0        yes
+  11     real    175465        70107           70107           547      3         3        -
+  12     real    200543        76149           76149           594      3         0        yes
+  13     real    225620        81960           81960           640      4         4        -
+  14     real    250698        87570           87570           684      4         0        yes
+  15     real    275775        93004           93004           726      4         4        -
+  16     real    300853        98282           98282           767      4         0        yes
+  17     real    325930        103419          103419          807      5         0        yes
+  18     real    351008        108430          108430          847      5         0        yes
+  19     real    376085        113324          113324          885      5         0        yes
+  20     real    401163        118113          118113          922      5         0        yes
+
+THREAD BUDGET
+  selfplay_real_net            = 25
+  selfplay_with_net_switch     = 27
+  gatekeeper_one_real_net      = 25
+  gatekeeper_two_real_nets     = 28
+  train                        = 14
+  shuffle                      = 12
+  worst_case                   = 28
+  cpus_per_task                = 32
+
+CYCLE WALL PROJECTION  [PRELIMINARY]
+  selfplay_games_per_hour_measured   = 2341.463
+  games_per_hour_derate              = 0.500
+  selfplay_games_per_hour_planning   = 1170.732
+  train_samples_per_second           = 14.243
+  selfplay_s                         = 3075.000
+  train_s                            = 7020.993
+  gatekeeper_s                       = 179.974
+  shuffle_s                          = 377.285
+  export_s                           = 60.000
+  cycle_s                            = 10713.252
+  cycle_h                            = 2.976
+  cycles_per_link                    = 24
+
+STORAGE PROJECTION
+  per-cycle monotonic         = 16.11 MiB
+  bounded steady state        = 552.90 MiB
+  env + build allowance       = 20.00 GiB
+  after one 24-cycle link      = 20.917 GiB
+  hard cap (budget.env)       = 500 GiB
+  cycles until the cap        = 30480
+
+CHECKS
+  ok   K1_bucket_gain_clears_epoch            gain = games*r*reuse = 258400.0 (lower90 200620.0) vs 0.99*E = 19800.0; ratio gain/E = 12.920 (lower90 10.031)
+  ok   T1_freshness_rows_per_cycle_ge_1p2_E   rows_per_cycle = 32300.0 (lower90 25077.5) vs 1.2*E = 24000.0; ratio 1.615 (lower90 1.254)
+  ok   K2_one_export_per_cycle                epochs_per_export = max_epochs_this_instance = floor(min(gain,cap_eff)/E) = 5 (lower90 5); cap_eff = max(cap,E) = 100000; effective reuse 3.10 (lower90 3.99) <= 8.0
+  ok   K2b_effective_reuse_within_cap         epochs*E/rows_per_cycle = 3.10 (lower90 3.99) <= reuse cap 8.0
+  ok   K3_keep_gt_cap                         keep = 120000 > cap = 100000 (synchronous_loop.sh:66) and keep >= epochs*E = 100000
+  ok   K5_random_bootstrap_reaches_min_rows   cycle-1 random rows = games*r_random = 31675.0 (lower90 28133.6) >= min_rows = 25000 (shuffle.py:1090 exit-0 gate; :1077 caps the usable count at min_rows)
+  ok   K4_window_holds_one_epoch              worst of cycles 1..20 is cycle 1: min(window 25000, keep 120000) = 25000 rows = 195 batches >= round(E/batch) = 156 batches (= 19968 rows); ratio 1.250. Conservative: the file-granularity slack of shuffle.sh:48 (-approx-rows-per-out-file 70000) is not credited.
+  ok   K2c_at_most_one_export_per_cycle       epochs_per_export == max_epochs_this_instance == 5, so train.py's persistent export_cycle_counter (:871,:975,:1743,:1831) can advance by at most 5 per cycle: never more than one candidate per cycle, from cycle 1 on. The ramp (o40): the window is pinned at min_rows while models/ is empty (shuffle.py:1077), each of those cycles trains ONE epoch (-no-repeat-files, training_data_generator.py:35; -quit-if-no-data, train.py:1487-1489), so the FIRST candidate exports at cycle 5 and is gated at cycle 6; with the gate accepting at cycle 6 the exports fall on cycles [5, 8, 10, 12, 14, 16, 17, 18, 19, 20] and every cycle exports from cycle 16 on, the window first holding 100000 rows at cycle 17. A rejection keeps the loop in the one-epoch regime and moves the whole ramp later.
+  ok   K6_swa_period_is_half_epoch            swa_period_samples = samples_per_epoch // 2 = 10000 (train.py:441 default made explicit)
+  ok   T4_threads_le_cpus                     worst stage thread count 28 (selfplay real-net 25 +2 net switch = 27; gatekeeper two real nets 28; train 14; shuffle 4+8=12) <= --cpus-per-task 32, headroom 4
+  ok   K7_cycle_wall_under_bound              projected cycle = 10713 s = 2.98 h <= 60 h bound, and 24 whole cycles fit the 257400 s chain link. [PRELIMINARY] tiny-count throughput inputs.
+  ok   T3_storage_projection_under_budget     per-cycle monotonic write 16.1 MiB; bounded steady state 552.9 MiB; env+build 20.0 GiB; after one full 24-cycle link 20.92 GiB of 500 GiB cap; 30480 cycles fit before the cap
+
+RESULT: PASS
+
+MISSION TOLERANCES
+  ok   T1_no_train_starvation             rows_per_cycle 32300.0 (lower90 25077.5) >= 1.2*E = 24000.0
+  ok   T2_bucket_holds_batches            worst cycle 1 has 195 batches >= 156 needed; per-cycle bucket gain 258400 (lower90 200620) >= epochs*E = 100000
+  ok   T3_storage_projection_under_budget 20.917 GiB after one 24-cycle link < 500 GiB (KTG_SCRATCH_HARD_BYTES)
+  ok   T4_threads_le_cpus                 worst stage 28 <= KTG_CPUS_PER_TASK 32
+
+LOOP DEFAULT WIRING  (paper_1902.10565/codes/loop/synchronous_loop_9x9.sh)
+  ok   NUM_GAMES_PER_CYCLE          loop default 1000 == derived 1000
+  ok   NUM_THREADS_FOR_SHUFFLING    loop default 8 == derived 8
+  ok   NUM_TRAIN_SAMPLES_PER_EPOCH  loop default 20000 == derived 20000
+  ok   MAX_TRAIN_PER_DATA           loop default 8 == derived 8
+  ok   NUM_TRAIN_SAMPLES_PER_SWA    loop default 10000 == derived 10000
+  ok   BATCHSIZE                    loop default 128 == derived 128
+  ok   SHUFFLE_MINROWS              loop default 25000 == derived 25000
+  ok   MAX_TRAIN_SAMPLES_PER_CYCLE  loop default 100000 == derived 100000
+  ok   TAPER_WINDOW_SCALE           loop default 50000 == derived 50000
+  ok   SHUFFLE_KEEPROWS             loop default 120000 == derived 120000
+  ok   EPOCHS_PER_EXPORT            loop default 5 == derived 5
+
+CHECK_KNOBS_9X9: PASS
+[exit 0]
+
+==============================================================================
+9. rows_per_game.txt as written
+==============================================================================
+
+$ cat /scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/runtime/phase0_dryrun/out/rows_per_game.txt
+rows_per_game -- node arxiv-1902.10565::measure_stage_throughput; claim c10
+basedir = /scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/runs/smoke
+games = one line of a .sgfs file (cpp/program/selfplaymanager.cpp:377-378)
+rows  = sum of npz binaryInputNCHWPacked.shape[0] over tdata
+
+rows_per_game_real   = 32.3   (646 rows / 20 games)
+rows_per_game_random = 31.675   (2534 rows / 80 games)
+
+per selfplay net directory (name = the net that played, 'random' = bootstrap):
+  random                       real_net=False games=80     rows=2534     rows/game=31.675
+  probe_search                 real_net=True  games=20     rows=646      (probe_search json)
+[exit 0]
+
+==============================================================================
+10. throughput_report.py default file selection + P1's nlwp assertion
+==============================================================================
+
+$ python3 codes/eval/throughput_report.py /scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/runs/smoke --assert-nlwp-le 32 --quiet --out /scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/runtime/phase0_dryrun/out/throughput_default.json
+[exit 0]
+
+   and the assertion bites when the budget is exceeded (32 -> 10):
+
+$ python3 codes/eval/throughput_report.py /scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/runs/smoke --assert-nlwp-le 10 --quiet
+throughput_report FAIL: nlwp_max per stage over the declared 10: {"selfplay": 25, "train": 14} (o03 / o39 (c))
+[exit 1]
+
+   P8's projected_cycle_h assertion, on the attempt whose sampler saw the cycles:
+
+$ python3 codes/eval/throughput_report.py /scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/runs/smoke --job 298712 --assert-projected-cycle-h 60 --quiet
+[exit 0]
+
+$ python3 codes/eval/throughput_report.py /scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/runs/smoke --job 298712 --assert-projected-cycle-h 0.001 --quiet
+throughput_report FAIL: projected_cycle_h 0.0343 h > 0.0010 h
+[exit 1]
+
+   and on the DEFAULT file (attempt 299259, whose sampler only ever ran during the
+   two probes) it refuses rather than inventing a rate -- the honest answer when
+   no cycle phase was sampled:
+
+$ python3 codes/eval/throughput_report.py /scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/runs/smoke --assert-projected-cycle-h 60 --quiet
+throughput_report FAIL: --assert-projected-cycle-h: no complete cycle measured yet
+[exit 1]
+
+==============================================================================
+11. check_metrics.py -- Phase 0's second test
+==============================================================================
+   'check_metrics.py on the smoke's 0-byte metrics_train.json exits non-zero
+    with a clear message'.
+
+$ ls -l '/scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/runs/smoke/train/t9/metrics_train.json'
+-rw-r--r-- 1 ssci-haiyangw users 0 Sep  4 05:21 /scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/runs/smoke/train/t9/metrics_train.json
+[exit 0]
+
+$ python3 codes/eval/check_metrics.py /scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/runs/smoke/train/t9/metrics_train.json --epochs 10
+check_metrics -- node arxiv-1902.10565::train_stage, claim c12
+metrics file : /scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/runs/smoke/train/t9/metrics_train.json
+basedir      : /scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/runs/smoke
+
+METRICS: UNUSABLE -- metrics_train.json is 0 bytes. train.py appends one row every print_train_loss_every_batches = 100 batches (train.py:1379,1661,1694), so a run whose epoch is shorter than 100 batches never writes one -- the smoke's 256-sample / batch-32 epoch is 8 batches. Use the checkpoint snapshots instead (--snapshots), which carry the same running_metrics accumulator
+
+RUNNING_METRICS FROM CHECKPOINT SNAPSHOTS (/scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/runs/smoke/audit_hooks):
+  cycle1         gss=1216       rows=1221       terms=86     nonfinite=0
+  cycle2         gss=2528       rows=2534       terms=86     nonfinite=0
+
+LOSS TREND PER EXPORT (metadata.json extra_stats: <term>_sum / weights):
+  net                    where    samples      p0loss       vloss        loss         pacc1     
+  t9-s1216-d1221         rejectedmodels 1216         4.388243     1.139460     51.865375    0.044439  
+  t9-s2528-d2534         modelstobetested 2528         4.387692     1.132380     52.082593    0.046677  
+
+c12: UNAVAILABLE -- need an export at <= 20000 samples (2 found) and one at >= 200000 samples (0 found); the chain has not trained that far
+
+CHECK_METRICS: FAIL
+  - metrics_train.json is 0 bytes. train.py appends one row every print_train_loss_every_batches = 100 batches (train.py:1379,1661,1694), so a run whose epoch is shorter than 100 batches never writes one -- the smoke's 256-sample / batch-32 epoch is 8 batches. Use the checkpoint snapshots instead (--snapshots), which carry the same running_metrics accumulator
+[exit 1]
+
+==============================================================================
+12. check_metrics.py -- the source that DOES carry the measurement
+==============================================================================
+   Finite running_metrics out of the checkpoint snapshots, and the loss trend
+   per export out of each exported net's metadata.json. No torch.
+
+$ python3 codes/eval/check_metrics.py /scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/runs/smoke/train/t9/metrics_train.json --allow-empty-metrics --json /scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/runtime/phase0_dryrun/out/metrics.json
+check_metrics -- node arxiv-1902.10565::train_stage, claim c12
+metrics file : /scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/runs/smoke/train/t9/metrics_train.json
+basedir      : /scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/runs/smoke
+
+METRICS: UNUSABLE -- metrics_train.json is 0 bytes. train.py appends one row every print_train_loss_every_batches = 100 batches (train.py:1379,1661,1694), so a run whose epoch is shorter than 100 batches never writes one -- the smoke's 256-sample / batch-32 epoch is 8 batches. Use the checkpoint snapshots instead (--snapshots), which carry the same running_metrics accumulator
+
+RUNNING_METRICS FROM CHECKPOINT SNAPSHOTS (/scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/runs/smoke/audit_hooks):
+  cycle1         gss=1216       rows=1221       terms=86     nonfinite=0
+  cycle2         gss=2528       rows=2534       terms=86     nonfinite=0
+
+LOSS TREND PER EXPORT (metadata.json extra_stats: <term>_sum / weights):
+  net                    where    samples      p0loss       vloss        loss         pacc1     
+  t9-s1216-d1221         rejectedmodels 1216         4.388243     1.139460     51.865375    0.044439  
+  t9-s2528-d2534         modelstobetested 2528         4.387692     1.132380     52.082593    0.046677  
+
+c12: UNAVAILABLE -- need an export at <= 20000 samples (2 found) and one at >= 200000 samples (0 found); the chain has not trained that far
+
+wrote /scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/runtime/phase0_dryrun/out/metrics.json
+
+CHECK_METRICS: PASS
+[exit 0]
+
+==============================================================================
+13. check_metrics.py -- the torch route is opt-in only
+==============================================================================
+
+$ python3 codes/eval/check_metrics.py /scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/runs/smoke/train/t9/metrics_train.json --allow-empty-metrics --ckpt /scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/runs/smoke/train/t9/checkpoint.ckpt
+check_metrics -- node arxiv-1902.10565::train_stage, claim c12
+metrics file : /scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/runs/smoke/train/t9/metrics_train.json
+basedir      : /scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/runs/smoke
+
+METRICS: UNUSABLE -- metrics_train.json is 0 bytes. train.py appends one row every print_train_loss_every_batches = 100 batches (train.py:1379,1661,1694), so a run whose epoch is shorter than 100 batches never writes one -- the smoke's 256-sample / batch-32 epoch is 8 batches. Use the checkpoint snapshots instead (--snapshots), which carry the same running_metrics accumulator
+
+RUNNING_METRICS FROM CHECKPOINT SNAPSHOTS (/scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/runs/smoke/audit_hooks):
+  cycle1         gss=1216       rows=1221       terms=86     nonfinite=0
+  cycle2         gss=2528       rows=2534       terms=86     nonfinite=0
+
+CHECKPOINT: REFUSED -- --ckpt given without --allow-torch: task section 13 forbids torch on the login node and section 5 permits it only for a checkpoint-metadata read at a link boundary, so this reader will not import it implicitly
+
+LOSS TREND PER EXPORT (metadata.json extra_stats: <term>_sum / weights):
+  net                    where    samples      p0loss       vloss        loss         pacc1     
+  t9-s1216-d1221         rejectedmodels 1216         4.388243     1.139460     51.865375    0.044439  
+  t9-s2528-d2534         modelstobetested 2528         4.387692     1.132380     52.082593    0.046677  
+
+c12: UNAVAILABLE -- need an export at <= 20000 samples (2 found) and one at >= 200000 samples (0 found); the chain has not trained that far
+
+CHECK_METRICS: FAIL
+  - --ckpt given without --allow-torch: task section 13 forbids torch on the login node and section 5 permits it only for a checkpoint-metadata read at a link boundary, so this reader will not import it implicitly
+[exit 1]
+
+==============================================================================
+14. freeze_baseline.py -- models/ still empty (the normal pre-acceptance state)
+==============================================================================
+
+$ python3 codes/eval/freeze_baseline.py /scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/runs/smoke
+freeze_baseline -- node arxiv-1902.10565::bootstrap_accepted_model
+basedir  : /scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/runs/smoke
+models/  : /scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/runs/smoke/models (0 accepted net(s) with a model.bin.gz)
+manifest : /scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/eval/manifest.json
+
+NOT FROZEN: models/ is empty -- no candidate has been accepted yet.
+P6 writes the manifest the FIRST time models/ is non-empty, so this is the
+normal state before the first acceptance (expected around cycle 6).
+[exit 0]
+
+   and --require makes that fatal for a caller that needs the baseline:
+
+$ python3 codes/eval/freeze_baseline.py /scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/runs/smoke --require
+freeze_baseline -- node arxiv-1902.10565::bootstrap_accepted_model
+basedir  : /scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/runs/smoke
+models/  : /scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/runs/smoke/models (0 accepted net(s) with a model.bin.gz)
+manifest : /scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/eval/manifest.json
+
+NOT FROZEN: models/ is empty -- no candidate has been accepted yet.
+P6 writes the manifest the FIRST time models/ is non-empty, so this is the
+normal state before the first acceptance (expected around cycle 6).
+[exit 1]
+
+==============================================================================
+15. freeze_baseline.py -- first write, then write-once
+==============================================================================
+
+$ rm -f /scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/runtime/phase0_dryrun/eval/manifest.json
+[exit 0]
+
+$ python3 codes/eval/freeze_baseline.py /scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/runtime/phase0_dryrun/base --eval-dir /scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/runtime/phase0_dryrun/eval
+freeze_baseline -- node arxiv-1902.10565::bootstrap_accepted_model
+basedir  : /scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/runtime/phase0_dryrun/base
+models/  : /scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/runtime/phase0_dryrun/base/models (2 accepted net(s) with a model.bin.gz)
+           t9-s1216-d1221
+           t9-s2528-d2534
+manifest : /scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/runtime/phase0_dryrun/eval/manifest.json
+
+FROZEN:
+  first_model        = t9-s1216-d1221
+  first_model_sha256 = 3471e2012336e47a379fcab920857de529cd54201531796b18aa2576b27cb4b2
+  bytes              = 3004833
+  global_step_samples= 1216
+  frozen_at          = 2026-09-04T11:57:05.284805-04:00
+wrote /scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/runtime/phase0_dryrun/eval/manifest.json
+[exit 0]
+
+$ python3 codes/eval/freeze_baseline.py /scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/runtime/phase0_dryrun/base --eval-dir /scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/runtime/phase0_dryrun/eval
+freeze_baseline -- node arxiv-1902.10565::bootstrap_accepted_model
+basedir  : /scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/runtime/phase0_dryrun/base
+models/  : /scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/runtime/phase0_dryrun/base/models (2 accepted net(s) with a model.bin.gz)
+           t9-s1216-d1221
+           t9-s2528-d2534
+manifest : /scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/runtime/phase0_dryrun/eval/manifest.json
+
+ALREADY FROZEN (write-once, unchanged):
+  first_model        = t9-s1216-d1221
+  first_model_sha256 = 3471e2012336e47a379fcab920857de529cd54201531796b18aa2576b27cb4b2
+  frozen_at          = 2026-09-04T11:57:05.284805-04:00
+  re-verified against /scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/runtime/phase0_dryrun/base/models/t9-s1216-d1221/model.bin.gz
+[exit 0]
+
+$ cat /scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/runtime/phase0_dryrun/eval/manifest.json
+{
+ "accepted_at_freeze_time": [
+  "t9-s1216-d1221",
+  "t9-s2528-d2534"
+ ],
+ "basedir": "/scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/runtime/phase0_dryrun/base",
+ "first_model": "t9-s1216-d1221",
+ "first_model_bytes": 3004833,
+ "first_model_global_step_samples": 1216,
+ "first_model_path": "/scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/runtime/phase0_dryrun/base/models/t9-s1216-d1221/model.bin.gz",
+ "first_model_sha256": "3471e2012336e47a379fcab920857de529cd54201531796b18aa2576b27cb4b2",
+ "first_model_total_num_data_rows": 1221,
+ "frozen_at": "2026-09-04T11:57:05.284805-04:00",
+ "node": "arxiv-1902.10565::bootstrap_accepted_model",
+ "selection_rule": "smallest s<samples> in the accepted net's name; directory mtime only as a fallback for a name that does not parse",
+ "task_id": "production_chain_9x9"
+}[exit 0]
+
+==============================================================================
+16. declare.py -- real sgf text, colour-symmetric: the null
+==============================================================================
+
+$ python3 codes/eval/declare.py /scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/runtime/phase0_dryrun/eval --match-sgfs /scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/runtime/phase0_dryrun/eval/match-fixture --require-acceptances 1 --ci 0.95 --target-p 0.60 --no-sacct
+declare -- node arxiv-1902.10565::eval_improvement (P12)
+evaldir  : /scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/runtime/phase0_dryrun/eval
+manifest : /scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/runtime/phase0_dryrun/eval/manifest.json
+basedir  : /scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/runtime/phase0_dryrun/base
+
+-- gatekeeper -------------------------------------------------------------
+accepted (models/)        : 2
+    t9-s1216-d1221
+    t9-s2528-d2534
+rejected (rejectedmodels/): 0
+gate decisions in the logs: 1
+    Candidate lost match, score 55.500 to 100.500 in 156 games, rejecting candidate t9-s1216-d1221
+
+-- nets -------------------------------------------------------------------
+frozen first   : t9-s1216-d1221
+  sha256 frozen: 3471e2012336e47a379fcab920857de529cd54201531796b18aa2576b27cb4b2
+  sha256 now   : 3471e2012336e47a379fcab920857de529cd54201531796b18aa2576b27cb4b2
+  frozen_at    : 2026-09-04T11:57:05.284805-04:00
+latest accepted: t9-s2528-d2534
+  sha256       : a2ea1ebec44d12c59f7c4bced4f26cefd548bc53525e788ba40efbbd9ed962a6
+  samples      : 2528  vs the 2000000-sample warm-up end (train.py:1074-1079): 0.001 of it
+
+-- match (P11: latest accepted vs the frozen first) ------------------------
+sgfs searched  : /scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/runtime/phase0_dryrun/eval/match-fixture
+files / games  : 2 / 312   (SZ[9] 312, other 0)
+bot names seen : {"first": 312, "latest": 312}
+colour split   : latest as black 156, as white 156
+W / L / D      : 155 / 155 / 2   (unscored 0 {})
+p = (W + 0.5 D)/N = 0.5000 over 312 scored games
+Wilson 95% CI  : [0.4449, 0.5551]   excludes 0.5: no
+Elo            : -0.0   (CI -38.5 .. +38.5)
+target p       : 0.60 -> not met
+
+-- compute ----------------------------------------------------------------
+GPU-hours (sacct Elapsed sum, 1 GPU per job): None   [not queried (--no-sacct)]
+
+-- declaration ------------------------------------------------------------
+P7  acceptances >= 1           : yes (2)
+P11 95% CI excludes 0.5       : no
+
+eval_improvement: not demonstrated
+improvement over the frozen first accepted net is NOT DEMONSTRATED on this
+evidence. That is a statement about the evidence, not a claim that the
+latest net is no better: the missing conjunct is named above.
+
+The scale-up decision is the human's (task section 10); this node is only the
+declaration.
+[exit 0]
+
+==============================================================================
+17. declare.py -- SYNTHETIC 240/400 branch check: improves
+==============================================================================
+   The sgf lines here are generated, not played. This exercises the decision
+   branch and the Wilson interval; it is not evidence about any net.
+
+$ python3 codes/eval/declare.py /scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/runtime/phase0_dryrun/eval --match-sgfs /scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/runtime/phase0_dryrun/eval/match-synthetic --require-acceptances 1 --ci 0.95 --target-p 0.60 --no-sacct --json /scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/runtime/phase0_dryrun/out/declare_synthetic.json
+declare -- node arxiv-1902.10565::eval_improvement (P12)
+evaldir  : /scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/runtime/phase0_dryrun/eval
+manifest : /scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/runtime/phase0_dryrun/eval/manifest.json
+basedir  : /scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/runtime/phase0_dryrun/base
+
+-- gatekeeper -------------------------------------------------------------
+accepted (models/)        : 2
+    t9-s1216-d1221
+    t9-s2528-d2534
+rejected (rejectedmodels/): 0
+gate decisions in the logs: 1
+    Candidate lost match, score 55.500 to 100.500 in 156 games, rejecting candidate t9-s1216-d1221
+
+-- nets -------------------------------------------------------------------
+frozen first   : t9-s1216-d1221
+  sha256 frozen: 3471e2012336e47a379fcab920857de529cd54201531796b18aa2576b27cb4b2
+  sha256 now   : 3471e2012336e47a379fcab920857de529cd54201531796b18aa2576b27cb4b2
+  frozen_at    : 2026-09-04T11:57:05.284805-04:00
+latest accepted: t9-s2528-d2534
+  sha256       : a2ea1ebec44d12c59f7c4bced4f26cefd548bc53525e788ba40efbbd9ed962a6
+  samples      : 2528  vs the 2000000-sample warm-up end (train.py:1074-1079): 0.001 of it
+
+-- match (P11: latest accepted vs the frozen first) ------------------------
+sgfs searched  : /scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/runtime/phase0_dryrun/eval/match-synthetic
+files / games  : 1 / 400   (SZ[9] 400, other 0)
+bot names seen : {"first": 400, "latest": 400}
+colour split   : latest as black 200, as white 200
+W / L / D      : 240 / 160 / 0   (unscored 0 {})
+p = (W + 0.5 D)/N = 0.6000 over 400 scored games
+Wilson 95% CI  : [0.5513, 0.6468]   excludes 0.5: YES
+Elo            : +70.4   (CI +35.7 .. +105.1)
+target p       : 0.60 -> met
+
+-- compute ----------------------------------------------------------------
+GPU-hours (sacct Elapsed sum, 1 GPU per job): None   [not queried (--no-sacct)]
+
+-- declaration ------------------------------------------------------------
+P7  acceptances >= 1           : yes (2)
+P11 95% CI excludes 0.5       : yes
+
+eval_improvement: improves
+improvement over the frozen first accepted net is DEMONSTRATED.
+
+The scale-up decision is the human's (task section 10); this node is only the
+declaration.
+
+wrote /scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/runtime/phase0_dryrun/out/declare_synthetic.json
+[exit 0]
+
+==============================================================================
+18. declare.py -- no manifest is the one fatal missing input
+==============================================================================
+
+$ python3 codes/eval/declare.py /scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/runtime/phase0_dryrun/eval_nomanifest --no-sacct
+declare -- node arxiv-1902.10565::eval_improvement (P12)
+evaldir  : /scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/runtime/phase0_dryrun/eval_nomanifest
+manifest : /scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/runtime/phase0_dryrun/eval_nomanifest/manifest.json
+
+MISSING INPUT: no manifest.json. Run codes/eval/freeze_baseline.py $BASEDIR
+first -- the declaration is a statement ABOUT the frozen first accepted net,
+so without it there is nothing to declare.
+[exit 2]
+
+==============================================================================
+19. match.sbatch -- the pre-conditions, all reached before any module load
+==============================================================================
+   (a) no manifest
+
+$ bash -c EVALDIR=/scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/runtime/phase0_dryrun/eval_nomanifest BASEDIR=/scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/runtime/phase0_dryrun/base bash codes/eval/match.sbatch
+=== [2026-09-04T11:57:05-04:00] match.sbatch start   job=manual host=login03 ===
+=== [2026-09-04T11:57:05-04:00] BASEDIR=/scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/runtime/phase0_dryrun/base  EVALDIR=/scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/runtime/phase0_dryrun/eval_nomanifest  NUM_GAMES=400 ===
+=== [2026-09-04T11:57:05-04:00] config=/home/schmidt/ssci-haiyangw/az/results/ktg/paper_1902.10565/codes/cfg/match_first_latest_9.cfg ===
+=== [2026-09-04T11:57:05-04:00] missing required input: /scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/runtime/phase0_dryrun/eval_nomanifest/manifest.json ===
+=== [2026-09-04T11:57:05-04:00] run codes/eval/freeze_baseline.py /scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/runtime/phase0_dryrun/base first (P6) ===
+[exit 2]
+   (b) no accepted net -- P11 runs only when P7 >= 1
+
+$ bash -c EVALDIR=/scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/runtime/phase0_dryrun/eval BASEDIR=/scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/runtime/phase0_dryrun/base_empty bash codes/eval/match.sbatch
+=== [2026-09-04T11:57:05-04:00] match.sbatch start   job=manual host=login03 ===
+=== [2026-09-04T11:57:05-04:00] BASEDIR=/scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/runtime/phase0_dryrun/base_empty  EVALDIR=/scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/runtime/phase0_dryrun/eval  NUM_GAMES=400 ===
+=== [2026-09-04T11:57:05-04:00] config=/home/schmidt/ssci-haiyangw/az/results/ktg/paper_1902.10565/codes/cfg/match_first_latest_9.cfg ===
+=== [2026-09-04T11:57:06-04:00] frozen first net : t9-s1216-d1221  (/scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/runtime/phase0_dryrun/base/models/t9-s1216-d1221/model.bin.gz) ===
+=== [2026-09-04T11:57:06-04:00]                    sha256 3471e2012336e47a379fcab920857de529cd54201531796b18aa2576b27cb4b2 (re-verified) ===
+=== [2026-09-04T11:57:06-04:00] no accepted net in /scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/runtime/phase0_dryrun/base_empty/models -- P11 runs only when P7 >= 1. Nothing to do. ===
+[exit 2]
+   (c) the frozen baseline changed underneath its frozen hash
+
+$ bash -c EVALDIR=/scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/runtime/phase0_dryrun/eval_tamper BASEDIR=/scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/runtime/phase0_dryrun/base bash codes/eval/match.sbatch
+=== [2026-09-04T11:57:06-04:00] match.sbatch start   job=manual host=login03 ===
+=== [2026-09-04T11:57:06-04:00] BASEDIR=/scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/runtime/phase0_dryrun/base  EVALDIR=/scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/runtime/phase0_dryrun/eval_tamper  NUM_GAMES=400 ===
+=== [2026-09-04T11:57:06-04:00] config=/home/schmidt/ssci-haiyangw/az/results/ktg/paper_1902.10565/codes/cfg/match_first_latest_9.cfg ===
+=== [2026-09-04T11:57:06-04:00] REFUSING: /scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/runtime/phase0_dryrun/base/models/t9-s1216-d1221/model.bin.gz hashes 3471e2012336e47a379fcab920857de529cd54201531796b18aa2576b27cb4b2 but the manifest froze 0000000000000000000000000000000000000000000000000000000000000000. ===
+=== [2026-09-04T11:57:06-04:00] The frozen baseline changed underneath its hash; escalate, do not re-freeze. ===
+[exit 2]
+
+==============================================================================
+20. match_first_latest_9.cfg -- every key is a key the engine reads
+==============================================================================
+
+$ bash -c 
+cd /home/schmidt/ssci-haiyangw/az
+for k in $(grep -oE "^[A-Za-z][A-Za-z0-9_]*[[:space:]]*=" results/ktg/paper_1902.10565/codes/cfg/match_first_latest_9.cfg | sed "s/[[:space:]]*=//" | sed "s/[01]$//" | sort -u); do
+  n=$(grep -rlF "\"$k\"" ref-code/lightvector-KataGo/cpp/ 2>/dev/null | wc -l)
+  printf "%-32s %s\n" "$k" "$([ "$n" -gt 0 ] && echo "read in $n cpp file(s)" || echo "NOT a literal cpp key")"
+done
+allowRectangleProb               read in 3 cpp file(s)
+allowResignation                 read in 6 cpp file(s)
+bSizeRelProbs                    read in 3 cpp file(s)
+bSizes                           read in 3 cpp file(s)
+botName                          read in 1 cpp file(s)
+chosenMovePrune                  read in 6 cpp file(s)
+chosenMoveSubtract               read in 6 cpp file(s)
+chosenMoveTemperature            read in 6 cpp file(s)
+chosenMoveTemperatureEarly       read in 6 cpp file(s)
+chosenMoveTemperatureHalflife    read in 6 cpp file(s)
+cpuctExploration                 read in 6 cpp file(s)
+cpuctExplorationLog              read in 6 cpp file(s)
+cudaUseFP16                      NOT a literal cpp key
+cudaUseNHWC                      read in 3 cpp file(s)
+drawEquivalentWinsForWhite       read in 6 cpp file(s)
+dynamicScoreCenterScale          read in 6 cpp file(s)
+dynamicScoreCenterZeroWeight     read in 6 cpp file(s)
+dynamicScoreUtilityFactor        read in 6 cpp file(s)
+fpuReductionMax                  read in 6 cpp file(s)
+handicapCompensateKomiProb       read in 2 cpp file(s)
+handicapProb                     read in 4 cpp file(s)
+hasButtons                       read in 3 cpp file(s)
+koRules                          read in 3 cpp file(s)
+komiAuto                         read in 3 cpp file(s)
+komiMean                         read in 1 cpp file(s)
+lcbStdevs                        read in 6 cpp file(s)
+logGamesEvery                    read in 2 cpp file(s)
+logMoves                         read in 2 cpp file(s)
+logSearchInfo                    read in 5 cpp file(s)
+logToStdout                      read in 1 cpp file(s)
+maxMovesPerGame                  read in 3 cpp file(s)
+maxVisits                        read in 29 cpp file(s)
+minVisitPropForLCB               read in 6 cpp file(s)
+multiStoneSuicideLegals          read in 3 cpp file(s)
+nnCacheSizePowerOfTwo            read in 1 cpp file(s)
+nnMaxBatchSize                   read in 6 cpp file(s)
+nnModelFile                      read in 1 cpp file(s)
+nnMutexPoolSizePowerOfTwo        read in 1 cpp file(s)
+nnRandomize                      read in 1 cpp file(s)
+noResultUtilityForWhite          read in 6 cpp file(s)
+numBots                          read in 1 cpp file(s)
+numGameThreads                   read in 5 cpp file(s)
+numGamesTotal                    read in 1 cpp file(s)
+numNNServerThreadsPerModel       read in 2 cpp file(s)
+numSearchThreads                 read in 15 cpp file(s)
+numVirtualLossesPerThread        read in 6 cpp file(s)
+policyOptimism                   read in 9 cpp file(s)
+resignConsecTurns                read in 2 cpp file(s)
+resignThreshold                  read in 3 cpp file(s)
+rootEndingBonusPoints            read in 6 cpp file(s)
+rootFpuReductionMax              read in 7 cpp file(s)
+rootPolicyOptimism               read in 6 cpp file(s)
+rootPruneUselessMoves            read in 6 cpp file(s)
+scoringRules                     read in 4 cpp file(s)
+staticScoreUtilityFactor         read in 6 cpp file(s)
+subtreeValueBiasFactor           read in 6 cpp file(s)
+subtreeValueBiasWeightExponent   read in 6 cpp file(s)
+taxRules                         read in 3 cpp file(s)
+uncertaintyCoeff                 read in 6 cpp file(s)
+uncertaintyExponent              read in 6 cpp file(s)
+useGraphSearch                   read in 6 cpp file(s)
+useLcbForSelection               read in 6 cpp file(s)
+useNonBuggyLcb                   read in 6 cpp file(s)
+useUncertainty                   read in 6 cpp file(s)
+valueWeightExponent              read in 6 cpp file(s)
+winLossUtilityFactor             read in 6 cpp file(s)
+[exit 0]
+
+   cudaUseFP16 is the one 'NOT a literal cpp key': setup.cpp:249 builds it as
+   backendPrefix + "UseFP16" at run time (backendPrefix = "cuda"), which is
+   also why the admitted codes/cfg/gatekeeper_9x9.cfg carries it unchanged.
+
+   The two structural facts the config depends on, from the engine itself:
+
+$ bash -c cd /home/schmidt/ssci-haiyangw/az && sed -n '99,110p' ref-code/lightvector-KataGo/cpp/command/match.cpp
+    for(int i = 0; i<numBots; i++) {
+      if(!includeBot[i])
+        continue;
+      for(int j = 0; j<numBots; j++) {
+        if(!includeBot[j])
+          continue;
+        if(i < j && !(contains(secondaryBotIdxs,i) && contains(secondaryBotIdxs,j))) {
+          matchupsPerRound.emplace_back(i,j);
+          matchupsPerRound.emplace_back(j,i);
+        }
+      }
+    }
+[exit 0]
+   -> numBots 2 with no secondaryBots / includeBots emplaces BOTH (0,1) and (1,0),
+      so 400 games split 200/200 by colour. That is P11's colour balance, and it
+      is structural, not a knob.
+
+$ bash -c cd /home/schmidt/ssci-haiyangw/az && sed -n '189,195p' ref-code/lightvector-KataGo/cpp/program/play.cpp
+  if(!cfg.contains("komiMean") && !(cfg.contains("komiAuto") && cfg.getBool("komiAuto")))
+    throw IOError("Must specify either komiMean=<komi value> or komiAuto=True in config");
+  if(cfg.contains("komiMean") && (cfg.contains("komiAuto") && cfg.getBool("komiAuto")))
+    throw IOError("Must specify only one of komiMean=<komi value> or komiAuto=True in config");
+
+  komiMean = cfg.contains("komiMean") ? cfg.getFloat("komiMean",Rules::MIN_USER_KOMI,Rules::MAX_USER_KOMI) : 7.5f;
+  komiStdev = cfg.contains("komiStdev") ? cfg.getFloat("komiStdev",0.0f,60.0f) : 0.0f;
+[exit 0]
+   -> komiAuto = false together with komiMean = 7 is accepted: the throw at :191
+      needs komiAuto to be TRUE.
+
+==============================================================================
+21. nothing was submitted
+==============================================================================
+
+$ squeue -h -u ssci-haiyangw -o %.10i %.10j %.8T %R
+    299461   ktg-loop  PENDING (Priority)
+[exit 0]
+
+$ sacct -n -P -X -S now-1days --name=ktg-loop -o JobID,JobName,State,Elapsed,Start
+299366|ktg-loop|CANCELLED by 30154|00:00:00|None
+299461|ktg-loop|PENDING|00:00:00|Unknown
+[exit 0]
+
+The queued chain job 299461 is untouched: no sbatch, no scancel, no srun, and
+codes/loop/* was not modified (job 299461 stages those scripts at start).
+
+$ git -C /home/schmidt/ssci-haiyangw/az status --porcelain -- results/ktg/paper_1902.10565/codes/loop
+[exit 0]
+
+==============================================================================
+end of dry run
+==============================================================================
+
+$ date -Is
+2026-09-04T11:58:06-04:00
+[exit 0]
