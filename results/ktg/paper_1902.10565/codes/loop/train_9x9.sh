@@ -8,6 +8,12 @@ set -o pipefail
 # two independent is silent: python/data_processing_pytorch.py:91 only asserts when
 # the written rows and the trainer disagree, and 19/19 on 81 real points costs
 # ~(361/81)^2 attention FLOPs for nothing.
+#
+# That 9 is now written as ${KTG_POS_LEN:-9} (node converged_test_7x7): the same
+# variable that codes/eval/check_pos_len_npz.py reads, so one export sets the board
+# length of the trainer AND of the pre-shuffle guard and they cannot drift apart.
+# With KTG_POS_LEN unset the expansion is the literal 9 and this wrapper behaves
+# exactly as it did before -- the 9x9 production chain sets nothing.
 # Positional interface is unchanged: BASEDIR TRAININGNAME MODELKIND BATCHSIZE EXPORTMODE
 # Called by the mission loop copy in place of upstream ./train.sh.
 {
@@ -95,7 +101,7 @@ time $PYTHON ./train.py \
      -latestdatadir "$BASEDIR"/shuffleddata/ \
      -exportdir "$BASEDIR"/"$EXPORT_SUBDIR" \
      -exportprefix "$TRAININGNAME" \
-     -pos-len 9 \
+     -pos-len "${KTG_POS_LEN:-9}" \
      -batch-size "$BATCHSIZE" \
      -model-kind "$MODELKIND" \
      $EXTRAFLAG \

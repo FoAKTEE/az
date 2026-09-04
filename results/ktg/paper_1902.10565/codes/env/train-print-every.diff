@@ -1,0 +1,52 @@
+# train-print-every.diff -- mission ktg-train, node arxiv-1902.10565::converged_test_7x7
+#
+# WHAT AND WHY
+# python/train.py:1379 (v1.18.2, fd0723fdbc0e9d82cf269c9630af8c27c57c07c4) hard-codes
+#     print_train_loss_every_batches = 100
+# and that constant gates BOTH the logging.info line and the metrics_train.json append
+# (train.py:1661-1694 -> katago/train/metrics_logging.py:28 log_metrics). A cycle of this
+# mission's size runs samples_per_epoch/batch batches -- 8 in the smoke run, 157 in the
+# converged 7x7 test -- so with the stock constant the smoke run's
+# runs/smoke/train/t9/metrics_train.json is EMPTY (0 lines, verified) and a run of a few
+# hundred batches yields a handful of points at most. There is no loss curve to plot.
+#
+# The change reads the interval from the environment variable KTG_PRINT_EVERY and keeps
+# 100 as the default, so:
+#   * KTG_PRINT_EVERY unset  -> byte-identical behaviour to upstream. The queued 9x9
+#     production chain (job 299461) sets nothing and is unaffected.
+#   * KTG_PRINT_EVERY=8      -> the 7x7 test logs ~19 rows per 157-batch cycle.
+# max(1, ...) keeps a 0 or negative value from turning the modulo at :1546/:1661 into a
+# ZeroDivisionError; the gnorm_stats_debug branch is untouched.
+#
+# WHERE IT IS APPLIED -- the SCRATCH BUILD CLONE ONLY:
+#   $KATAGO_SRC = /scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/build/KataGo
+# NEVER the read-only mirror ref-code/lightvector-KataGo (alignment.md section 4).
+# The loop copies python/*.py into $BASEDIR/scripts/dated/<ts>/ and runs from there
+# (synchronous_loop_9x9.sh CHANGE 4 region), so the patched file rides into every dated
+# archive of every cycle without any further action.
+#
+# APPLY / REVERT (from $KATAGO_SRC):
+#   git apply -p1 codes/env/train-print-every.diff        # apply
+#   git apply -R -p1 codes/env/train-print-every.diff     # revert
+#
+# python/train.py sha256
+#   before : 991cbfb2d5cea8180cd3daf818ef2a516aca048e0ae0eab68865e9a125967e9e
+#   after  : f819c2262181a8676535e5d3b97c89568864538d66fc9313e38bfad2b6a767ab
+# applied  : 2026-09-04T20:53:00Z
+#
+--- a/python/train.py
++++ b/python/train.py
+@@ -1376,7 +1376,12 @@
+         logging.warning(f"Error checking longterm checkpoints: {str(e)}. Using current time as default.")
+ 
+     num_epochs_this_instance = 0
+-    print_train_loss_every_batches = 100 if not gnorm_stats_debug else 1000
++    # mission ktg-train, node arxiv-1902.10565::converged_test_7x7 -- the loss-log
++    # interval is read from KTG_PRINT_EVERY and DEFAULTS TO 100, so a caller that
++    # does not set it (the 9x9 production chain) gets the stock behaviour exactly.
++    # Without this the metrics_train.json of a short run is EMPTY: a cycle of
++    # samples_per_epoch/batch < 100 batches never reaches the print at :1661.
++    print_train_loss_every_batches = max(1, int(os.environ.get("KTG_PRINT_EVERY", "100"))) if not gnorm_stats_debug else 1000
+ 
+     if "sums" not in running_metrics:
+         running_metrics["sums"] = defaultdict(float)

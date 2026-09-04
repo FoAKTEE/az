@@ -1,0 +1,38 @@
+check_board_param -- node arxiv-1902.10565::converged_test_7x7  2026-09-04T21:00:08Z
+  az     = /home/schmidt/ssci-haiyangw/az
+  clone  = /scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/build/KataGo
+  mirror = /home/schmidt/ssci-haiyangw/az/ref-code/lightvector-KataGo
+
+== C1  train_9x9.sh -pos-len is ${KTG_POS_LEN:-9}
+  [ok]   the literal is present in /home/schmidt/ssci-haiyangw/az/results/ktg/paper_1902.10565/codes/loop/train_9x9.sh
+  [ok]   unset  -> -pos-len 9   (the 9x9 chain is unaffected)
+  [ok]   set 7  -> -pos-len 7
+
+== C2/C3  check_pos_len_npz.py expectations at L = 9 (unset) and L = 7
+  [ok]   unset -> POS_LEN 9, 2145 B/row, shapes identical to the pre-parameterised constants
+  [ok]   KTG_POS_LEN=7 -> POS_LEN 7, 1513 B/row, shapes as trainingwrite.cpp derives at 7
+
+== C4/C5  the guard on this mission's real 9x9 npz, both ways
+  [ok]   unset  -> ACCEPTS the 9x9 rows in /scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/runs/smoke/selfplay (exit 0)
+  [ok]   KTG_POS_LEN=7 -> REFUSES the 9x9 rows (exit non-zero), naming every wrong array
+
+== C6  print_train_loss_every_batches in the SCRATCH CLONE
+  [ok]   unset                  -> print interval 100
+  [ok]   KTG_PRINT_EVERY=8      -> print interval 8
+  [ok]   KTG_PRINT_EVERY=5      -> print interval 5
+  [ok]   gnorm_stats_debug branch still 1000 (untouched)
+
+== C7  the read-only mirror is NOT patched (alignment.md section 4)
+  [ok]   /home/schmidt/ssci-haiyangw/az/ref-code/lightvector-KataGo/python/train.py is unpatched
+  [ok]   the mirror still holds upstream's literal 100
+
+== C8  the 7x7 configs differ from the 9x9 ones in exactly the declared keys
+  [ok]   selfplay_7x7.cfg: 6 keys differ -> bSizes cheapSearchVisits dataBoardLen maxVisits numGameThreads reducedVisitsMin 
+  [ok]   gatekeeper_7x7.cfg: 4 keys differ -> bSizes maxVisits numGameThreads numGamesPerGating 
+  [ok]   match_first_latest_7.cfg: 5 keys differ -> bSizes komiMean maxVisits numGameThreads numGamesTotal 
+
+== C9/C10  KTG_STAGE_ONLY dry runs of the 9x9 loop
+  [ok]   C9  9x9 dry run exits 0 and stages selfplay_9x9.cfg + gatekeeper_9x9.cfg byte for byte
+  [ok]   C10 7x7 dry run exits 0 and stages selfplay_7x7.cfg + gatekeeper_7x7.cfg
+
+CHECK_BOARD_PARAM: PASS

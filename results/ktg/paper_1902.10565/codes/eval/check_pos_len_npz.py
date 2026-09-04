@@ -2,7 +2,11 @@
 """check_pos_len_npz.py -- mission ktg-train, obligation o02_pos_len_matches_databoardlen.
 
 Asserts that every training-data .npz written by the mission selfplay config is a
-dataBoardLen = 9 row set, and reports the per-row byte cost the data-budget node needs:
+dataBoardLen = L row set, and reports the per-row byte cost the data-budget node needs.
+L is read from the environment variable KTG_POS_LEN and DEFAULTS TO 9, so a caller that
+does not set it -- the 9x9 production chain, every existing call site -- sees exactly the
+constants this file carried before the variable existed (node converged_test_7x7). At
+L = 9:
 
     binaryInputNCHWPacked  (N, 22, 11)   uint8    22 * 11 =  242 B/row
     globalInputNC          (N, 19)       float32  19 *  4 =   76 B/row
@@ -35,17 +39,62 @@ import struct
 import sys
 import zipfile
 
-# What a pos_len = 9 row must look like. Trailing dims only; N is free.
-EXPECTED_SHAPES = {
-    "binaryInputNCHWPacked": (22, 11),
-    "globalInputNC": (19,),
-    "policyTargetsNCMove": (2, 82),
-    "globalTargetsNC": (80,),
-    "scoreDistrN": (282,),
-    "valueTargetsNCHW": (5, 9, 9),
-    "qValueTargetsNCMove": (3, 82),
-}
-EXPECTED_ROW_BYTES = 2145
+# The board length this run writes. cpp/dataio/trainingwrite.cpp:292-299 builds every
+# training array from xLen/yLen alone, so the whole expectation is a function of L:
+#
+#   binaryInputNCHWPacked  (22, (L*L+7)//8)            trainingwrite.cpp:288,292
+#   globalInputNC          (19,)                       independent of L
+#   policyTargetsNCMove    (2, L*L+1)                  NNPos::getPolicySize, :294
+#   globalTargetsNC        (80,)                       independent of L
+#   scoreDistrN            (L*L*2 + 120,)              :296, EXTRA_SCORE_DISTR_RADIUS=60
+#   valueTargetsNCHW       (5, L, L)                   :297
+#   qValueTargetsNCMove    (3, L*L+1)                  :298
+#
+# L = 9 -> 2145 B/row (the number this file asserted before it was parameterised);
+# L = 7 -> 1513 B/row.
+POS_LEN_ENV = "KTG_POS_LEN"
+
+
+def _pos_len():
+    raw = os.environ.get(POS_LEN_ENV, "").strip()
+    if not raw:
+        return 9
+    try:
+        v = int(raw)
+    except ValueError:
+        raise SystemExit("%s=%r is not an integer" % (POS_LEN_ENV, raw))
+    if v < 2 or v > 19:
+        raise SystemExit("%s=%d is outside the supported range [2, 19]" % (POS_LEN_ENV, v))
+    return v
+
+
+def expected_shapes(pos_len):
+    l = pos_len
+    return {
+        "binaryInputNCHWPacked": (22, (l * l + 7) // 8),
+        "globalInputNC": (19,),
+        "policyTargetsNCMove": (2, l * l + 1),
+        "globalTargetsNC": (80,),
+        "scoreDistrN": (l * l * 2 + 120,),
+        "valueTargetsNCHW": (5, l, l),
+        "qValueTargetsNCMove": (3, l * l + 1),
+    }
+
+
+def expected_row_bytes(pos_len):
+    l = pos_len
+    return (22 * ((l * l + 7) // 8)          # uint8
+            + 19 * 4                          # float32
+            + 2 * (l * l + 1) * 2             # int16
+            + 80 * 4                          # float32
+            + (l * l * 2 + 120)               # int8
+            + 5 * l * l                       # int8
+            + 3 * (l * l + 1) * 2)            # int16
+
+
+POS_LEN = _pos_len()
+EXPECTED_SHAPES = expected_shapes(POS_LEN)
+EXPECTED_ROW_BYTES = expected_row_bytes(POS_LEN)
 
 
 def _read_npy_header(fh):
@@ -166,6 +215,7 @@ def main(argv):
     rows = sum(r["rows"] for r in reports)
     ok = bool(reports) and all(r["pass"] for r in reports)
     summary = {
+        "pos_len": POS_LEN,
         "npz_files": len(reports),
         "total_rows": rows,
         "row_bytes_expected": EXPECTED_ROW_BYTES,
@@ -176,7 +226,9 @@ def main(argv):
     if as_json:
         print(json.dumps(summary, indent=1, sort_keys=True))
     else:
-        print("check_pos_len_npz: %d npz file(s), %d rows" % (len(reports), rows))
+        print("check_pos_len_npz: pos_len=%d (%s), %d npz file(s), %d rows"
+              % (POS_LEN, os.environ.get(POS_LEN_ENV, "unset -> default 9"),
+                 len(reports), rows))
         for r in reports:
             print("  %-6s rows=%-7d row_bytes=%-6d %s"
                   % ("ok" if r["pass"] else "FAIL", r["rows"], r["row_bytes"], r["path"]))
