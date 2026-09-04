@@ -18,7 +18,10 @@
 # guards that make an unattended chain safe:
 #
 #   contract   1 GPU, 32 CPUs, 120G, 2-23:30:00 (30 min inside MaxTime),
-#              b300 when it has free GPUs, b200 otherwise (a02, a04)
+#              b300 when it has free GPUs, else the next candidate -- by default
+#              b200, and whatever KTG_PARTITIONS names when it is set, which may
+#              be a comma-joined multi-partition set such as b200,l40s
+#              (a02, a04, mission.json decisions[3])
 #   chain      sbatch --dependency=afterany:$SLURM_JOB_ID issued at the TOP of the
 #              body, so the successor is queued before anything can kill us --
 #              it survives OOM, node failure and the hard walltime kill
@@ -252,9 +255,42 @@ CYCLES_AT_ENTRY=$(read_counter "$(cat "$CYCLES_FILE" 2>/dev/null || echo 0)")
 say "chain depth $chaindepth/$KTG_MAX_CHAIN, failcount $failcount/$KTG_MAX_FAILS, cycles completed so far $CYCLES_AT_ENTRY"
 
 # ---------------------------------------------------------------- partition pick
+# The candidate list is a knob, not a hard-coded pair, because the successors of a
+# multi-partition first link must inherit the SAME allowed set: resubmit() passes
+# --partition on the sbatch command line, and a command-line --partition beats
+# SBATCH_PARTITION, so a link 1 submitted with --partition=b200,l40s would have
+# queued links 2..N on b300/b200 only and l40s would never be used again
+# (evidence/production_chain/preflight.txt section R6).
+#
+# KTG_PARTITIONS is read as a list of CANDIDATES separated by whitespace, tried in
+# order. A candidate may itself be a comma-joined Slurm partition SET --
+# "b200,l40s" -- because Slurm accepts --partition=b200,l40s and starts the job in
+# whichever of those partitions can run it first; the free-GPU count for such a
+# candidate is the sum over its members, since sinfo -p takes the same comma list.
+# Comma is therefore Slurm's own spelling and never a candidate separator: a value
+# that is purely comma-separated is one multi-partition candidate. So
+# "b300 b200,l40s" means exactly the documented behaviour -- prefer b300 when it
+# has a free GPU and no reservation/drain blocks it, otherwise submit to the
+# multi-partition set b200,l40s -- and the fallback when nothing is free is the
+# LAST candidate, which is where the multi-partition set belongs.
+#
+# Unset (or empty) KTG_PARTITIONS keeps the historical list and the historical
+# b200 fallback byte for byte, so nothing about an existing chain changes.
+#
+# Propagation is the same path as the other operator knobs (KTG_MAX_CHAIN,
+# KTG_MAX_FAILS, KTG_MIN_RUNTIME_SECONDS): a plain ${VAR:-default} assignment,
+# which keeps the export attribute of a value that came in from the environment,
+# plus resubmit()'s sbatch call carrying no --export, so Slurm's default
+# --export=ALL hands KTG_PARTITIONS to the successor and on down the whole chain.
+# An operator therefore sets it once, on the first link, and every link resolves
+# its own partition from the same allowed set.
+KTG_PARTITIONS="${KTG_PARTITIONS:-b300 b200}"
 pick_partition() {
-    local p free
-    for p in b300 b200; do
+    local p free last=""
+    # deliberate word splitting: this is a list, not one word.
+    # shellcheck disable=SC2086
+    for p in $KTG_PARTITIONS; do
+        last="$p"
         free=$(sinfo -p "$p" -N -h -o "%N" 2>/dev/null | sort -u | while read -r n; do
             info=$(scontrol show node "$n" 2>/dev/null)
             st=$(grep -oP 'State=\K\S+' <<<"$info")
@@ -263,7 +299,7 @@ pick_partition() {
         done | awk '{s+=$1} END{print s+0}')
         if [ "${free:-0}" -ge "$REQ_GPUS" ]; then echo "$p"; return 0; fi
     done
-    echo b200
+    echo "${last:-b200}"
 }
 
 # ---------------------------------------------------------------- exit accounting
