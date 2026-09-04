@@ -963,3 +963,58 @@ SchedNodeList=gl111
   worst stage 28 <= 32) and loop.sbatch exits 2 on a granted SLURM_CPUS_PER_TASK
   that disagrees with it, so trimming it would need the knob re-derived, not a
   submit-time override. Escalated with the node table above.
+
+------------------------------------------------------------------------------
+(8) validator qualification on KTG_PARTITIONS -- risk recorded, chain NOT touched
+     2026-09-04T17:52:30-04:00
+------------------------------------------------------------------------------
+The partition-inheritance repair was ADMITTED (commit 7ff4794, no chain defect;
+validation_repair5.md refutation attempts R1-R3 all 'Not refuted'). One
+qualification, validation_repair5.md section 0 item 1, verbatim:
+
+    
+    1. **Submission-time pinning.** `pick_partition()` runs when a link *starts*, and the successor it queues cannot
+       start for up to one full link (23.5 h). If b300 shows one unreserved free GPU at that instant, the successor is
+       queued on `b300` *alone* and is never re-evaluated; a reservation placed on gb301 afterwards (the pattern on this
+       cluster: `ssci-adamgleave-aug2026` → `ssci-adamgleave-sep2026`, back to back) leaves that link PENDING in b300
+       until the reservation ends. That is the human's stated preference ("b300 stays preferred when free") executed
+       literally, and it stalls the chain without corrupting it; the manual remedy is `scancel` of the pending successor
+       and a resubmission of that link with the knob. If stall-freedom matters more than the preference, the single-set
+       spelling `KTG_PARTITIONS="b300,b200,l40s"` is accepted by the policy script and lets Slurm start wherever first.
+
+$ sacct -j 301099 -X -n -o JobID,State,Partition,Elapsed,Start
+301099          PENDING  b200,l40s   00:00:00             Unknown 
+$ squeue -j 301099 -o '%.10i %.9P %.8T %.20S %R'
+     JOBID PARTITION    STATE           START_TIME NODELIST(REASON)
+    301099 b200,l40s  PENDING  2026-09-04T21:54:14 (Resources)
+
+  A cancel-and-resubmit with the single-set spelling was proposed and then
+  COUNTERMANDED before any action was taken. 301099 is untouched: it is the
+  same job submitted at 17:18:56, still PENDING on b200,l40s, estimate
+  2026-09-04T21:54:14. Nothing was cancelled and no duplicate chain exists
+  (squeue shows only ktg-t7 301096 and ktg-loop 301099).
+
+  WHY THE RISK CANNOT BITE YET: gb301 is held by ssci-adamgleave-sep2026 to
+  2026-09-07T00:00, and pick_partition() counts a RESERVED node as 0 free, so
+  b300 is skipped at the link-1 and link-2 boundaries (~09-05 21:54 and
+  ~09-06 21:24). The first boundary that can pin to b300 is link 3's, after the
+  reservation ends.
+
+  AMPLIFIER worth carrying (validation_repair5.md section 0 item 2): a node whose
+  reservation has NOT YET STARTED counts as free. gb301 runs back-to-back
+  reservations on this cluster, so at the link-3 boundary a successor can be
+  pinned to b300 alone while a not-yet-started gb301 reservation is already on
+  the books -- which is precisely the stall. Hence the watch below starts at
+  link 3 rather than at link 1.
+
+  MITIGATION (monitoring rule, no code change): at every link boundary from
+  link 3 on, read the successor's partition from the 'successor queued:' line
+  in $L and from squeue. If it is queued on b300 ALONE and has been PENDING
+  > 2 h while b200 or l40s have free GPUs, escalate with
+    squeue -j <successor> -o '%.10i %.9P %.8T %.10M %.20S %R'
+    bash <mission.json compute.policyCheck>   (its per-partition free_gpus lines)
+    scontrol show reservation | grep -A1 gb301
+  and request authorisation to scancel THAT SUCCESSOR ONLY and resubmit that
+  link with KTG_PARTITIONS="b300,b200,l40s", resuming from the same BASEDIR.
+  Cancelling a pending successor loses no work: the chain state lives in
+  $BASEDIR and the link had not started.

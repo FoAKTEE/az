@@ -132,5 +132,16 @@
     },
     "action": "reported, not tuned -- KTG_CPUS_PER_TASK is a validated knob (o39; T4 worst stage 28 <= 32) and loop.sbatch exits 2 on a mismatched grant"
   },
-  "throughput_caveat": "the 3.11 h/cycle projection and the cycles-per-link arithmetic were derived on B200 (298712, 299259); an l40s link may be slower. chain_status.sh and the section 11 abort table must not escalate on slow cycles alone, and every P8 rate must record its partition."
+  "throughput_caveat": "the 3.11 h/cycle projection and the cycles-per-link arithmetic were derived on B200 (298712, 299259); an l40s link may be slower. chain_status.sh and the section 11 abort table must not escalate on slow cycles alone, and every P8 rate must record its partition.",
+  "validator_qualification": {
+    "commit": "7ff4794",
+    "record": "results/ktg/paper_1902.10565/evidence/loop_resume/validation_repair5.md",
+    "verdict": "partition-inheritance repair admitted, no chain defect (R1-R3 all 'Not refuted')",
+    "risk": "submission-time pinning: with KTG_PARTITIONS='b300 b200,l40s' a successor that sees one free unreserved b300 GPU at link start is queued on b300 ALONE and never re-evaluated; a gb301 reservation placed afterwards stalls that link until it ends",
+    "amplifier": "a not-yet-started reservation counts as free (item 2), and gb301 runs back-to-back reservations here",
+    "not_live_until": "link 3's boundary -- gb301 is held by ssci-adamgleave-sep2026 to 2026-09-07T00:00 and pick_partition() counts a RESERVED node as 0 free, so b300 is skipped at the link-1 and link-2 boundaries",
+    "mitigation": "monitoring rule from link 3 on: if the successor is queued on b300 alone and PENDING > 2 h while b200/l40s have free GPUs, escalate and, with authorisation, scancel that successor only and resubmit that link with KTG_PARTITIONS='b300,b200,l40s' from the same BASEDIR",
+    "action_taken": "none -- a cancel-and-resubmit with the single set was proposed and countermanded before any action; 301099 is untouched",
+    "standing_constraint": "301099 is the last authorized resubmission of the chain"
+  }
 }
