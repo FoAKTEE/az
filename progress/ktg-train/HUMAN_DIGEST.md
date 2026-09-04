@@ -1,79 +1,84 @@
 # HUMAN_DIGEST — ktg-train
 
-**Status:** wave 2 (smoke job + knobs) closed (iteration 3); wave 3 (production chain) is next, gated on
-one wiring obligation (o39) plus two carried-over blocking gaps (o02, o03).
+**Status:** wave 3 (production chain) is **executing**. The first 9x9 production chain link is running on
+an L40S; a second, separately-authorized 7x7 convergence test is running on a B200 and converging visibly.
+Nothing is blocked; one non-blocking wrapper defect is being repaired while the chain keeps running.
 
 ## What landed
 
-- **The smoke allocation ran, twice, inside its 3-attempt budget.** Job 298712 (b200, COMPLETED) ran two
-  full loop cycles end to end: selfplay → shuffle → train → export → gatekeeper. Cycle 1's candidate
-  (`t9-s1216-d1221`) was gated against the random baseline and **rejected**, 55.5 to 100.5 in 156 games —
-  expected for a near-random-init net, not a bug. `global_step_samples` went 1216 → 2528 across the two
-  cycles with zero re-initialisations. Attempt 2 (job 299259) resumed cleanly from job 1's markers and ran
-  the training-side and search-side architecture probes: kill-and-resume passed 6/6 (SIGKILL at sample
-  4992, resumed to 14976, rows unchanged), the training probe passed 4/4.
-- **Eight new results admitted** (13 total now, up from 5): the loop-cycle execution itself, the tiny
-  throughput record, both architecture probes, and the derived cycle knobs — all empirical or conditional.
-  **Two results refuted, both narrowly, as literally written**: the 24-CPU thread bound (real-net stages
-  measure 25 threads, one more than declared — every other clause of that bound holds) and the ≤10 KiB/game
-  disk-bytes bound (rows/game clause holds; bytes/game runs 9-20% over). Neither refutation threatens the
-  pipeline — both fed directly into the next node's derivation.
-- **A worker-proposed refutation was itself refuted.** The worker read the smoke data as disproving the
-  paper's cheap-search fraction (0.342 measured vs. 0.25 predicted) and the byte bound. Cross-model
-  validation traced the fraction discrepancy to a probe-instrument bug — cheap MCTS searches reuse a
-  subtree and inherit visit counts, so the worker's binning rule mis-classified 667 of 7401 searches. The
-  band is left explicitly **unchecked** (neither refuted nor re-admitted at a new value); a follow-on
-  obligation (o38) fixes the discriminator with no further compute needed.
-- **The 9x9 production-cycle knobs are derived and admitted `conditional`** (1000 games/cycle, 20000
-  samples/epoch, min_rows 25000, keep 120000 > cap 100000, 5 epochs/export, 32 CPUs / 18 game threads,
-  ~3.11 h/cycle measured, ~20.9 GiB per 23-cycle chain link). Every arithmetic check re-derives
-  independently on validation (16/16 pass at the measurement and its 90% lower bound; 9 deliberate
-  break-attempts fail as they must). The one correction: the worker's claimed export timeline ("exactly one
-  candidate per cycle from cycle 13") does not survive the trainer's own exit-on-empty-epoch behavior — the
-  validator's read says **the first real candidate exports at cycle 5**, gated at cycle 6; "exactly one per
-  cycle" doesn't hold reliably until roughly cycle 16. This is a corrected reading of the same knobs, not a
-  knob change — nothing needs re-deriving.
-- **Four more nodes promoted to solid** on this wave's validation: the transformer trunk architecture, the
-  policy-head global-pooling design, the training row data format, and train.py's resume semantics.
-- **A fifth repair round closed on the Slurm chain wrapper** (`loop_resume_under_walltime`): every
-  chain-state counter file now reads through a base-10 guard, closing a bash bug where a leading-zero value
-  (e.g. "08") aborted the wrapper's failure-accounting logic entirely. A residual — the wrapper still fails
-  *open* (doesn't stop the chain) if a state file becomes unwritable, or if an operator sets a malformed
-  `KTG_MAX_FAILS` — is tracked as a new, explicitly non-blocking obligation (o36).
+- **All six pre-launch repairs landed and were cross-model admitted.** The Slurm wrapper now declares and
+  asserts the 32 CPUs the derived knobs need (was 24), samples thread counts and GPU utilization for the
+  whole length of every chain link (not just the smoke), and refuses to shuffle any data file that is not a
+  9x9 row set before every shuffle stage. The knob deriver now raises by name on any missing measured input
+  instead of silently substituting a stale constant. The export-ramp model was corrected twice — first by
+  the worker, then independently re-derived by the validator from the trainer's own file-consumption
+  behavior — landing on: the first real candidate exports at **cycle 5**, is gated at cycle 6, and "exactly
+  one export per cycle" never actually holds at these knobs (exports fall at roughly cycles 5, 10, 15, 19,
+  22 instead). And the full-search-fraction probe was fixed — a subtle instrument bug had cheap searches on
+  a reused tree miscounted as full searches — re-establishing the measured fraction (0.2516) inside the
+  paper's expected band and promoting `playout_cap_randomization` to solid on two independent instruments.
+- **You authorized L40S for the production chain, and it measures out runnable.** A dedicated 1-GPU probe
+  (job 300987) ran the mission's engine binary on an L40S with zero "no kernel image available" errors and
+  a benchmark rate essentially matching a B200 (2401.88 vs. 2322.17 visits/s) — the binary carries no sm_89
+  image, but the next-oldest architecture's compiled kernels load and run correctly under CUDA's own
+  compatibility rule, measured rather than assumed. A second defect (the chain wrapper's successor-partition
+  list was hard-coded and would have pinned links 2-9 to b200/b300 only) was found and fixed before it could
+  bite. Admitting l40s moved the chain's earliest start estimate from **2026-09-06** to **2026-09-04**, about
+  two days sooner.
+- **The first 9x9 production chain link is running.** Job 301099 has been RUNNING on an L40S (node gl111)
+  since 2026-09-04 18:52. Its first cycle is healthy: selfplay and shuffle are done, training is in progress,
+  every measurement taken so far (rows per game, thread counts, storage guard) is within the tolerances
+  derived at wave 2. A useful surprise: production self-play runs 7.4× faster than the earlier smoke test on
+  this same hardware, traced to a logging flag the smoke left on and production correctly turns off — not a
+  partition-speed effect. One non-blocking wrapper bug was found in this first read: a site-specific Slurm
+  banner on stderr breaks the wrapper's own successor-job-id bookkeeping, so its log wrongly claims "chain
+  not extended" even though the successor was created correctly and is queued. The chain itself, its crash
+  breaker, and its stop mechanism are all unaffected — only a log line and one safety fast-path are wrong.
+  The fix is a one-line change, not yet landed; it will self-apply to link 2 once committed, since the chain
+  re-reads its own script from the repository at the start of every link.
+- **The separately-authorized 7x7 convergence test is running and learning.** After you asked for a short
+  test run with a real loss curve, the worker found the 9x9 smoke had never actually produced one (a logging
+  interval mismatch), fixed that generically, and also found that KataGo's own from-scratch learning-rate
+  warmup — calibrated for a much longer 19x19-scale run — would have held a short 7x7 test at 1/20 the
+  intended rate for its entire duration; both were corrected before the run that matters started. Job 301096
+  has been running on a B200 since 17:14 and is converging clearly: as of this note, 46 cycles and about
+  1.19 million training samples in, policy loss has fallen from 3.92 to 1.55 (well below the random-guessing
+  baseline of 3.91), value loss from 0.92 to 0.57, with 43 of 45 candidate nets accepted by the gatekeeper.
+- **You changed the 7x7 test's stopping rule mid-run**, from a fixed 6-hour cap to training until the loss
+  curve visibly stops improving. That is now implemented as a measured-plateau rule (two consecutive
+  evaluations with both policy and value loss essentially flat AND no new gatekeeper acceptance in the last
+  15 cycles), running in same-directory continuation segments with a 12-segment safety bound — a backstop,
+  not a target, since the run is still improving steeply and nowhere near it.
 
-## What is blocked / open
+## What is live / blocked / open
 
-- **One wiring obligation blocks the first real chain launch (o39):** `loop.sbatch` still declares 24 CPUs
-  where the derived knobs need 32. This is a one-line-class fix but belongs to the wrapper's owner task
-  (`loop_resume_under_walltime`), not to the knobs task, by task-boundary convention.
-- **Two carried-over blocking gaps, untouched this wave:** `o02` (propagating the 9x9 pos_len override into
-  `shuffle_stage`) and `o03` (re-measuring real-net thread counts at the new 32-CPU declaration, not the
-  smoke's 24). A fourth blocking item, `o25`, needs an executed proof that the failure-circuit-breaker trips
-  under a real Slurm TIMEOUT/CANCELLED/FAILED, not just a simulated one.
-- **The crash-triage / simplification-status tension flagged at iteration 2 persists, unchanged**, for
-  `loop_resume_under_walltime`: crash-triage still says its next change must be `change_type=structural`;
-  simplification-status still independently wants a `refactor` row holding its metric. Two more tasks
-  (`synchronous_loop_smoke`, `derive_cycle_knobs_9x9`) opened their own `simplification-status: required`
-  flags this wave — four such flags are now open at once across three tasks, none yet resolved by a
-  qualifying commit.
-- **Nothing blocks the loop gate itself** — `continue`, no-progress 0/8, stuck 0/3.
+- **Live, unattended, healthy**: the 9x9 chain (link 1 of 9, L40S) and the 7x7 test (B200), both progressing
+  without any knob having moved since launch. Neither is blocked.
+- **One non-blocking repair in flight**: the wrapper's successor-job-id capture (above); does not affect the
+  chain's correctness or safety, only its own logging and one dead fast-path; targeted before link 1 ends.
+- **One monitoring watch, not a repair**: from link 3 onward, a successor could in principle get pinned to a
+  momentarily-free B300 GPU and stall if a reservation lands on it afterward. This cannot happen before link
+  3 (the relevant node is reserved through 2026-09-07), and the response if it does fire is to escalate with
+  data and ask for authorization to resubmit that one link — not to silently retune anything.
+- **Seven tasks carry an open "simplify before the next commit" flag**, none yet resolved — three carried
+  over from the prior wave, three opened by this wave's new tasks. All are deferred by design while their
+  allocations are live: editing a running chain's own scripts mid-run is forbidden by its own task rules.
+- **Nothing blocks the mission's own progress gate** — `continue`, no-progress 0/8, stuck 0/3.
 
 ## Decisions needed from you
 
-- **L40S while B200 is saturated? Still open, unchanged from last wave.** Both smoke jobs did eventually run
-  on b200 without a decision here, so nothing was blocked — but the next launch is a **multi-day production
-  chain**, not a 6-minute smoke job, and it is gated behind `o39` (an easy fix) rather than compute
-  availability today. If B200 queue pressure returns before that chain launches, the L40S question (open,
-  `AllowAccounts=ALL`, not currently in `mission.json.compute.partitions` or the compute-budget
-  allow-list) becomes relevant again. No urgency this wave; flagging so it isn't lost.
-- No other decisions pending — prior wave-0 decisions (CPU policy, scratch budget, b200 vs b300) remain
-  fully landed.
+**None pending.** Both open items from the last wave are resolved: the L40S question (you decided to allow
+whichever of b200/l40s frees first, and it now measures out runnable and is in production use), and the 7x7
+test's stopping rule (you replaced the time cap with the plateau rule, now implemented and running). If
+anything, the one item worth a glance is informational rather than decision-needed: the wrapper's log line
+about "chain not extended" is misleading until its one-line fix lands — the chain itself is fine.
 
 ## Pointers
 
-`progress/ktg-train/RESEARCH_STATE.md` (mission through-line, incl. a Training-status paragraph) ·
-`progress/ktg-train/nodal_note.md` (10-iter window: DAG snapshot, accepted results, simplification cycle,
-failure-mode drift) · `progress/ktg-train/loop_notes/current_iter.md` (this wave's verbatim verifier +
+`progress/ktg-train/RESEARCH_STATE.md` (mission through-line, incl. the Training-status paragraph) ·
+`progress/ktg-train/nodal_note.md` (iterations 1-4 window: DAG snapshot, accepted results, simplification
+cycle, failure-mode drift) · `progress/ktg-train/loop_notes/current_iter.md` (this wave's verbatim verifier +
 crash-triage output) · `results/ktg/paper_1902.10565/decomposition/{logic,DESIGN,claims,obligations}.md` ·
-`results/ktg/GLOBAL_DAG.md` · `results/ktg/paper_1902.10565/codes/loop/knobs_9x9.env` ·
-`results/ktg/paper_1902.10565/evidence/{smoke,derive_cycle_knobs,loop_resume}/`.
+`results/ktg/GLOBAL_DAG.md` (regenerated this wave) · `results/ktg/paper_1902.10565/codes/loop/knobs_9x9.env` ·
+`results/ktg/paper_1902.10565/evidence/production_chain/{preflight.txt,launch.json,status_log.txt}` ·
+`results/ktg/paper_1902.10565/evidence/converged_7x7/{status_log.txt,summary-301096.json}`.
