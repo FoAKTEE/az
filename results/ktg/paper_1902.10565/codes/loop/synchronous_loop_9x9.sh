@@ -19,7 +19,10 @@ set -o pipefail
 #   5  upstream :113 ./export_model_for_selfplay.sh -> ./export_model_for_selfplay_9x9.sh
 #                                       (mv before rm; o09)
 #   6  new, before the while loop      stale torchmodels_toexport/*.exported sweep (o09)
-#   7  new, top of the while body      scratch cap guard (owned by node data_budget; o04)
+#   7  new, top of the while body      call codes/data_budget/scratch_guard.sh and
+#                                       abort on any non-zero exit; every storage
+#                                       threshold lives in budget.env, none here
+#                                       (node data_budget; o04, o27)
 #   8  new, top/end of the while body  KTG_ONE_CYCLE=1 runs exactly one cycle
 #   9  upstream :57-66 knob block      one override-able variable block, 9x9 sized
 #
@@ -129,7 +132,12 @@ GATING_CONFIG="${GATING_CONFIG:-$KTG_CODES/cfg/gatekeeper_9x9.cfg}"
 TRAIN_WRAPPER="${TRAIN_WRAPPER:-$KTG_CODES/loop/train_9x9.sh}"
 EXPORT_WRAPPER="${EXPORT_WRAPPER:-$KTG_CODES/loop/export_model_for_selfplay_9x9.sh}"
 
-for f in "$SELFPLAY_CONFIG" "$GATING_CONFIG" "$TRAIN_WRAPPER" "$EXPORT_WRAPPER"
+# CHANGE 7 (node data_budget, obligations o04 / o27): the storage guard. Every
+# threshold lives in codes/data_budget/budget.env, which the guard reads; this
+# script holds no storage number of its own.
+SCRATCH_GUARD="${KTG_SCRATCH_GUARD:-$KTG_CODES/data_budget/scratch_guard.sh}"
+
+for f in "$SELFPLAY_CONFIG" "$GATING_CONFIG" "$TRAIN_WRAPPER" "$EXPORT_WRAPPER" "$SCRATCH_GUARD"
 do
     if [ ! -f "$f" ]
     then
@@ -184,11 +192,8 @@ rm -rf "$BASEDIR"/shuffleddata/*.tmp
 # Also run the code out of the archive, so that we don't unexpectedly crash or change behavior if the local repo changes.
 cd "$DATED_ARCHIVE"
 
-# CHANGE 7 (node data_budget, obligation o04): refuse to start a cycle when the
-# mission root is already at the soft cap. Thresholds are data_budget's to own.
-KTG_SCRATCH_ROOT="${KTG_SCRATCH_ROOT:-${KTG_ROOT:-$BASEDIR}}"
-KTG_SCRATCH_CAP_BYTES="${KTG_SCRATCH_CAP_BYTES:-214748364800}"   # 200 GiB hard
-KTG_SCRATCH_SOFT_BYTES="${KTG_SCRATCH_SOFT_BYTES:-193273528320}" # 180 GiB, no new cycle
+# Cycle counter, used only to label the per-cycle scratch_guard log triple.
+CYCLE_INDEX=0
 
 # Dry-run hook: KTG_STAGE_ONLY=1 stops here, after the archive is staged and the
 # startup sweeps have run but before any engine or trainer stage. It exists so
@@ -214,17 +219,35 @@ do
         exit 0
     fi
 
-    # CHANGE 7: per-cycle scratch accounting and cap.
-    USED_BYTES=$(du -sb "$KTG_SCRATCH_ROOT" | cut -f1)
-    echo "scratch: du -sb $KTG_SCRATCH_ROOT = $USED_BYTES B (soft $KTG_SCRATCH_SOFT_BYTES, hard $KTG_SCRATCH_CAP_BYTES)"
-    df -B1 "$KTG_SCRATCH_ROOT" || true
-    if [ "$USED_BYTES" -ge "$KTG_SCRATCH_SOFT_BYTES" ]
+    # CHANGE 7: per-cycle scratch accounting and cap, delegated in full to node
+    # data_budget's guard. It prints the du -sb / df -B1 / quotas.py triple that
+    # o04 requires and decides by exit code; it is never advisory:
+    #   0 within budget / 1 mission-root hard cap / 2 group free floor /
+    #   3 could not measure.
+    CYCLE_INDEX=$((CYCLE_INDEX + 1))
+    set +x
+    set +e
+    bash "$SCRATCH_GUARD" --label "cycle $CYCLE_INDEX pre-gatekeeper"
+    GUARD_RC=$?
+    set -e
+    if [ "$GUARD_RC" -ne 0 ]
     then
-        set +x
-        echo "scratch soft cap reached: $USED_BYTES >= $KTG_SCRATCH_SOFT_BYTES -- no new cycle."
-        touch "$BASEDIR"/STOP
-        exit 3
+        case "$GUARD_RC" in
+            1) echo "scratch_guard exit 1: projected mission-root usage crosses the hard cap -- no new cycle." ;;
+            2) echo "scratch_guard exit 2: group scratch free space below the safety floor -- no new cycle." ;;
+            *) echo "scratch_guard exit $GUARD_RC: could not measure the budget -- refusing to start a cycle." ;;
+        esac
+        # 1 and 2 are deliberate storage refusals: brake the whole chain so the
+        # queued successor does not retry into the same full filesystem. 3 is a
+        # measurement failure and is reported as one, without the brake.
+        if [ "$GUARD_RC" -eq 1 ] || [ "$GUARD_RC" -eq 2 ]
+        then
+            touch "$BASEDIR"/STOP
+            exit 3
+        fi
+        exit 2
     fi
+    set -x
 
     echo "Gatekeeper"
     time ./bin/katago gatekeeper -rejected-models-dir "$BASEDIR"/rejectedmodels -accepted-models-dir "$BASEDIR"/models/ -sgf-output-dir "$BASEDIR"/gatekeepersgf/ -test-models-dir "$BASEDIR"/modelstobetested/ -config "$DATED_ARCHIVE"/gatekeeper.cfg -quit-if-no-nets-to-test | tee -a "$BASEDIR"/gatekeepersgf/stdout.txt

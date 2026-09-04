@@ -27,7 +27,10 @@ set -o pipefail
 if [[ $# -ne 3 ]]
 then
     echo "Usage: $0 NAMEPREFIX BASEDIR USEGATING"
-    echo "Currently expects to be run from within the 'python' directory of the KataGo repo, or otherwise in the same dir as export_model.py."
+    # CHANGE D (obligation o08): upstream's usage string names the TensorFlow-era
+    # exporter, a file that does not exist at v1.18.2. The exporter this script
+    # actually invokes below is export_model_pytorch.py, so the message names it.
+    echo "Currently expects to be run from within the 'python' directory of the KataGo repo, or otherwise in the same dir as export_model_pytorch.py."
     echo "NAMEPREFIX string prefix for this training run, try to pick something globally unique. Will be displayed to users when KataGo loads the model."
     echo "BASEDIR containing selfplay data and models and related directories"
     echo "USEGATING = 1 to use gatekeeper, 0 to not use gatekeeper and output directly to models/"
@@ -88,15 +91,36 @@ function exportStuff() {
                [ -d "$BASEDIR"/modelsuploaded/"$NAME" ]
             then
                 # CHANGE B: with mv-before-rm, a kill between the rename and the
-                # source removal leaves both TARGET and SRC on disk. Finish that
-                # interrupted move here instead of re-listing SRC every cycle.
-                if [ -d "$TARGET" ] && [ -d "$SRC" ]
+                # source removal leaves both the exported model and SRC on disk.
+                # Finish that interrupted move here instead of re-listing SRC
+                # every cycle.
+                #
+                # The completed export is looked for in EVERY final location,
+                # not only in $TARGET: by the time the next link reaches this
+                # line the gatekeeper has usually already moved the candidate
+                # out of modelstobetested/ into models/ or rejectedmodels/, so a
+                # $TARGET-only test falls through to "already exists" and the
+                # source lingers in torchmodels_toexport/ forever
+                # (validation.md F4). A directory counts as a completed export
+                # only once it holds model.bin.gz -- the last file written
+                # before the rename -- so a half-written destination never
+                # authorises deleting a checkpoint.
+                EXPORTED_AT=""
+                for FINALDIR in modelstobetested rejectedmodels models models_extra modelsuploaded
+                do
+                    if [ -f "$BASEDIR/$FINALDIR/$NAME/model.bin.gz" ]
+                    then
+                        EXPORTED_AT="$BASEDIR/$FINALDIR/$NAME"
+                        break
+                    fi
+                done
+                if [ -n "$EXPORTED_AT" ] && [ -d "$SRC" ]
                 then
-                    echo "Completing interrupted export of" "$NAME" "-- target exists, removing source:" "$SRC"
+                    echo "Completing interrupted export of" "$NAME" "-- exported model present at" "$EXPORTED_AT" "-- removing source:" "$SRC"
                     rm -rf "$TMPDST"
                     rm -rf "$SRC"
                 else
-                    echo "Model with same name already exists, so skipping:" "$SRC"
+                    echo "Model with same name already exists but no completed export was found, so skipping:" "$SRC"
                 fi
             else
                 rm -rf "$TMPDST"
