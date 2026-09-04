@@ -620,3 +620,119 @@ ls: cannot access '/scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/runs/p1':
 The link never started inside the wait budget, so there is no first cycle log
 and no monitoring read to perform. The chain is queued and untouched.
 ==============================================================================
+
+==============================================================================
+(R6) MULTI-PARTITION RE-SUBMISSION -- HELD AT THE PRE-SUBMISSION GATE
+     2026-09-04T16:30 -- the coordinator's own condition fired; nothing was
+     cancelled and nothing was submitted.
+==============================================================================
+
+The gates the coordinator set that PASS:
+$ bash "$POLICY_CHECK" --gpus 1 --cpus 32 --partition b200,l40s
+== compute-budget self-check  2026-09-04T16:30:38-04:00 ==
+my jobs      : gpus=1 cpus=32  (1 jobs)
+partition b200 : free_gpus=13/128 (excludes reserved/drained nodes)
+partition b300 : free_gpus=0/8 (excludes reserved/drained nodes)
+partition l40s : free_gpus=6/48 (excludes reserved/drained nodes)
+reservations : 9 defined (6 active) — scontrol show reservation
+quota        : | /home/ssci-haiyangw/ | 3.46 GB  | 100.00 GB |  3.46%   |
+quota        : | /scratch/ssci-anima/ | 33.91 TB |  40.00 TB |   84%    |
+OK           : request gpus=1 cpus=32 part=b200,l40s within policy (gpu<=4, no cpu cap)
+exit 0
+  (the comma list is accepted; l40s alone also exits 0; mission.json
+   compute.partitions now reads ['b300','b200','l40s'] and decisions[3] is the
+   human's 2026-09-04 multi-partition decision, landed in commit d04b144)
+
+$ bash codes/data_budget/scratch_guard.sh --label preflight-l40s
+projected root total : 29284512999 B   (hard cap 536870912000 B = 500 GiB)
+group scratch free   : 6090000000000 B   (source: quotas.py; fail floor 1099511627776 B, warn floor 1649267441664 B)
+scratch_guard: OK  used=7809676519 B  projected_total=29284512999 B  group_free=6090000000000 B
+exit 0
+$ env | grep -c '^KTG_\|^BASEDIR\|^OMP_\|^MKL_\|^SBATCH_'
+0
+$ test ! -e $KTG_ROOT/runs/p1
+  exit 0 -- BASEDIR still fresh
+$ scontrol show node gl105  [l40s node facts]
+CPUTot=128 Gres=gpu:l40s:8 RealMemory=773600 CfgTRES=cpu=124,mem=773600M,billing=124,gres/gpu=8 
+  124 schedulable CPUs and 773 GB against the job's 32 CPUs / 120G: the
+  allocation fits an L40S node unchanged, and 48 GB VRAM against the 4094 MiB
+  the smoke peaked at leaves ~12x headroom.
+
+------------------------------------------------------------------------------
+BLOCKER 1 -- sm_89 is ABSENT from the katago binary, in SASS *and* in PTX
+------------------------------------------------------------------------------
+The coordinator's instruction: 'confirm sm_89 is in that list from
+evidence/env/smoke.txt; if it is absent, say so before submitting'. It is absent.
+Verified twice -- from the recorded evidence and from the binary itself:
+
+$ sed -n '41p' results/ktg/paper_1902.10565/evidence/env/smoke.txt
+sm_100 sm_120 sm_50 sm_52 sm_53 sm_60 sm_61 sm_62 sm_70 sm_72 sm_75 sm_80 sm_86 sm_87 sm_90 
+
+$ cuobjdump --list-elf $KATAGO_BIN | grep -oE 'sm_[0-9]+' | sort -u
+sm_100 sm_120 sm_50 sm_52 sm_53 sm_60 sm_61 sm_62 sm_70 sm_72 sm_75 sm_80 sm_86 sm_87 sm_90 
+$ cuobjdump --list-ptx $KATAGO_BIN | grep -oE 'sm_[0-9]+' | sort -u
+sm_100 sm_120 sm_50 sm_52 sm_53 sm_60 sm_61 sm_62 sm_70 sm_72 sm_75 sm_80 sm_86 sm_87 sm_90 
+$ cuobjdump --list-elf $KATAGO_BIN | grep -c 'sm_89'
+0
+$ cuobjdump --list-elf $KATAGO_BIN | grep -c 'sm_86'
+2
+
+  L40S is sm_89 (Ada). The binary carries neither an sm_89 cubin nor a
+  compute_89 PTX image, so nothing in it targets the device directly.
+  What it DOES carry is sm_86 in both forms. CUDA's documented minor-version
+  rule -- a cubin built for X.y loads on a device X.z with z >= y, same major
+  -- would make the sm_86 cubin loadable on sm_89, and the sm_86 PTX JIT-able.
+  That is an INFERENCE FROM DOCUMENTATION, not a measurement on this cluster,
+  and this task file forbids running torch or an engine on the login node, so
+  it cannot be settled here. It is cheap to settle for real: one <= 15 min
+  1-GPU l40s job running 'katago runtests' plus a short 'katago benchmark'
+  on b7c96h3tfrs would either print a board-eval result or fail with
+  'no kernel image is available for execution on the device'.
+
+  [ESCALATED] not submitted. A 9-link chain that reaches an L40S node and dies
+  on a missing kernel image would burn a breaker attempt per link.
+
+------------------------------------------------------------------------------
+BLOCKER 2 -- resubmit() DOES pass --partition, so SBATCH_PARTITION cannot
+             reach the successors the way SBATCH_TIMELIMIT does
+------------------------------------------------------------------------------
+The brief's premise was that resubmit()'s successors pass no --partition.
+They do. loop.sbatch:507 and :518-519:
+
+    part=$(pick_partition)
+    out=$(sbatch --parsable --partition="$part" \
+        --dependency=afterany:"${SLURM_JOB_ID:-0}" "$SELF" 2>&1)
+
+and pick_partition() (loop.sbatch:255-267) iterates ONLY b300 then b200, with a
+hard-coded 'echo b200' fallback:
+pick_partition() {
+    local p free
+    for p in b300 b200; do
+    done
+    echo b200
+}
+
+  A command-line --partition beats SBATCH_PARTITION, so the variable would be
+  overridden on every resubmit. Link 1 would be b200,l40s-eligible; links 2-9
+  would be pinned to b300/b200 and l40s would never be used again. The chain
+  would also submit its successor to a partition the link is not running on.
+  This is exactly the asymmetry that made SBATCH_TIMELIMIT work: resubmit()
+  passes no --time, and it does pass --partition.
+
+  The repair is one line in pick_partition()'s 'for p in b300 b200' -- e.g.
+  reading the list from mission.json compute.partitions or from a
+  KTG_PARTITIONS environment knob, so it stays a knob and not a hard-coded
+  list. That is an edit to an admitted script and therefore not mine to make
+  under this packet's no-tuning rule (task file section 13).
+
+------------------------------------------------------------------------------
+STATE HELD: job 299461 is NOT cancelled and is still queued.
+------------------------------------------------------------------------------
+$ squeue -j 299461 -o '%.10i %.8T %.12l %.20S %R'
+     JOBID    STATE   TIME_LIMIT           START_TIME NODELIST(REASON)
+    299461  PENDING     23:30:00  2026-09-06T17:09:47 (Priority)
+  Cancelling it without submitting a replacement would leave the mission with
+  no queued chain at all and discard its accrued age. Its estimate has however
+  slipped again (2026-09-05T13:44 -> 15:16 -> 2026-09-06T17:09), which
+  strengthens rather than weakens the case for the l40s move.
+==============================================================================
