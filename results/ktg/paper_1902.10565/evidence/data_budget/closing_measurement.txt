@@ -1,0 +1,38 @@
+== closing measurement 2026-09-03T23:50:13-04:00 ==
+host: login03   cwd: /home/schmidt/ssci-haiyangw/az
+ref-code pin: v1.18.2 = fd0723fdbc0e9d82cf269c9630af8c27c57c07c4
+
+### guard, production constants ###
+== scratch_guard 2026-09-03T23:50:13-04:00 [closing measurement] ==
+constants            : /home/schmidt/ssci-haiyangw/az/results/ktg/paper_1902.10565/codes/data_budget/budget.env
+root                 : /scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train
+du -sb               : 7558580421	/scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train
+df -B1               : wekafs1/scratchssci 40000000000000 37626045796352 2373954203648 95% /weka/scratch/schmidt
+quotas.py            | +--------------------------------------------------------+
+quotas.py            | | Usage for [31mssci-haiyangw[0m as of [31mThu Sep  3 23:01:02 2026[0m |
+quotas.py            | +----------------------+----------+-----------+----------+
+quotas.py            | |          FS          |   Used   |   Quota   |  Used %  |
+quotas.py            | +----------------------+----------+-----------+----------+
+quotas.py            | | /home/[31mssci-haiyangw[0m/ | 3.39 GB  | 100.00 GB |  3.39%   |
+quotas.py            | | /scratch/[31mssci-anima[0m/ | 37.61 TB |  40.00 TB |   94%    |
+quotas.py            | +----------------------+----------+-----------+----------+
+projected write      : 21474836480 B
+projected root total : 29033416901 B   (hard cap 536870912000 B = 500 GiB)
+group scratch free   : 2373954203648 B   (source: df; fail floor 1099511627776 B, warn floor 1649267441664 B)
+scratch_guard: OK  used=7558580421 B  projected_total=29033416901 B  group_free=2373954203648 B
+guard exit=0
+
+### pruner against the live mission root (DRY RUN - nothing removed) ###
+== prune_retention 2026-09-03T23:50:16-0400 DRY-RUN ==
+constants : /weka/home/schmidt/ssci-haiyangw/az/results/ktg/paper_1902.10565/codes/data_budget/budget.env
+root      : /scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train
+basedir   : /scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/loop
+-- protected set (1 entries; never a deletion candidate) --
+   PROTECT  /scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/evidence    <- evidence tree
+-- deletion plan (0 paths, 0 B) --
+   (nothing to remove)
+pruner exit=0
+
+### node verification command ###
+bash results/ktg/paper_1902.10565/codes/data_budget/tests/run_guard_tests.sh >/dev/null && bash results/ktg/paper_1902.10565/codes/data_budget/scratch_guard.sh --quiet >/dev/null && grep -q 'KTG_SCRATCH_HARD_BYTES=536870912000' results/ktg/paper_1902.10565/codes/data_budget/budget.env && grep -q 'KTG_GROUP_FREE_FAIL_BYTES=1099511627776' results/ktg/paper_1902.10565/codes/data_budget/budget.env && grep -q 'du -sb' results/ktg/paper_1902.10565/codes/data_budget/scratch_guard.sh && grep -q 'quotas.py' results/ktg/paper_1902.10565/codes/data_budget/scratch_guard.sh && python3 results/ktg/paper_1902.10565/codes/data_budget/prune_retention.py --root /scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train >/dev/null && test $(du -sb /scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train | cut -f1) -le 536870912000
+verification exit=0

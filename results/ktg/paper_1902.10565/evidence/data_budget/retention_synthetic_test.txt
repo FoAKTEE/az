@@ -1,0 +1,139 @@
+########## PHASE 2 - prune_retention.py on a synthetic tree ##########
+tree root: /scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/runtime/prune_test
+
+### 1. pre-state ###
+shuffleddata dirs (incl .tmp): 9   stale .tmp older than 2h: 1
+selfplay generations        : 5
+longterm_checkpoints        : 9
+rejectedmodels dirs         : 14
+scripts/dated archives      : 6
+du -sb                      : 7469000
+
+### 2. dry run (default: nothing is deleted) ###
+== prune_retention 2026-09-03T23:47:14-0400 DRY-RUN ==
+constants : /weka/home/schmidt/ssci-haiyangw/az/results/ktg/paper_1902.10565/codes/data_budget/budget.env
+root      : /scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/runtime/prune_test
+basedir   : /scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/runtime/prune_test/loop
+-- protected set (7 entries; never a deletion candidate) --
+   PROTECT  /scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/runtime/prune_test/loop/models/model1    <- frozen baseline (oldest models/ dir)
+   PROTECT  /scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/runtime/prune_test/loop/models/model4    <- latest accepted net (newest models/ dir)
+   PROTECT  /scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/runtime/prune_test/loop/train/ktg9/checkpoint.ckpt    <- short-term checkpoint (train.py:573-578)
+   PROTECT  /scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/runtime/prune_test/loop/train/ktg9/checkpoint_prev0.ckpt    <- short-term checkpoint (train.py:573-578)
+   PROTECT  /scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/runtime/prune_test/loop/train/ktg9/checkpoint_prev1.ckpt    <- short-term checkpoint (train.py:573-578)
+   PROTECT  /scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/runtime/prune_test/loop/shuffleddata/20260910-000000    <- shuffleddata younger than 7200s
+   PROTECT  /scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/runtime/prune_test/evidence    <- evidence tree
+-- deletion plan (16 paths, 3154000 B) --
+   WOULD-REMOVE         100000 B  /scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/runtime/prune_test/loop/shuffleddata/20260901-000000    <- shuffleddata: keep newest 3 older than 7200s (cleanup_old_dirs.py:13,24)
+   WOULD-REMOVE         100000 B  /scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/runtime/prune_test/loop/shuffleddata/20260902-000000    <- shuffleddata: keep newest 3 older than 7200s (cleanup_old_dirs.py:13,24)
+   WOULD-REMOVE         100000 B  /scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/runtime/prune_test/loop/shuffleddata/20260903-000000    <- shuffleddata: keep newest 3 older than 7200s (cleanup_old_dirs.py:13,24)
+   WOULD-REMOVE          50000 B  /scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/runtime/prune_test/loop/shuffleddata/20260902-000000.tmp    <- orphan shuffleddata .tmp: shuffle.sh:105 renamed nothing; cleanup_old_dirs.py applies no name filter
+   WOULD-REMOVE         200000 B  /scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/runtime/prune_test/loop/selfplay/gen1    <- selfplay: keep newest 3 generations, and only delete generations older than the oldest retained shuffle window
+   WOULD-REMOVE         200000 B  /scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/runtime/prune_test/loop/selfplay/gen2    <- selfplay: keep newest 3 generations, and only delete generations older than the oldest retained shuffle window
+   WOULD-REMOVE         300000 B  /scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/runtime/prune_test/loop/train/ktg9/longterm_checkpoints/20260901-000000.ckpt    <- longterm_checkpoints: keep newest 6 (train.py:1883-1889 writes one every 12 h, never prunes)
+   WOULD-REMOVE         300000 B  /scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/runtime/prune_test/loop/train/ktg9/longterm_checkpoints/20260902-000000.ckpt    <- longterm_checkpoints: keep newest 6 (train.py:1883-1889 writes one every 12 h, never prunes)
+   WOULD-REMOVE         300000 B  /scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/runtime/prune_test/loop/train/ktg9/longterm_checkpoints/20260903-000000.ckpt    <- longterm_checkpoints: keep newest 6 (train.py:1883-1889 writes one every 12 h, never prunes)
+   WOULD-REMOVE           1000 B  /scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/runtime/prune_test/loop/rejectedmodels/rej01    <- rejectedmodels: keep newest 10
+   WOULD-REMOVE           1000 B  /scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/runtime/prune_test/loop/rejectedmodels/rej02    <- rejectedmodels: keep newest 10
+   WOULD-REMOVE           1000 B  /scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/runtime/prune_test/loop/rejectedmodels/rej03    <- rejectedmodels: keep newest 10
+   WOULD-REMOVE           1000 B  /scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/runtime/prune_test/loop/rejectedmodels/rej04    <- rejectedmodels: keep newest 10
+   WOULD-REMOVE         500000 B  /scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/runtime/prune_test/loop/scripts/dated/20260901    <- scripts/dated: keep newest 3 (each holds a katago binary)
+   WOULD-REMOVE         500000 B  /scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/runtime/prune_test/loop/scripts/dated/20260902    <- scripts/dated: keep newest 3 (each holds a katago binary)
+   WOULD-REMOVE         500000 B  /scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/runtime/prune_test/loop/scripts/dated/20260903    <- scripts/dated: keep newest 3 (each holds a katago binary)
+
+### 3. apply ###
+== prune_retention 2026-09-03T23:47:15-0400 APPLY ==
+constants : /weka/home/schmidt/ssci-haiyangw/az/results/ktg/paper_1902.10565/codes/data_budget/budget.env
+root      : /scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/runtime/prune_test
+basedir   : /scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/runtime/prune_test/loop
+-- protected set (7 entries; never a deletion candidate) --
+   PROTECT  /scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/runtime/prune_test/loop/models/model1    <- frozen baseline (oldest models/ dir)
+   PROTECT  /scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/runtime/prune_test/loop/models/model4    <- latest accepted net (newest models/ dir)
+   PROTECT  /scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/runtime/prune_test/loop/train/ktg9/checkpoint.ckpt    <- short-term checkpoint (train.py:573-578)
+   PROTECT  /scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/runtime/prune_test/loop/train/ktg9/checkpoint_prev0.ckpt    <- short-term checkpoint (train.py:573-578)
+   PROTECT  /scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/runtime/prune_test/loop/train/ktg9/checkpoint_prev1.ckpt    <- short-term checkpoint (train.py:573-578)
+   PROTECT  /scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/runtime/prune_test/loop/shuffleddata/20260910-000000    <- shuffleddata younger than 7200s
+   PROTECT  /scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/runtime/prune_test/evidence    <- evidence tree
+-- deletion plan (16 paths, 3154000 B) --
+   REMOVE          100000 B  /scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/runtime/prune_test/loop/shuffleddata/20260901-000000    <- shuffleddata: keep newest 3 older than 7200s (cleanup_old_dirs.py:13,24)
+   REMOVE          100000 B  /scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/runtime/prune_test/loop/shuffleddata/20260902-000000    <- shuffleddata: keep newest 3 older than 7200s (cleanup_old_dirs.py:13,24)
+   REMOVE          100000 B  /scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/runtime/prune_test/loop/shuffleddata/20260903-000000    <- shuffleddata: keep newest 3 older than 7200s (cleanup_old_dirs.py:13,24)
+   REMOVE           50000 B  /scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/runtime/prune_test/loop/shuffleddata/20260902-000000.tmp    <- orphan shuffleddata .tmp: shuffle.sh:105 renamed nothing; cleanup_old_dirs.py applies no name filter
+   REMOVE          200000 B  /scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/runtime/prune_test/loop/selfplay/gen1    <- selfplay: keep newest 3 generations, and only delete generations older than the oldest retained shuffle window
+   REMOVE          200000 B  /scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/runtime/prune_test/loop/selfplay/gen2    <- selfplay: keep newest 3 generations, and only delete generations older than the oldest retained shuffle window
+   REMOVE          300000 B  /scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/runtime/prune_test/loop/train/ktg9/longterm_checkpoints/20260901-000000.ckpt    <- longterm_checkpoints: keep newest 6 (train.py:1883-1889 writes one every 12 h, never prunes)
+   REMOVE          300000 B  /scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/runtime/prune_test/loop/train/ktg9/longterm_checkpoints/20260902-000000.ckpt    <- longterm_checkpoints: keep newest 6 (train.py:1883-1889 writes one every 12 h, never prunes)
+   REMOVE          300000 B  /scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/runtime/prune_test/loop/train/ktg9/longterm_checkpoints/20260903-000000.ckpt    <- longterm_checkpoints: keep newest 6 (train.py:1883-1889 writes one every 12 h, never prunes)
+   REMOVE            1000 B  /scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/runtime/prune_test/loop/rejectedmodels/rej01    <- rejectedmodels: keep newest 10
+   REMOVE            1000 B  /scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/runtime/prune_test/loop/rejectedmodels/rej02    <- rejectedmodels: keep newest 10
+   REMOVE            1000 B  /scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/runtime/prune_test/loop/rejectedmodels/rej03    <- rejectedmodels: keep newest 10
+   REMOVE            1000 B  /scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/runtime/prune_test/loop/rejectedmodels/rej04    <- rejectedmodels: keep newest 10
+   REMOVE          500000 B  /scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/runtime/prune_test/loop/scripts/dated/20260901    <- scripts/dated: keep newest 3 (each holds a katago binary)
+   REMOVE          500000 B  /scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/runtime/prune_test/loop/scripts/dated/20260902    <- scripts/dated: keep newest 3 (each holds a katago binary)
+   REMOVE          500000 B  /scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/runtime/prune_test/loop/scripts/dated/20260903    <- scripts/dated: keep newest 3 (each holds a katago binary)
+-- removed 16 paths, 3154000 B --
+
+### 4. post-state ###
+shuffleddata dirs (incl .tmp): 5   stale .tmp older than 2h: 0
+selfplay generations        : 3
+longterm_checkpoints        : 6
+rejectedmodels dirs         : 10
+scripts/dated archives      : 3
+du -sb                      : 4315000
+
+### 5. every protected path survives ###
+   SURVIVES /scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/runtime/prune_test/loop/models/model1
+   SURVIVES /scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/runtime/prune_test/loop/models/model4
+   SURVIVES /scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/runtime/prune_test/loop/train/ktg9/checkpoint.ckpt
+   SURVIVES /scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/runtime/prune_test/loop/train/ktg9/checkpoint_prev0.ckpt
+   SURVIVES /scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/runtime/prune_test/loop/train/ktg9/checkpoint_prev1.ckpt
+   SURVIVES /scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/runtime/prune_test/loop/shuffleddata/20260910-000000
+   SURVIVES /scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/runtime/prune_test/loop/shuffleddata/20260911-000000.tmp
+   SURVIVES /scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/runtime/prune_test/evidence/keepme.txt
+
+### 6. rolling mode --target-bytes 2000000 (dry run) ###
+prune_retention: WARNING cannot reach 2000000 B without going below the rolling minimum (1 shuffle window, 1 selfplay generation) or touching a protected path; best reachable 3615000 B
+== prune_retention 2026-09-03T23:47:15-0400 DRY-RUN ==
+constants : /weka/home/schmidt/ssci-haiyangw/az/results/ktg/paper_1902.10565/codes/data_budget/budget.env
+root      : /scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/runtime/prune_test
+basedir   : /scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/runtime/prune_test/loop
+-- protected set (7 entries; never a deletion candidate) --
+   PROTECT  /scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/runtime/prune_test/loop/models/model1    <- frozen baseline (oldest models/ dir)
+   PROTECT  /scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/runtime/prune_test/loop/models/model4    <- latest accepted net (newest models/ dir)
+   PROTECT  /scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/runtime/prune_test/loop/train/ktg9/checkpoint.ckpt    <- short-term checkpoint (train.py:573-578)
+   PROTECT  /scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/runtime/prune_test/loop/train/ktg9/checkpoint_prev0.ckpt    <- short-term checkpoint (train.py:573-578)
+   PROTECT  /scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/runtime/prune_test/loop/train/ktg9/checkpoint_prev1.ckpt    <- short-term checkpoint (train.py:573-578)
+   PROTECT  /scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/runtime/prune_test/loop/shuffleddata/20260910-000000    <- shuffleddata younger than 7200s
+   PROTECT  /scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/runtime/prune_test/evidence    <- evidence tree
+-- rolling mode: du -sb = 4315000 B, after fixed rules 4315000 B, target 2000000 B --
+-- deletion plan (5 paths, 700000 B) --
+   WOULD-REMOVE         100000 B  /scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/runtime/prune_test/loop/shuffleddata/20260904-000000    <- rolling: over --target-bytes 2000000
+   WOULD-REMOVE         100000 B  /scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/runtime/prune_test/loop/shuffleddata/20260905-000000    <- rolling: over --target-bytes 2000000
+   WOULD-REMOVE         100000 B  /scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/runtime/prune_test/loop/shuffleddata/20260906-000000    <- rolling: over --target-bytes 2000000
+   WOULD-REMOVE         200000 B  /scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/runtime/prune_test/loop/selfplay/gen3    <- rolling: over --target-bytes 2000000
+   WOULD-REMOVE         200000 B  /scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/runtime/prune_test/loop/selfplay/gen4    <- rolling: over --target-bytes 2000000
+
+### 7. rolling mode --target-bytes 3800000 (dry run, reachable) ###
+== prune_retention 2026-09-03T23:47:15-0400 DRY-RUN ==
+constants : /weka/home/schmidt/ssci-haiyangw/az/results/ktg/paper_1902.10565/codes/data_budget/budget.env
+root      : /scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/runtime/prune_test
+basedir   : /scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/runtime/prune_test/loop
+-- protected set (7 entries; never a deletion candidate) --
+   PROTECT  /scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/runtime/prune_test/loop/models/model1    <- frozen baseline (oldest models/ dir)
+   PROTECT  /scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/runtime/prune_test/loop/models/model4    <- latest accepted net (newest models/ dir)
+   PROTECT  /scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/runtime/prune_test/loop/train/ktg9/checkpoint.ckpt    <- short-term checkpoint (train.py:573-578)
+   PROTECT  /scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/runtime/prune_test/loop/train/ktg9/checkpoint_prev0.ckpt    <- short-term checkpoint (train.py:573-578)
+   PROTECT  /scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/runtime/prune_test/loop/train/ktg9/checkpoint_prev1.ckpt    <- short-term checkpoint (train.py:573-578)
+   PROTECT  /scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/runtime/prune_test/loop/shuffleddata/20260910-000000    <- shuffleddata younger than 7200s
+   PROTECT  /scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/runtime/prune_test/evidence    <- evidence tree
+-- rolling mode: du -sb = 4315000 B, after fixed rules 4315000 B, target 3800000 B --
+-- deletion plan (5 paths, 700000 B) --
+   WOULD-REMOVE         100000 B  /scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/runtime/prune_test/loop/shuffleddata/20260904-000000    <- rolling: over --target-bytes 3800000
+   WOULD-REMOVE         100000 B  /scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/runtime/prune_test/loop/shuffleddata/20260905-000000    <- rolling: over --target-bytes 3800000
+   WOULD-REMOVE         100000 B  /scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/runtime/prune_test/loop/shuffleddata/20260906-000000    <- rolling: over --target-bytes 3800000
+   WOULD-REMOVE         200000 B  /scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/runtime/prune_test/loop/selfplay/gen3    <- rolling: over --target-bytes 3800000
+   WOULD-REMOVE         200000 B  /scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/runtime/prune_test/loop/selfplay/gen4    <- rolling: over --target-bytes 3800000
+
+### 8. idempotence: a second apply removes nothing ###
+-- deletion plan (0 paths, 0 B) --
+   (nothing to remove)
+-- removed 0 paths, 0 B --

@@ -1,0 +1,7 @@
+== compute-budget self-check  2026-09-03T23:39:11-04:00 ==
+my jobs      : gpus=0 cpus=0  (0 jobs)
+partition b200 : free_gpus=0/128 (excludes reserved/drained nodes)
+partition b300 : free_gpus=0/8 (excludes reserved/drained nodes)
+reservations : 8 defined (6 active) — scontrol show reservation
+quota        : | /home/ssci-haiyangw/ | 3.39 GB  | 100.00 GB |  3.39%   |
+quota        : | /scratch/ssci-anima/ | 37.61 TB |  40.00 TB |   94%    |

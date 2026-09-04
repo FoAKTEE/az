@@ -1,0 +1,92 @@
+== scratch_guard exit-code contract  2026-09-03T23:48:59-04:00 ==
+guard: /home/schmidt/ssci-haiyangw/az/results/ktg/paper_1902.10565/codes/data_budget/tests/../scratch_guard.sh
+
+PASS  exit 0   A. within budget, default 20 GiB projection
+      | == scratch_guard 2026-09-03T23:48:59-04:00 [A within-budget] ==
+      | constants            : /home/schmidt/ssci-haiyangw/az/results/ktg/paper_1902.10565/codes/data_budget/budget.env
+      | root                 : /scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train
+      | du -sb               : 7562895421	/scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train
+      | df -B1               : wekafs1/scratchssci 40000000000000 37626356281344 2373643718656 95% /weka/scratch/schmidt
+      | projected write      : 21474836480 B
+      | projected root total : 29037731901 B   (hard cap 536870912000 B = 500 GiB)
+      | group scratch free   : 2373643718656 B   (source: df; fail floor 1099511627776 B, warn floor 1649267441664 B)
+      | scratch_guard: OK  used=7562895421 B  projected_total=29037731901 B  group_free=2373643718656 B
+PASS  exit 1   B. projected write crosses the 500 GiB hard cap
+      | == scratch_guard 2026-09-03T23:49:02-04:00 [B projected-over-cap] ==
+      | constants            : /home/schmidt/ssci-haiyangw/az/results/ktg/paper_1902.10565/codes/data_budget/budget.env
+      | root                 : /scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train
+      | du -sb               : 7562895421	/scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train
+      | df -B1               : wekafs1/scratchssci 40000000000000 37626356281344 2373643718656 95% /weka/scratch/schmidt
+      | projected write      : 529312333000 B
+      | projected root total : 536875228421 B   (hard cap 536870912000 B = 500 GiB)
+      | group scratch free   : 2373643718656 B   (source: df; fail floor 1099511627776 B, warn floor 1649267441664 B)
+      | VIOLATION: projected mission-root usage 536875228421 B exceeds the mission-root budget (hard cap 536870912000 B).
+      |            current 7562895421 B + projected 529312333000 B. Run prune_retention.py --apply --target-bytes 536870912000 before retrying.
+PASS  exit 1   C. a stray KTG_SCRATCH_HARD_BYTES in the environment cannot loosen the cap
+      | == scratch_guard 2026-09-03T23:49:06-04:00 [C env-cannot-loosen] ==
+      | constants            : /home/schmidt/ssci-haiyangw/az/results/ktg/paper_1902.10565/codes/data_budget/budget.env
+      | root                 : /scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train
+      | du -sb               : 7562895421	/scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train
+      | df -B1               : wekafs1/scratchssci 40000000000000 37625610915840 2374389084160 95% /weka/scratch/schmidt
+      | projected write      : 529312333000 B
+      | projected root total : 536875228421 B   (hard cap 536870912000 B = 500 GiB)
+      | group scratch free   : 2374389084160 B   (source: df; fail floor 1099511627776 B, warn floor 1649267441664 B)
+      | VIOLATION: projected mission-root usage 536875228421 B exceeds the mission-root budget (hard cap 536870912000 B).
+      |            current 7562895421 B + projected 529312333000 B. Run prune_retention.py --apply --target-bytes 536870912000 before retrying.
+PASS  exit 1   D. current usage already over the cap, zero projection
+      | == scratch_guard 2026-09-03T23:49:10-04:00 [D over-cap-now] ==
+      | constants            : /home/schmidt/ssci-haiyangw/az/results/ktg/paper_1902.10565/codes/data_budget/tests/fixture_tinycap.env
+      | root                 : /scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train
+      | du -sb               : 7562895421	/scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train
+      | df -B1               : wekafs1/scratchssci 40000000000000 37625610915840 2374389084160 95% /weka/scratch/schmidt
+      | projected write      : 0 B
+      | projected root total : 7562895421 B   (hard cap 1000000 B = 500 GiB)
+      | group scratch free   : 2374389084160 B   (source: df; fail floor 1099511627776 B, warn floor 1649267441664 B)
+      | VIOLATION: projected mission-root usage 7562895421 B exceeds the mission-root budget (hard cap 1000000 B).
+      |            current 7562895421 B + projected 0 B. Run prune_retention.py --apply --target-bytes 1000000 before retrying.
+PASS  exit 2   E. group scratch free space below the safety floor
+      | == scratch_guard 2026-09-03T23:49:13-04:00 [E group-fail-floor] ==
+      | constants            : /home/schmidt/ssci-haiyangw/az/results/ktg/paper_1902.10565/codes/data_budget/tests/fixture_failfloor.env
+      | root                 : /scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train
+      | du -sb               : 7562895421	/scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train
+      | df -B1               : wekafs1/scratchssci 40000000000000 37625523769344 2374476230656 95% /weka/scratch/schmidt
+      | projected write      : 21474836480 B
+      | projected root total : 29037731901 B   (hard cap 536870912000 B = 500 GiB)
+      | group scratch free   : 2374476230656 B   (source: df; fail floor 9999999999999999 B, warn floor 1649267441664 B)
+      | VIOLATION: group scratch free space 2374476230656 B is below the 9999999999999999 B safety floor.
+      |            The pool is shared by the whole group; do not start a cycle. Escalate.
+PASS  exit 0   F. group free below the warn floor only: warns, does not abort
+      | == scratch_guard 2026-09-03T23:49:17-04:00 [F warn-only] ==
+      | constants            : /home/schmidt/ssci-haiyangw/az/results/ktg/paper_1902.10565/codes/data_budget/tests/fixture_warnfloor.env
+      | root                 : /scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train
+      | du -sb               : 7562895421	/scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train
+      | df -B1               : wekafs1/scratchssci 40000000000000 37625523769344 2374476230656 95% /weka/scratch/schmidt
+      | projected write      : 21474836480 B
+      | projected root total : 29037731901 B   (hard cap 536870912000 B = 500 GiB)
+      | group scratch free   : 2374476230656 B   (source: df; fail floor 1099511627776 B, warn floor 9999999999999999 B)
+      | scratch_guard: WARNING group scratch free space 2374476230656 B is below the 9999999999999999 B warn floor; one mission budget of headroom left.
+      | scratch_guard: OK  used=7562895421 B  projected_total=29037731901 B  group_free=2374476230656 B
+PASS  exit 3   G. mission root does not exist
+      | == scratch_guard 2026-09-03T23:49:20-04:00  ==
+      | constants            : /home/schmidt/ssci-haiyangw/az/results/ktg/paper_1902.10565/codes/data_budget/budget.env
+      | root                 : /scratch/schmidt/ssci-anima/ssci-haiyangw/no-such-root
+      | scratch_guard: mission root does not exist: /scratch/schmidt/ssci-anima/ssci-haiyangw/no-such-root
+PASS  exit 3   H. malformed --projected-bytes
+      | scratch_guard: --projected-bytes must be a non-negative integer, got '12.5GB'
+PASS  exit 3   I. unknown argument
+      | scratch_guard: unknown argument '--no-such-flag'
+PASS  exit 3   J. constants file missing
+      | scratch_guard: constants file not readable: /home/schmidt/ssci-haiyangw/az/results/ktg/paper_1902.10565/codes/data_budget/tests/no-such-constants.env
+PASS  exit 0   K. quotas.py unreadable: falls back to df on the same pool and warns
+      | == scratch_guard 2026-09-03T23:49:20-04:00 [K df-fallback] ==
+      | constants            : /home/schmidt/ssci-haiyangw/az/results/ktg/paper_1902.10565/codes/data_budget/budget.env
+      | root                 : /scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train
+      | du -sb               : 7562895421	/scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train
+      | df -B1               : wekafs1/scratchssci 40000000000000 37625639284736 2374360715264 95% /weka/scratch/schmidt
+      | scratch_guard: WARNING quotas.py unreadable or unparseable at /apps/helpers/does-not-exist.py; using df -B1 on the same pool
+      | projected write      : 21474836480 B
+      | projected root total : 29037731901 B   (hard cap 536870912000 B = 500 GiB)
+      | group scratch free   : 2374360715264 B   (source: df (quotas.py unavailable); fail floor 1099511627776 B, warn floor 1649267441664 B)
+      | scratch_guard: OK  used=7562895421 B  projected_total=29037731901 B  group_free=2374360715264 B
+
+== 11 passed, 0 failed ==

@@ -1,0 +1,18 @@
+== baseline measurement 2026-09-03T23:39:17-04:00 ==
+-- du -sb $ROOT --
+7558579007	/scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train
+-- du -sb --max-depth=1 $ROOT --
+du: warning: summarizing conflicts with --max-depth=1
+Try 'du --help' for more information.
+-- df -B1 $ROOT --
+Filesystem               1B-blocks           Used     Available Use% Mounted on
+wekafs1/scratchssci 40000000000000 37614991798272 2385008201728  95% /weka/scratch/schmidt
+-- python3 /apps/helpers/quotas.py --
++--------------------------------------------------------+
+| Usage for [31mssci-haiyangw[0m as of [31mThu Sep  3 23:01:02 2026[0m |
++----------------------+----------+-----------+----------+
+|          FS          |   Used   |   Quota   |  Used %  |
++----------------------+----------+-----------+----------+
+| /home/[31mssci-haiyangw[0m/ | 3.39 GB  | 100.00 GB |  3.39%   |
+| /scratch/[31mssci-anima[0m/ | 37.61 TB |  40.00 TB |   94%    |
++----------------------+----------+-----------+----------+

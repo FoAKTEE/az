@@ -1,0 +1,102 @@
+{
+  "note": "Candidate rows staged by the worker for an INDEPENDENT VALIDATOR. Nothing here is admitted. The worker did not append any result row; per pipelines/2-work/spec.md the refuter must attempt rejection and the judge admits by running the ledger append.",
+  "packet": "arxiv-1902.10565::data_budget",
+  "git_commit_at_staging": "befb3b1",
+  "candidate_result_rows": [
+    {
+      "paper": "arxiv-1902.10565",
+      "result_id": "data-budget-guard-500gib",
+      "name": "500 GiB mission-scratch guard with a group free-space floor and bounded rolling retention",
+      "working_context": {
+        "cluster": "skipjack login03 (CPU only; no GPU job was submitted for this node)",
+        "mission_root": "/scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train",
+        "units": "bytes, binary GiB (1 GiB = 2**30 B); quotas.py reports DECIMAL TB and is converted as such",
+        "regime": "pre-loop: the mission root holds venv and build only, no selfplay data exists yet",
+        "constants": {
+          "hard_cap_bytes": 536870912000,
+          "default_cycle_projection_bytes": 21474836480,
+          "effective_soft_cap_bytes": 515396075520,
+          "group_free_fail_bytes": 1099511627776,
+          "group_free_warn_bytes": 1649267441664
+        },
+        "authority": "mission.json decisions[] 2026-09-03 (human): scratch budget for selfplay data + checkpoints = 500 GiB"
+      },
+      "claim": "codes/data_budget/scratch_guard.sh refuses, with a non-zero exit, any cycle whose declared projected write would take du -sb of the mission root past 536870912000 B (exit 1) or that would start while group scratch free space is below 1099511627776 B (exit 2), and cannot be loosened by an environment variable; codes/data_budget/prune_retention.py bounds retention to longterm_checkpoints <= 6, rejectedmodels <= 10, selfplay <= 3 generations, scripts/dated <= 3 and shuffleddata <= 3 windows older than 2 h, sweeps orphan .tmp windows, prints its protected set before any path becomes a candidate, is dry-run unless --apply, and in --target-bytes rolling mode never drops below one shuffle window plus one selfplay generation nor removes a generation a retained window could still reference. Measured at staging time the mission root is 7558580421 B, far under the cap.",
+      "evidence_type": "empirical_measurement",
+      "evidence": "results/ktg/paper_1902.10565/evidence/data_budget/closing_measurement.txt",
+      "supporting_evidence": [
+        "results/ktg/paper_1902.10565/evidence/data_budget/guard_exit_contract.txt",
+        "results/ktg/paper_1902.10565/evidence/data_budget/retention_synthetic_test.txt",
+        "results/ktg/paper_1902.10565/evidence/data_budget/baseline_usage.txt",
+        "results/ktg/paper_1902.10565/evidence/data_budget/compute_budget_check.txt"
+      ],
+      "verification": {
+        "command": "bash results/ktg/paper_1902.10565/codes/data_budget/tests/run_guard_tests.sh >/dev/null && bash results/ktg/paper_1902.10565/codes/data_budget/scratch_guard.sh --quiet >/dev/null && grep -q 'KTG_SCRATCH_HARD_BYTES=536870912000' results/ktg/paper_1902.10565/codes/data_budget/budget.env && grep -q 'KTG_GROUP_FREE_FAIL_BYTES=1099511627776' results/ktg/paper_1902.10565/codes/data_budget/budget.env && grep -q 'du -sb' results/ktg/paper_1902.10565/codes/data_budget/scratch_guard.sh && grep -q 'quotas.py' results/ktg/paper_1902.10565/codes/data_budget/scratch_guard.sh && python3 results/ktg/paper_1902.10565/codes/data_budget/prune_retention.py --root /scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train >/dev/null && test $(du -sb /scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train | cut -f1) -le 536870912000",
+        "timeout_s": 900
+      },
+      "verifier_result": {
+        "verdict": "pass",
+        "detail": "Executed at 2026-09-03T23:50 on login03 from the az root: exit 0. Components: the 11-case exit-code contract matched 11/11; the guard exits 0 on production constants; both byte constants grep-hit in budget.env; du -sb and quotas.py both appear in scratch_guard.sh; the pruner dry run on the live mission root plans 0 paths; du -sb = 7558580421 B <= 536870912000 B."
+      },
+      "metrics": {
+        "guard_exit_contract_cases_matched": {
+          "value": 11,
+          "threshold": 11,
+          "pass": true
+        },
+        "du_sb_mission_root_bytes": {
+          "value": 7558580421,
+          "threshold": 536870912000,
+          "pass": true
+        },
+        "group_free_bytes_df": {
+          "value": 2373954203648,
+          "threshold": 1099511627776,
+          "pass": true
+        },
+        "group_free_bytes_quotas_py": {
+          "value": 2390000000000,
+          "threshold": 1099511627776,
+          "pass": true
+        }
+      },
+      "dependencies": [
+        "arxiv-1902.10565::data_format_pos_len"
+      ],
+      "assumptions": [
+        "a05_9x9_only",
+        "a07_moves_per_game_80 (planning arithmetic only; no measured bytes/row is claimed here)",
+        "The 1 TiB group free-space floor is a design choice, not a measurement: it is 2x the mission's whole 500 GiB budget, so spending the entire budget can never be what fills the shared 40 TB pool.",
+        "quotas.py reports DECIMAL TB (40.00 TB matches the 40000000000000 B pool df reports), and is rounded to 0.01 TB and refreshed hourly; the guard takes min(quotas.py, df -B1) so neither rounding nor staleness can hide a shortage."
+      ],
+      "status": "empirical",
+      "provenance": {
+        "task_id": "data_budget",
+        "node_id": "arxiv-1902.10565::data_budget",
+        "code": [
+          "results/ktg/paper_1902.10565/codes/data_budget/budget.env",
+          "results/ktg/paper_1902.10565/codes/data_budget/scratch_guard.sh",
+          "results/ktg/paper_1902.10565/codes/data_budget/prune_retention.py",
+          "results/ktg/paper_1902.10565/codes/data_budget/tests/run_guard_tests.sh"
+        ],
+        "ref_code": "ref-code/lightvector-KataGo @ v1.18.2 = fd0723fdbc0e9d82cf269c9630af8c27c57c07c4",
+        "upstream_lines_read": [
+          "python/selfplay/cleanup_old_dirs.py:11-25",
+          "python/selfplay/shuffle.sh:105,111-113",
+          "python/train.py:573-578,1882-1889"
+        ],
+        "host": "login03",
+        "actor_role": "worker"
+      },
+      "open_obligations": [
+        "o04_scratch_budget conjunct (b): codes/loop/loop.sbatch:74-75 still carries its own inline literals 214748364800 / 193273528320 and its own du/quotas block at :192-197; it must instead call scratch_guard.sh. Owner: node loop_resume_under_walltime. [BLOCKING]",
+        "The 20 GiB default per-cycle projection is a placeholder until measure_stage_throughput reports measured bytes/row on real 9x9 tdata; a loop that passes an honest --projected-bytes does not depend on it.",
+        "The retention bounds 6 / 10 / 3 / 3 are design choices, not measurements.",
+        "prune_retention.py --apply has been exercised only on a synthetic tree; it has never deleted real loop data, because none exists yet."
+      ]
+    }
+  ],
+  "not_proposed": [
+    "No knowledge-node promotion is proposed for arxiv-1902.10565::data_budget: the node's own obligation o04 still has an unmet conjunct (b) owned by another node, so a solid promotion would be premature."
+  ]
+}

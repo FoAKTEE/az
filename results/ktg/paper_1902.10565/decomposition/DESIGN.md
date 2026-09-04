@@ -1,6 +1,6 @@
 # DESIGN.md — mission `ktg-train`: 9x9 transformer KataGo self-play loop on skipjack
 
-Scope: what the loop is, how it fits ≤4 GPUs / ≤24 CPUs / 3-day walltime / 94 %-full scratch, and in
+Scope: what the loop is, how it fits ≤4 GPUs / the CPUs each job declares / 3-day walltime / 94 %-full scratch, and in
 what order it is proven. Source of truth is the v1.18.2 code mirror (human redirect 2026-09-03); the
 2019 paper is background. Every claim carries `[SOLID|PRELIMINARY|HOLE|FUTURE]` and a `verify:` line.
 `[SOLID]` here means read in code with path:line or measured in a recorded run; the only GPU execution so
@@ -29,7 +29,7 @@ repo is `codes/env/cmake-sm100.diff` adding `100` to the CUDA-12.8 arch list in 
 - [SOLID] Ladder steps are fresh runs: `train.py:850` takes the model config from `checkpoint.ckpt`, so a b7 checkpoint is never resumed into b8.
   verify: `sed -n 850p ref-code/lightvector-KataGo/python/train.py`; node `select_transformer_ladder`.
 
-## 1. GPU / CPU split — why the 24-CPU cap, not the GPU, is the binding constraint
+## 1. GPU / CPU split — why the declared CPU request, not the GPU, bounds the thread budget
 
 Paper regime (background): 16→24 V100 self-play : 2 gating : 1 training (l.603), i.e. 16–24× more GPU
 on self-play than training; upstream docs say 4–40×. On a *synchronous* single-node loop this ratio is
@@ -48,24 +48,56 @@ training (`:64`). Training can never outrun self-play; it can only idle.
   a 1-GPU job started immediately, a 2-GPU request projected a multi-week wait on 2026-09-03.
   verify: `docs/cluster-manual.md` §6 ("Queue waits scale sharply with GPU count"); `scontrol show reservation`; compute-budget `check.sh` output 2026-09-03T21:49:50-04:00.
 
-Design: **one job, one GPU, 24 CPUs, all five stages sequential**, partition b300 preferred → b200 fallback.
-GPU is shared trivially (one process at a time). `--mem=120G` (shuffle buckets + train prefetch).
-Split of the 24 CPUs per stage (only one stage runs at a time, so each stage may use the whole budget):
+Design: **one job, one GPU, `--cpus-per-task=24`, all five stages sequential**, partition b300 preferred
+→ b200 fallback (b200 while gb301 is reserved). GPU is shared trivially (one process at a time).
+`--mem=120G` (shuffle buckets + train prefetch).
+
+The 24 is no longer a cap handed down by policy. The "no more than 20 % of all CPUs" clause was
+**withdrawn by the human on 2026-09-03** (`mission.json` `decisions[]` entry 1, `compute.cpuCapPerJob = null`,
+`compute.cpuPolicy`); what survives is the weaker and purely local rule that a job must *declare*
+`--cpus-per-task` honestly and must not spawn more OS threads than it declared. So the derivation runs the
+other way now: pick the thread counts the stage needs, sum every live thread, and request at least that many
+CPUs. The mission's stages sum to 22 threads (table below), so the honest request is 24 — 22 plus the two
+transient threads of a mid-run net switch — and 24 also happens to be what `loop.sbatch` and the
+`cfg_9x9_override` validation job (Slurm 298359, `--cpus-per-task=24`) actually asked for, which is the number
+`ps -o nlwp=` is compared against. Nothing forbids a larger request; a larger one has to be *earned* by a
+measurement, not assumed (see the `[OPEN]` item below).
+- [SOLID] There is no CPU cap; the constraint is "declared ≥ used", and `check.sh` passes any CPU count.
+  verify: `mission.json` `compute.cpuCapPerJob` = `null` and `decisions[0].decision` = "no CPU usage limit; the 20% clause in PROMPT.md is withdrawn"; `bash .claude/skills/compute-budget/check.sh --gpus 1 --cpus 24 --partition b200` → `OK : request gpus=1 cpus=24 part=b200 within policy (gpu<=4, no cpu cap)`, exit 0.
+
+Split of the 24 declared CPUs per stage (only one stage runs at a time, so each stage may use the whole
+request):
 
 | stage | OS threads / processes | how | evidence |
 |---|---|---|---|
 | selfplay | 18 game + 1 nnServer + 1 dataWrite + 1 modelLoad + 1 main = 22 (+2 transient at net switch) | `numGameThreads=18`, `numSearchThreads=1`, `numNNServerThreadsPerModel=1` | `selfplay.cpp:359-364`, `setup.cpp:193-203`, `selfplaymanager.cpp:156` |
-| gatekeeper | 18 game + 2 nnServer (2 models) + 1 dataWrite + 1 main = 22 | `numGameThreads=18` (pass 1's 20 gave 24 — the data-write thread was uncounted) | `gatekeeper.cpp:548-553` |
+| gatekeeper | 18 game + 2 nnServer (2 models) + 1 dataWrite + 1 main = 22 | `numGameThreads=18` (pass 1's 20 gave 24 — the data-write thread was uncounted, leaving no margin under a 24-CPU request) | `gatekeeper.cpp:548-553` |
 | shuffle | 8 worker processes | `-num-processes 8` | `synchronous_loop.sh:58`, `shuffle.py:791` |
 | train | 1 process, `OMP_NUM_THREADS=MKL_NUM_THREADS=4`, prefetch depth 1 | env vars + `-data-prefetch-depth` default | `train.py:126`; obligation `o11` |
 | export | 1 process | — | — |
-- [SOLID] Shipped defaults (`numGameThreads=128`) would spawn ~132 threads and violate the cap.
-  verify: `selfplay1_maxsize9.cfg:84`; arithmetic in `audit_loop_scripts_configs.md` §D; node `selfplay_search_params`.
-- [PRELIMINARY] The table is computed, not measured; compliance is admitted only from `ps -o nlwp=` on the live processes.
-  verify: claim `c06`, obligation `o03` (gatekeeper ≤ 18).
-- [HOLE] Whether the 20 % policy is per job or summed over my concurrent jobs is not written down; `check.sh` sums
-  `squeue -u $USER` CPUs, so the design assumes the *sum* ≤ 24 and runs one job at a time (assumption `a11`).
-  verify: the compute-budget check script named by `mission.json` `compute.policyCheck`, its `my_cpus` line; obligation `o22` (owner: human) before any 2-job layout.
+- [SOLID] Shipped defaults (`numGameThreads=128`) would spawn ~132 threads against a 24-CPU request — a
+  declaration that is false by more than 5x, and 128 game threads × 1 search thread each on one node oversubscribes
+  the cores regardless of any policy. The mission configs must override the key whatever the policy says.
+  verify: `selfplay1_maxsize9.cfg:84`, `gatekeeper1_maxsize9.cfg:18`; arithmetic in `audit_loop_scripts_configs.md` §D; node `selfplay_search_params`.
+- [SOLID] Selfplay at `numGameThreads=18` peaks at 22 live threads, so the 24-CPU declaration is honest with 2 to spare.
+  Measured, not computed: `ps -o nlwp=` sampled every 50 ms on the live `katago selfplay` pid inside job 298359
+  (`--cpus-per-task=24`), 36 games so that all 18 game threads are simultaneously busy.
+  verify: `codes/eval/check_cfg_9x9.sh` lines `NLWP_MAX`, `NLWP_SAMPLES`, `CPU_BUDGET`; evidence `../evidence/cfg_9x9/check_cfg_9x9-298359.txt`; claim `c06`, obligation `o03`.
+- [PRELIMINARY] The gatekeeper, shuffle and train rows of the table are still computed, not measured; they are
+  admitted only from `ps -o nlwp=` on those live processes when their nodes run.
+  verify: claim `c06` for `gatekeeper_stage` / `train_stage`; obligation `o03`.
+- [SOLID] Assumption `a11` (the 20 % policy applies to the *sum* over concurrent jobs) and obligation `o22`
+  (per-job vs summed) are both moot: the human withdrew the percentage clause outright on 2026-09-03, so there is
+  no quantity to apportion and a second concurrent job no longer needs an answer before it may run. `check.sh`
+  still prints the summed `my jobs gpus=…  cpus=…` line, but only the GPU half of it now gates anything.
+  verify: `mission.json` `decisions[0].affects` names `compute.cpuCapPerJob`, `obligation o22`, `assumption a11` and "thread budgets in DESIGN.md"; `check.sh` prints `no cpu cap` in its OK line. [OPEN] the claim-ledger transitions for `a11` and `o22` are not appended by this node's worker; they belong with the validator that admits `cfg_9x9_override`.
+- [OPEN] With the cap gone, `numGameThreads` is a throughput knob rather than a budget knob, and 18 is now only a
+  lower bound justified by §1's queue-depth argument: a B200 fed by ≤18 concurrent 9x9 evaluations at batch 1 is
+  idle most of the time. Raising it (and `--cpus-per-task` with it, one node has 124) is the cheapest way to lift
+  GPU duty cycle, but must not be guessed. Closes when `measure_stage_throughput` reports GPU duty cycle and
+  games/hour at 18 game threads and at one larger setting, and `derive_cycle_knobs_9x9` re-derives the cycle knobs
+  from the winner. Until then the configs stay at 18 and the loop declares 24 CPUs.
+  verify: node `measure_stage_throughput` (`nvidia-smi dmon -s u`, `nnBatches`/`nnEvals`); claim `c09`.
 
 ## 2. Starting configuration and scaling path
 
@@ -119,7 +151,15 @@ Split of the 24 CPUs per stage (only one stage runs at a time, so each stage may
 - [PRELIMINARY] Side effects at 9x9 accepted as-is: komi σ scaled to 0.474 (`playutils.cpp:42`), handicap silently
   off (`playutils.cpp:10-22`), value-head gpool collinear (pool2 = −0.5·pool1, pool3 = 0.15·pool1 at 81 points, `model_pytorch.py:534-540`).
   verify: probe in task `paper_code_map_training`; the arithmetic half already passes at append (node `head_gpool_degeneracy_9x9`).
-- Acceptance test for this section: every SGF has `SZ[9]` (claim c04).
+- [SOLID] The five keys are set and executed, not planned: `codes/cfg/selfplay_9x9.cfg` and
+  `codes/cfg/gatekeeper_9x9.cfg` are line-for-line copies of the two `maxsize9` presets whose only differing
+  significant lines carry the whitelisted keys, and `codes/loop/train_9x9.sh` differs from upstream `train.sh`
+  in exactly one line. Rows 3 and 4 land in one commit, as `o02` requires.
+  verify: `codes/eval/check_cfg_9x9.sh` checks 1-2 (`OUT_OF_SET_KEYS = 0` on both diffs); `diff <(tail -n +3 ref-code/lightvector-KataGo/python/selfplay/train.sh) <(tail -n +13 results/ktg/paper_1902.10565/codes/loop/train_9x9.sh)` shows only line 86 of the tail.
+- Acceptance test for this section: every SGF has `SZ[9]` (claim c04) — executed by `codes/eval/check_cfg_9x9.sh`
+  check 4 as `n9 == n_all` over every `.sgfs` line of the parse run, with rectangular games (`SZ[x:y]`,
+  `sgf.cpp:2015`) counted separately and required to be 0.
+  verify: `../evidence/cfg_9x9/check_cfg_9x9-298359.txt` lines `n_all`, `n9`, `SZ9_FRACTION`, `n_rectangular`.
 
 ## 4. Checkpoint / resume under the 3-day walltime
 
@@ -155,13 +195,26 @@ Per-stage idempotency the wrapper relies on:
 | models / modelstobetested / rejectedmodels | model.bin.gz + model.ckpt + metadata per export, never pruned upstream | ~2 MB × cycles |
 | `scripts/dated/<ts>` | copy of `python/` + `katago` binary per loop (re)start | ~0.1 GB × restarts |
 | venv + build (same root) | torch wheel, cuDNN wheel, CUTLASS, build tree | O(10 GB), counted from now on |
-- [PRELIMINARY] Total well under 50 GiB for P1; hard cap **200 GiB = 214 748 364 800 B on the whole mission root**
-  (`/scratch/…/ktg-train`, venv + build included), **no new cycle at ≥ 180 GiB = 193 273 528 320 B**, group quota
-  (`python3 /apps/helpers/quotas.py`) checked too because `du` of the mission root cannot see group exhaustion; one
-  `du -sb` / `df -B1` / quota triple logged per cycle. Retention is bounded by a logged policy that protects the frozen
+- [PRELIMINARY] Total well under 50 GiB for P1; hard cap **500 GiB = 536 870 912 000 B on the whole mission root**
+  (`/scratch/…/ktg-train`, venv + build included; human decision 2026-09-03, `mission.json` `decisions[]`). The guard is
+  projection-based rather than a second fixed threshold: a cycle declares the bytes it expects to write and is refused when
+  `du -sb` + that projection would cross the cap, so with the default 20 GiB per-cycle projection no new cycle starts at
+  ≥ 480 GiB = 515 396 075 520 B. The group quota (`python3 /apps/helpers/quotas.py`, cross-checked against `df -B1` and the
+  smaller of the two taken) is checked too because `du` of the mission root cannot see group exhaustion: **the guard also
+  refuses below 1 TiB = 1 099 511 627 776 B of group free space** — twice the mission's entire budget, so spending the whole
+  budget can never be what fills the shared 40 TB pool — and warns below 1.5 TiB. One `du -sb` / `df -B1` / quota triple is
+  logged per cycle. Retention is bounded by a logged policy that protects the frozen
   baseline, latest accepted net, current + previous checkpoints and evidence: `longterm_checkpoints` ≤ 6, `rejectedmodels` ≤ 10,
-  stale `shuffleddata/*.tmp`. Bytes/row is calibrated after 100 k rows by `measure_stage_throughput` (pass 2's 1 KiB/row planning number is a 19x19 upper bound).
-  verify: node `data_budget` closing check (`grep 193273528320 loop.sbatch`; `du -sb $KTG ≤ 214748364800`); claims c10, c11; obligation o04.
+  stale `shuffleddata/*.tmp`, and an over-budget rolling mode that never goes below one shuffle window plus one selfplay
+  generation. Bytes/row is calibrated after 100 k rows by `measure_stage_throughput` (pass 2's 1 KiB/row planning number is a 19x19 upper bound).
+  verify: node `data_budget` closing check (`codes/data_budget/tests/run_guard_tests.sh`, 11/11; `du -sb $KTG ≤ 536870912000`); claims c10, c11; obligation o04.
+- [OPEN] The 200 GiB / 180 GiB pair above predates the human's 2026-09-03 decision, which set the scratch budget
+  for selfplay data + checkpoints to **500 GiB** (`mission.json` `compute.scratchBudgetGiB`, `decisions[1]`). The
+  two numbers contradict each other and `data_budget` owns the reconciliation — including whether 500 GiB is the
+  whole mission root (venv + build included, as the 200 GiB figure was) or only data + checkpoints, and where the
+  pre-cycle guard then sits. Closes when `data_budget` lands `loop.sbatch` with the settled constants and this
+  table's estimates are restated against them. Not this node's to change.
+  verify: `mission.json` `compute.scratchBudgetGiB` = 500 and `decisions[1].affects` = ["node data_budget", "obligation o04"]; node `data_budget` closing check.
 - [SOLID] Nothing upstream prunes `selfplay/*/tdata`; growth is monotonic.
   verify: grep of `python/selfplay/*.sh` and `cleanup_old_dirs.py` (audit §F).
 
@@ -203,8 +256,8 @@ Code-map nodes (15, `preliminary`) are promoted to solid by the two probe **task
 | R1 | no sm_100 SASS (`CMakeLists.txt:761`) — **closed**: `codes/env/cmake-sm100.diff` applied at env_build stage 2b, `smoke.txt:40` count = 2 | `cuobjdump --list-elf katago \| grep -c sm_100` = 0 | re-apply the diff after any re-clone |
 | R2 | pos_len 19 left in place | npz row 7675 B not 2145; `train.py` log `pos_len 19`; attention memory ~20× | fix §3 keys before any data; discard data |
 | R3 | attention-logit export refusal | export stage exit ≠ 0 with bound > 2.5e4 (`export_model_pytorch.py:42`); loop dies each cycle | enable `-attn-logit-penalty-cap` in train wrapper; record fail row (o15) |
-| R4 | CPU cap breach | `ps -o nlwp -p <pid>` > 24; `seff` CPU > 24 cores | thread table §1 (gatekeeper 18) |
-| R5 | scratch full (group) | `quotas.py` ≥ 99 %; `OSError: No space left` in shuffle | 180/200 GiB guard + quota check + bounded retention; stop loop |
+| R4 | job uses more CPUs than it declared (no cap exists, but the declaration must be true) | `ps -o nlwp -p <pid>` > `SLURM_CPUS_PER_TASK`; `seff` CPU > allocated cores | thread table §1 (gatekeeper 18); raise `--cpus-per-task` *and* the config together, never one alone |
+| R5 | scratch full (group) | `quotas.py` ≥ 99 %; `OSError: No space left` in shuffle | 500 GiB projected-write guard + 1 TiB group free-space floor + bounded retention; stop loop |
 | R6 | queue wait / b300 reserved | `PENDING (Priority|ReqNodeNotAvail)` > 30 min | 1 GPU on b200; never request 2 GPUs before `async_multi_gpu_layout` |
 | R7 | random-net bootstrap | `selfplay/random/` appears; cycle 1 trains on random-play rows; first candidate gated vs random | accepted (a10); rows capped at `min_rows` by the shuffler |
 | R8 | export kill-window orphan | `torchmodels_toexport/<NAME>.exported` with no `models/<NAME>` | wrapper cleanup + reordered mission exporter |
@@ -220,12 +273,13 @@ Code-map nodes (15, `preliminary`) are promoted to solid by the two probe **task
 
 - Code-first: v1.18.2 is authoritative; paper values (lr 6e-5, c_value 1.5, S = 421, 300-node gating) are not targets. [SOLID] verify: assumption `a09`; `derivation.md` §3.
 - Start config `b7c96h3tfrs`; ladder b8 → b14 as fresh runs; `b5c48h3tfr` excluded (unservable), kept as negative fixture. [SOLID] verify: nodes `engine_ffn_swiglu_constraint` (solid), `select_transformer_ladder`; jobs 297952 (FAILED 1:0) vs 298018 (COMPLETED 0:0); a06, o07/o18 discharged.
-- One GPU, 24 CPUs, five stages sequential; multi-GPU only as `async_multi_gpu_layout` after measured saturation. [PRELIMINARY] verify: §1; a02 amended; o22 (per-job vs summed CPU policy) with the human.
-- Threads: selfplay 18 / gatekeeper 18 game threads (data-write thread counted), shuffle 8, train OMP 4. [PRELIMINARY] verify: c06 via `ps -o nlwp`; o03.
+- One GPU, `--cpus-per-task=24`, five stages sequential; multi-GPU only as `async_multi_gpu_layout` after measured saturation. [PRELIMINARY] verify: §1; a02 amended.
+- No CPU usage limit (human, 2026-09-03): the 20 % clause is withdrawn, so 24 CPUs is a derived honest declaration (22 live threads + 2 transient), not a ceiling; `a11` and `o22` are moot and `o03`'s "24-CPU cap" wording is superseded by "declared ≥ measured". [SOLID] verify: `mission.json` `decisions[0]`, `compute.cpuCapPerJob = null`, `compute.cpuPolicy`; §1 `NLWP_MAX` measurement.
+- Threads: selfplay 18 / gatekeeper 18 game threads (data-write thread counted), shuffle 8, train OMP 4; selfplay's 22 live threads are measured, the other three rows are still arithmetic. [PRELIMINARY] verify: c06 via `ps -o nlwp` — selfplay `NLWP_MAX` in `../evidence/cfg_9x9/check_cfg_9x9-298359.txt`, the rest at `gatekeeper_stage` / `shuffle_stage` / `train_stage`; o03.
 - USEGATING = 1 throughout; cycle 1 gates the first candidate against the random baseline; first dir in `models/` is the frozen baseline. [SOLID] verify: `gating_rule` node; o10, o16 discharged; o19 runtime confirmation.
 - Cycle knobs are derived from measured rows/game (`derive_cycle_knobs_9x9`), one exported candidate per cycle; the §2 pilot set is a hypothesis. [PRELIMINARY] verify: o24; smoke `rows_per_game.txt`.
 - Data windows: KEEPROWS > MAX_TRAIN_SAMPLES_PER_CYCLE always; random rows capped at `min_rows`. [SOLID] verify: `synchronous_loop.sh:66`, `shuffle.py:1077`.
-- Scratch: 200 GiB cap on the whole mission root, 180 GiB pre-cycle guard, quota check, logged bounded retention. [PRELIMINARY] verify: o04, c11; node `data_budget`.
+- Scratch: 500 GiB cap on the whole mission root, projected-write pre-cycle guard, 1 TiB group free-space floor, logged bounded retention. [PRELIMINARY] verify: o04, c11; node `data_budget`.
 - Keep gpool constants (14, 0.1) for C++ compatibility; accept 9x9 redundancy. [SOLID] verify: o14 discharged by node `head_gpool_degeneracy_9x9`.
 - CUDA backend, cuDNN 9.19 wheel (SDPA path on since `CUDNN_VERSION >= 8903`, `cudabackend.cpp:13`); TensorRT deferred; no TCMalloc yet. [SOLID] verify: result row `env-toolchain-b200`; a08, o05, o20.
 - Evaluation: ≥ 1 acceptance (target 2) AND 400-game CI excluding 0.5 (target p ≥ 0.60). [PRELIMINARY] verify: c13, c14; nodes `count_gatekeeper_acceptances`, `match_latest_against_first`, `eval_improvement`.
