@@ -110,6 +110,16 @@
         "new node converged_test_7x7",
         "loss logging interval (mission-owned override in the scratch clone)"
       ]
+    },
+    {
+      "date": "2026-09-04",
+      "by": "human",
+      "decision": "the 7x7 test run has no hard time cap: keep training in continuation segments on the same run directory and monitor the loss curve until no progress is being made (plateau rule), then run the final match",
+      "affects": [
+        "node converged_test_7x7",
+        "codes/loop/converged_7x7.sbatch continuation mode",
+        "loss-curve artifact refresh cadence"
+      ]
     }
   ]
 }
