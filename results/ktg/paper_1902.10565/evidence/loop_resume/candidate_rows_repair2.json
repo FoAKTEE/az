@@ -1,0 +1,178 @@
+{
+  "_note": "CANDIDATE rows only. Written by the worker for the SECOND repair packet of node arxiv-1902.10565::loop_resume_under_walltime (obligations o31_wrapper_scheduler_termination_classification, new and blocking, and o26_wrapper_early_exit_bypasses_breaker, rejected for discharge on the first packet and kept open). NOT appended: an independent validator admits or refutes them. The only row this worker appended is the error-ledger trial row_hash b8f1bb5cfb30b17bcf1f6bd00e3340153202a31d0ced63ba20facc436c4063e8.",
+  "node_id": "arxiv-1902.10565::loop_resume_under_walltime",
+  "task_id": "loop_resume_under_walltime",
+  "worker_role": "worker",
+  "supersedes": "results/ktg/paper_1902.10565/evidence/loop_resume/candidate_rows_repair.json (the first repair packet; its o27 and o08 transitions were admitted, its o26 discharge was rejected)",
+  "evidence_files": [
+    "results/ktg/paper_1902.10565/evidence/loop_resume/repair_o31.txt"
+  ],
+  "evidence_sha256": {
+    "results/ktg/paper_1902.10565/evidence/loop_resume/repair_o31.txt": "906cec83bc12f87728d37f88a6f823edc95e57bc75defc335f5b9e393f23b095"
+  },
+  "artifacts": [
+    "results/ktg/paper_1902.10565/codes/loop/loop.sbatch"
+  ],
+  "artifact_sha256": {
+    "before_this_repair": "4485f6eabe1f9b9448b4aad0cae464bc6be3510a0e41d19d4ecbed23c1fa3542",
+    "after_this_repair": "fd498f398369b83628a1b9a5c0b86b92d846d1f3d21ef43b1cd851e3701c7f4b"
+  },
+  "artifacts_not_touched": [
+    "results/ktg/paper_1902.10565/codes/loop/synchronous_loop_9x9.sh (the STOP-before-exit-3 order at :245-246 is what the wrapper now keys on; no change was needed)",
+    "results/ktg/paper_1902.10565/codes/loop/export_model_for_selfplay_9x9.sh",
+    "results/ktg/paper_1902.10565/codes/data_budget/ (node data_budget's, called by exit code only)"
+  ],
+  "verification": {
+    "command": "bash -n results/ktg/paper_1902.10565/codes/loop/loop.sbatch && grep -q afterany results/ktg/paper_1902.10565/codes/loop/loop.sbatch && grep -q failcount results/ktg/paper_1902.10565/codes/loop/loop.sbatch && grep -q 'cpp/build/katago' results/ktg/paper_1902.10565/codes/loop/synchronous_loop_9x9.sh && ! grep -q 'cpp/katago\"' results/ktg/paper_1902.10565/codes/loop/synchronous_loop_9x9.sh && bash \"$(python3 -c 'import json;print(json.load(open(\"mission.json\"))[\"compute\"][\"policyCheck\"])')\" --gpus 1 --cpus 24 --partition b200",
+    "exit_code": 0,
+    "conjuncts": {
+      "bash_n_loop_sbatch": "clean",
+      "grep_c_afterany": 7,
+      "grep_c_failcount": 23,
+      "grep_c_cpp_build_katago": 5,
+      "grep_c_cpp_katago_quote": 0,
+      "check_sh_exit": 0
+    },
+    "measured_at": "2026-09-04T01:13:54-04:00 (verbatim in the closing-checks block of the evidence file)",
+    "additional_gates_run": {
+      "o27_no_storage_literal_in_codes_loop": "grep -rn -E '214748364800|193273528320|536870912000|1099511627776|du -sb \"|/apps/helpers/quotas.py' codes/loop/ -> no match (exit 1), unchanged by this repair",
+      "o08_exporter_name_repo_grep": "grep -rn 'export_model\\.py' results/ktg/paper_1902.10565/codes/ -> no hit (exit 1), unchanged by this repair",
+      "offline_signal_injection": "every K/L/M scenario run twice in one transcript -- BEFORE against the wrapper at git HEAD (sha256 4485f6ea..., the file the validator rejected) and AFTER against the repaired working tree -- under the validator's own PATH shims; no Slurm job, no GPU",
+      "regression_set": "the validator's scenarios A, B, B2a, C, D, E, F, G, H, J re-run unchanged, all with the outcomes its record states"
+    }
+  },
+  "candidate_claim_transitions": [
+    {
+      "paper": "arxiv-1902.10565",
+      "entry_id": "o31_wrapper_scheduler_termination_classification",
+      "kind": "obligation",
+      "status": "discharged",
+      "discharged_by": "r_loop_resume_under_walltime_static",
+      "evidence_path": "results/ktg/paper_1902.10565/evidence/loop_resume/repair_o31.txt",
+      "blocking": true,
+      "owner": "worker loop_resume_under_walltime",
+      "task_id": "loop_resume_under_walltime",
+      "node_ids": [
+        "arxiv-1902.10565::loop_resume_under_walltime",
+        "arxiv-1902.10565::loop_failure_circuit_breaker"
+      ],
+      "dependencies": [
+        "o26_wrapper_early_exit_bypasses_breaker",
+        "r_loop_resume_under_walltime_static",
+        "a03_walltime_resume"
+      ],
+      "statement_of_discharge": "finalize() in codes/loop/loop.sbatch now has a third outcome class between the deliberate storage stop and the failure branch, and a scheduler termination lands in it. A TERM handler installed before resubmit() (on_term, loop.sbatch:164-168) sets SCHED_TERM=1 and logs that the queued successor is the resume path; finalize enters the new branch when that flag is set, or when the loop's status is 128+15 and the link has run at least KTG_MIN_RUNTIME_SECONDS -- the second test covers the ordering in which only the loop is signalled and this wrapper reaps 143 without seeing the signal, while the runtime floor keeps a stage that returns 143 in the first minutes counted as the crash it is, since a time-limit kill cannot arrive that early. In the branch the wrapper leaves .failcount exactly as it found it, does NOT cancel the queued afterany successor, does NOT print 'clean exit', and logs 'scheduler termination at walltime after <n>s (<how it was seen>) -- successor continues, failcount left at <n>'. Second conjunct: a loop exit of KTG_RC_SCRATCH_STOP is read as a storage refusal only when $BASEDIR/STOP exists (loop.sbatch:471-478); the loop writes that file immediately before its own exit 3 (synchronous_loop_9x9.sh:245-246), so its absence means some other stage returned 3 and the link is counted as an ordinary failure instead of ending the chain silently.",
+      "verifier_checks": [
+        "K1/K2/K3 -- SIGTERM to the link's process group, the way slurmstepd signals a step at --time, three consecutive links: BEFORE each link logged 'clean exit -- failcount reset to 0'; AFTER each logs 'scheduler termination at walltime after 6s (SIGTERM to this wrapper) -- successor continues, failcount left at 0', and the shim log for the three links holds three SBATCH lines and no SCANCEL",
+        "K4 child-first ordering: BEFORE 'failure rc=143 -- failcount now 1/3' with the successor kept, which is the classification that trips the breaker on the third healthy rollover; AFTER 'scheduler termination at walltime after 6s (loop status 143, this wrapper not signalled)', failcount 0",
+        "K5 bash-only ordering: BEFORE 'clean exit -- failcount reset to 0'; AFTER the handler fires, the loop is left to finish (rc 0 after 45s) and the link is booked as a scheduler termination, failcount left at 0",
+        "K6 the same process-group SIGTERM on a link that starts with .failcount=2: BEFORE the count is reset to 0 -- a walltime kill wiping a genuine failure count; AFTER 'failcount left at 2', successor kept. This is the scenario that shows the branch leaves the count UNCHANGED rather than at zero",
+        "M (control) SIGKILL to the process group: no handler runs, finalize writes nothing, the queued successor stays queued -- identical before and after. This is the by-design limit o25 covers and it is recorded, not claimed as repaired",
+        "L1 loop exit 3 with no $BASEDIR/STOP: BEFORE 'the loop stopped on the storage guard -- treating as a deliberate chain stop', successor cancelled, uncounted; AFTER 'loop exit 3 with no .../STOP -- not a storage refusal, counting it as a failure', failcount 1/3, chain continues",
+        "L2 loop exit 3 after the loop wrote $BASEDIR/STOP: unchanged both before and after -- deliberate chain stop, successor cancelled, failcount left at 0",
+        "P (bash-semantics probe, outside the wrapper): a TERM handler is deferred until the foreground command returns and the shell survives the signal (rc after the handler = 5 for a child that exited 5, 143 for a child killed by SIGTERM); with no TERM trap bash 5.1.8 runs the EXIT trap on SIGTERM and exits 143, which is the fact the obligation rests on",
+        "section 2 closing check exit 0; bash -n clean; the literal grep over codes/loop/ still exits 1"
+      ],
+      "notes": "Evidence type is static verification plus executed offline signal injection: no Slurm job, no GPU, as the task file section 13 requires. The loop is deliberately NOT started in its own process group -- bash defers a trap handler until the foreground command it is waiting on returns, so with the TERM trap installed the wrapper outlives the loop by construction (probe P, and K1-K3 where the whole group is signalled at once), while a separate group would only hide the loop from a group signal that slurmstepd's cgroup tracking reaches anyway. The executed proof under a real scheduler stays with o25."
+    },
+    {
+      "paper": "arxiv-1902.10565",
+      "entry_id": "o26_wrapper_early_exit_bypasses_breaker",
+      "kind": "obligation",
+      "status": "discharged",
+      "discharged_by": "r_loop_resume_under_walltime_static",
+      "evidence_path": "results/ktg/paper_1902.10565/evidence/loop_resume/repair_o31.txt",
+      "blocking": true,
+      "owner": "worker loop_resume_under_walltime",
+      "task_id": "loop_resume_under_walltime",
+      "node_ids": [
+        "arxiv-1902.10565::loop_resume_under_walltime"
+      ],
+      "dependencies": [
+        "r_loop_resume_under_walltime_static",
+        "o31_wrapper_scheduler_termination_classification"
+      ],
+      "statement_of_discharge": "The obligation's own conjuncts were reproduced by the validator on the first packet and are unchanged here: .failcount is written in exactly one accounting place, finalize(), run from trap 'finalize $?' EXIT installed immediately after resubmit(), so a missing or unreadable env.sh, an env.sh exporting no KATAGO_SRC, a raw set -u abort, a missing loop script, a failed cd and a non-zero scratch guard all update the count with the fast-failure penalty and cancel the queued successor, and a link that starts with .failcount >= KTG_MAX_FAILS or .breaker_tripped present exits before running the loop. What was missing, and is why the validator kept this open with a dependency on o31, is that the same EXIT trap also runs on the chain's dominant termination path and misclassified it; with o31's branch in place every termination path now reaches finalize with the class it belongs to -- deliberate storage stop (successor cancelled, uncounted), scheduler termination (successor KEPT, count untouched), pre-flight failure (counted, successor cancelled), loop failure (counted, successor cancelled only when the breaker trips), clean cycle (count reset), exit 0 before the loop started (count left) -- and no path leaves the successor queued with the count unchanged except the one where that is the correct outcome, the scheduler's own resume.",
+      "verifier_checks": [
+        "the validator's scenarios A, B, B2a, C, D, E, F, G, H and J re-run against the repaired file with the outcomes its record states: A failcount 2 then 4 with the breaker tripping on link 2 and link 3 exiting without running the loop; B and C failcount 2 then 4 with a SCANCEL after every link; B2a the raw 'KATAGO_SRC: unbound variable' abort -> failcount 2 and a SCANCEL; D and E guard exit 1/2 -> wrapper exit 3, STOP written, SCANCEL, failcount 0; F guard exit 3 -> counted, SCANCEL; G reset 2 -> 0; H STOP at entry leaves 2; J one accounting line and a no-op second finalize",
+        "the o31 checks above for the path this obligation was previously kept open on",
+        "section 2 closing check exit 0"
+      ],
+      "notes": "Closes together with o31, exactly as the validator's amendment specified ('o26 closes together with it, by a result row whose injection run includes the SIGTERM and exit-3 scenarios'). The executed proof under a real scheduler stays with o25 (owner loop_failure_circuit_breaker)."
+    }
+  ],
+  "candidate_result_row_amendment": {
+    "paper": "arxiv-1902.10565",
+    "result_id": "r_loop_resume_under_walltime_static",
+    "amends_row_hash": "6227934bca847e8d5eb0d3a62d050158de2e04f8a2f854d3e9480231ed3db8c8",
+    "name": "Slurm chain wrapper + mission loop copy: every process-internal exit accounted, and the scheduler's own termination classified as neither a clean cycle nor a failure (static + offline injection)",
+    "working_context": {
+      "cluster": "skipjack, partition b200 (b300 preferred when free), account ssci-anima; MaxTime 3-00:00:00, KillWait 30 s, OverTimeLimit NONE",
+      "contract": "1 GPU, 24 CPUs, 120G, --time 2-23:30:00, self-resubmit with --dependency=afterany by absolute path",
+      "upstream": "lightvector/KataGo v1.18.2 @ fd0723fdbc0e9d82cf269c9630af8c27c57c07c4 (read-only mirror ref-code/lightvector-KataGo)",
+      "scope": "static verification plus offline failure and signal injection under PATH shims for the scheduler; no Slurm job submitted, no GPU used; the storage guard is node data_budget's working-tree copy, wired by exit code only"
+    },
+    "claim": "In codes/loop/loop.sbatch the .failcount accounting, the minimum-runtime penalty, the breaker and the scancel of the queued afterany successor live in one function, finalize(), run from an EXIT trap installed immediately after resubmit(), and finalize sorts the ways a link can end into five classes rather than two. A deliberate storage stop -- the loop exiting 3 WITH $BASEDIR/STOP present, the file the loop writes before that exit -- cancels the successor and spends no attempt. A scheduler termination -- SIGTERM to this wrapper, recorded by a TERM trap installed before the resubmit, or a 128+15 loop status on a link that has run at least KTG_MIN_RUNTIME_SECONDS -- leaves .failcount untouched and KEEPS the queued successor, which is the resume itself. A pre-flight failure counts, with the fast-failure penalty, and cancels the successor, which would repeat it. A loop failure counts and cancels only when the breaker trips; an exit 3 without STOP is one of these. A cycle that ran and exited 0 resets the count, and an exit 0 that never ran the loop leaves it. Neither loop.sbatch nor synchronous_loop_9x9.sh contains a storage threshold or its own du/df/quotas.py measurement: both call codes/data_budget/scratch_guard.sh and honour its exit code, with no --root passed, so the only storage numbers in force are budget.env's. codes/loop/export_model_for_selfplay_9x9.sh no longer names the TensorFlow-era exporter anywhere. The three upstream defect repairs (o09, o13 config half, o17) admitted in the first row are unchanged. NOT covered: a SIGKILL end -- KillWait expiry, cgroup OOM, node failure -- runs no handler, writes nothing and simply lets the queued successor resume; that is by design and its executed proof is o25's.",
+    "evidence_type": "existence_only",
+    "evidence": "results/ktg/paper_1902.10565/evidence/loop_resume/repair_o31.txt",
+    "verifier_result": {
+      "verdict": "pass",
+      "command_exit": 0,
+      "detail": "section 2 closing check exit 0 (afterany 7, failcount 23, cpp/build/katago 5, cpp/katago\" 0, check.sh exit 0); 34 wrapper invocations across 14 scenario groups (A, B, B2, C, D, E, F, G, H, J once each; K, M, L1, L2 twice each -- once against the pre-repair wrapper, once against the repaired one, in the same transcript) plus 3 bash-semantics probes",
+      "metric": {
+        "name": "termination_classes_classified_as_specified_offline",
+        "value": 11,
+        "threshold": 11,
+        "pass": true
+      }
+    },
+    "dependencies": [
+      "arxiv-1902.10565::env_build",
+      "arxiv-1902.10565::train_resume_semantics",
+      "arxiv-1902.10565::data_budget"
+    ],
+    "assumptions": [
+      "a01_single_node",
+      "a02_gpu_cap_start_at_1",
+      "a03_walltime_resume",
+      "a04_b200_fallback",
+      "a12_single_chain_per_basedir"
+    ],
+    "status": "existence_only",
+    "provenance": "worker second repair packet for o31 / o26, 2026-09-04; error-ledger trial b8f1bb5cfb30b17bcf1f6bd00e3340153202a31d0ced63ba20facc436c4063e8; candidate rows results/ktg/paper_1902.10565/evidence/loop_resume/candidate_rows_repair2.json; amends the validator's row 6227934b... which amends 7df3425f...",
+    "open_obligations": [
+      "o25_chain_breaker_executed_proof",
+      "o13_loop_config_paths",
+      "o24_cycle_knobs_derived",
+      "c07_loop_cycle_completes",
+      "c08_resume_no_loss"
+    ],
+    "notes": "Status stays existence_only for the reasons the validator gave twice: nothing here ran on a GPU or under a real scheduler, and c07/c08 need numerical_simulation evidence that does not exist yet. Knowledge status stays preliminary; no knowledge row is proposed. The claim is deliberately narrower than 'every termination path is accounted for': SIGKILL is excluded in the claim text itself and shown, not assumed, by scenario M."
+  },
+  "open_after_repair": [
+    {
+      "marker": "[OPEN]",
+      "id": "o25_chain_breaker_executed_proof",
+      "reason": "unchanged, owner loop_failure_circuit_breaker. Only a run under a real scheduler can show three real failures with no fourth submission, and the kill classes no in-script handler can see: SIGKILL at KillWait expiry, cgroup OOM at --mem 120G, node failure. Scenario M reproduces that shape offline -- nothing written, successor kept -- but offline.",
+      "closing_evidence": "sacct records for one dry-run BASEDIR showing exactly three job records and a cancelled successor, plus one induced Slurm-level kill; and, now that the wrapper logs it, the line 'scheduler termination at walltime' in the job log of a link that really hit its time limit"
+    },
+    {
+      "marker": "[OPEN]",
+      "id": "loop_exit_143_after_a_long_run_is_read_as_a_scheduler_termination",
+      "reason": "the 128+15 inference is guarded only by KTG_MIN_RUNTIME_SECONDS, so a loop that returns 143 for its own reasons after a long healthy run is booked as a scheduler termination: the count is left and the chain continues. It is bounded by KTG_MAX_CHAIN=200 and visible in sacct (a link Slurm did not terminate is not TIMEOUT/CANCELLED), and the alternative -- counting it -- is what scancels a healthy chain, so the safe direction was chosen deliberately.",
+      "closing_evidence": "either an executed run under o25 that reads the Slurm job state back and confirms the classification, or a wrapper-side discriminator that does not depend on the exit status alone"
+    },
+    {
+      "marker": "[OPEN]",
+      "id": "o13_loop_config_paths",
+      "reason": "unchanged: the ten-variable knob block is sized from an expected ~22 rows/game, not a measurement; closes under derive_cycle_knobs_9x9 (o24_cycle_knobs_derived).",
+      "closing_evidence": "measured rows/game from the smoke cycle"
+    },
+    {
+      "marker": "[OPEN]",
+      "id": "a12_single_chain_per_basedir",
+      "reason": "recorded by the validator as an active assumption, not repaired here: two concurrent chains sharing one BASEDIR would prune each other's archives, and the wrapper cannot detect a second chain without querying the scheduler.",
+      "closing_evidence": "either the single-chain rule accepted for the mission, or a lock file in BASEDIR that a second wrapper refuses to start against"
+    }
+  ]
+}

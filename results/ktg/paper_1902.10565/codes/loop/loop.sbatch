@@ -26,6 +26,13 @@
 #              termination path -- explicit exit, set -u abort, missing env.sh,
 #              missing loop script -- updates .failcount and cancels the queued
 #              successor when it must (obligation o26)
+#   signals    a TERM trap installed before the resubmit. SIGTERM to the step is
+#              how the scheduler ends every HEALTHY link at --time (SIGKILL
+#              follows KillWait seconds later) and how scancel works, and bash
+#              runs the EXIT trap on that path, so the wrapper must tell that
+#              end apart from a clean cycle and from a failure: it is neither,
+#              the count is left alone and the queued successor -- the resume
+#              itself -- is kept (obligation o31)
 #   breaker    $BASEDIR/.failcount, three consecutive non-zero exits stop the
 #              chain; reset to 0 only after a cycle that ran and exited 0
 #   depth      $BASEDIR/.chain_depth against KTG_MAX_CHAIN
@@ -80,8 +87,15 @@ KTG_MAX_FAILS="${KTG_MAX_FAILS:-3}"
 KTG_MIN_RUNTIME_SECONDS="${KTG_MIN_RUNTIME_SECONDS:-600}"
 
 # Exit code the loop script uses when the storage guard refuses a cycle. It is a
-# deliberate refusal, not a crash, so it must not spend a breaker attempt.
+# deliberate refusal, not a crash, so it must not spend a breaker attempt. The
+# code alone is not the evidence: the loop writes $BASEDIR/STOP before it exits
+# with it (synchronous_loop_9x9.sh:245-246), and only that file distinguishes a
+# storage refusal from any other stage that happens to exit 3 under bash -e.
 KTG_RC_SCRATCH_STOP=3
+
+# 128 + SIGTERM(15): the status bash reports for a child the scheduler killed at
+# the time limit.
+KTG_RC_SIGTERM=143
 
 # Loop arguments: NAMEPREFIX BASEDIR TRAININGNAME MODELKIND USEGATING
 # (order fixed by python/selfplay/synchronous_loop.sh:12-32). USEGATING stays 1.
@@ -129,7 +143,29 @@ pick_partition() {
 SUCCESSOR=""      # job id of the queued successor, "" when none
 LOOP_STARTED=0    # 1 once the loop script has actually been launched
 CHAIN_STOP=0      # 1 for a deliberate stop (storage guard) -- not a failure
+SCHED_TERM=0      # 1 once this wrapper has been sent SIGTERM by the scheduler
 FINALIZED=0
+
+# The scheduler's SIGTERM is the chain's NORMAL end: slurmstepd signals the whole
+# step at --time and sends SIGKILL KillWait seconds later, and scancel takes the
+# same route. Trapping it does two things.
+#   1. It records WHY the link ended, which finalize cannot otherwise tell: bash
+#      runs the EXIT trap on SIGTERM, so without this flag the same end shows up
+#      as a clean cycle (the reset that would wipe a real failure count) or as a
+#      failure (three of them scancel a perfectly healthy chain).
+#   2. It keeps this wrapper alive past the signal, so finalize still runs. Bash
+#      defers a trap handler until the foreground command it is waiting on
+#      returns, so the wrapper outlives the loop by construction -- the loop does
+#      NOT need its own process group, and giving it one would only hide it from
+#      the group signal while slurmstepd's cgroup tracking reaches it anyway.
+# SIGKILL runs no handler at all (KillWait expiry, cgroup OOM, node failure):
+# nothing is written and the queued successor simply runs. That residue is
+# obligation o25's, and it is why the successor is queued before anything else.
+on_term() {
+    SCHED_TERM=1
+    say "SIGTERM received -- scheduler termination (walltime or scancel); the queued successor is the resume path"
+}
+trap on_term TERM
 
 cancel_successor() {
     if [ -n "$SUCCESSOR" ]; then
@@ -147,7 +183,7 @@ cancel_successor() {
 # "KATAGO_SRC: unbound variable", a missing loop script, a failed cd, and any
 # future early exit somebody adds between the resubmit and the end of the file.
 finalize() {
-    local rc="${1:-0}" elapsed
+    local rc="${1:-0}" elapsed reason
     [ "$FINALIZED" -eq 0 ] || return 0
     FINALIZED=1
     trap - EXIT
@@ -158,6 +194,30 @@ finalize() {
         # continue, but the attempt must not spend a breaker slot either.
         say "deliberate chain stop (rc=$rc after ${elapsed}s) -- failcount left at $failcount"
         cancel_successor "storage guard stopped the chain"
+        return 0
+    fi
+
+    # Scheduler termination: the third outcome, and the one every healthy link
+    # of a three-day chain ends in (obligation o31). It is not a clean cycle --
+    # the cycle was cut mid-flight, so a real failure count must NOT be wiped --
+    # and it is not a failure -- nothing went wrong, and the queued afterany
+    # successor IS the resume, so it must NOT be cancelled. Two ways to see it,
+    # both needed because the order in which the step's processes are signalled
+    # is not fixed:
+    #   * this wrapper got the SIGTERM itself -> SCHED_TERM, set by the TERM trap;
+    #   * only the loop got it and this wrapper reaped a 128+15 status -> the
+    #     $rc test, but only once the link has run at least
+    #     KTG_MIN_RUNTIME_SECONDS. A time-limit kill cannot arrive in the first
+    #     minutes of a link, so a stage that returns 143 within them is a crash
+    #     to be counted, not a resume to be waved through.
+    if [ "$SCHED_TERM" -eq 1 ] ||
+       { [ "$rc" -eq "$KTG_RC_SIGTERM" ] && [ "$elapsed" -ge "$KTG_MIN_RUNTIME_SECONDS" ]; }; then
+        if [ "$SCHED_TERM" -eq 1 ]; then
+            reason="SIGTERM to this wrapper"
+        else
+            reason="loop status $rc, this wrapper not signalled"
+        fi
+        say "scheduler termination at walltime after ${elapsed}s ($reason) -- successor continues, failcount left at $failcount"
         return 0
     fi
 
@@ -400,9 +460,21 @@ say "loop exited rc=$RC after ${ELAPSED}s"
 # The loop script uses the same code when its own per-cycle scratch_guard call
 # refuses a cycle. That is a deliberate stop, not a failure: it must not spend a
 # breaker attempt, and the queued successor must not run.
+#
+# The exit code alone does not prove it, though. Under bash -e any stage inside
+# the loop that exits 3 for its own reasons ends the script with 3 as well, and
+# reading that as a storage refusal would stop a healthy chain silently, without
+# spending an attempt and without anything in the tree to explain it. The
+# storage path always writes the brake file first (synchronous_loop_9x9.sh:245
+# touches $BASEDIR/STOP, then :246 exits 3), so STOP is the discriminator and
+# its absence makes the exit an ordinary failure (obligation o31).
 if [ "$RC" -eq "$KTG_RC_SCRATCH_STOP" ]; then
-    say "the loop stopped on the storage guard -- treating as a deliberate chain stop"
-    CHAIN_STOP=1
+    if [ -e "$BASEDIR/STOP" ]; then
+        say "the loop stopped on the storage guard ($BASEDIR/STOP present) -- treating as a deliberate chain stop"
+        CHAIN_STOP=1
+    else
+        say "loop exit $KTG_RC_SCRATCH_STOP with no $BASEDIR/STOP -- not a storage refusal, counting it as a failure"
+    fi
 fi
 
 # .failcount, the breaker and the successor cancellation are all handled by
