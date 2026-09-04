@@ -1,0 +1,25 @@
+== verification of node arxiv-1902.10565::tiny_model_export_smoke
+== task file section 2 verification command:
+   bash results/ktg/paper_1902.10565/codes/eval/export_smoke.sh b7c96h3tfrs \
+     && python3 results/ktg/paper_1902.10565/codes/eval/check_export_blocks.py /scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/runtime/smoke/x/model.bin
+
+== conjunct 1: export_smoke.sh b7c96h3tfrs -- needs a CUDA device, so it ran as
+   Slurm job 298358 (b200/gb205, 1 GPU, 8 CPUs, 64G, elapsed 00:00:20, COMPLETED 0:0).
+   Full transcript: export_smoke-298358.txt.  Script exit code:
+export_smoke.sh exit=0
+EXPORT_SMOKE RESULT: PASS
+
+== conjunct 2: closing histogram check, re-run standalone on login03 against the
+   model.bin job 298358 left at $W. Verbatim:
+
+model.bin       : /scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/runtime/smoke/x/model.bin (3281596 bytes)
+block histogram : {"transformer_attention_block": 7, "transformer_ffn_block": 7}
+expected        : {"transformer_attention_block": 7, "transformer_ffn_block": 7}
+trunk declares  : 14 blocks; kind lines found: 14
+witness         : ^[A-Za-z0-9_.]+\.q_proj$     7 (kind lines: 7)
+witness         : ^[A-Za-z0-9_.]+\.ffn_linear1$ 7 (kind lines: 7)
+BLOCK_HISTOGRAM: PASS
+
+exit code = 0
+wall seconds = .242359827
+run at 2026-09-04T00:26:00-04:00 on login03

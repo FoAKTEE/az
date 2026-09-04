@@ -80,7 +80,8 @@ This node does **not** depend on `cfg_9x9_override`: legs 3-5 use the upstream `
 ```text
 results/ktg/paper_1902.10565/codes/eval/
 ├── export_smoke.sh           # node tiny_model_export_smoke - legs 1-5 of §2, exits non-zero on any failure
-└── check_export_blocks.py    # node tiny_model_export_smoke - block-kind histogram over model.bin, exact-match assert
+├── check_export_blocks.py    # node tiny_model_export_smoke - block-kind histogram over model.bin, exact-match assert
+└── export_smoke.sbatch       # 1-GPU b200 runner: supplies the GPU, the toolchain and a transcript, no science
 ```
 
 `check_export_blocks.py` reads `model.bin` as text up to each `@BIN@` float section (`export_model_pytorch.py:220-226`) and counts standalone block-kind lines from the closed set `{ordinary_block, gpool_block, nested_bottleneck_block, transformer_attention_block, transformer_ffn_block}`. It takes the `model.bin` path as its single positional argument so the closing check can call it directly.
@@ -143,14 +144,13 @@ results/ktg/paper_1902.10565/codes/eval/
 
 ## 12. Current State
 
-- `[SOLID]` The exporter path works and the C++ reader accepts a transformer net: job `298018` exported a random-initialized `b7c96h3tfrs`, and `katago benchmark` at 9x9 plus a 9x9 GTP `genmove` both returned `[OK]` (`SMOKE RESULT: PASS`). Evidence `results/ktg/paper_1902.10565/evidence/env/smoke.txt`.
-- `[SOLID]` Predecessor `env_build` is `solid` (result row `env-toolchain-b200`, `sm_100` ELF count 2, cuDNN 9.19.0). Predecessor `select_transformer_ladder` fixes the start model at `b7c96h3tfrs` and the `*tfrs|*tflrs` rule.
-- `[SOLID]` The negative fixture's expected behaviour is already recorded once: job `297952` aborted with exit 134 and `Non-SwiGLU transformer FFN is not yet supported in CUDA backend` (`evidence/env/smoke-297952-fail.txt:26-27`), the `throw` at `cpp/neuralnet/cudaandrocmbackend.inc:3307-3308`. This node re-runs it as a controlled, asserted fixture on the current binary — node `engine_ffn_swiglu_constraint` owns the fact.
-- `[SOLID]` `transformer_trunk_b5c48h3tfr` is superseded and is not a live node; `b5c48h3tfr` exists in the mission only as this task's negative fixture.
-- `[PRELIMINARY]` Leg 1 is known to pass for both kinds (job `297952` wrote `model.bin` 505183 B / `model.bin.gz` 462127 B for `b5c48h3tfr`; job `298018` did the same for `b7c96h3tfrs`). Legs 2-5 have never been run in this asserted form.
-- `[OPEN]` `codes/eval/export_smoke.sh` and `codes/eval/check_export_blocks.py` are not written yet (`codes/` = `env` only).
-- `[OPEN]` `o23_ffn_negative_fixture` — closes when leg 5 runs on the current binary and both the non-zero exit and the exact diagnostic are recorded under `evidence/export_smoke/`.
-- `[OPEN]` `o15_attn_logit_export_guard` — untested for a *trained* checkpoint; random init says nothing about it. Closes in `export_stage`.
+- `[SOLID]` All five legs pass on one recorded run: Slurm job `298358` (b200/`gb205`, 1 GPU, 8 CPUs, 64 G, elapsed `00:00:20`, `COMPLETED 0:0`). Histogram exactly `{"transformer_attention_block": 7, "transformer_ffn_block": 7}` with the trunk header's own declared count `14` and witnesses `7` `*.q_proj` / `7` `*.ffn_linear1` agreeing; `benchmarknn` exit `0` with `sumMedianNNEvalsPerSec = 4536.95806`; GTP exit `0` with `= J6`; negative fixture exit `134` with one distinct `Non-SwiGLU transformer FFN is not yet supported in CUDA backend` emitted after the engine identified `ktg-smoke-b5c48h3tfr (transformer, 125241 params)`. Evidence `results/ktg/paper_1902.10565/evidence/tiny_smoke/`.
+- `[SOLID]` `o23_ffn_negative_fixture` discharged: one binary, one job, the same exporter invocation and the same `benchmarknn` flags for both kinds, so the refusal is attributable to the FFN variant alone. The two-variable confound of `297952` (unpatched arch list + `b5c48h3tfr`) versus `298018` (patched + `b7c96h3tfrs`) is gone. The fixture also asserts that the model was *identified* before the throw, which is what separates the SwiGLU refusal from a missing-file or CLI error (§11 row 1).
+- `[SOLID]` Predecessor `env_build` is `solid` (result row `env-toolchain-b200`). `select_transformer_ladder` is `preliminary`, which is the only thing keeping this node's knowledge row at `preliminary` rather than `solid` — the admission gate requires solid predecessors; nothing about this node's own evidence is outstanding.
+- `[SOLID]` Cost: 20 s of one B200, 7 MB of scratch across `$W` and `$W_neg`, no core file from the deliberate leg-5 abort (`ulimit -c 0`).
+- `[OPEN]` `o15_attn_logit_export_guard` — by design, and this run says why it cannot close here: the exporter reported a data-free attention-logit bound of `14` over 7 layers against the `2.5e4` limit, because the weights are random. Closes in `export_stage` on a trained checkpoint.
+- `[OPEN]` `o08_exporter_name` — this node's files call `export_model_pytorch.py` only, but the obligation's literal repo-wide grep still returns one hit: `codes/loop/export_model_for_selfplay_9x9.sh:30`, an upstream *usage string* (that file invokes `./export_model_pytorch.py` at `:130`). Owner `export_stage`; the fix is one word in one `echo`, and it was not made from here.
+- `[OPEN]` `c03_tf_export_loads` — proposed `in_progress`, not `admitted`. Every conjunct is measured except the one naming `selfplay_9x9.cfg`, which §13 forbids this node from using. That conjunct belongs to `cfg_9x9_override` / `synchronous_loop_smoke`, or `c03` is amended to name the config the smoke may use.
 
 ## 13. Forbidden Actions
 
@@ -179,10 +179,10 @@ Inherits `../../_common/contracts/progress_principles.md`. Additions:
 
 ## 16. Termination Checklist
 
-- [ ] Verification command ran and output is pasted.
-- [ ] Result-log delta records claim, evidence type, evidence, dependencies, assumptions, status, open obligations.
-- [ ] Metrics are within the thresholds in §2, negative fixture included.
-- [ ] Reduction-to-baseline test passed when relevant (NA).
-- [ ] No `[BLOCKING]`, `[OPEN]`, or `[UNCHECKED]` markers remain for this checked claim — `o15` stays open by design and belongs to `export_stage`.
-- [ ] No silent scope expansion: export + load + `benchmarknn` + GTP + negative fixture only.
-- [ ] Contributing sub-agents had `alignment.md` plus `_common/contracts/research_admission_contract.md` injected.
+- [x] Verification command ran and output is pasted — conjunct 1 as Slurm job `298358` (exit 0), conjunct 2 re-run standalone on `login03` (exit 0); verbatim in `evidence/tiny_smoke/verification.txt` and `evidence/tiny_smoke/export_smoke-298358.txt`.
+- [x] Result-log delta records claim, evidence type, evidence, dependencies, assumptions, status, open obligations — staged as CANDIDATE rows at `evidence/tiny_smoke/candidate_rows.json` for an independent validator. The worker appended only the error-ledger trial (`row_hash a3553e5c2688f03b6764393df69d1d42dd021ce8b3a0f4e16de8c2b608e60400`).
+- [x] Metrics are within the thresholds in §2, negative fixture included.
+- [x] Reduction-to-baseline test passed when relevant (NA).
+- [x] No `[BLOCKING]`, `[OPEN]`, or `[UNCHECKED]` markers remain on the node's own checked path. `o15` stays open by design and belongs to `export_stage`; `o08`'s remaining grep hit lives in `codes/loop/`, outside this node; `c03`'s `selfplay_9x9.cfg` conjunct is out of scope by §13.
+- [x] No silent scope expansion: export + load + `benchmarknn` + GTP + negative fixture only. One extra file, `export_smoke.sbatch`, is a GPU runner with no science in it (§7).
+- [x] Contributing sub-agents had `alignment.md` plus `_common/contracts/research_admission_contract.md` injected — no sub-agents were spawned; the worker read both directly.

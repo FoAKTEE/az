@@ -1,0 +1,38 @@
+== node arxiv-1902.10565::tiny_model_export_smoke -- section 11 / 13 guard probes
+== run 2026-09-04T00:26:13-04:00 on login03, cwd results/ktg/paper_1902.10565
+
+--- o08_exporter_name: grep -rn 'export_model\.py' codes/   (must be empty)
+codes/loop/export_model_for_selfplay_9x9.sh:30:    echo "Currently expects to be run from within the 'python' directory of the KataGo repo, or otherwise in the same dir as export_model.py."
+grep exit = 0  (1 = no match)
+
+--- what codes/ actually invokes
+    codes/eval/check_export_blocks.py:5:``python/export_model_pytorch.py::write_block`` emits, for every trunk block, a
+    codes/eval/export_smoke.sh:8:#   1  export a random-initialized <kind> with python/export_model_pytorch.py, gzip it
+    codes/eval/export_smoke.sh:61:EXPORTER="$KATAGO_SRC/python/export_model_pytorch.py"
+    codes/eval/export_smoke.sh:77:say "leg 1: export random-initialized $KIND with export_model_pytorch.py"
+    codes/eval/export_smoke.sh:79:( cd "$KATAGO_SRC/python" && python export_model_pytorch.py \
+    codes/eval/export_smoke.sh:143:( cd "$KATAGO_SRC/python" && python export_model_pytorch.py \
+    codes/loop/export_model_for_selfplay_9x9.sh:130:                $PYTHON ./export_model_pytorch.py \
+    codes/loop/export_model_for_selfplay_9x9.sh:141:                    echo "export_model_pytorch.py failed with exit $EXPORT_RC for" "$SRC" "-- leaving source intact" >&2
+    codes/env/env_build.sbatch:193:  ( cd "$KATAGO_SRC/python" && python export_model_pytorch.py \
+
+--- negative-fixture containment: grep -rn 'b5c48h3tfr' codes/ | grep -v eval/export_smoke.sh   (must be empty)
+grep exit = 1  (1 = no match)
+files naming b5c48h3tfr in codes/:
+    codes/eval/export_smoke.sh
+
+--- section 13: gtp_example.cfg, not codes/cfg/selfplay_9x9.cfg, in the smoke legs
+    60:CFG="$KATAGO_SRC/cpp/configs/gtp_example.cfg"
+
+--- section 13: -ignore-attn-logit-bound is never passed
+grep exit = 1  (1 = no match)
+
+--- o15 witness from job 298358: the exporter's data-free attention-logit bound
+    (guard limit is -attn-logit-bound-limit 2.5e4; random init is ~3 orders below it)
+    15:Data-free attention logit bound, max over 7 layers: attn3=14, attn2=14, attn7=14, attn6=14, attn5=14
+
+--- scratch cost of the two workdirs
+6.1M	/scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/runtime/smoke/x
+964K	/scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/runtime/smoke/x_ffng
+--- core files left by the deliberate leg-5 abort (ulimit -c 0):
+(nothing listed = none)

@@ -1,0 +1,226 @@
+{
+  "_note": "CANDIDATE rows only. Written by the worker for node arxiv-1902.10565::tiny_model_export_smoke; NOT appended. An independent validator admits or refutes them. The only row this worker appended is the error-ledger trial row_hash a3553e5c2688f03b6764393df69d1d42dd021ce8b3a0f4e16de8c2b608e60400 (pass, 5/5 legs, actor_role=worker).",
+  "node_id": "arxiv-1902.10565::tiny_model_export_smoke",
+  "task_id": "tiny_model_export_smoke",
+  "worker_role": "worker",
+  "evidence_files": [
+    "results/ktg/paper_1902.10565/evidence/tiny_smoke/verification.txt",
+    "results/ktg/paper_1902.10565/evidence/tiny_smoke/export_smoke-298358.txt",
+    "results/ktg/paper_1902.10565/evidence/tiny_smoke/job-298358.txt",
+    "results/ktg/paper_1902.10565/evidence/tiny_smoke/guards.txt",
+    "results/ktg/paper_1902.10565/evidence/tiny_smoke/compute_budget_check.txt"
+  ],
+  "artifacts": [
+    "results/ktg/paper_1902.10565/codes/eval/export_smoke.sh",
+    "results/ktg/paper_1902.10565/codes/eval/check_export_blocks.py",
+    "results/ktg/paper_1902.10565/codes/eval/export_smoke.sbatch"
+  ],
+  "run": {
+    "slurm_job": 298358,
+    "partition": "b200",
+    "node": "gb205",
+    "alloc": "gres/gpu=1, cpu=8, mem=64G, time=00:30:00",
+    "elapsed": "00:00:20",
+    "state": "COMPLETED",
+    "exit_code": "0:0",
+    "seff": "CPU 13.12% of core-walltime, memory 2.97 GB of 64 GB - a smoke, sized as a smoke",
+    "slurm_log": "/scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/logs/export-smoke-298358.log",
+    "compute_budget_check": "bash .claude/skills/compute-budget/check.sh --gpus 1 --cpus 8 --partition b200 -> exit 0, 'OK: request gpus=1 cpus=8 part=b200 within policy'",
+    "scratch_cost": "6.1 MB at $W plus 964 KB at $W_neg; no core file left by the deliberate leg-5 abort (ulimit -c 0)"
+  },
+  "verification": {
+    "task_file_section_2_command": "bash results/ktg/paper_1902.10565/codes/eval/export_smoke.sh b7c96h3tfrs && python3 results/ktg/paper_1902.10565/codes/eval/check_export_blocks.py /scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/runtime/smoke/x/model.bin",
+    "how_it_was_run": "Conjunct 1 needs a CUDA device, so it ran as Slurm job 298358 and exited 0 (transcript export_smoke-298358.txt, last line 'export_smoke.sh exit=0'). Conjunct 2 was then re-run standalone on login03 against the model.bin the job left at $W and exited 0 (verification.txt). Both halves are verbatim in the evidence.",
+    "proposed_ledger_verification_command": "python3 results/ktg/paper_1902.10565/codes/eval/check_export_blocks.py /scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/runtime/smoke/x/model.bin && T=results/ktg/paper_1902.10565/evidence/tiny_smoke/export_smoke-298358.txt && grep -q '^EXPORT_SMOKE RESULT: PASS$' \"$T\" && grep -q '\"sumMedianNNEvalsPerSec\":4536.95806' \"$T\" && grep -q '^genmove response: = J6$' \"$T\" && grep -q '^negative benchmarknn exit=134$' \"$T\" && grep -q '^distinct diagnostics     = 1$' \"$T\" && grep -q 'Non-SwiGLU transformer FFN is not yet supported in CUDA backend' \"$T\" && grep -q '^model-identified lines   = 1' \"$T\"",
+    "proposed_command_exit_code": 0,
+    "_why_not_the_section_2_command_verbatim": "A ledger append RUNS verification.command, and the login node has no GPU (the katago binary does not even load there: libzip.so.5 is compute-node only). The proposed command re-derives the histogram LIVE from the exported model.bin and pins each recorded GPU outcome against the content-hashed transcript. A validator with a GPU allocation should prefer the section-2 command verbatim.",
+    "measured": {
+      "block_histogram": {
+        "transformer_attention_block": 7,
+        "transformer_ffn_block": 7
+      },
+      "trunk_declared_blocks": 14,
+      "witness_q_proj": 7,
+      "witness_ffn_linear1": 7,
+      "benchmarknn_exit": 0,
+      "sumMedianNNEvalsPerSec": 4536.95806,
+      "perThreadMedianMs": [
+        0.440824
+      ],
+      "usingFP16": true,
+      "requireExactNNLen": true,
+      "gtp_exit": 0,
+      "gtp_genmove_response": "= J6",
+      "negative_fixture_exit": 134,
+      "negative_fixture_distinct_diagnostics": 1,
+      "negative_fixture_diagnostic": "Non-SwiGLU transformer FFN is not yet supported in CUDA backend",
+      "negative_fixture_model_identified": "ktg-smoke-b5c48h3tfr (transformer, 125241 params)",
+      "positive_model_identified": "ktg-smoke-b7c96h3tfrs (transformer, 818857 params)",
+      "exporter_attention_logit_bound_max": 14
+    },
+    "thresholds": {
+      "block_histogram": "exact dict equality, no other kind present",
+      "sumMedianNNEvalsPerSec": "> 0",
+      "gtp": "exit 0 and a legal 9x9 vertex",
+      "negative_fixture": "exit != 0 AND the exact diagnostic AND one distinct diagnostic AND the model was identified before the throw"
+    },
+    "measured_at": "2026-09-04T00:26:00-04:00",
+    "wall_clock_seconds": 20
+  },
+  "candidate_result_row": {
+    "paper": "arxiv-1902.10565",
+    "result_id": "r_tiny_model_export_smoke_b7c96h3tfrs",
+    "name": "Random-init b7c96h3tfrs exports to exactly 7+7 transformer blocks, loads in the CUDA backend and serves 4536.96 nnEval/s at 9x9; the same binary refuses a non-SwiGLU FFN",
+    "working_context": {
+      "cluster": "skipjack, partition b200, node gb205, 1x NVIDIA B200 (sm_100), account ssci-anima, Slurm job 298358",
+      "engine": "KataGo v1.18.2 @ fd0723fdbc0e9d82cf269c9630af8c27c57c07c4, USE_BACKEND=CUDA, CUDA 12.8.93, cuDNN 9.19.0, sm_100 SASS present",
+      "exporter": "python/export_model_pytorch.py, -export-random-initialized-model, torch 2.11.0+cu128, model built on cpu at pos_len 19",
+      "engine_regime": "boardsize 9, -require-exact-nnlen, batch 2, warmup 1, iterations 2, fp16 auto -> true, config cpp/configs/gtp_example.cfg",
+      "weights": "random initialization only; no training, no checkpoint, no data",
+      "scope": "export + reader acceptance + raw forward throughput + one genmove + one negative fixture. NOT: the mission 9x9 config, a trained checkpoint, or any loop wiring."
+    },
+    "claim": "A random-initialized b7c96h3tfrs exported by python/export_model_pytorch.py lowers to exactly 7 transformer_attention_block and 7 transformer_ffn_block entries and no other block kind (corroborated by the trunk header's own declared count of 14 and by 7 *.q_proj / 7 *.ffn_linear1 matmul names); the KataGo v1.18.2 CUDA backend accepts that model.bin.gz, identifies it as 'ktg-smoke-b7c96h3tfrs (transformer, 818857 params)', and serves 4536.95806 nnEval/s at 9x9 with require-exact-nnlen and batch 2, with a 9x9 gtp genmove returning the legal vertex J6 at exit 0; and the SAME binary in the SAME job refuses a random-initialized b5c48h3tfr with exit 134 and exactly one distinct diagnostic, 'Non-SwiGLU transformer FFN is not yet supported in CUDA backend', emitted after the engine has already identified the model as 'ktg-smoke-b5c48h3tfr (transformer, 125241 params)'.",
+    "evidence_type": "numerical_simulation",
+    "evidence": "results/ktg/paper_1902.10565/evidence/tiny_smoke/verification.txt",
+    "verifier_result": {
+      "verdict": "pass",
+      "command": "python3 results/ktg/paper_1902.10565/codes/eval/check_export_blocks.py /scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/runtime/smoke/x/model.bin && T=results/ktg/paper_1902.10565/evidence/tiny_smoke/export_smoke-298358.txt && grep -q '^EXPORT_SMOKE RESULT: PASS$' \"$T\" && grep -q '\"sumMedianNNEvalsPerSec\":4536.95806' \"$T\" && grep -q '^genmove response: = J6$' \"$T\" && grep -q '^negative benchmarknn exit=134$' \"$T\" && grep -q '^distinct diagnostics     = 1$' \"$T\" && grep -q 'Non-SwiGLU transformer FFN is not yet supported in CUDA backend' \"$T\" && grep -q '^model-identified lines   = 1' \"$T\"",
+      "exit_code": 0,
+      "detail": "5/5 legs. histogram {attn:7, ffn:7} == expected, trunk declares 14, witnesses 7/7; benchmarknn exit 0 sumMedianNNEvalsPerSec=4536.95806 > 0; gtp exit 0 response '= J6'; negative fixture exit 134 with one distinct exact diagnostic after model identification."
+    },
+    "dependencies": [
+      "arxiv-1902.10565::env_build",
+      "arxiv-1902.10565::select_transformer_ladder",
+      "arxiv-1902.10565::transformer_trunk_b7c96h3tfrs",
+      "arxiv-1902.10565::engine_ffn_swiglu_constraint"
+    ],
+    "assumptions": [
+      "a06_tf_family",
+      "a08_cuda_backend"
+    ],
+    "status": "checked",
+    "provenance": "worker tiny_model_export_smoke, Slurm job 298358 on b200/gb205 2026-09-04T00:24:45-04:00; closing conjunct re-run on login03 2026-09-04T00:26:00-04:00; error-ledger trial row_hash a3553e5c2688f03b6764393df69d1d42dd021ce8b3a0f4e16de8c2b608e60400",
+    "open_obligations": [
+      "o08_exporter_name",
+      "o15_attn_logit_export_guard"
+    ],
+    "task_id": "tiny_model_export_smoke",
+    "node_ids": [
+      "arxiv-1902.10565::tiny_model_export_smoke"
+    ],
+    "iteration": 1,
+    "notes": "The two carried obligations listed above are NOT on this result's checked path: o15 needs a TRAINED checkpoint and is owned by export_stage (this run's random-init attention-logit bound is 14, about three orders below the 2.5e4 guard, so it says nothing about the guard firing); o08 is owned by export_stage and its only remaining hit in codes/ is an upstream usage string, not an invocation - see _open_items below. o23_ffn_negative_fixture IS discharged by this row."
+  },
+  "candidate_knowledge_row": {
+    "paper": "arxiv-1902.10565",
+    "node_id": "arxiv-1902.10565::tiny_model_export_smoke",
+    "task_id": "tiny_model_export_smoke",
+    "domain": "numerical",
+    "status": "preliminary",
+    "summary": "Export smoke for the transformer path: codes/eval/export_smoke.sh runs five legs on one B200 binary - export random-init b7c96h3tfrs with export_model_pytorch.py, exact block-kind histogram {attn:7, ffn:7} via codes/eval/check_export_blocks.py with two independent structural witnesses, benchmarknn -json at 9x9 with require-exact-nnlen (4536.95806 nnEval/s), a 9x9 gtp genmove ('= J6'), and the o23 negative fixture in which the same binary refuses b5c48h3tfr with exit 134 and one distinct exact SwiGLU diagnostic. Job 298358, all five legs pass on one recorded run.",
+    "evidence": "results/ktg/paper_1902.10565/evidence/tiny_smoke/verification.txt",
+    "predecessors": [
+      "arxiv-1902.10565::env_build",
+      "arxiv-1902.10565::select_transformer_ladder"
+    ],
+    "code_block_refs": [
+      "results/ktg/paper_1902.10565/codes/eval/export_smoke.sh",
+      "results/ktg/paper_1902.10565/codes/eval/check_export_blocks.py",
+      "results/ktg/paper_1902.10565/codes/eval/export_smoke.sbatch"
+    ],
+    "metric_at_landing": {
+      "name": "smoke_legs_passed",
+      "value": 5,
+      "threshold": 5,
+      "pass": true
+    },
+    "error_db_refs": [
+      {
+        "row_hash": "a3553e5c2688f03b6764393df69d1d42dd021ce8b3a0f4e16de8c2b608e60400",
+        "timestamp": "2026-09-04T04:26:59+00:00",
+        "git_commit": "a6dd902",
+        "pass_fail": "pass"
+      }
+    ],
+    "runtime_metadata": {
+      "device": "NVIDIA B200 (sm_100)",
+      "slurm_job": 298358,
+      "dtype": "fp16 inference, fp32 export",
+      "key_libraries": "KataGo v1.18.2 CUDA backend, torch 2.11.0+cu128, cuDNN 9.19.0"
+    },
+    "_validator_decision_point": "'solid' is NOT proposed, for a mechanical reason and not a scientific one: the admission gate requires solid predecessors, and arxiv-1902.10565::select_transformer_ladder is currently 'preliminary' (env_build is already 'solid'). The node's own section-2 success criterion is fully met on one recorded run with nothing outstanding, so this node should promote to solid the moment select_transformer_ladder does. If the validator has grounds to promote select_transformer_ladder first, promote this node in the same pass."
+  },
+  "candidate_claim_transitions": [
+    {
+      "entry_id": "o23_ffn_negative_fixture",
+      "kind": "obligation",
+      "proposed_status": "discharged",
+      "discharged_by": "arxiv-1902.10565::tiny_model_export_smoke",
+      "rationale": "The obligation asks for a controlled re-run on ONE patched binary: export random-init b5c48h3tfr and b7c96h3tfrs with the same command, run the identical benchmarknn on both, b5 must reproduce exactly 'Non-SwiGLU transformer FFN is not yet supported in CUDA backend' with non-zero exit and b7 must exit 0. Job 298358 does exactly that: one binary, one job, same exporter invocation, same benchmarknn flags. b7c96h3tfrs exits 0 at 4536.95806 nnEval/s; b5c48h3tfr exits 134 with one distinct occurrence of the exact string. The two-variable confound of 297952 (unpatched arch list + b5) versus 298018 (patched + b7) is removed.",
+      "evidence": "results/ktg/paper_1902.10565/evidence/tiny_smoke/export_smoke-298358.txt",
+      "strengthening": "The fixture asserts more than the obligation text: it also requires the engine to print 'Model name: ktg-smoke-b5c48h3tfr' BEFORE the throw, which rules out the section-11 risk that a missing file or a CLI error produced the non-zero exit. Under -json the diagnostic appears exactly once (logs go to stderr), so the section-2 'diagnostic string count == 1' reads literally here; the script asserts one DISTINCT diagnostic so it stays correct on the search-level path, which printed the same line three times in job 297952.",
+      "_ordering_note": "discharged_by names a knowledge node, so append candidate_knowledge_row before this transition."
+    },
+    {
+      "entry_id": "c03_tf_export_loads",
+      "kind": "claim",
+      "proposed_status": "in_progress",
+      "rationale": "Every conjunct of c03 is now measured EXCEPT one: the claim text requires '>0 visits/s in katago benchmark -boardsize 9 with the mission selfplay_9x9.cfg', and this node's task file section 13 explicitly FORBIDS pointing the smoke legs at codes/cfg/selfplay_9x9.cfg (the node has no edge to cfg_9x9_override and must stay runnable in parallel with it). Measured here on gtp_example.cfg: block kinds exactly {attn:7, ffn:7}, reader acceptance, 4536.95806 nnEval/s at 9x9, a legal genmove. The selfplay_9x9.cfg leg belongs to cfg_9x9_override / synchronous_loop_smoke. Do not admit c03 on this row alone; either wait for the mission-config run or amend c03 to name the config the smoke is allowed to use.",
+      "evidence": "results/ktg/paper_1902.10565/evidence/tiny_smoke/verification.txt",
+      "_validator_decision_point": "If the validator judges the config to be immaterial to c03 - benchmarknn measures the raw forward pass and -require-exact-nnlen fixes the buffer to 9x9, so the only config-dependent quantity is thread/batch sizing, which the flags override anyway - then c03 is admissible now with result_ref r_tiny_model_export_smoke_b7c96h3tfrs. That judgement is the validator's, not the worker's."
+    },
+    {
+      "entry_id": "o08_exporter_name",
+      "kind": "obligation",
+      "proposed_status": "open",
+      "rationale": "Half satisfied and blocked on one line that belongs to another node. This node's own files call python/export_model_pytorch.py and nothing else. But the repo-wide test the obligation states - grep -rn 'export_model.py' over results/ktg/paper_1902.10565/codes/ returns nothing - still fails on exactly one hit: codes/loop/export_model_for_selfplay_9x9.sh:30, inside an upstream usage string (\"...or otherwise in the same dir as export_model.py.\"). It is a message, not an invocation - that file invokes ./export_model_pytorch.py at :130 - but the obligation's test is a literal grep, so it stays open. Owner is worker export_stage; the fix is one word in one echo.",
+      "evidence": "results/ktg/paper_1902.10565/evidence/tiny_smoke/guards.txt",
+      "owner": "arxiv-1902.10565::export_stage"
+    },
+    {
+      "entry_id": "o15_attn_logit_export_guard",
+      "kind": "obligation",
+      "proposed_status": "open",
+      "rationale": "Untouched by design, and this run says why it cannot be settled here. The exporter reported 'Data-free attention logit bound, max over 7 layers: attn3=14, attn2=14, attn7=14, attn6=14, attn5=14' - about three orders of magnitude below the 2.5e4 guard - because the weights are random. Only a trained checkpoint can make the bound approach the limit, so the guard's refusal path and the loop's handling of it belong to export_stage / train_stage. Section 13 forbids -ignore-attn-logit-bound; grep confirms it appears nowhere in codes/.",
+      "evidence": "results/ktg/paper_1902.10565/evidence/tiny_smoke/guards.txt",
+      "owner": "arxiv-1902.10565::export_stage"
+    }
+  ],
+  "_open_items": [
+    {
+      "marker": "[OPEN]",
+      "id": "o08 grep hit outside this node",
+      "what": "codes/loop/export_model_for_selfplay_9x9.sh:30 keeps the upstream usage string naming export_model.py, so the o08 repo-wide grep test still returns a hit.",
+      "closes_when": "that echo names export_model_pytorch.py and grep -rn 'export_model\\.py' codes/ returns nothing.",
+      "owner": "the node that owns codes/loop/ (export_stage / loop_resume_under_walltime); NOT edited from here."
+    },
+    {
+      "marker": "[OPEN]",
+      "id": "o15_attn_logit_export_guard",
+      "what": "the guard is untested for a trained checkpoint; random init sits at bound 14 against a 2.5e4 limit.",
+      "closes_when": "export_stage exports a trained checkpoint and either passes the guard or records its refusal (exit != 0) in the error ledger instead of bypassing it.",
+      "owner": "arxiv-1902.10565::export_stage"
+    },
+    {
+      "marker": "[OPEN]",
+      "id": "c03 config conjunct",
+      "what": "c03 names selfplay_9x9.cfg; this node is forbidden from using it, so one conjunct of c03 is unmeasured.",
+      "closes_when": "cfg_9x9_override / synchronous_loop_smoke runs a 9x9 forward pass under codes/cfg/selfplay_9x9.cfg, or c03 is amended to name the config the smoke may use.",
+      "owner": "validator + arxiv-1902.10565::cfg_9x9_override"
+    },
+    {
+      "marker": "[OPEN]",
+      "id": "node promotion to solid",
+      "what": "the knowledge row is proposed 'preliminary' only because predecessor select_transformer_ladder is 'preliminary' and the gate requires solid predecessors.",
+      "closes_when": "select_transformer_ladder is promoted; nothing about this node's own evidence is outstanding.",
+      "owner": "validator"
+    },
+    {
+      "marker": "[OPEN]",
+      "id": "packet path conventions",
+      "what": "the work packet named codes/tiny_smoke/ and evidence/tiny_smoke/; the task file's section-2 verification command hardcodes codes/eval/ and its section 14 names evidence/export_smoke/. Scripts were placed in codes/eval/ so the section-2 command runs as written; evidence was placed in evidence/tiny_smoke/ per the packet.",
+      "closes_when": "the scheduler confirms which of the two naming conventions is canonical, or the task file's section-2 command is amended.",
+      "owner": "jobs"
+    }
+  ]
+}

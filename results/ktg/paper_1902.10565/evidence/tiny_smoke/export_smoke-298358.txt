@@ -1,0 +1,97 @@
+== tiny_model_export_smoke  2026-09-04T00:24:45-04:00  host=gb205  job=298358
+== kind=b7c96h3tfrs  W=/scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/runtime/smoke/x  W_NEG=/scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/runtime/smoke/x_ffng
+== katago=/scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/build/KataGo/cpp/build/katago
+== cfg=/scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/build/KataGo/cpp/configs/gtp_example.cfg
+   KataGo v1.18.2
+   Git revision: fd0723fdbc0e9d82cf269c9630af8c27c57c07c4-dirty
+   Compile Time: Sep  3 2026 22:02:13
+   Using CUDA backend
+   Compiled with CUDA version 12.8.93
+   gpu: 0, NVIDIA B200, 10.0
+== katago sha: fd0723fdbc0e9d82cf269c9630af8c27c57c07c4
+
+--- leg 1: export random-initialized b7c96h3tfrs with export_model_pytorch.py
+{'version': 17, 'norm_kind': 'fixup', 'bnorm_epsilon': 0.0001, 'bnorm_running_avg_momentum': 0.001, 'initial_conv_1x1': False, 'gamma_weight_decay_center_1': True, 'trunk_num_channels': 96, 'mid_num_channels': 96, 'gpool_num_channels': 32, 'transformer_ffn_channels': 256, 'transformer_heads': 3, 'transformer_kv_heads': 3, 'block_kind': [['attn1', 'attnrope'], ['ffn1', 'ffnsg'], ['attn2', 'attnrope'], ['ffn2', 'ffnsg'], ['attn3', 'attnrope'], ['ffn3', 'ffnsg'], ['attn4', 'attnrope'], ['ffn4', 'ffnsg'], ['attn5', 'attnrope'], ['ffn5', 'ffnsg'], ['attn6', 'attnrope'], ['ffn6', 'ffnsg'], ['attn7', 'attnrope'], ['ffn7', 'ffnsg']], 'p1_num_channels': 32, 'g1_num_channels': 32, 'v1_num_channels': 32, 'sbv2_num_channels': 48, 'num_scorebeliefs': 4, 'v2_size': 64}
+Data-free attention logit bound, max over 7 layers: attn3=14, attn2=14, attn7=14, attn6=14, attn5=14
+Writing model
+Exported at: 
+2026-09-04 04:24:51.323272 UTC
+[OK] leg 1 export (/scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/build/KataGo/python/export_model_pytorch.py)
+total 6140
+-rw-r--r-- 1 ssci-haiyangw users    1228 Sep  4 00:24 log.txt
+-rw-r--r-- 1 ssci-haiyangw users       2 Sep  4 00:24 metadata.json
+-rw-r--r-- 1 ssci-haiyangw users 3281596 Sep  4 00:24 model.bin
+-rw-r--r-- 1 ssci-haiyangw users 2992914 Sep  4 00:24 model.bin.gz
+
+--- leg 2: block-kind histogram (exact match, no other kind)
+model.bin       : /scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/runtime/smoke/x/model.bin (3281596 bytes)
+block histogram : {"transformer_attention_block": 7, "transformer_ffn_block": 7}
+expected        : {"transformer_attention_block": 7, "transformer_ffn_block": 7}
+trunk declares  : 14 blocks; kind lines found: 14
+witness         : ^[A-Za-z0-9_.]+\.q_proj$     7 (kind lines: 7)
+witness         : ^[A-Za-z0-9_.]+\.ffn_linear1$ 7 (kind lines: 7)
+BLOCK_HISTOGRAM: PASS
+[OK] leg 2 block histogram
+
+--- leg 3: benchmarknn -json, 9x9, require-exact-nnlen, batch 2
+benchmarknn exit=0
+stdout:
+{"modelFile":"/scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/runtime/smoke/x/model.bin.gz","modelName":"ktg-smoke-b7c96h3tfrs","revision":"fd0723fdbc0e9d82cf269c9630af8c27c57c07c4-dirty-cuda","boardSizes":[9],"requireExactNNLen":true,"usingFP16":true,"batchSize":2,"numThreads":1,"numIterations":2,"gpuIdxs":[-1],"perThreadMedianMs":[0.440824],"perThreadNNEvalsPerSec":[4536.95806],"sumMedianNNEvalsPerSec":4536.95806,"actualWallSeconds":0.000883638,"actualWallNNEvalsPerSec":4526.740588}
+stderr (tail):
+: Version fd0723fdbc0e9d82cf269c9630af8c27c57c07c4-dirty-cuda
+: nnRandSeed0 = 4122298195026492625
+: After dedups: nnModelFile0 = /scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/runtime/smoke/x/model.bin.gz useFP16 auto
+: Initializing neural net buffer to be size 9 * 9 exactly
+: Cuda backend thread 0: Found GPU NVIDIA B200 memory 191495471104 compute capability major 10 minor 0
+: Cuda backend thread 0: Model version 17 useFP16 = true useNHWC = true
+: Cuda backend thread 0: Model name: ktg-smoke-b7c96h3tfrs (transformer, 818857 params)
+: Cuda backend: using combined QKV projection for attention
+: Cuda backend: using CUTLASS fused FFN kernel
+: CUDA backend: running 1x1 NHWC convolutions as a GEMM
+: Cuda backend thread 0: warming up transformer graphs for batch sizes 1..2
+: Cuda backend: using tensor-core mma flash attention kernel
+sumMedianNNEvalsPerSec = 4536.95806
+[OK] leg 3 benchmarknn sumMedianNNEvalsPerSec > 0
+
+--- leg 4: gtp genmove on 9x9
+gtp exit=0
+stdout:
+= 
+
+= 
+
+= 
+
+= J6
+
+= 
+
+legal-vertex responses = 1
+genmove response: = J6
+[OK] leg 4 gtp genmove returned a legal 9x9 vertex
+
+--- leg 5: negative fixture -- the engine must REFUSE a non-SwiGLU transformer FFN
+Writing model
+Exported at: 
+2026-09-04 04:25:01.337146 UTC
+[OK] leg 5a negative fixture exported (the exporter itself does not object)
+/home/schmidt/ssci-haiyangw/az/results/ktg/paper_1902.10565/codes/eval/export_smoke.sh: line 160: 664150 Aborted                 (core dumped) "$KATAGO_BIN" benchmarknn -model "$W_NEG/model.bin.gz" -config "$CFG" -boardsize 9 -require-exact-nnlen -batch-size 2 -warmup 1 -iterations 2 -json > "$W_NEG/benchmarknn.out" 2> "$W_NEG/benchmarknn.err"
+negative benchmarknn exit=134
+combined stdout+stderr (tail):
+: Version fd0723fdbc0e9d82cf269c9630af8c27c57c07c4-dirty-cuda
+: nnRandSeed0 = 13710115247334588626
+: After dedups: nnModelFile0 = /scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/runtime/smoke/x_ffng/model.bin.gz useFP16 auto
+: Initializing neural net buffer to be size 9 * 9 exactly
+: Cuda backend thread 0: Found GPU NVIDIA B200 memory 191495471104 compute capability major 10 minor 0
+: Cuda backend thread 0: Model version 17 useFP16 = true useNHWC = true
+: Cuda backend thread 0: Model name: ktg-smoke-b5c48h3tfr (transformer, 125241 params)
+terminate called after throwing an instance of 'StringError'
+  what():  Non-SwiGLU transformer FFN is not yet supported in CUDA backend
+diagnostic occurrences   = 1
+distinct diagnostics     = 1
+model-identified lines   = 1  (proves the refusal is the FFN throw, not a CLI/file error)
+[OK] leg 5 negative fixture REFUSED with the exact diagnostic (exit 134)
+
+--- verdict
+EXPORT_SMOKE RESULT: PASS
+export_smoke.sh exit=0

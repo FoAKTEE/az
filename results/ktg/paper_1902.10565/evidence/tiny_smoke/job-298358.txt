@@ -1,0 +1,24 @@
+## sacct
+JobID         Partition        NodeList                                          AllocTRES    Elapsed      State ExitCode 
+------------ ---------- --------------- -------------------------------------------------- ---------- ---------- -------- 
+298358             b200           gb205 billing=8,cpu=8,energy=7097,gres/gpu=1,mem=64G,no+   00:00:20  COMPLETED      0:0 
+
+## seff
+Job ID: 298358
+Cluster: skipjack
+User/Group: ssci-haiyangw/users
+Partition: b200
+Account: ssci-anima
+State: COMPLETED (exit code 0:0)
+Nodes: 1
+Cores per node: 8
+CPU Utilized: 00:00:21
+CPU Efficiency: 13.12% of 00:02:40 core-walltime
+Job Wall-clock time: 00:00:20
+Memory Utilized: 2.97 GB
+Memory Efficiency: 4.64% of 64.00 GB
+
+## job script
+results/ktg/paper_1902.10565/codes/eval/export_smoke.sbatch
+## slurm log
+/scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/logs/export-smoke-298358.log
