@@ -20,6 +20,7 @@
 #          KTG_PRINT_EVERY  default 8   (loss rows every 8 batches; see
 #                                        codes/env/train-print-every.diff)
 #          KTG_T7_GAMES     default 600 (overridden by the positional arg)
+#          KTG_TRAIN_EXTRA_ARGS  default -lr-scale-auto (see the LR block below)
 #          KTG_STAGE_ONLY=1 -> stage the dated archive and stop before any engine stage
 #
 # KNOBS AND THEIR DERIVATION (tasks/converged_test_7x7/implementation.md section 10).
@@ -84,6 +85,25 @@ export KTG_POS_LEN=7
 
 # ---- dense loss logging (codes/env/train-print-every.diff) ------------------
 export KTG_PRINT_EVERY="${KTG_PRINT_EVERY:-8}"
+
+# ---- learning rate: upstream's own bootstrap schedule ----------------------
+# train.py:1060-1078 multiplies the LR by a WARMUP factor keyed on
+# global_step_samples, and below 250 000 samples that factor is 1/20. This whole run
+# trains ~150 000 samples, so with the stock lr_scale = 1.0 EVERY batch of it would run
+# at 1/20 of the mature learning rate and could not converge inside one allocation --
+# the warmup horizon (250 k .. 2 M samples) is calibrated for a 19x19 run of billions
+# of samples, not for a 6 h 7x7 test.
+#
+# The fix is upstream's own flag, not a number invented here. -lr-scale-auto
+# (train.py:84, :504-512) returns a CONSTANT 8.0 for every sample count below 550 M,
+# so across this entire run the effective multiplier is 8.0 * 1/20 = 0.4 -- exactly the
+# multiplier KataGo itself runs at the start of one of its own from-scratch runs. The
+# warmup is left ON (-no-lr-warmup would give the full 8.0, twenty times upstream's own
+# start-of-run rate, to a randomly initialised net).
+#
+# It travels through $KTG_TRAIN_EXTRA_ARGS, which train_9x9.sh expands unquoted and
+# which is EMPTY for the 9x9 chain.
+export KTG_TRAIN_EXTRA_ARGS="${KTG_TRAIN_EXTRA_ARGS:--lr-scale-auto}"
 
 # ---- 7x7 configs -----------------------------------------------------------
 export SELFPLAY_CONFIG="$KTG_CODES/cfg/selfplay_7x7.cfg"

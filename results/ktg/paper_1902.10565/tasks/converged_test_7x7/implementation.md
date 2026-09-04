@@ -31,7 +31,7 @@
 | S6 | dense loss log | `loss_log.rows >= 20` | one JSON row per `KTG_PRINT_EVERY = 8` batches |
 
 - **Open obligations before start:** none blocking. `o02_pos_len_matches_databoardlen` is *extended* by this node from a constant to a parameter and re-verified in both directions (C2–C5 of the verifier).
-- **Reduction-to-baseline test:** the 9×9 behaviour of every shared file with the new variables UNSET must be unchanged. Verifier checks C1, C2, C4, C6, C7, C9 are exactly that test, and they pass.
+- **Reduction-to-baseline test:** the 9×9 behaviour of every shared file with the new variables UNSET must be unchanged. Verifier checks C1, C2, C4, C6, C7, C9 and C11 are exactly that test, and they pass.
 
 ## 3. Motivation
 
@@ -75,10 +75,10 @@ codes/cfg/match_first_latest_7.cfg  5 keys off match_first_latest_9.cfg
 codes/loop/t7_cycle.sh              exports KTG_POS_LEN=7 + the knob set, one cycle
 codes/loop/converged_7x7.sbatch     the ONE allocation: preflight, cycles, match, summary
 codes/eval/summarize_7x7_run.py     loss log + exports + gate + match -> summary JSON
-codes/eval/check_board_param.sh     the verifier (10 checks, both directions)
+codes/eval/check_board_param.sh     the verifier (11 checks, both directions)
 codes/env/train-print-every.diff    the mission-owned one-line train.py patch
 --- parameterised, NOT forked -------------------------------------------------
-codes/loop/train_9x9.sh             -pos-len "${KTG_POS_LEN:-9}"
+codes/loop/train_9x9.sh             -pos-len "${KTG_POS_LEN:-9}" + $KTG_TRAIN_EXTRA_ARGS
 codes/eval/check_pos_len_npz.py     shapes and row bytes derived from KTG_POS_LEN (def. 9)
 codes/loop/synchronous_loop_9x9.sh  UNCHANGED (its knobs and configs were already ${VAR:-})
 ```
@@ -86,7 +86,7 @@ codes/loop/synchronous_loop_9x9.sh  UNCHANGED (its knobs and configs were alread
 ## 8. Phase Plan
 
 ### Phase 1 — parameterise + patch (DONE, verified)
-- **Files:** the eight above. **Test:** `check_board_param.sh` → `CHECK_BOARD_PARAM: PASS`, 10/10.
+- **Files:** the eight above. **Test:** `check_board_param.sh` → `CHECK_BOARD_PARAM: PASS`, 11/11.
 ### Phase 2 — the allocation
 - 1 GPU, 16 CPUs, 96 G, `--time=06:00:00`, `--partition=b200,l40s` (L40S admitted: `evidence/env/l40s-300987.txt` `L40S PROBE RESULT: PASS`, engine runs natively on sm_89 at 2401.88 visits/s).
 - **Test:** cycle 1 completes and `metrics_train.json` gains ≥ 1 row.
@@ -121,6 +121,7 @@ codes/loop/synchronous_loop_9x9.sh  UNCHANGED (its knobs and configs were alread
 | gate `maxVisits` | 100 | the visit count selfplay trains under. Scaling upstream's 150/600 ratio would gate at 25 visits, where a 7×7 result is mostly root noise |
 | `numGameThreads` | 12 | 16 CPUs requested (the l40s partition is CPU-tight — coordinator, 2026-09-04): 12 game threads + 1 NN server thread + the shuffler |
 | `KTG_PRINT_EVERY` | 8 | ~19 loss rows per 156-batch cycle; the brief's 5–10 |
+| `-lr-scale-auto` | on | `train.py:1060-1078` multiplies the LR by **1/20** below 250 000 samples; this run trains ~150 000, so at the stock `lr_scale = 1.0` *every* batch would sit at 1/20 of the mature rate and could not converge in one allocation — that warmup horizon is calibrated for a 19×19 run of billions of samples. `-lr-scale-auto` (`train.py:84,504-512`) is a **constant 8.0** below 550 M samples, so the effective multiplier across the whole run is `8.0 × 1/20 = 0.4` — exactly what upstream itself runs at the start of a from-scratch run. Warmup is left ON; `-no-lr-warmup` would hand a randomly initialised net 20× that rate. Travels through `$KTG_TRAIN_EXTRA_ARGS`, empty for the 9×9 chain |
 | match | 200 games, 100 visits, komi 9 | 7×7 area scoring is B+9 at perfect play; colours are balanced by construction (`match.cpp:99-110`), so komi moves variance, not bias |
 
 ## 11. Risk Mitigation / Abort Rules
@@ -137,7 +138,7 @@ codes/loop/synchronous_loop_9x9.sh  UNCHANGED (its knobs and configs were alread
 
 ## 12. Current State
 
-- `[SOLID]` the parameterisation and the patch: `evidence/converged_7x7/check_board_param.txt`, `CHECK_BOARD_PARAM: PASS`, 10/10 checks executed.
+- `[SOLID]` the parameterisation and the patch: `evidence/converged_7x7/check_board_param.txt`, `CHECK_BOARD_PARAM: PASS`, 11/11 checks executed.
 - `[PRELIMINARY]` the run itself — submitted, not yet terminal.
 - `[OPEN]` every criterion of § 2 until `summary-<jobid>.json` exists. Closing evidence: that file plus `metrics_train-<jobid>.json`.
 

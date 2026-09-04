@@ -1,4 +1,4 @@
-check_board_param -- node arxiv-1902.10565::converged_test_7x7  2026-09-04T21:00:08Z
+check_board_param -- node arxiv-1902.10565::converged_test_7x7  2026-09-04T21:10:44Z
   az     = /home/schmidt/ssci-haiyangw/az
   clone  = /scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/build/KataGo
   mirror = /home/schmidt/ssci-haiyangw/az/ref-code/lightvector-KataGo
@@ -34,5 +34,12 @@ check_board_param -- node arxiv-1902.10565::converged_test_7x7  2026-09-04T21:00
 == C9/C10  KTG_STAGE_ONLY dry runs of the 9x9 loop
   [ok]   C9  9x9 dry run exits 0 and stages selfplay_9x9.cfg + gatekeeper_9x9.cfg byte for byte
   [ok]   C10 7x7 dry run exits 0 and stages selfplay_7x7.cfg + gatekeeper_7x7.cfg
+
+== C11  train_9x9.sh $KTG_TRAIN_EXTRA_ARGS passthrough
+  [ok]   the unquoted passthrough sits on its own line in the train.py invocation
+  [ok]   unset  -> contributes 0 words (the 9x9 command line is unchanged)
+  [ok]   set    -> contributes exactly 1 word (-lr-scale-auto)
+  [ok]   t7_cycle.sh defaults it to -lr-scale-auto (train.py:504-512 -> constant 8.0 below 550 M samples)
+  [ok]   the 1/20 warmup below 250000 samples that motivates it is still in train.py
 
 CHECK_BOARD_PARAM: PASS

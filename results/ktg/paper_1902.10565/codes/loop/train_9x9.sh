@@ -14,6 +14,12 @@ set -o pipefail
 # length of the trainer AND of the pre-shuffle guard and they cannot drift apart.
 # With KTG_POS_LEN unset the expansion is the literal 9 and this wrapper behaves
 # exactly as it did before -- the 9x9 production chain sets nothing.
+#
+# The same node adds $KTG_TRAIN_EXTRA_ARGS, EMPTY BY DEFAULT: extra train.py flags a
+# caller needs that the loop's fixed invocation cannot supply. It is expanded UNQUOTED,
+# exactly like the $EXTRAFLAG on the line above it, so it word-splits on spaces and
+# disappears entirely when unset. The 9x9 chain sets nothing and the command line it
+# builds is byte-identical to the one this wrapper built before.
 # Positional interface is unchanged: BASEDIR TRAININGNAME MODELKIND BATCHSIZE EXPORTMODE
 # Called by the mission loop copy in place of upstream ./train.sh.
 {
@@ -33,6 +39,10 @@ then
     echo "EXPORTMODE 'main': train and export for selfplay. 'extra': train and export extra non-selfplay model. 'trainonly': train without export"
     exit 0
 fi
+# Extra train.py arguments, empty by default (node converged_test_7x7). Read here so
+# that `set -u` never sees it unset, and expanded unquoted below.
+KTG_TRAIN_EXTRA_ARGS="${KTG_TRAIN_EXTRA_ARGS:-}"
+
 BASEDIR="$1"
 shift
 TRAININGNAME="$1"
@@ -105,6 +115,7 @@ time $PYTHON ./train.py \
      -batch-size "$BATCHSIZE" \
      -model-kind "$MODELKIND" \
      $EXTRAFLAG \
+     $KTG_TRAIN_EXTRA_ARGS \
      "$@" \
      2>&1 | tee -a "$BASEDIR"/train/"$TRAININGNAME"/stdout.txt
 

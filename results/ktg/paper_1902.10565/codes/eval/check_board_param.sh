@@ -7,7 +7,7 @@
 # (job 299461, PENDING when this was written, which stages these files at start) is not
 # disturbed.
 #
-# It is login-node executable: no GPU, no Slurm, no torch. Ten checks, all EXECUTED:
+# It is login-node executable: no GPU, no Slurm, no torch. Eleven checks, all EXECUTED:
 #
 #   C1  train_9x9.sh passes -pos-len "${KTG_POS_LEN:-9}"; the expansion is 9 unset, 7 set
 #   C2  check_pos_len_npz.py with KTG_POS_LEN unset reproduces, exactly, the seven
@@ -25,6 +25,8 @@
 #   C9  a KTG_STAGE_ONLY=1 dry run of the 9x9 loop still exits 0 and still stages the
 #       9x9 configs, byte for byte
 #   C10 the same dry run under the 7x7 environment stages the 7x7 configs instead
+#   C11 train_9x9.sh's $KTG_TRAIN_EXTRA_ARGS passthrough is EMPTY unset (the 9x9 command
+#       line is unchanged) and carries -lr-scale-auto for the 7x7 run
 #
 # usage:  bash codes/eval/check_board_param.sh
 # exit 0 iff every check passes.
@@ -250,6 +252,32 @@ else
     fail "C10 the 7x7 KTG_STAGE_ONLY dry run did not exit 0"
   fi
   rm -rf "$D9" "$D7"
+fi
+
+# ------------------------------------------------------------------------ C11
+head_ "C11  train_9x9.sh \$KTG_TRAIN_EXTRA_ARGS passthrough"
+if grep -q '^     \$KTG_TRAIN_EXTRA_ARGS \\$' "$CODES/loop/train_9x9.sh"; then
+  pass "the unquoted passthrough sits on its own line in the train.py invocation"
+else
+  fail "train_9x9.sh does not expand \$KTG_TRAIN_EXTRA_ARGS in the train.py invocation"
+fi
+# The wrapper builds the command line by UNQUOTED expansion, exactly like $EXTRAFLAG, so
+# an unset variable must contribute zero words -- not one empty argument, which train.py
+# would reject.
+NARGS_UNSET="$(unset KTG_TRAIN_EXTRA_ARGS; bash -c 'KTG_TRAIN_EXTRA_ARGS="${KTG_TRAIN_EXTRA_ARGS:-}"; set -- x $KTG_TRAIN_EXTRA_ARGS y; echo $#')"
+NARGS_SET="$(KTG_TRAIN_EXTRA_ARGS=-lr-scale-auto bash -c 'KTG_TRAIN_EXTRA_ARGS="${KTG_TRAIN_EXTRA_ARGS:-}"; set -- x $KTG_TRAIN_EXTRA_ARGS y; echo $#')"
+[ "$NARGS_UNSET" = "2" ] && pass "unset  -> contributes 0 words (the 9x9 command line is unchanged)"                          || fail "unset  -> the expansion contributed $((NARGS_UNSET - 2)) word(s), expected 0"
+[ "$NARGS_SET" = "3" ]   && pass "set    -> contributes exactly 1 word (-lr-scale-auto)"                          || fail "set    -> $((NARGS_SET - 2)) word(s), expected 1"
+if grep -q 'KTG_TRAIN_EXTRA_ARGS:--lr-scale-auto' "$CODES/loop/t7_cycle.sh"; then
+  pass "t7_cycle.sh defaults it to -lr-scale-auto (train.py:504-512 -> constant 8.0 below 550 M samples)"
+else
+  fail "t7_cycle.sh does not default KTG_TRAIN_EXTRA_ARGS to -lr-scale-auto"
+fi
+if grep -q "elif train_state\[\"global_step_samples\"\] < 250000:" "$KATAGO_SRC/python/train.py" \
+   && grep -q 'warmup_scale = 1.0 / 20.0' "$KATAGO_SRC/python/train.py"; then
+  pass "the 1/20 warmup below 250000 samples that motivates it is still in train.py"
+else
+  fail "train.py's <250000-sample 1/20 warmup branch was not found -- re-derive the LR choice"
 fi
 
 echo

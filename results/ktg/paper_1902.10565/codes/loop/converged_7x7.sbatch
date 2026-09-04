@@ -25,8 +25,13 @@
 # WHY IT IS SAFE FOR THE QUEUED 9x9 CHAIN (job 299461, PENDING at submission time).
 # Everything 7x7 travels in the ENVIRONMENT (KTG_POS_LEN, KTG_PRINT_EVERY,
 # SELFPLAY_CONFIG, GATING_CONFIG and the knob block), never as an edit to a 9x9 default.
-# The three shared files that changed carry `${KTG_POS_LEN:-9}` / `KTG_PRINT_EVERY`
-# defaults, so a caller that exports nothing -- the chain -- sees the previous behaviour.
+# The shared files that changed carry `${KTG_POS_LEN:-9}` / `KTG_PRINT_EVERY` /
+# `${KTG_TRAIN_EXTRA_ARGS:-}` defaults, so a caller that exports nothing -- the chain --
+# sees the previous behaviour. The 7x7 run's one extra trainer flag is -lr-scale-auto:
+# train.py:1060-1078 runs the LR at 1/20 below 250 k samples and this run trains only
+# ~150 k, so without it every batch would sit at 1/20 of the mature rate. -lr-scale-auto
+# (train.py:504-512) is a constant 8.0 there, giving 8/20 = 0.4x -- upstream's own
+# start-of-run multiplier, not a number invented here.
 # codes/eval/check_board_param.sh proves both directions and is this node's verifier.
 #
 # usage (from the az root). The policy self-check is NOT optional and its path is not
@@ -123,6 +128,7 @@ echo "  partition      = ${SLURM_JOB_PARTITION:-?}   cpus = ${SLURM_CPUS_PER_TAS
 echo "  walltime       = ${WALL_S}s  (squeue '%l' = '${TL:-unset}')"
 echo "  cycle deadline = $(date -u -d "@$CYCLE_DEADLINE" +%Y-%m-%dT%H:%M:%SZ)  (reserve ${RESERVE_S}s for the match)"
 echo "  pos_len        = $KTG_POS_LEN   print_every = $KTG_PRINT_EVERY   samples/epoch = $SAMPLES_PER_EPOCH"
+echo "  train extra    = $(grep -o 'KTG_TRAIN_EXTRA_ARGS:-[^}]*' "$KTG_CODES/loop/t7_cycle.sh" | head -1)"
 echo "======================================================================"
 scontrol show job "$JOBID" 2>/dev/null | sed -n '1,12p' || true
 nvidia-smi --query-gpu=index,name,compute_cap,memory.total,driver_version --format=csv,noheader || true
