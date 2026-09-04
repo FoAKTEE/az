@@ -1,0 +1,963 @@
+################################################################################
+# Validator's transcript -- fifth repair packet of arxiv-1902.10565::loop_resume_under_walltime
+# (o44 partition inheritance, loop.sbatch 8e394116) and the env_build L40S row (r_env_l40s, job 300987).
+# Role: refuter, then judge; cross-model relative to both workers. Login node, CPU only. No job submitted,
+# no job cancelled; 'sbatch --test-only' below queues nothing (Slurm man page: validates and estimates only).
+# $S = this validator's scratch root; $AZ = the az checkout; $SIM = a harness sandbox under $S.
+################################################################################
+
+########## 0. environment
+host: login03  date: 2026-09-04T17:46:06-04:00  az HEAD: 05ebce1  user: ssci-haiyangw
+loop.sbatch sha256          : 8e394116f7efdab6053ff1a058cc04c819bcc01e20f5107fceaff84f8ed51a81
+pre-repair (git 56f2979)    : 0a03fbb230cc288f698da846d1f2619c97bc4963ead833e36b1c2c651358f389
+job 301099 stored script    : 8e394116f7efdab6053ff1a058cc04c819bcc01e20f5107fceaff84f8ed51a81   (scontrol write batch_script 301099 -)
+repair_partitions.txt sha256: 04c717e74e8bbf0eab83759f63a2969e4e47580639d9b817b5f5690833cb4d6e
+l40s-300987.txt sha256      : 55184b87cb001bea6030c169a2e713ddfa5084bd7ba340f301359be727bf842b
+--- queue (must hold only the running 7x7 job and the PENDING chain link)
+   JOBID    PARTITION      STATE       NAME           START_TIME          SUBMIT_TIME NODELIST(REASON)
+  301096         b200    RUNNING     ktg-t7  2026-09-04T17:14:35  2026-09-04T17:14:33 gb207
+  301099    b200,l40s    PENDING   ktg-loop  2026-09-04T21:54:14  2026-09-04T17:18:56 (Resources)
+--- scontrol show job 301099 (the live link 1)
+JobId=301099 JobName=ktg-loop
+JobState=PENDING Reason=Resources Dependency=(null)
+RunTime=00:00:00 TimeLimit=23:30:00 TimeMin=N/A
+SubmitTime=2026-09-04T17:18:56 EligibleTime=2026-09-04T17:18:56
+Partition=b200,l40s AllocNode:Sid=login03:3843237
+NumNodes=1-1 NumCPUs=32 NumTasks=1 CPUs/Task=32 ReqB:S:C:T=0:0:*:*
+ReqTRES=cpu=32,mem=120G,node=1,billing=32,gres/gpu=1
+Command=/weka/home/schmidt/ssci-haiyangw/az/results/ktg/paper_1902.10565/codes/loop/loop.sbatch
+WorkDir=/weka/home/schmidt/ssci-haiyangw/az
+--- the submission line the launcher recorded (evidence/production_chain/preflight.txt:892-896)
+$ BASEDIR=/scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/runs/p1 \
+    KTG_MAX_CHAIN=9 KTG_MON_PS_INTERVAL=1 KTG_MON_GPU_INTERVAL=5 \
+    SBATCH_TIMELIMIT=23:30:00 KTG_PARTITIONS="b300 b200,l40s" \
+    sbatch --time=23:30:00 --partition=b200,l40s \
+      results/ktg/paper_1902.10565/codes/loop/loop.sbatch
+
+########## 1. static
+--- code lines of commit 4c30b00 (comment lines excluded)
++KTG_PARTITIONS="${KTG_PARTITIONS:-b300 b200}"
+-    local p free
+-    for p in b300 b200; do
++    local p free last=""
++    for p in $KTG_PARTITIONS; do
++        last="$p"
+-    echo b200
++    echo "${last:-b200}"
+--- spans at 8e394116: pick_partition 288-303; resubmit 522-563; KTG_PARTITIONS= at :287; pick at :543; policy call at :548; sbatch at :554
+--- --export on non-comment lines: 0   (0 = Slurm's default --export=ALL)
+--- bash -n
+  ok export_model_for_selfplay_9x9.sh
+  ok smoke_one_cycle.sh
+  ok synchronous_loop_9x9.sh
+  ok t7_cycle.sh
+  ok train_9x9.sh
+  ok converged_7x7.sbatch
+  ok loop.sbatch
+  ok smoke_loop.sbatch
+  ok stage_monitor.sh
+--- untouched files
+4515b83c870d013b7108ef9410ef4da6e7a9c2b009c3384a72ef9aad6509ed1d  $AZ/results/ktg/paper_1902.10565/codes/loop/smoke_loop.sbatch
+b5acb1d8ad1a313f8bd439076d0e61598d18f6c7ff7647a6eab672edad3d65f5  $AZ/results/ktg/paper_1902.10565/codes/loop/synchronous_loop_9x9.sh
+5ae5358791974ae12dd2e635aa38b825637faf23e1963dae1d96f146fd266d62  $AZ/results/ktg/paper_1902.10565/codes/loop/knobs_9x9.env
+--- grep is: /usr/bin/grep in a non-interactive login shell ('#!/bin/bash -l'); grep (GNU grep) 3.6
+
+########## 2. the real cluster (read-only)
+--- sinfo geometry
+PARTITION AVAIL TIMELIMIT NODES CPUS MEMORY GRES STATE NODELIST
+b200 up 3-00:00:00 2 128 1547000 gpu:b200:8 mixed- gb[203,214]
+b200 up 3-00:00:00 4 128 1547000 gpu:b200:8 allocated gb[211-212,215-216]
+b200 up 3-00:00:00 3 128 1547000 gpu:b200:8 reserved gb[201,208,210]
+b200 up 3-00:00:00 7 128 1547000 gpu:b200:8 mixed gb[202,204-207,209,213]
+b300 up 3-00:00:00 1 128 1547000 gpu:b300:8 reserved gb301
+l40s up 3-00:00:00 4 128 773600 gpu:l40s:8 mixed- gl[105-106,111-112]
+l40s up 3-00:00:00 1 128 773600 gpu:l40s:8 draining gl110
+l40s up 3-00:00:00 1 128 773600 gpu:l40s:8 allocated gl107
+--- per-node State / AllocTRES (what pick_partition and check.sh parse), and the free count both derive
+  gb201  b200   IDLE+RESERVED        AllocTRES=                                         alloc_gpu=0 free=0
+  gb202  b200   MIXED                AllocTRES=cpu=64,mem=512G,gres/gpu=8               alloc_gpu=8 free=0
+  gb203  b200   MIXED+PLANNED        AllocTRES=cpu=113,mem=1352288M,gres/gpu=8          alloc_gpu=8 free=0
+  gb204  b200   MIXED                AllocTRES=cpu=64,mem=512G,gres/gpu=8               alloc_gpu=8 free=0
+  gb205  b200   MIXED                AllocTRES=cpu=64,mem=512G,gres/gpu=8               alloc_gpu=8 free=0
+  gb206  b200   MIXED                AllocTRES=cpu=30,mem=360000M,gres/gpu=2            alloc_gpu=2 free=6
+  gb207  b200   MIXED                AllocTRES=cpu=16,mem=96G,gres/gpu=1                alloc_gpu=1 free=7
+  gb208  b200   IDLE+RESERVED        AllocTRES=                                         alloc_gpu=0 free=0
+  gb209  b200   MIXED                AllocTRES=cpu=64,mem=512G,gres/gpu=8               alloc_gpu=8 free=0
+  gb210  b200   IDLE+RESERVED        AllocTRES=                                         alloc_gpu=0 free=0
+  gb211  b200   ALLOCATED+RESERVED   AllocTRES=cpu=124,mem=1400G,gres/gpu=8             alloc_gpu=8 free=0
+  gb212  b200   ALLOCATED+RESERVED   AllocTRES=cpu=124,mem=1400G,gres/gpu=8             alloc_gpu=8 free=0
+  gb213  b200   MIXED                AllocTRES=cpu=64,mem=512G,gres/gpu=8               alloc_gpu=8 free=0
+  gb214  b200   MIXED+PLANNED        AllocTRES=cpu=102,mem=1T,gres/gpu=7                alloc_gpu=7 free=1
+  gb215  b200   ALLOCATED+RESERVED   AllocTRES=cpu=124,mem=1400G,gres/gpu=8             alloc_gpu=8 free=0
+  gb216  b200   ALLOCATED+RESERVED   AllocTRES=cpu=124,mem=1400G,gres/gpu=8             alloc_gpu=8 free=0
+  gb301  b300   IDLE+RESERVED        AllocTRES=                                         alloc_gpu=0 free=0
+  gl105  l40s   MIXED+PLANNED        AllocTRES=cpu=121,mem=670G,gres/gpu=6              alloc_gpu=6 free=2
+  gl106  l40s   MIXED+PLANNED        AllocTRES=cpu=119,mem=711104M,gres/gpu=8           alloc_gpu=8 free=0
+  gl107  l40s   ALLOCATED            AllocTRES=cpu=124,mem=699.50G,gres/gpu=8           alloc_gpu=8 free=0
+  gl110  l40s   MIXED+DRAIN          AllocTRES=cpu=60,mem=350816M,gres/gpu=4            alloc_gpu=4 free=0
+  gl111  l40s   MIXED+PLANNED        AllocTRES=cpu=122,mem=688.50G,gres/gpu=6           alloc_gpu=6 free=2
+  gl112  l40s   MIXED+PLANNED        AllocTRES=cpu=123,mem=704G,gres/gpu=8              alloc_gpu=8 free=0
+--- the live AFTER pick_partition() (extracted from loop.sbatch) vs the policy script's own counting, same minute
+extracted 17 lines; KTG_PARTITIONS='b300 b200'
+live free[b300]=0
+live free[b200]=14
+live free[l40s]=4
+live free[b200,l40s]=18
+  KTG_PARTITIONS='unset'                -> b200
+  KTG_PARTITIONS='b300 b200,l40s'       -> b200,l40s
+  KTG_PARTITIONS='b200,l40s'            -> b200,l40s
+  KTG_PARTITIONS='b300'                 -> b300
+  KTG_PARTITIONS='zzz'                  -> zzz
+  KTG_PARTITIONS='b300 zzz'             -> zzz
+  KTG_PARTITIONS=',b200'                -> ,b200
+  KTG_PARTITIONS='b200,'                -> b200,
+  KTG_PARTITIONS='b200,,l40s'           -> b200,,l40s
+  KTG_PARTITIONS='b2*'                  -> b2*
+  KTG_PARTITIONS=''                     -> b200
+  KTG_PARTITIONS=' '                    -> b200
+  KTG_PARTITIONS='b300 b200'            -> b200
+my jobs      : gpus=2 cpus=48  (2 jobs)
+partition b200 : free_gpus=14/128 (excludes reserved/drained nodes)
+partition b300 : free_gpus=0/8 (excludes reserved/drained nodes)
+partition l40s : free_gpus=4/48 (excludes reserved/drained nodes)
+OK           : request gpus=1 cpus=32 part=b200,l40s within policy (gpu<=4, no cpu cap)
+--- real sinfo on malformed candidates: 'rc' is sinfo's exit, 'lines' the node count it printed
+  sinfo -p 'zzz'          rc=0 lines=0
+  sinfo -p 'b2*'          rc=0 lines=0
+  sinfo -p ''             rc=0 lines=0
+  sinfo -p ',b200'        rc=0 lines=16
+  sinfo -p 'b200,'        rc=0 lines=16
+  sinfo -p 'b200,,l40s'   rc=0 lines=22
+  sinfo -p 'b300 b200'    rc=0 lines=0
+--- reservations touching the allowed partitions' nodes
+  ReservationName=ssci-adamgleave-aug2026 StartTime=2026-08-21T12:00:00 EndTime=2026-09-10T00:00:00 Nodes=gb[211-212,215-216]
+  ReservationName=ssci-yejinc-b200-sep2026 StartTime=2026-09-03T03:00:00 EndTime=2026-09-08T15:00:00 Nodes=gb208
+  ReservationName=ssci-aganeshram-sep2026 StartTime=2026-09-03T12:00:00 EndTime=2026-09-11T21:00:00 Nodes=gb[201,210]
+  ReservationName=test_l40s StartTime=2026-09-03T10:33:59 EndTime=2026-09-10T10:33:59 Nodes=gl[108-109]
+  ReservationName=ssci-emanuele-sep2026 StartTime=2026-09-04T22:00:00 EndTime=2026-09-06T12:00:00 Nodes=gb206
+  ReservationName=ssci-adamgleave-sep2026 StartTime=2026-09-04T15:00:01 EndTime=2026-09-07T00:00:00 Nodes=gb301
+  ReservationName=ssci-sep5 StartTime=2026-09-04T23:00:00 EndTime=2026-09-05T23:00:00 Nodes=gb207
+
+########## 3. Slurm precedence: environment vs command line (the wrapper passes --partition on the argv)
+--- man sbatch (slurm slurm 25.11.2), ENVIRONMENT VARIABLES section:
+         the environment variable will result  in  the  option  not  being  set.
+         There are a couple exceptions to these rules that are noted below.
+         NOTE:  Environment  variables  will override any options set in a batch
+         script, and command line options will override  any  environment  vari‐
+         ables.
+  
+         SBATCH_PARTITION      Same as -p, --partition
+--- sbatch --test-only (validates and estimates; queues NOTHING): SBATCH_PARTITION=zzz in the environment, --partition=b200 on the argv
+  sbatch: Job 301131 to start at 2027-08-08T05:41:31 a using 15 processors on nodes gb214 in partition b200
+--- the same with NO --partition on the argv (proves the environment variable IS read when nothing overrides it)
+  sbatch: error: invalid partition specified: zzz
+  allocation failure: Invalid partition name specified
+--- queue after (unchanged: 2 jobs)
+
+########## 4. pick_partition() in isolation under the validator's own shims (my_pick.sh; sources in section 10)
+== sources
+0a03fbb230cc288f698da846d1f2619c97bc4963ead833e36b1c2c651358f389  $W/before.sbatch
+8e394116f7efdab6053ff1a058cc04c819bcc01e20f5107fceaff84f8ed51a81  $W/after.sbatch
+extracted: before 13 lines sha 6d8a339cc6e63290; after 17 lines sha 2bc932c5237cf171
+after block, non-comment lines:
+    | KTG_PARTITIONS="${KTG_PARTITIONS:-b300 b200}"
+    | pick_partition() {
+    |     local p free last=""
+    |     for p in $KTG_PARTITIONS; do
+    |         last="$p"
+    |         free=$(sinfo -p "$p" -N -h -o "%N" 2>/dev/null | sort -u | while read -r n; do
+    |             info=$(scontrol show node "$n" 2>/dev/null)
+    |             st=$(grep -oP 'State=\K\S+' <<<"$info")
+    |             a=$(grep -oP 'AllocTRES=.*?gres/gpu=\K\d+' <<<"$info"); a=${a:-0}
+    |             case "$st" in *RESERVED*|*DRAIN*|*DOWN*|*MAINT*) echo 0 ;; *) echo $((8-a)) ;; esac
+    |         done | awk '{s+=$1} END{print s+0}')
+    |         if [ "${free:-0}" -ge "$REQ_GPUS" ]; then echo "$p"; return 0; fi
+    |     done
+    |     echo "${last:-b200}"
+    | }
+
+########## M1: knob UNSET, b300 state x alloc matrix, b200 MIXED 4, l40s IDLE 0 -- before must equal after
+    b300 State=IDLE                alloc=0 -> before=b300  after=b300  SAME
+    b300 State=IDLE                alloc=1 -> before=b300  after=b300  SAME
+    b300 State=IDLE                alloc=7 -> before=b300  after=b300  SAME
+    b300 State=IDLE                alloc=8 -> before=b200  after=b200  SAME
+    b300 State=MIXED               alloc=0 -> before=b300  after=b300  SAME
+    b300 State=MIXED               alloc=1 -> before=b300  after=b300  SAME
+    b300 State=MIXED               alloc=7 -> before=b300  after=b300  SAME
+    b300 State=MIXED               alloc=8 -> before=b200  after=b200  SAME
+    b300 State=ALLOCATED           alloc=0 -> before=b300  after=b300  SAME
+    b300 State=ALLOCATED           alloc=1 -> before=b300  after=b300  SAME
+    b300 State=ALLOCATED           alloc=7 -> before=b300  after=b300  SAME
+    b300 State=ALLOCATED           alloc=8 -> before=b200  after=b200  SAME
+    b300 State=RESERVED            alloc=0 -> before=b200  after=b200  SAME
+    b300 State=RESERVED            alloc=1 -> before=b200  after=b200  SAME
+    b300 State=RESERVED            alloc=7 -> before=b200  after=b200  SAME
+    b300 State=RESERVED            alloc=8 -> before=b200  after=b200  SAME
+    b300 State=DRAIN               alloc=0 -> before=b200  after=b200  SAME
+    b300 State=DRAIN               alloc=1 -> before=b200  after=b200  SAME
+    b300 State=DRAIN               alloc=7 -> before=b200  after=b200  SAME
+    b300 State=DRAIN               alloc=8 -> before=b200  after=b200  SAME
+    b300 State=DRAINED             alloc=0 -> before=b200  after=b200  SAME
+    b300 State=DRAINED             alloc=1 -> before=b200  after=b200  SAME
+    b300 State=DRAINED             alloc=7 -> before=b200  after=b200  SAME
+    b300 State=DRAINED             alloc=8 -> before=b200  after=b200  SAME
+    b300 State=DOWN                alloc=0 -> before=b200  after=b200  SAME
+    b300 State=DOWN                alloc=1 -> before=b200  after=b200  SAME
+    b300 State=DOWN                alloc=7 -> before=b200  after=b200  SAME
+    b300 State=DOWN                alloc=8 -> before=b200  after=b200  SAME
+    b300 State=MAINT               alloc=0 -> before=b200  after=b200  SAME
+    b300 State=MAINT               alloc=1 -> before=b200  after=b200  SAME
+    b300 State=MAINT               alloc=7 -> before=b200  after=b200  SAME
+    b300 State=MAINT               alloc=8 -> before=b200  after=b200  SAME
+    b300 State=IDLE+RESERVED       alloc=0 -> before=b200  after=b200  SAME
+    b300 State=IDLE+RESERVED       alloc=1 -> before=b200  after=b200  SAME
+    b300 State=IDLE+RESERVED       alloc=7 -> before=b200  after=b200  SAME
+    b300 State=IDLE+RESERVED       alloc=8 -> before=b200  after=b200  SAME
+    b300 State=ALLOCATED+RESERVED  alloc=0 -> before=b200  after=b200  SAME
+    b300 State=ALLOCATED+RESERVED  alloc=1 -> before=b200  after=b200  SAME
+    b300 State=ALLOCATED+RESERVED  alloc=7 -> before=b200  after=b200  SAME
+    b300 State=ALLOCATED+RESERVED  alloc=8 -> before=b200  after=b200  SAME
+    b300 State=MIXED+DRAIN         alloc=0 -> before=b200  after=b200  SAME
+    b300 State=MIXED+DRAIN         alloc=1 -> before=b200  after=b200  SAME
+    b300 State=MIXED+DRAIN         alloc=7 -> before=b200  after=b200  SAME
+    b300 State=MIXED+DRAIN         alloc=8 -> before=b200  after=b200  SAME
+    b300 State=MIXED+PLANNED       alloc=0 -> before=b300  after=b300  SAME
+    b300 State=MIXED+PLANNED       alloc=1 -> before=b300  after=b300  SAME
+    b300 State=MIXED+PLANNED       alloc=7 -> before=b300  after=b300  SAME
+    b300 State=MIXED+PLANNED       alloc=8 -> before=b200  after=b200  SAME
+    b300 State=IDLE+PLANNED        alloc=0 -> before=b300  after=b300  SAME
+    b300 State=IDLE+PLANNED        alloc=1 -> before=b300  after=b300  SAME
+    b300 State=IDLE+PLANNED        alloc=7 -> before=b300  after=b300  SAME
+    b300 State=IDLE+PLANNED        alloc=8 -> before=b200  after=b200  SAME
+    b300 State=COMPLETING          alloc=0 -> before=b300  after=b300  SAME
+    b300 State=COMPLETING          alloc=1 -> before=b300  after=b300  SAME
+    b300 State=COMPLETING          alloc=7 -> before=b300  after=b300  SAME
+    b300 State=COMPLETING          alloc=8 -> before=b200  after=b200  SAME
+    M1 cells: 56  same=56  different=0
+
+########## M1b: knob UNSET, b300 RESERVED, b200 state x alloc matrix -- before must equal after (the fallback byte)
+    b200 State=IDLE                alloc=0 -> before=b200  after=b200  SAME
+    b200 State=IDLE                alloc=8 -> before=b200  after=b200  SAME
+    b200 State=MIXED               alloc=0 -> before=b200  after=b200  SAME
+    b200 State=MIXED               alloc=8 -> before=b200  after=b200  SAME
+    b200 State=ALLOCATED           alloc=0 -> before=b200  after=b200  SAME
+    b200 State=ALLOCATED           alloc=8 -> before=b200  after=b200  SAME
+    b200 State=IDLE+RESERVED       alloc=0 -> before=b200  after=b200  SAME
+    b200 State=IDLE+RESERVED       alloc=8 -> before=b200  after=b200  SAME
+    b200 State=ALLOCATED+RESERVED  alloc=0 -> before=b200  after=b200  SAME
+    b200 State=ALLOCATED+RESERVED  alloc=8 -> before=b200  after=b200  SAME
+    b200 State=MIXED+DRAIN         alloc=0 -> before=b200  after=b200  SAME
+    b200 State=MIXED+DRAIN         alloc=8 -> before=b200  after=b200  SAME
+    b200 State=DOWN                alloc=0 -> before=b200  after=b200  SAME
+    b200 State=DOWN                alloc=8 -> before=b200  after=b200  SAME
+
+########## M2: knob 'b300 b200,l40s' -- the decided behaviour, before vs after
+  --- b300 has ONE free GPU (MIXED 7/8)
+    fixture (node partitions State alloc_gpus; 8 GPUs per node):
+      gb301 b300 MIXED 7
+      gb202 b200 MIXED 4
+      gl105 l40s IDLE 0
+    [before] KTG_PARTITIONS=b300\ b200\,l40s           -> b300
+    [after ] KTG_PARTITIONS=b300\ b200\,l40s           -> b300
+      expected after: b300  OK
+  --- b300 IDLE+RESERVED (the real state now), b200 room
+    fixture (node partitions State alloc_gpus; 8 GPUs per node):
+      gb301 b300 IDLE+RESERVED 0
+      gb202 b200 MIXED 4
+      gl105 l40s IDLE 0
+    [before] KTG_PARTITIONS=b300\ b200\,l40s           -> b200
+    [after ] KTG_PARTITIONS=b300\ b200\,l40s           -> b200,l40s
+      expected after: b200,l40s  OK
+  --- b300 reserved, b200 full, l40s 2 free
+    fixture (node partitions State alloc_gpus; 8 GPUs per node):
+      gb301 b300 IDLE+RESERVED 0
+      gb202 b200 ALLOCATED 8
+      gl105 l40s MIXED+PLANNED 6
+    [before] KTG_PARTITIONS=b300\ b200\,l40s           -> b200
+    [after ] KTG_PARTITIONS=b300\ b200\,l40s           -> b200,l40s
+      expected after: b200,l40s  OK
+  --- b300 reserved, b200 idle-but-RESERVED, l40s idle-but-DRAIN: set sums to 0 -> LAST candidate
+    fixture (node partitions State alloc_gpus; 8 GPUs per node):
+      gb301 b300 IDLE+RESERVED 0
+      gb202 b200 IDLE+RESERVED 0
+      gl105 l40s MIXED+DRAIN 0
+    [before] KTG_PARTITIONS=b300\ b200\,l40s           -> b200
+    [after ] KTG_PARTITIONS=b300\ b200\,l40s           -> b200,l40s
+      expected after: b200,l40s  OK
+  --- nothing free anywhere
+    fixture (node partitions State alloc_gpus; 8 GPUs per node):
+      gb301 b300 MIXED+DRAIN 0
+      gb202 b200 ALLOCATED 8
+      gl105 l40s ALLOCATED 8
+    [before] KTG_PARTITIONS=b300\ b200\,l40s           -> b200
+    [after ] KTG_PARTITIONS=b300\ b200\,l40s           -> b200,l40s
+      expected after: b200,l40s  OK
+  --- b300 IDLE but 8/8 allocated; b200 reserved; l40s free
+    fixture (node partitions State alloc_gpus; 8 GPUs per node):
+      gb301 b300 IDLE 8
+      gb202 b200 ALLOCATED+RESERVED 8
+      gl105 l40s IDLE 0
+    [before] KTG_PARTITIONS=b300\ b200\,l40s           -> b200
+    [after ] KTG_PARTITIONS=b300\ b200\,l40s           -> b200,l40s
+      expected after: b200,l40s  OK
+  --- b300 free, everything else full -> preference
+    fixture (node partitions State alloc_gpus; 8 GPUs per node):
+      gb301 b300 IDLE 0
+      gb202 b200 ALLOCATED 8
+      gl105 l40s ALLOCATED 8
+    [before] KTG_PARTITIONS=b300\ b200\,l40s           -> b300
+    [after ] KTG_PARTITIONS=b300\ b200\,l40s           -> b300
+      expected after: b300  OK
+
+########## M3: the free-GPU SUM of a comma set, member by member (fixture with two b200 nodes and two l40s nodes)
+    fixture (node partitions State alloc_gpus; 8 GPUs per node):
+      gb201 b200 IDLE+RESERVED 0
+      gb202 b200 MIXED 6
+      gl105 l40s MIXED+PLANNED 6
+      gl110 l40s MIXED+DRAIN 4
+      gb301 b300 IDLE+RESERVED 0
+    sinfo -p 'b300'       nodes=[gb301]  free=0
+    sinfo -p 'b200'       nodes=[gb201 gb202]  free=2
+    sinfo -p 'l40s'       nodes=[gl105 gl110]  free=2
+    sinfo -p 'b200,l40s'  nodes=[gb201 gb202 gl105 gl110]  free=4
+    sinfo -p ',b200'      nodes=[gb201 gb202]  free=2
+    sinfo -p 'b200,'      nodes=[gb201 gb202]  free=2
+    sinfo -p 'b200,,l40s' nodes=[gb201 gb202 gl105 gl110]  free=4
+    sinfo -p 'zzz'        nodes=[]  free=0
+    sinfo -p 'b2*'        nodes=[]  free=0
+    expected: b200=2 (gb201 reserved counts 0, gb202 8-6), l40s=2 (gl110 drain counts 0), b200,l40s=4 = 2+2
+
+########## M4: knob spellings and MALFORMED candidates (AFTER; fixture: b300 reserved, b200 MIXED 4, l40s IDLE 0)
+    [after ] KTG_PARTITIONS=b300\ b200                 -> b200
+    [after ] KTG_PARTITIONS=b300\ b200\,l40s           -> b200,l40s
+    [after ] KTG_PARTITIONS=b200\,l40s                 -> b200,l40s
+    [after ] KTG_PARTITIONS=l40s                       -> l40s
+    [after ] KTG_PARTITIONS=b300\,b200\,l40s           -> b300,b200,l40s
+    [after ] KTG_PARTITIONS=b300\ \ \ b200\,l40s       -> b200,l40s
+    [after ] KTG_PARTITIONS=$'b300\tb200,l40s'         -> b200,l40s
+    [after ] KTG_PARTITIONS=\ \ b300\ b200\,l40s\ \    -> b200,l40s
+    [after ] KTG_PARTITIONS=$'b300\nb200,l40s'         -> b200,l40s
+    [after ] KTG_PARTITIONS=''                         -> b200
+    [after ] KTG_PARTITIONS=\                          -> b200
+    [after ] KTG_PARTITIONS=zzz                        -> zzz
+    [after ] KTG_PARTITIONS=b300\ zzz                  -> zzz
+    [after ] KTG_PARTITIONS=\,b200                     -> ,b200
+    [after ] KTG_PARTITIONS=b200\,                     -> b200,
+    [after ] KTG_PARTITIONS=b200\,\,l40s               -> b200,,l40s
+    [after ] KTG_PARTITIONS=b300\ \,b200\,l40s         -> ,b200,l40s
+    [after ] KTG_PARTITIONS=b2\*                       -> b2*
+    [after ] KTG_PARTITIONS=b3\*                       -> b3*
+    [after ] KTG_PARTITIONS=\*                         -> *
+  --- the same globs with the job's cwd holding files named b200 b2zz b3xx l40s.txt (pathname expansion is live: $KTG_PARTITIONS is unquoted)
+    [after ] KTG_PARTITIONS=b2\*                       -> b200
+    [after ] KTG_PARTITIONS=b3\*                       -> b3xx
+    [after ] KTG_PARTITIONS=b3\*\ b200\,l40s           -> b200,l40s
+    [after ] KTG_PARTITIONS=\*                         -> b200
+    [after ] KTG_PARTITIONS=l40s.\*                    -> l40s.txt
+  --- and with 'set -f' in force in the caller (what a hardening would do)
+    [after+set-f] KTG_PARTITIONS=b2\*                       -> b2*
+    [after+set-f] KTG_PARTITIONS=b3\*                       -> b3*
+    [after+set-f] KTG_PARTITIONS=\*                         -> *
+
+########## M5: what the REAL policy script (mission.json compute.policyCheck) says about every string M4 can hand to sbatch (live cluster, PATH restored)
+    --partition 'b300'           exit=0  OK: request gpus=1 cpus=32 part=b300 within policy (gpu<=4, no cpu cap)
+    --partition 'b200'           exit=0  OK: request gpus=1 cpus=32 part=b200 within policy (gpu<=4, no cpu cap)
+    --partition 'l40s'           exit=0  OK: request gpus=1 cpus=32 part=l40s within policy (gpu<=4, no cpu cap)
+    --partition 'b200,l40s'      exit=0  OK: request gpus=1 cpus=32 part=b200,l40s within policy (gpu<=4, no cpu cap)
+    --partition 'b300,b200,l40s' exit=0  OK: request gpus=1 cpus=32 part=b300,b200,l40s within policy (gpu<=4, no cpu cap)
+    --partition 'zzz'            exit=0  VIOLATION: partition 'zzz' — policy allows b200/b300/l40s only (human decision 2026-09-04)
+    --partition ',b200'          exit=0  VIOLATION: partition ',b200' — policy allows b200/b300/l40s only (human decision 2026-09-0
+    --partition 'b200,'          exit=0  VIOLATION: partition 'b200,' — policy allows b200/b300/l40s only (human decision 2026-09-0
+    --partition 'b200,,l40s'     exit=0  VIOLATION: partition 'b200,,l40s' — policy allows b200/b300/l40s only (human decision 2026
+    --partition 'b2*'            exit=0  VIOLATION: partition 'b2*' — policy allows b200/b300/l40s only (human decision 2026-09-04)
+    --partition 'b2zz'           exit=0  VIOLATION: partition 'b2zz' — policy allows b200/b300/l40s only (human decision 2026-09-04
+    --partition 'b3xx'           exit=0  VIOLATION: partition 'b3xx' — policy allows b200/b300/l40s only (human decision 2026-09-04
+    --partition 'b200'           exit=0  OK: request gpus=1 cpus=32 part=b200 within policy (gpu<=4, no cpu cap)
+    --partition 'l40s.txt'       exit=0  VIOLATION: partition 'l40s.txt' — policy allows b200/b300/l40s only (human decision 2026-0
+    --partition 'w3v_common.sh'  exit=0  VIOLATION: partition 'w3v_common.sh' — policy allows b200/b300/l40s only (human decision 2
+done 2026-09-04T17:31:24-04:00
+
+########## 5. the whole wrapper BEFORE/AFTER under w3v_common.sh + the validator's own sinfo/scontrol/sbatch shims (my_links.sh)
+########## environment
+host: login03  date: 2026-09-04T17:31:25-04:00  az HEAD: 93d6e07  loop.sbatch sha256: 8e394116f7efdab6...  loop sha256: b5acb1d8ad1a313f...  stage_monitor sha256: c28ce54477c9d784...  shims: nvidia-smi sacct sbatch scancel scontrol sinfo squeue 
+knobs_9x9.env copy: 5ae5358791974ae1... (real 5ae5358791974ae1...)  SLURM_CPUS_PER_TASK exported as 32 for every link unless a scenario says otherwise
+writer block (lines 421-428 of synchronous_loop_9x9.sh, BASEDIR substituted):
+    | CYCLES_DONE=$(cat $SIM/ktg/loop/.cycles_completed 2>/dev/null || echo 0)
+    | CYCLES_DONE="${CYCLES_DONE#"${CYCLES_DONE%%[![:space:]]*}"}"
+    | CYCLES_DONE="${CYCLES_DONE%"${CYCLES_DONE##*[![:space:]]}"}"
+    | case "$CYCLES_DONE" in ''|*[!0-9]*) CYCLES_DONE=0 ;; esac
+    | [ "${#CYCLES_DONE}" -le 18 ] || CYCLES_DONE=0
+    | CYCLES_DONE=$(( 10#$CYCLES_DONE + 1 ))
+    | echo "$CYCLES_DONE" > $SIM/ktg/loop/.cycles_completed
+    | echo "cycle $CYCLE_INDEX complete -- $CYCLES_DONE cycle(s) recorded in $BASEDIR/.cycles_completed"
+
+before sha 0a03fbb230cc288f  after sha 8e394116f7efdab6
+
+########## VL1: knob unset, b300 IDLE+RESERVED (real state), b200 MIXED 4, l40s IDLE 0 -- old behaviour
+    fixture (node partitions State alloc_gpus; 8 GPUs per node):
+      gb301 b300 IDLE+RESERVED 0
+      gb202 b200 MIXED 4
+      gl105 l40s IDLE 0
+  [before] unset  exit=0  announced:part=b200  check.sh:[OK: request gpus=1 cpus=32 part=b200]  sbatch-argv:--partition=b200
+      === successor queued: 800001 (partition b200, dependency afterany:7001) ===
+      shim: SBATCH[800001] argv: --parsable --partition=b200 --dependency=afterany:7001 $S/rt_links/before.sbatch
+      shim: SBATCH[800001] env : KTG_PARTITIONS='<unset>' SBATCH_PARTITION='<unset>' SBATCH_TIMELIMIT='<unset>' SBATCH_EXPORT='<unset>' KTG_MAX_CHAIN='<unset>'
+      .failcount=0$|  .chain_depth=1$|  .cycles_completed=<absent>  breaker_tripped=no
+  [after] unset  exit=0  announced:part=b200  check.sh:[OK: request gpus=1 cpus=32 part=b200]  sbatch-argv:--partition=b200
+      === successor queued: 800001 (partition b200, dependency afterany:7002) ===
+      shim: SBATCH[800001] argv: --parsable --partition=b200 --dependency=afterany:7002 $AZ/results/ktg/paper_1902.10565/codes/loop/loop.sbatch
+      shim: SBATCH[800001] env : KTG_PARTITIONS='<unset>' SBATCH_PARTITION='<unset>' SBATCH_TIMELIMIT='<unset>' SBATCH_EXPORT='<unset>' KTG_MAX_CHAIN='<unset>'
+      .failcount=0$|  .chain_depth=1$|  .cycles_completed=<absent>  breaker_tripped=no
+
+########## VL2: KTG_PARTITIONS='b300 b200,l40s', same fixture -- the defect (before) and the fix (after)
+  [before] knob  exit=0  announced:part=b200  check.sh:[OK: request gpus=1 cpus=32 part=b200]  sbatch-argv:--partition=b200
+      === successor queued: 800001 (partition b200, dependency afterany:7011) ===
+      shim: SBATCH[800001] argv: --parsable --partition=b200 --dependency=afterany:7011 $S/rt_links/before.sbatch
+      shim: SBATCH[800001] env : KTG_PARTITIONS='b300 b200,l40s' SBATCH_PARTITION='<unset>' SBATCH_TIMELIMIT='<unset>' SBATCH_EXPORT='<unset>' KTG_MAX_CHAIN='<unset>'
+      .failcount=0$|  .chain_depth=1$|  .cycles_completed=<absent>  breaker_tripped=no
+  [after] knob  exit=0  announced:part=b200,l40s  check.sh:[OK: request gpus=1 cpus=32 part=b200,l40s]  sbatch-argv:--partition=b200,l40s
+      === successor queued: 800001 (partition b200,l40s, dependency afterany:7012) ===
+      shim: SBATCH[800001] argv: --parsable --partition=b200,l40s --dependency=afterany:7012 $AZ/results/ktg/paper_1902.10565/codes/loop/loop.sbatch
+      shim: SBATCH[800001] env : KTG_PARTITIONS='b300 b200,l40s' SBATCH_PARTITION='<unset>' SBATCH_TIMELIMIT='<unset>' SBATCH_EXPORT='<unset>' KTG_MAX_CHAIN='<unset>'
+      .failcount=0$|  .chain_depth=1$|  .cycles_completed=<absent>  breaker_tripped=no
+
+########## VL3: knob, b300 MIXED 7 (one free GPU) -- preference
+    fixture (node partitions State alloc_gpus; 8 GPUs per node):
+      gb301 b300 MIXED 7
+      gb202 b200 MIXED 4
+      gl105 l40s IDLE 0
+  [before] knob  exit=0  announced:part=b300  check.sh:[OK: request gpus=1 cpus=32 part=b300]  sbatch-argv:--partition=b300
+      === successor queued: 800001 (partition b300, dependency afterany:7021) ===
+      shim: SBATCH[800001] argv: --parsable --partition=b300 --dependency=afterany:7021 $S/rt_links/before.sbatch
+      shim: SBATCH[800001] env : KTG_PARTITIONS='b300 b200,l40s' SBATCH_PARTITION='<unset>' SBATCH_TIMELIMIT='<unset>' SBATCH_EXPORT='<unset>' KTG_MAX_CHAIN='<unset>'
+      .failcount=0$|  .chain_depth=1$|  .cycles_completed=<absent>  breaker_tripped=no
+  [after] knob  exit=0  announced:part=b300  check.sh:[OK: request gpus=1 cpus=32 part=b300]  sbatch-argv:--partition=b300
+      === successor queued: 800001 (partition b300, dependency afterany:7022) ===
+      shim: SBATCH[800001] argv: --parsable --partition=b300 --dependency=afterany:7022 $AZ/results/ktg/paper_1902.10565/codes/loop/loop.sbatch
+      shim: SBATCH[800001] env : KTG_PARTITIONS='b300 b200,l40s' SBATCH_PARTITION='<unset>' SBATCH_TIMELIMIT='<unset>' SBATCH_EXPORT='<unset>' KTG_MAX_CHAIN='<unset>'
+      .failcount=0$|  .chain_depth=1$|  .cycles_completed=<absent>  breaker_tripped=no
+
+########## VL4: knob, nothing free (b300 DRAIN, b200 ALLOCATED 8, l40s ALLOCATED+RESERVED 8) -- last candidate
+    fixture (node partitions State alloc_gpus; 8 GPUs per node):
+      gb301 b300 MIXED+DRAIN 0
+      gb202 b200 ALLOCATED 8
+      gl105 l40s ALLOCATED+RESERVED 8
+  [before] knob  exit=0  announced:part=b200  check.sh:[OK: request gpus=1 cpus=32 part=b200]  sbatch-argv:--partition=b200
+      === successor queued: 800001 (partition b200, dependency afterany:7031) ===
+      shim: SBATCH[800001] argv: --parsable --partition=b200 --dependency=afterany:7031 $S/rt_links/before.sbatch
+      shim: SBATCH[800001] env : KTG_PARTITIONS='b300 b200,l40s' SBATCH_PARTITION='<unset>' SBATCH_TIMELIMIT='<unset>' SBATCH_EXPORT='<unset>' KTG_MAX_CHAIN='<unset>'
+      .failcount=0$|  .chain_depth=1$|  .cycles_completed=<absent>  breaker_tripped=no
+  [after] knob  exit=0  announced:part=b200,l40s  check.sh:[OK: request gpus=1 cpus=32 part=b200,l40s]  sbatch-argv:--partition=b200,l40s
+      === successor queued: 800001 (partition b200,l40s, dependency afterany:7032) ===
+      shim: SBATCH[800001] argv: --parsable --partition=b200,l40s --dependency=afterany:7032 $AZ/results/ktg/paper_1902.10565/codes/loop/loop.sbatch
+      shim: SBATCH[800001] env : KTG_PARTITIONS='b300 b200,l40s' SBATCH_PARTITION='<unset>' SBATCH_TIMELIMIT='<unset>' SBATCH_EXPORT='<unset>' KTG_MAX_CHAIN='<unset>'
+      .failcount=0$|  .chain_depth=1$|  .cycles_completed=<absent>  breaker_tripped=no
+
+########## VL5: propagation over three links -- link N+1 is run with exactly the environment link N's sbatch process carried
+    fixture (node partitions State alloc_gpus; 8 GPUs per node):
+      gb301 b300 IDLE+RESERVED 0
+      gb202 b200 ALLOCATED 8
+      gl105 l40s MIXED 6
+  [after] link 1  exit=0  announced:part=b200,l40s  check.sh:[OK: request gpus=1 cpus=32 part=b200,l40s]  sbatch-argv:--partition=b200,l40s
+      === successor queued: 800001 (partition b200,l40s, dependency afterany:7061) ===
+      shim: SBATCH[800001] argv: --parsable --partition=b200,l40s --dependency=afterany:7061 $AZ/results/ktg/paper_1902.10565/codes/loop/loop.sbatch
+      shim: SBATCH[800001] env : KTG_PARTITIONS='b300 b200,l40s' SBATCH_PARTITION='<unset>' SBATCH_TIMELIMIT='23:30:00' SBATCH_EXPORT='<unset>' KTG_MAX_CHAIN='9'
+      .failcount=0$|  .chain_depth=1$|  .cycles_completed=<absent>  breaker_tripped=no
+      -> link 2 inherits KTG_PARTITIONS='b300 b200,l40s' SBATCH_TIMELIMIT='23:30:00'
+  [after] link 2  exit=0  announced:part=b200,l40s  check.sh:[OK: request gpus=1 cpus=32 part=b200,l40s]  sbatch-argv:--partition=b200,l40s
+      === successor queued: 800001 (partition b200,l40s, dependency afterany:7062) ===
+      shim: SBATCH[800001] argv: --parsable --partition=b200,l40s --dependency=afterany:7062 $AZ/results/ktg/paper_1902.10565/codes/loop/loop.sbatch
+      shim: SBATCH[800001] env : KTG_PARTITIONS='b300 b200,l40s' SBATCH_PARTITION='<unset>' SBATCH_TIMELIMIT='23:30:00' SBATCH_EXPORT='<unset>' KTG_MAX_CHAIN='9'
+      .failcount=0$|  .chain_depth=1$|  .cycles_completed=<absent>  breaker_tripped=no
+      -> link 3 inherits KTG_PARTITIONS='b300 b200,l40s'
+  [after] link 3  exit=0  announced:part=b200,l40s  check.sh:[OK: request gpus=1 cpus=32 part=b200,l40s]  sbatch-argv:--partition=b200,l40s
+      === successor queued: 800001 (partition b200,l40s, dependency afterany:7063) ===
+      shim: SBATCH[800001] argv: --parsable --partition=b200,l40s --dependency=afterany:7063 $AZ/results/ktg/paper_1902.10565/codes/loop/loop.sbatch
+      shim: SBATCH[800001] env : KTG_PARTITIONS='b300 b200,l40s' SBATCH_PARTITION='<unset>' SBATCH_TIMELIMIT='23:30:00' SBATCH_EXPORT='<unset>' KTG_MAX_CHAIN='9'
+      .failcount=0$|  .chain_depth=1$|  .cycles_completed=<absent>  breaker_tripped=no
+      (b300 frees before link 3 resubmits:)
+  [after] link 3, b300 now free  exit=0  announced:part=b300  check.sh:[OK: request gpus=1 cpus=32 part=b300]  sbatch-argv:--partition=b300
+      === successor queued: 800001 (partition b300, dependency afterany:7064) ===
+      shim: SBATCH[800001] argv: --parsable --partition=b300 --dependency=afterany:7064 $AZ/results/ktg/paper_1902.10565/codes/loop/loop.sbatch
+      shim: SBATCH[800001] env : KTG_PARTITIONS='b300 b200,l40s' SBATCH_PARTITION='<unset>' SBATCH_TIMELIMIT='23:30:00' SBATCH_EXPORT='<unset>' KTG_MAX_CHAIN='9'
+      .failcount=0$|  .chain_depth=1$|  .cycles_completed=<absent>  breaker_tripped=no
+
+########## VL6: SBATCH_PARTITION in the job environment (exported) -- the wrapper's argv must be what sbatch sees on the command line
+  [after] SBATCH_PARTITION=b300 + knob  exit=0  announced:part=b200,l40s  check.sh:[OK: request gpus=1 cpus=32 part=b200,l40s]  sbatch-argv:--partition=b200,l40s
+      === successor queued: 800001 (partition b200,l40s, dependency afterany:7071) ===
+      shim: SBATCH[800001] argv: --parsable --partition=b200,l40s --dependency=afterany:7071 $AZ/results/ktg/paper_1902.10565/codes/loop/loop.sbatch
+      shim: SBATCH[800001] env : KTG_PARTITIONS='b300 b200,l40s' SBATCH_PARTITION='b300' SBATCH_TIMELIMIT='<unset>' SBATCH_EXPORT='<unset>' KTG_MAX_CHAIN='<unset>'
+      .failcount=0$|  .chain_depth=1$|  .cycles_completed=<absent>  breaker_tripped=no
+  [after] SBATCH_PARTITION=b200,l40s, knob unset  exit=0  announced:part=b200  check.sh:[OK: request gpus=1 cpus=32 part=b200]  sbatch-argv:--partition=b200
+      === successor queued: 800001 (partition b200, dependency afterany:7072) ===
+      shim: SBATCH[800001] argv: --parsable --partition=b200 --dependency=afterany:7072 $AZ/results/ktg/paper_1902.10565/codes/loop/loop.sbatch
+      shim: SBATCH[800001] env : KTG_PARTITIONS='<unset>' SBATCH_PARTITION='b200,l40s' SBATCH_TIMELIMIT='<unset>' SBATCH_EXPORT='<unset>' KTG_MAX_CHAIN='<unset>'
+      .failcount=0$|  .chain_depth=1$|  .cycles_completed=<absent>  breaker_tripped=no
+      (Slurm 25.11.2 man sbatch: 'command line options will override any environment variables'; --test-only shown in the record)
+
+########## VL7: malformed candidates reach the pre-flight as-is and are REFUSED -- no sbatch is issued
+  [after] knob=b300\ zzz  exit=0  announced:part=zzz  check.sh:[VIOLATION: partition 'zzz']  sbatch-argv:<NO SBATCH>
+      === compute-budget check failed (exit 1) -- refusing to chain ===
+      .failcount=0$|  .chain_depth=1$|  .cycles_completed=<absent>  breaker_tripped=no
+  [after] knob=\,b200  exit=0  announced:part=,b200  check.sh:[VIOLATION: partition ',b200']  sbatch-argv:<NO SBATCH>
+      === compute-budget check failed (exit 1) -- refusing to chain ===
+      .failcount=0$|  .chain_depth=1$|  .cycles_completed=<absent>  breaker_tripped=no
+  [after] knob=b200\,  exit=0  announced:part=b200,  check.sh:[VIOLATION: partition 'b200,']  sbatch-argv:<NO SBATCH>
+      === compute-budget check failed (exit 1) -- refusing to chain ===
+      .failcount=0$|  .chain_depth=1$|  .cycles_completed=<absent>  breaker_tripped=no
+  [after] knob=b200\,\,l40s  exit=0  announced:part=b200,,l40s  check.sh:[VIOLATION: partition 'b200,,l40s']  sbatch-argv:<NO SBATCH>
+      === compute-budget check failed (exit 1) -- refusing to chain ===
+      .failcount=0$|  .chain_depth=1$|  .cycles_completed=<absent>  breaker_tripped=no
+  [after] knob=zzz  exit=0  announced:part=zzz  check.sh:[VIOLATION: partition 'zzz']  sbatch-argv:<NO SBATCH>
+      === compute-budget check failed (exit 1) -- refusing to chain ===
+      .failcount=0$|  .chain_depth=1$|  .cycles_completed=<absent>  breaker_tripped=no
+
+########## VL8: globs against the job's cwd (files b200 and b3xx present) -- unquoted expansion
+  [after] knob='b3*'  exit=0  announced:part=b3xx  check.sh:[VIOLATION: partition 'b3xx']  sbatch-argv:<NO SBATCH>
+      === compute-budget check failed (exit 1) -- refusing to chain ===
+      .failcount=0$|  .chain_depth=1$|  .cycles_completed=<absent>  breaker_tripped=no
+  [after] knob='b3* b200,l40s'  exit=0  announced:part=b200,l40s  check.sh:[OK: request gpus=1 cpus=32 part=b200,l40s]  sbatch-argv:--partition=b200,l40s
+      === successor queued: 800001 (partition b200,l40s, dependency afterany:7092) ===
+      shim: SBATCH[800001] argv: --parsable --partition=b200,l40s --dependency=afterany:7092 $AZ/results/ktg/paper_1902.10565/codes/loop/loop.sbatch
+      shim: SBATCH[800001] env : KTG_PARTITIONS='b3* b200,l40s' SBATCH_PARTITION='<unset>' SBATCH_TIMELIMIT='<unset>' SBATCH_EXPORT='<unset>' KTG_MAX_CHAIN='<unset>'
+      .failcount=0$|  .chain_depth=1$|  .cycles_completed=<absent>  breaker_tripped=no
+  [after] knob='b2*'  exit=0  announced:part=b200  check.sh:[OK: request gpus=1 cpus=32 part=b200]  sbatch-argv:--partition=b200
+      === successor queued: 800001 (partition b200, dependency afterany:7093) ===
+      shim: SBATCH[800001] argv: --parsable --partition=b200 --dependency=afterany:7093 $AZ/results/ktg/paper_1902.10565/codes/loop/loop.sbatch
+      shim: SBATCH[800001] env : KTG_PARTITIONS='b2*' SBATCH_PARTITION='<unset>' SBATCH_TIMELIMIT='<unset>' SBATCH_EXPORT='<unset>' KTG_MAX_CHAIN='<unset>'
+      .failcount=0$|  .chain_depth=1$|  .cycles_completed=<absent>  breaker_tripped=no
+  [after] knob='*'  exit=0  announced:part=b200  check.sh:[OK: request gpus=1 cpus=32 part=b200]  sbatch-argv:--partition=b200
+      === successor queued: 800001 (partition b200, dependency afterany:7094) ===
+      shim: SBATCH[800001] argv: --parsable --partition=b200 --dependency=afterany:7094 $AZ/results/ktg/paper_1902.10565/codes/loop/loop.sbatch
+      shim: SBATCH[800001] env : KTG_PARTITIONS='*' SBATCH_PARTITION='<unset>' SBATCH_TIMELIMIT='<unset>' SBATCH_EXPORT='<unset>' KTG_MAX_CHAIN='<unset>'
+      .failcount=0$|  .chain_depth=1$|  .cycles_completed=<absent>  breaker_tripped=no
+
+########## VL9: knob set in the submitting shell but NOT exported -> default list
+  [after] not exported  --partition=b200  KTG_PARTITIONS='<unset>'
+
+########## VL10: empty and blank knob -> default list (b200 here, b300 reserved)
+  [after] knob=''  exit=0  announced:part=b200  check.sh:[OK: request gpus=1 cpus=32 part=b200]  sbatch-argv:--partition=b200
+      === successor queued: 800001 (partition b200, dependency afterany:7111) ===
+      shim: SBATCH[800001] argv: --parsable --partition=b200 --dependency=afterany:7111 $AZ/results/ktg/paper_1902.10565/codes/loop/loop.sbatch
+      shim: SBATCH[800001] env : KTG_PARTITIONS='b300 b200' SBATCH_PARTITION='<unset>' SBATCH_TIMELIMIT='<unset>' SBATCH_EXPORT='<unset>' KTG_MAX_CHAIN='<unset>'
+      .failcount=0$|  .chain_depth=1$|  .cycles_completed=<absent>  breaker_tripped=no
+  [after] knob=' '  exit=0  announced:part=b200  check.sh:[OK: request gpus=1 cpus=32 part=b200]  sbatch-argv:--partition=b200
+      === successor queued: 800001 (partition b200, dependency afterany:7112) ===
+      shim: SBATCH[800001] argv: --parsable --partition=b200 --dependency=afterany:7112 $AZ/results/ktg/paper_1902.10565/codes/loop/loop.sbatch
+      shim: SBATCH[800001] env : KTG_PARTITIONS=' ' SBATCH_PARTITION='<unset>' SBATCH_TIMELIMIT='<unset>' SBATCH_EXPORT='<unset>' KTG_MAX_CHAIN='<unset>'
+      .failcount=0$|  .chain_depth=1$|  .cycles_completed=<absent>  breaker_tripped=no
+
+########## cleanup
+done 2026-09-04T17:36:12-04:00
+
+########## 6. the wave-3 validator's regression set (v2_regress.sh) and seed matrix (v3_seeds.sh), run UNMODIFIED against 8e394116
+--- scripts extracted from evidence/wave3_prelaunch_repairs/validation_harness.txt by this validator; sha256 (equal to the worker's record):
+7d91e5ba189907841e2cf95cdae908b9e7dd15180cc51c05634dbddfe22c1592  $S/h/w3v_common.sh
+9d4648ab8f7c747c76509044dd2baebf776d645fe0be9ce24de0bc01800bd0a1  $S/h/v2_regress.sh
+02199febff5189862dc96f6dca49dd614758eb65b58f8eed79691a284c248a1e  $S/h/v3_seeds.sh
+--- environment lines of the two runs
+host: login03  date: 2026-09-04T17:27:06-04:00  az HEAD: 93d6e07  loop.sbatch sha256: 8e394116f7efdab6...  loop sha256: b5acb1d8ad1a313f...  stage_monitor sha256: c28ce54477c9d784...  shims: nvidia-smi sacct sbatch scancel scontrol sinfo squeue 
+host: login03  date: 2026-09-04T17:27:06-04:00  az HEAD: 93d6e07  loop.sbatch sha256: 8e394116f7efdab6...  loop sha256: b5acb1d8ad1a313f...  stage_monitor sha256: c28ce54477c9d784...  shims: nvidia-smi sacct sbatch scancel scontrol sinfo squeue 
+--- reference = validation_harness.txt lines 809-1439 (v2) and 1459-1878 (v3); this run's bodies cut at the same section markers
+line counts: ref_v2 631 new_v2 632 | ref_v3 420 new_v3 420
+--- RAW differing lines by shape (digits -> N), v2
+     22 > === loop exited rc=N after Ns ===
+     22 < === loop exited rc=N after Ns ===
+     10 > === fast failure: Ns < Ns -- counting it twice ===
+     10 < === fast failure: Ns < Ns -- counting it twice ===
+      8 > === scheduler termination at walltime after Ns (SIGTERM to this wrapper) -- successor continues, failcount left at N ===
+      8 < === scheduler termination at walltime after Ns (SIGTERM to this wrapper) -- successor continues, failcount left at N ===
+      5 > === PRE-FLIGHT FAILURE rc=N after Ns -- the loop never started ===
+      5 < === PRE-FLIGHT FAILURE rc=N after Ns -- the loop never started ===
+      3 > === scheduler termination at walltime after Ns (loop status N, this wrapper not signalled) -- successor continues, failcount left at N ===
+      3 > === circuit breaker tripped after N consecutive failures (last ran Ns) ===
+      3 < === scheduler termination at walltime after Ns (loop status N, this wrapper not signalled) -- successor continues, failcount left at N ===
+      3 < === circuit breaker tripped after N consecutive failures (last ran Ns) ===
+      2 > Terminated
+      1 > wNv_common.sh: line N: N Killed                  SLURM_JOB_ID="$jid" setsid bash "$script" > "$SIM/out.txt" N>&N
+      1 > === scheduler termination at walltime after Ns (SIGTERM to this wrapper) -- successor continues; N cycle(s) completed, so failcount N is cleared ===
+      1 > === deliberate chain stop (rc=N after Ns) -- failcount left at N ===
+      1 > $SIM/loop_nochecks.sbatch: line N: KATAGO_SRC: unbound variable
+      1 > $SIM/loop_nochecks.sbatch: line N: $SIM/ktg/env.sh: No such file or directory
+      1 < Terminated
+      1 < === scheduler termination at walltime after Ns (SIGTERM to this wrapper) -- successor continues; N cycle(s) completed, so failcount N is cleared ===
+      1 < === deliberate chain stop (rc=N after Ns) -- failcount left at N ===
+      1 < $SIM/loop_nochecks.sbatch: line N: KATAGO_SRC: unbound variable
+      1 < $SIM/loop_nochecks.sbatch: line N: $SIM/ktg/env.sh: No such file or directory
+      1 < $HD/wNv_common.sh: line N: N Killed                  SLURM_JOB_ID="$jid" setsid bash "$script" > "$SIM/out.txt" N>&N
+--- RAW differing lines by shape (digits -> N), v3
+     18 >       === circuit breaker tripped after N consecutive failures (last ran Ns) ===
+     18 <       === circuit breaker tripped after N consecutive failures (last ran Ns) ===
+--- the validator's path rule (the record spelled this harness's directory $HD/): s#^$S/h/w3v_common.sh#w3v_common.sh#
+--- NORMALISED with the worker's norm.sed (verbatim from repair_partitions.txt), v2:
+7a8
+> Terminated
+263d263
+< Terminated
+349a350
+> Terminated
+379c380
+< === deliberate chain stop (rc=3 after 6s) -- failcount left at 0 ===
+---
+> === deliberate chain stop (rc=3 after 8s) -- failcount left at 0 ===
+V2_NORMALISED_DIFF_EXIT=1
+--- NORMALISED with norm.sed, v3:
+V3_NORMALISED_DIFF_EXIT=0
+--- the four v2 residual lines are (a) three placements of bash's job-control message 'Terminated' for the sampler pids
+    stage_monitor.sh stop kills from finalize (:154), which the record itself carries 21 times at timing-dependent positions
+    (ref_v2:262-263 has it twice in a row), and (b) one elapsed-seconds instance inside parentheses, '(rc=3 after Ns)', that
+    norm.sed's ' after Ns ' rule (which needs a trailing space) does not cover. Two validator rules added -> norm3.sed:
+      /^Terminated$/d
+      s/(rc=\([0-9]*\) after [0-9]\+s)/(rc=\1 after <ELAPSED>s)/g
+V2_NORM3_DIFF_EXIT=0
+V3_NORM3_DIFF_EXIT=0
+--- scratch-guard du-race warnings in this run: v2 0, v3 0 (the worker saw one; norm2.sed drops them)
+
+########## 7. KTG_STAGE_ONLY=1 dry run from the REAL scratch clone (my_stage.sh), twice
+KATAGO_SRC=/scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/build/KataGo  git HEAD fd0723fd  KATAGO_BIN size 27273864 sha 4d2bbed4de859598
+    pos_len check: 0 npz (loop start) -- nothing new to verify
+    KTG_STAGE_ONLY=1 -- archive staged at $RT/stage_run1/scripts/dated/<ts>, no cycle run.
+  [run1] STAGE_EXIT=0
+  [run1] files: 87  bytes: 28882815  pycache files: 13
+  [run1] cmp bin/katago $KATAGO_BIN exit=0
+  [run1] cmp selfplay.cfg exit=0  dataBoardLen = 9
+    pos_len check: 0 npz (loop start) -- nothing new to verify
+    KTG_STAGE_ONLY=1 -- archive staged at $RT/stage_run2/scripts/dated/<ts>, no cycle run.
+  [run2] STAGE_EXIT=0
+  [run2] files: 87  bytes: 28882815  pycache files: 13
+  [run2] cmp bin/katago $KATAGO_BIN exit=0
+  [run2] cmp selfplay.cfg exit=0  dataBoardLen = 9
+  manifest diff exit=0
+  staged archives removed; done 2026-09-04T17:36:21-04:00
+--- a third staging, sized filesystem-independently (sum of file sizes; du -sb adds directory entries, whose size differs by filesystem: the worker staged on weka, this validator on ext4)
+  STAGE_EXIT=0
+  files=87 file_bytes=28837759 du_sb=28882815 dirs=11  staged train.py 105475 B, KTG_PRINT_EVERY mentions: 2
+--- the scratch clone every link stages, vs its own HEAD (fd0723fd):
+   M cpp/CMakeLists.txt
+   M python/train.py
+   cpp/CMakeLists.txt | 2 +-
+   python/train.py    | 7 ++++++-
+   2 files changed, 7 insertions(+), 2 deletions(-)
+  python/train.py mtime: 2026-09-04 16:52  (the worker's dry run ran 16:47; this hook landed 16:52, node converged_test_7x7, mission.json decisions[4])
+  -    print_train_loss_every_batches = 100 if not gnorm_stats_debug else 1000
+  +    # mission ktg-train, node arxiv-1902.10565::converged_test_7x7 -- the loss-log
+  +    # interval is read from KTG_PRINT_EVERY and DEFAULTS TO 100, so a caller that
+  +    # does not set it (the 9x9 production chain) gets the stock behaviour exactly.
+  +    # Without this the metrics_train.json of a short run is EMPTY: a cycle of
+  +    # samples_per_epoch/batch < 100 batches never reaches the print at :1661.
+  +    print_train_loss_every_batches = max(1, int(os.environ.get("KTG_PRINT_EVERY", "100"))) if not gnorm_stats_debug else 1000
+
+########## 8. closing checks in a clean non-interactive bash (no shell functions, GNU grep)
+  grep is: /usr/bin/grep grep (GNU grep) 3.6
+  OK           : request gpus=1 cpus=32 part=b200 within policy (gpu<=4, no cpu cap)
+  ROW_VERIFICATION_EXIT=0
+  --- task file section 2 command, verbatim:
+  OK           : request gpus=1 cpus=24 part=b200 within policy (gpu<=4, no cpu cap)
+  SECTION2_EXIT=0
+  counts: afterany=8 failcount=35 cpp/build/katago=5 cpp/katago"=0
+
+########## 9. the L40S row (r_env_l40s): its verification command, verbatim, and the claims checked against sacct / smoke.txt
+  L40S_VERIFICATION_EXIT=0
+  -rwxr-xr-x 1 ssci-haiyangw users 27273864 Sep  3 22:02 /scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/build/KataGo/cpp/build/katago
+  --- sacct (read-only):
+  300987             l40s  COMPLETED   00:00:38      0:0           gl111          billing=9,cpu=9,gres/gpu=1,mem=48G,node=1 
+  298018             b200  COMPLETED           gb205 
+  --- the B200 reference figure (evidence/env/smoke.txt:103):
+  numSearchThreads =  1: 10 / 10 positions, visits/s = 2322.17 nnEvals/s = 2322.17 nnBatches/s = 2322.17 avgBatchSize = 1.00 (0.3 secs) (EloDiff baseline)
+  --- the probe's benchmark invocation (codes/env/l40s_probe.sbatch:118) and the rebuild-trigger rule (:145-151):
+    "$KATAGO_BIN" benchmark -model "$MODEL" -config "$CFG" -v 80 -t 1 -boardsize 9 \
+  REASON=""
+  if [ "$A_NOKERNEL" -gt 0 ]; then
+    REBUILD=1; REASON="benchmark log carries 'no kernel image is available'"
+  elif [ "$A_FAIL" -ne 0 ]; then
+    REBUILD=1; REASON="at least one phase-A leg exited non-zero"
+  elif awk -v v="$A_VISITS" -v f="$SLOW_FLOOR" 'BEGIN{exit !(v < f)}'; then
+    REBUILD=1; REASON="benchmark visits/s $A_VISITS is below the pathological floor $SLOW_FLOOR (a tenth of the B200 $B200_VISITS_PER_S)"
+  --- gtp_example.cfg says numSearchThreads = 6; the benchmark ran -t 1, so the 2401.88 figure is ONE thread, batch 1 (the row says so)
+  --- codes/env/cmake-sm89.diff (authored, NOT applied): 1797ea82882e013a...; applies to the scratch clone? git apply --check exit 0
+
+########## 10. harness sources, verbatim (the validator's own; w3v_common.sh / v2_regress.sh / v3_seeds.sh are the wave-3 record's, sha256 in section 6)
+==== my_shims.sh ====
+#!/bin/bash
+# Validator's OWN fixture-driven scheduler shims (written independently of the worker's
+# hp_common.sh). Fixture: $FIXNODES, one node per line:  <node> <partitions,comma> <State> <alloc_gpus>
+# Mirrors what the REAL sinfo/scontrol on skipjack printed on 2026-09-04 (see validation record):
+#   sinfo -p <list> -N -h -o %N   ignores empty tokens (',b200' 'b200,' 'b200,,l40s' all work),
+#                                 prints nothing for an unknown partition, exit 0
+#   scontrol show node <n>        State=<st> ... AllocTRES=cpu=..,mem=..,gres/gpu=<a>  (empty when idle)
+# Usage: . my_shims.sh <bindir>
+mk_shims() {
+  local B="$1"
+  cat > "$B/sinfo" <<'EOF'
+#!/bin/bash
+plist=""; while [ $# -gt 0 ]; do case "$1" in -p) plist="$2"; shift 2 ;; *) shift ;; esac; done
+IFS=',' read -r -a want <<< "$plist"
+while read -r n parts st a; do
+  [ -n "${n:-}" ] || continue
+  IFS=',' read -r -a np <<< "$parts"
+  for q in "${want[@]}"; do
+    [ -n "$q" ] || continue
+    for pp in "${np[@]}"; do [ "$pp" = "$q" ] && echo "$n"; done
+  done
+done < "$FIXNODES"
+exit 0
+EOF
+  cat > "$B/scontrol" <<'EOF'
+#!/bin/bash
+if [ "${1:-}" = show ] && [ "${2:-}" = node ]; then
+  while read -r n parts st a; do
+    if [ "$n" = "${3:-}" ]; then
+      echo "NodeName=$n Arch=x86_64 CoresPerSocket=64 "
+      echo "   CPUAlloc=$((a*16)) CPUEfctv=128 CPUTot=128 CPULoad=1.00"
+      echo "   Gres=gpu:${parts%%,*}:8"
+      echo "   State=$st ThreadsPerCore=1 TmpDisk=0 Weight=1 Owner=N/A MCS_label=N/A"
+      echo "   Partitions=$parts "
+      echo "   CfgTRES=cpu=128,mem=1547000M,billing=128,gres/gpu=8"
+      if [ "$a" -gt 0 ]; then echo "   AllocTRES=cpu=$((a*16)),mem=$((a*64))G,gres/gpu=$a"; else echo "   AllocTRES="; fi
+      exit 0
+    fi
+  done < "$FIXNODES"
+fi
+exit 0
+EOF
+  cat > "$B/sbatch" <<'EOF'
+#!/bin/bash
+n=$(cat "$VAL_JOBCTR" 2>/dev/null || echo 800000); n=$((n+1)); echo "$n" > "$VAL_JOBCTR"
+echo "SBATCH[$n] argv: $*" >> "$VAL_SHIMLOG"
+echo "SBATCH[$n] env : KTG_PARTITIONS='${KTG_PARTITIONS-<unset>}' SBATCH_PARTITION='${SBATCH_PARTITION-<unset>}' SBATCH_TIMELIMIT='${SBATCH_TIMELIMIT-<unset>}' SBATCH_EXPORT='${SBATCH_EXPORT-<unset>}' KTG_MAX_CHAIN='${KTG_MAX_CHAIN-<unset>}'" >> "$VAL_SHIMLOG"
+echo "$n"
+EOF
+  chmod +x "$B/sinfo" "$B/scontrol" "$B/sbatch"
+}
+fixset() { : > "$FIXNODES"; }
+fixadd() { printf '%s %s %s %s\n' "$1" "$2" "$3" "$4" >> "$FIXNODES"; }   # node partitions state alloc
+fixshow() { echo "    fixture (node partitions State alloc_gpus; 8 GPUs per node):"; sed 's/^/      /' "$FIXNODES"; }
+==== my_pick.sh ====
+#!/bin/bash
+# Validator's PART-2 equivalent: pick_partition() BEFORE (git 56f2979) and AFTER (HEAD working tree),
+# extracted by the validator's own awk (by function name, never retyped), run under the validator's
+# own shims and fixtures. CPU only, no Slurm call in the matrix sections.
+set -u
+S="$1"; AZ=$AZ
+W="$S/pick"; rm -rf "$W"; mkdir -p "$W/bin" "$W/cwd_glob" "$W/cwd_empty"
+. "$S/my_shims.sh"; mk_shims "$W/bin"
+export FIXNODES="$W/nodes" VAL_JOBCTR="$W/jobctr" VAL_SHIMLOG="$W/shim.log"
+ORIG_PATH="$PATH"; export PATH="$W/bin:/usr/bin:$PATH"
+git -C "$AZ" show 56f2979:results/ktg/paper_1902.10565/codes/loop/loop.sbatch > "$W/before.sbatch"
+cp "$AZ/results/ktg/paper_1902.10565/codes/loop/loop.sbatch" "$W/after.sbatch"
+echo "== sources"; sha256sum "$W/before.sbatch" "$W/after.sbatch" | sed "s#$W#\$W#"
+ext() { awk '/^KTG_PARTITIONS=|^pick_partition\(\) \{/{f=1} f{print} f&&/^\}$/{exit}' "$1"; }
+ext "$W/before.sbatch" > "$W/pick_before.sh"; ext "$W/after.sbatch" > "$W/pick_after.sh"
+echo "extracted: before $(wc -l < "$W/pick_before.sh") lines sha $(sha256sum < "$W/pick_before.sh" | cut -c1-16); after $(wc -l < "$W/pick_after.sh") lines sha $(sha256sum < "$W/pick_after.sh" | cut -c1-16)"
+echo "after block, non-comment lines:"; grep -v '^\s*#' "$W/pick_after.sh" | sed 's/^/    | /'
+# run <before|after> <knob|__unset__> [cwd]
+run() { local v="$1" k="$2" d="${3:-$W/cwd_empty}"
+  if [ "$k" = __unset__ ]; then (cd "$d" && env -u KTG_PARTITIONS bash -c 'set -uo pipefail; REQ_GPUS=1; . "$1"; pick_partition' _ "$W/pick_$v.sh" 2>&1)
+  else (cd "$d" && KTG_PARTITIONS="$k" bash -c 'set -uo pipefail; REQ_GPUS=1; . "$1"; pick_partition' _ "$W/pick_$v.sh" 2>&1); fi; }
+show() { printf '    [%-6s] KTG_PARTITIONS=%-26s -> %s\n' "$1" "$(if [ "$2" = __unset__ ]; then echo '<unset>'; else printf '%q' "$2"; fi)" "$3"; }
+
+echo; echo "########## M1: knob UNSET, b300 state x alloc matrix, b200 MIXED 4, l40s IDLE 0 -- before must equal after"
+same=0; diff=0
+for st in IDLE MIXED ALLOCATED RESERVED DRAIN DRAINED DOWN MAINT IDLE+RESERVED ALLOCATED+RESERVED MIXED+DRAIN MIXED+PLANNED IDLE+PLANNED COMPLETING; do
+  for a in 0 1 7 8; do
+    fixset; fixadd gb301 b300 "$st" "$a"; fixadd gb202 b200 MIXED 4; fixadd gl105 l40s IDLE 0
+    b=$(run before __unset__); af=$(run after __unset__)
+    if [ "$b" = "$af" ]; then same=$((same+1)); tag=SAME; else diff=$((diff+1)); tag=DIFFERENT; fi
+    printf '    b300 State=%-19s alloc=%s -> before=%-5s after=%-5s %s\n' "$st" "$a" "$b" "$af" "$tag"
+  done
+done
+echo "    M1 cells: $((same+diff))  same=$same  different=$diff"
+echo; echo "########## M1b: knob UNSET, b300 RESERVED, b200 state x alloc matrix -- before must equal after (the fallback byte)"
+for st in IDLE MIXED ALLOCATED IDLE+RESERVED ALLOCATED+RESERVED MIXED+DRAIN DOWN; do for a in 0 8; do
+  fixset; fixadd gb301 b300 IDLE+RESERVED 0; fixadd gb202 b200 "$st" "$a"; fixadd gb203 b200 ALLOCATED 8; fixadd gl105 l40s IDLE 0
+  b=$(run before __unset__); af=$(run after __unset__)
+  printf '    b200 State=%-19s alloc=%s -> before=%-5s after=%-5s %s\n' "$st" "$a" "$b" "$af" "$([ "$b" = "$af" ] && echo SAME || echo DIFFERENT)"
+done; done
+
+echo; echo "########## M2: knob 'b300 b200,l40s' -- the decided behaviour, before vs after"
+K='b300 b200,l40s'
+scen() { echo "  --- $1"; fixshow; b=$(run before "$K"); af=$(run after "$K"); show before "$K" "$b"; show after "$K" "$af"; echo "      expected after: $2  $([ "$af" = "$2" ] && echo OK || echo MISMATCH)"; }
+fixset; fixadd gb301 b300 MIXED 7; fixadd gb202 b200 MIXED 4; fixadd gl105 l40s IDLE 0;                                 scen "b300 has ONE free GPU (MIXED 7/8)" b300
+fixset; fixadd gb301 b300 IDLE+RESERVED 0; fixadd gb202 b200 MIXED 4; fixadd gl105 l40s IDLE 0;                          scen "b300 IDLE+RESERVED (the real state now), b200 room" b200,l40s
+fixset; fixadd gb301 b300 IDLE+RESERVED 0; fixadd gb202 b200 ALLOCATED 8; fixadd gl105 l40s MIXED+PLANNED 6;             scen "b300 reserved, b200 full, l40s 2 free" b200,l40s
+fixset; fixadd gb301 b300 IDLE+RESERVED 0; fixadd gb202 b200 IDLE+RESERVED 0; fixadd gl105 l40s MIXED+DRAIN 0;           scen "b300 reserved, b200 idle-but-RESERVED, l40s idle-but-DRAIN: set sums to 0 -> LAST candidate" b200,l40s
+fixset; fixadd gb301 b300 MIXED+DRAIN 0; fixadd gb202 b200 ALLOCATED 8; fixadd gl105 l40s ALLOCATED 8;                   scen "nothing free anywhere" b200,l40s
+fixset; fixadd gb301 b300 IDLE 8; fixadd gb202 b200 ALLOCATED+RESERVED 8; fixadd gl105 l40s IDLE 0;                       scen "b300 IDLE but 8/8 allocated; b200 reserved; l40s free" b200,l40s
+fixset; fixadd gb301 b300 IDLE 0; fixadd gb202 b200 ALLOCATED 8; fixadd gl105 l40s ALLOCATED 8;                           scen "b300 free, everything else full -> preference" b300
+
+echo; echo "########## M3: the free-GPU SUM of a comma set, member by member (fixture with two b200 nodes and two l40s nodes)"
+fixset; fixadd gb201 b200 IDLE+RESERVED 0; fixadd gb202 b200 MIXED 6; fixadd gl105 l40s MIXED+PLANNED 6; fixadd gl110 l40s MIXED+DRAIN 4; fixadd gb301 b300 IDLE+RESERVED 0
+fixshow
+for p in b300 b200 l40s b200,l40s ,b200 b200, b200,,l40s zzz 'b2*'; do
+  free=$(sinfo -p "$p" -N -h -o "%N" 2>/dev/null | sort -u | while read -r n; do info=$(scontrol show node "$n" 2>/dev/null); st=$(grep -oP 'State=\K\S+' <<<"$info"); a=$(grep -oP 'AllocTRES=.*?gres/gpu=\K\d+' <<<"$info"); a=${a:-0}; case "$st" in *RESERVED*|*DRAIN*|*DOWN*|*MAINT*) echo 0 ;; *) echo $((8-a)) ;; esac; done | awk '{s+=$1} END{print s+0}')
+  printf '    sinfo -p %-12s nodes=[%s]  free=%s\n' "'$p'" "$(sinfo -p "$p" -N -h -o "%N" | sort -u | tr '\n' ' ' | sed 's/ $//')" "$free"
+done
+echo "    expected: b200=2 (gb201 reserved counts 0, gb202 8-6), l40s=2 (gl110 drain counts 0), b200,l40s=4 = 2+2"
+
+echo; echo "########## M4: knob spellings and MALFORMED candidates (AFTER; fixture: b300 reserved, b200 MIXED 4, l40s IDLE 0)"
+fixset; fixadd gb301 b300 IDLE+RESERVED 0; fixadd gb202 b200 MIXED 4; fixadd gl105 l40s IDLE 0
+touch "$W/cwd_glob/b200" "$W/cwd_glob/b2zz" "$W/cwd_glob/b3xx" "$W/cwd_glob/l40s.txt"
+for k in 'b300 b200' 'b300 b200,l40s' 'b200,l40s' 'l40s' 'b300,b200,l40s' 'b300   b200,l40s' "$(printf 'b300\tb200,l40s')" '  b300 b200,l40s  ' "$(printf 'b300\nb200,l40s')" '' ' ' 'zzz' 'b300 zzz' ',b200' 'b200,' 'b200,,l40s' 'b300 ,b200,l40s' 'b2*' 'b3*' '*'; do
+  show after "$k" "$(run after "$k")"
+done
+echo "  --- the same globs with the job's cwd holding files named b200 b2zz b3xx l40s.txt (pathname expansion is live: \$KTG_PARTITIONS is unquoted)"
+for k in 'b2*' 'b3*' 'b3* b200,l40s' '*' 'l40s.*'; do show after "$k" "$(run after "$k" "$W/cwd_glob")"; done
+echo "  --- and with 'set -f' in force in the caller (what a hardening would do)"
+for k in 'b2*' 'b3*' '*'; do
+  out=$(cd "$W/cwd_glob" && KTG_PARTITIONS="$k" bash -c 'set -uo pipefail; set -f; REQ_GPUS=1; . "$1"; pick_partition' _ "$W/pick_after.sh" 2>&1); show after+set-f "$k" "$out"
+done
+
+echo; echo "########## M5: what the REAL policy script (mission.json compute.policyCheck) says about every string M4 can hand to sbatch (live cluster, PATH restored)"
+( export PATH="$ORIG_PATH"; cd "$AZ"; PC=$(python3 -c 'import json;print(json.load(open("mission.json"))["compute"]["policyCheck"])')
+  for p in b300 b200 l40s b200,l40s b300,b200,l40s zzz ,b200 b200, b200,,l40s 'b2*' b2zz b3xx b200 l40s.txt w3v_common.sh; do
+    line=$(bash "$PC" --gpus 1 --cpus 32 --partition "$p" 2>&1 | grep -E '^(OK|VIOLATION)' | sed 's/ *: */: /' | cut -c1-90); rc=${PIPESTATUS[0]}
+    printf '    --partition %-16s exit=%s  %s\n' "'$p'" "$rc" "$line"
+  done )
+echo "done $(date -Is)"
+==== my_links.sh ====
+#!/bin/bash
+# Validator's PART-3 equivalent: the WHOLE wrapper (BEFORE = git 56f2979, AFTER = HEAD working tree)
+# under the wave-3 validator's verbatim w3v_common.sh (stand-in loop, real check.sh, real mission.json,
+# real codes/{cfg,eval,data_budget}) with the validator's OWN sinfo/scontrol/sbatch shims on top.
+# What is read off each link: (i) the part= the wrapper announces for its pre-flight, (ii) the part=
+# check.sh accepted, (iii) the --partition= on the sbatch argv, (iv) the environment the sbatch
+# PROCESS carried (what --export=ALL copies into the successor).
+set -u
+S="$1"; export RT="$S/rt_links"; mkdir -p "$RT"
+. "$S/h/w3v_common.sh" simVL
+. "$S/my_shims.sh"; mk_shims "$SIM/bin"     # replaces the three shims; the other four stay w3v_common's
+export FIXNODES="$SIM/nodes"
+PRE="$RT/before.sbatch"; git -C "$AZ" show 56f2979:results/ktg/paper_1902.10565/codes/loop/loop.sbatch > "$PRE"
+echo "before sha $(sha256sum < "$PRE" | cut -c1-16)  after sha $(sha256sum < "$REAL_SBATCH" | cut -c1-16)"
+export KTG_MIN_RUNTIME_SECONDS=1
+mkdir -p "$SIM/cwd_glob"; touch "$SIM/cwd_glob/b200" "$SIM/cwd_glob/b3xx"
+
+# plink <label> <before|after> <jobid> [env assignments or -u VAR ...]
+plink() { local label="$1" v="$2" jid="$3"; shift 3
+  local s="$REAL_SBATCH"; [ "$v" = before ] && s="$PRE"
+  reset_state; fake_loop 'exit 0'
+  ( export KTG_LOOP_SBATCH="$s" SLURM_JOB_ID="$jid"; cd "${PLINK_CWD:-$SIM}" && env "$@" bash "$s" ) > "$SIM/out.txt" 2>&1; local rc=$?
+  local pre chk arg
+  pre=$(grep -o 'pre-flight for the successor ([^)]*)' "$SIM/out.txt" | grep -o 'part=[^)]*' | head -1)
+  chk=$(grep -E '^(OK|VIOLATION)' "$SIM/out.txt" | head -1 | sed -e 's/ *: */: /' -e 's/ within policy.*//' -e 's/ — policy allows.*//')
+  arg=$(grep -o -- '--partition=[^ ]*' "$VAL_SHIMLOG" | head -1)
+  echo "  [$v] $label  exit=$rc  announced:${pre:-<none>}  check.sh:[${chk:-<none>}]  sbatch-argv:${arg:-<NO SBATCH>}"
+  grep -E 'refusing to chain|successor queued|sbatch did not return' "$SIM/out.txt" | sed -e 's/=== \[[^]]*\] /=== /' -e "s#$AZ#\$AZ#g" | sed 's/^/      /'
+  [ -s "$VAL_SHIMLOG" ] && sed -e "s#$AZ#\$AZ#g" "$VAL_SHIMLOG" | sed 's/^/      shim: /'
+  echo "      $(state | cut -c1-80)"; }
+
+echo; echo "########## VL1: knob unset, b300 IDLE+RESERVED (real state), b200 MIXED 4, l40s IDLE 0 -- old behaviour"
+fixset; fixadd gb301 b300 IDLE+RESERVED 0; fixadd gb202 b200 MIXED 4; fixadd gl105 l40s IDLE 0; fixshow
+plink "unset" before 7001 -u KTG_PARTITIONS; plink "unset" after 7002 -u KTG_PARTITIONS
+echo; echo "########## VL2: KTG_PARTITIONS='b300 b200,l40s', same fixture -- the defect (before) and the fix (after)"
+plink "knob" before 7011 KTG_PARTITIONS='b300 b200,l40s'; plink "knob" after 7012 KTG_PARTITIONS='b300 b200,l40s'
+echo; echo "########## VL3: knob, b300 MIXED 7 (one free GPU) -- preference"
+fixset; fixadd gb301 b300 MIXED 7; fixadd gb202 b200 MIXED 4; fixadd gl105 l40s IDLE 0; fixshow
+plink "knob" before 7021 KTG_PARTITIONS='b300 b200,l40s'; plink "knob" after 7022 KTG_PARTITIONS='b300 b200,l40s'
+echo; echo "########## VL4: knob, nothing free (b300 DRAIN, b200 ALLOCATED 8, l40s ALLOCATED+RESERVED 8) -- last candidate"
+fixset; fixadd gb301 b300 MIXED+DRAIN 0; fixadd gb202 b200 ALLOCATED 8; fixadd gl105 l40s ALLOCATED+RESERVED 8; fixshow
+plink "knob" before 7031 KTG_PARTITIONS='b300 b200,l40s'; plink "knob" after 7032 KTG_PARTITIONS='b300 b200,l40s'
+echo; echo "########## VL5: propagation over three links -- link N+1 is run with exactly the environment link N's sbatch process carried"
+fixset; fixadd gb301 b300 IDLE+RESERVED 0; fixadd gb202 b200 ALLOCATED 8; fixadd gl105 l40s MIXED 6; fixshow
+plink "link 1" after 7061 KTG_PARTITIONS='b300 b200,l40s' SBATCH_TIMELIMIT=23:30:00 KTG_MAX_CHAIN=9
+seen=$(grep -o "KTG_PARTITIONS='[^']*'" "$VAL_SHIMLOG" | head -1 | sed "s/KTG_PARTITIONS=//; s/'//g"); tl=$(grep -o "SBATCH_TIMELIMIT='[^']*'" "$VAL_SHIMLOG" | head -1 | sed "s/SBATCH_TIMELIMIT=//; s/'//g")
+echo "      -> link 2 inherits KTG_PARTITIONS='$seen' SBATCH_TIMELIMIT='$tl'"
+plink "link 2" after 7062 KTG_PARTITIONS="$seen" SBATCH_TIMELIMIT="$tl" KTG_MAX_CHAIN=9
+seen2=$(grep -o "KTG_PARTITIONS='[^']*'" "$VAL_SHIMLOG" | head -1 | sed "s/KTG_PARTITIONS=//; s/'//g")
+echo "      -> link 3 inherits KTG_PARTITIONS='$seen2'"
+plink "link 3" after 7063 KTG_PARTITIONS="$seen2" SBATCH_TIMELIMIT="$tl" KTG_MAX_CHAIN=9
+echo "      (b300 frees before link 3 resubmits:)"; fixset; fixadd gb301 b300 IDLE 0; fixadd gb202 b200 ALLOCATED 8; fixadd gl105 l40s MIXED 6
+plink "link 3, b300 now free" after 7064 KTG_PARTITIONS="$seen2" SBATCH_TIMELIMIT="$tl" KTG_MAX_CHAIN=9
+echo; echo "########## VL6: SBATCH_PARTITION in the job environment (exported) -- the wrapper's argv must be what sbatch sees on the command line"
+fixset; fixadd gb301 b300 IDLE+RESERVED 0; fixadd gb202 b200 MIXED 4; fixadd gl105 l40s IDLE 0
+plink "SBATCH_PARTITION=b300 + knob" after 7071 KTG_PARTITIONS='b300 b200,l40s' SBATCH_PARTITION=b300
+plink "SBATCH_PARTITION=b200,l40s, knob unset" after 7072 -u KTG_PARTITIONS SBATCH_PARTITION=b200,l40s
+echo "      (Slurm 25.11.2 man sbatch: 'command line options will override any environment variables'; --test-only shown in the record)"
+echo; echo "########## VL7: malformed candidates reach the pre-flight as-is and are REFUSED -- no sbatch is issued"
+for k in 'b300 zzz' ',b200' 'b200,' 'b200,,l40s' 'zzz'; do plink "knob=$(printf %q "$k")" after 7081 KTG_PARTITIONS="$k"; done
+echo; echo "########## VL8: globs against the job's cwd (files b200 and b3xx present) -- unquoted expansion"
+PLINK_CWD="$SIM/cwd_glob"
+plink "knob='b3*'" after 7091 KTG_PARTITIONS='b3*'
+plink "knob='b3* b200,l40s'" after 7092 KTG_PARTITIONS='b3* b200,l40s'
+plink "knob='b2*'" after 7093 KTG_PARTITIONS='b2*'
+plink "knob='*'" after 7094 KTG_PARTITIONS='*'
+unset PLINK_CWD
+echo; echo "########## VL9: knob set in the submitting shell but NOT exported -> default list"
+reset_state; fake_loop 'exit 0'; ( KTG_PARTITIONS='b300 b200,l40s'; SLURM_JOB_ID=7101 bash "$REAL_SBATCH" ) > "$SIM/out.txt" 2>&1
+echo "  [after] not exported  $(grep -o -- '--partition=[^ ]*' "$VAL_SHIMLOG" | head -1)  $(grep -o "KTG_PARTITIONS='[^']*'" "$VAL_SHIMLOG" | head -1)"
+echo; echo "########## VL10: empty and blank knob -> default list (b200 here, b300 reserved)"
+plink "knob=''" after 7111 KTG_PARTITIONS=''; plink "knob=' '" after 7112 KTG_PARTITIONS=' '
+echo; echo "########## cleanup"; pkill -KILL -f "$SIM/" 2>/dev/null; rm -rf "$SIM"; echo "done $(date -Is)"
+==== my_stage.sh ====
+#!/bin/bash
+# KTG_STAGE_ONLY=1 dry run from the REAL scratch clone, twice, byte-identical manifest required.
+set -u
+S="$1"; AZ=$AZ; RT="$S/rt_stage"; rm -rf "$RT"; mkdir -p "$RT"
+CODES="$AZ/results/ktg/paper_1902.10565/codes"; LOOPDIR="$CODES/loop"
+export PATH=/usr/bin:$PATH
+source /scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/env.sh >/dev/null 2>&1 || { echo "env.sh failed"; exit 1; }
+echo "KATAGO_SRC=$KATAGO_SRC  git HEAD $(git -C "$KATAGO_SRC" rev-parse --short HEAD)  KATAGO_BIN size $(stat -c %s "$KATAGO_BIN") sha $(sha256sum "$KATAGO_BIN" | cut -c1-16)"
+unset TRAIN_WRAPPER EXPORT_WRAPPER
+export KTG_CODES="$CODES"
+for v in run1 run2; do b="$RT/stage_$v"; rm -rf "$b"; mkdir -p "$b"
+  ( cd "$KATAGO_SRC" && KTG_STAGE_ONLY=1 bash "$LOOPDIR/synchronous_loop_9x9.sh" ktg9 "$b" t9 b7c96h3tfrs 1 ) > "$RT/out_$v.txt" 2>&1; rc=$?
+  grep -E 'STAGE_ONLY|pos_len' "$RT/out_$v.txt" | sed -e "s#$RT#\$RT#g" -e 's/dated\/[0-9]\{8\}-[0-9]\{6\}/dated\/<ts>/g' | sed 's/^/    /'; echo "  [$v] STAGE_EXIT=$rc"
+  arc=$(ls -d "$b"/scripts/dated/*/ | head -1)
+  ( cd "$arc" && find . -type f | sort | xargs sha256sum ) > "$RT/manifest_$v"
+  echo "  [$v] files: $(wc -l < "$RT/manifest_$v")  bytes: $(du -sb "$arc" | cut -f1)  pycache files: $(grep -c __pycache__ "$RT/manifest_$v")"
+  cmp "$arc/bin/katago" "$KATAGO_BIN"; echo "  [$v] cmp bin/katago \$KATAGO_BIN exit=$?"
+  cmp "$arc/selfplay.cfg" "$CODES/cfg/selfplay_9x9.cfg"; echo "  [$v] cmp selfplay.cfg exit=$?  $(grep -E '^dataBoardLen' "$arc/selfplay.cfg")"
+done
+diff "$RT/manifest_run1" "$RT/manifest_run2"; echo "  manifest diff exit=$?"
+rm -rf "$RT/stage_run1" "$RT/stage_run2"; echo "  staged archives removed; done $(date -Is)"
+==== live_pick.sh ====
+#!/bin/bash
+# validator's own live run of the AFTER pick_partition() against the REAL sinfo/scontrol (read-only)
+set -u
+REQ_GPUS=1
+eval "$(awk '/^KTG_PARTITIONS=/{p=1} p{print} /^}/{if(p){exit}}' "$1")"
+echo "extracted $(awk '/^KTG_PARTITIONS=/{p=1} p{print} /^}/{if(p){exit}}' "$1" | wc -l) lines; KTG_PARTITIONS='$KTG_PARTITIONS'"
+for p in b300 b200 l40s b200,l40s; do
+  free=$(sinfo -p "$p" -N -h -o "%N" 2>/dev/null | sort -u | while read -r n; do
+            info=$(scontrol show node "$n" 2>/dev/null)
+            st=$(grep -oP 'State=\K\S+' <<<"$info")
+            a=$(grep -oP 'AllocTRES=.*?gres/gpu=\K\d+' <<<"$info"); a=${a:-0}
+            case "$st" in *RESERVED*|*DRAIN*|*DOWN*|*MAINT*) echo 0 ;; *) echo $((8-a)) ;; esac
+        done | awk '{s+=$1} END{print s+0}')
+  echo "live free[$p]=$free"
+done
+for k in unset "b300 b200,l40s" "b200,l40s" "b300" "zzz" "b300 zzz" ",b200" "b200," "b200,,l40s" "b2*" "" " " "b300 b200"; do
+  if [ "$k" = unset ]; then unset KTG_PARTITIONS; else KTG_PARTITIONS="$k"; fi
+  KTG_PARTITIONS="${KTG_PARTITIONS:-b300 b200}"
+  printf '  KTG_PARTITIONS=%-22s -> %s\n' "'$k'" "$(pick_partition)"
+done
+==== rowcmd.sh ====
+#!/bin/bash
+cd $AZ || exit 9
+echo "grep is: $(command -v grep) $(grep --version | head -1)"
+bash -n results/ktg/paper_1902.10565/codes/loop/loop.sbatch && grep -q '^#SBATCH --cpus-per-task=32$' results/ktg/paper_1902.10565/codes/loop/loop.sbatch && grep -q 'REQ_CPUS="${KTG_CPUS_PER_TASK' results/ktg/paper_1902.10565/codes/loop/loop.sbatch && ! grep -n 'cpus-per-task=24\|REQ_CPUS=24' results/ktg/paper_1902.10565/codes/loop/loop.sbatch && grep -q 'cpp/build/katago' results/ktg/paper_1902.10565/codes/loop/synchronous_loop_9x9.sh && grep -q 'check_pos_len_npz.py' results/ktg/paper_1902.10565/codes/loop/synchronous_loop_9x9.sh && grep -q 'stage_monitor.sh' results/ktg/paper_1902.10565/codes/loop/loop.sbatch && bash "$(python3 -c 'import json;print(json.load(open("mission.json"))["compute"]["policyCheck"])')" --gpus 1 --cpus 32 --partition b200 | grep -E '^(OK|VIOLATION)'
+echo "ROW_VERIFICATION_EXIT=$?"
+==== norm.sed ====
+s/ after [0-9]\+s / after <ELAPSED>s /g
+s/fast failure: [0-9]\+s </fast failure: <ELAPSED>s </g
+s/(last ran [0-9]\+s)/(last ran <ELAPSED>s)/g
+s/\.sbatch: line [0-9]\+:/.sbatch: line <LINENO>:/g
+s#^\$HD/w3v_common.sh#w3v_common.sh#
+s#^\./w3v_common.sh#w3v_common.sh#
+s/^w3v_common.sh: line 88: [0-9]\+ Killed/w3v_common.sh: line 88: <PID> Killed/
+==== norm3.sed ====
+s/ after [0-9]\+s / after <ELAPSED>s /g
+s/fast failure: [0-9]\+s </fast failure: <ELAPSED>s </g
+s/(last ran [0-9]\+s)/(last ran <ELAPSED>s)/g
+s/\.sbatch: line [0-9]\+:/.sbatch: line <LINENO>:/g
+s#^\$HD/w3v_common.sh#w3v_common.sh#
+s#^\./w3v_common.sh#w3v_common.sh#
+s/^w3v_common.sh: line 88: [0-9]\+ Killed/w3v_common.sh: line 88: <PID> Killed/
+/^Terminated$/d
+s/(rc=\([0-9]*\) after [0-9]\+s)/(rc=\1 after <ELAPSED>s)/g
+
+########## 11. name sweep (vendor / model / assistant terms, case-insensitive) over this transcript and the record; the term list is not printed
+  validation_repair5_harness.txt: 0 match(es)
+  validation_repair5.md: 0 match(es)
+  (the only permitted hit is the tracked repository path named by mission.json compute.policyCheck, if any)
+sweep done 2026-09-04T17:46:42-04:00
