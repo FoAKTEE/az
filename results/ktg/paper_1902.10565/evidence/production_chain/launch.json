@@ -1,0 +1,76 @@
+{
+  "task_id": "production_chain_9x9",
+  "paper": "arxiv-1902.10565",
+  "job_id": 299366,
+  "job_name": "ktg-loop",
+  "link": 1,
+  "chain": {
+    "KTG_MAX_CHAIN": 3,
+    "chain_depth_at_submit": 0,
+    "successor_policy": "sbatch --dependency=afterany issued at the top of each link body"
+  },
+  "sbatch_command_line": "BASEDIR=/scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/runs/p1 KTG_MAX_CHAIN=3 KTG_MON_PS_INTERVAL=1 KTG_MON_GPU_INTERVAL=5 sbatch results/ktg/paper_1902.10565/codes/loop/loop.sbatch",
+  "submit_line_slurm_recorded": "sbatch results/ktg/paper_1902.10565/codes/loop/loop.sbatch",
+  "submitted_at": "2026-09-04T10:01:22-04:00",
+  "submitted_from": {
+    "host": "login03",
+    "cwd": "/weka/home/schmidt/ssci-haiyangw/az",
+    "clean_shell": true
+  },
+  "allocation": {
+    "partition": "b200",
+    "nodes": 1,
+    "gres": "gpu:1",
+    "cpus_per_task": 32,
+    "mem": "120G",
+    "time": "2-23:30:00",
+    "req_tres": "cpu=32,mem=120G,node=1,billing=32,gres/gpu=1"
+  },
+  "partition_rationale": "mission.json decisions[2] (b200 while b300 is reserved); scontrol show reservation at submit time has gb301 held by ssci-ssci-yejinc-sep2026 to 2026-09-04T15:00 and ssci-adamgleave-sep2026 to 2026-09-07T00:00, and check.sh reported b300 free_gpus=0/8",
+  "policy_check": {
+    "script": ".claude/skills/compute-budget/check.sh (mission.json compute.policyCheck)",
+    "invocation": "bash .claude/skills/compute-budget/check.sh --gpus 1 --cpus 32 --partition b200",
+    "exit": 0,
+    "verdict": "OK : request gpus=1 cpus=32 part=b200 within policy (gpu<=4, no cpu cap)"
+  },
+  "basedir": "/scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/runs/p1",
+  "stdout_log": "/scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/logs/loop-299366.log",
+  "git_head": "272b887986d015ca432c72580df4d46addebb959",
+  "git_head_subject": "fix(eval,ktg): bin a full search at Root visits == maxVisits, not > cheap",
+  "knobs_sha256": "5ae5358791974ae12dd2e635aa38b825637faf23e1963dae1d96f146fd266d62",
+  "artifact_sha256": {
+    "codes/loop/knobs_9x9.env": "5ae5358791974ae12dd2e635aa38b825637faf23e1963dae1d96f146fd266d62",
+    "codes/loop/loop.sbatch": "0a03fbb230cc288f698da846d1f2619c97bc4963ead833e36b1c2c651358f389",
+    "codes/loop/synchronous_loop_9x9.sh": "b5acb1d8ad1a313f8bd439076d0e61598d18f6c7ff7647a6eab672edad3d65f5",
+    "codes/loop/train_9x9.sh": "02bfbcb5fcb20f04f8efb16a4ac465ae286806777ddba9bdba1c5c0afc41c3f5",
+    "codes/loop/export_model_for_selfplay_9x9.sh": "a1277ecb84ecaa4f5691176bdf14c192d9bb9cae2f09b36cab7079f7fb6ce694",
+    "codes/eval/stage_monitor.sh": "c28ce54477c9d78494d67dbd436c64020a9963f6d8fac01b4e71fdf82a732dad",
+    "codes/data_budget/scratch_guard.sh": "361ad2c06ae6995ea245036364d1265788178b5ca840e1f8a54e9f89245dad5e",
+    "codes/data_budget/budget.env": "6f38681ea6befc64f1e0f0c4faced2ddd1d774ac7f445595997d07e4abf81f62",
+    "codes/cfg/selfplay_9x9.cfg": "be49d61d7d9adc8925fd61dbd5f526b8ad3f00657cee051b82ee9ba07bf23991",
+    "codes/cfg/gatekeeper_9x9.cfg": "b72c09c5f3ad1a583268ddeec4aeb8758df1a1e2eb123ba4bc20ea5959d4e57b"
+  },
+  "preflight": {
+    "transcript": "results/ktg/paper_1902.10565/evidence/production_chain/preflight.txt",
+    "steps": {
+      "1_tree_clean_and_repairs": "PASS",
+      "2_bash_n": "PASS",
+      "3_check_knobs_9x9": "PASS",
+      "4_policy_check": "PASS",
+      "5_quota_and_scratch_guard": "PASS",
+      "6_fresh_basedir": "PASS",
+      "7_stage_only_dry_run": "PASS",
+      "8_clean_shell": "PASS"
+    },
+    "passed": 8,
+    "total": 8
+  },
+  "queue_at_submit": {
+    "state": "PENDING",
+    "reason": "Priority",
+    "priority": 18181,
+    "squeue_start_estimate": "2026-09-05T13:44:02 (backfill estimate published ~2 min after submit; reason (Priority)) -- an estimate, not a reservation; the job can start earlier",
+    "b200_free_gpus": "10/128",
+    "b300_free_gpus": "0/8"
+  }
+}
