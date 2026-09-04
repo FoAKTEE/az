@@ -1,0 +1,9 @@
+== compute-budget self-check  2026-09-04T18:15:16-04:00 ==
+my jobs      : gpus=2 cpus=48  (2 jobs)
+partition b200 : free_gpus=14/128 (excludes reserved/drained nodes)
+partition b300 : free_gpus=0/8 (excludes reserved/drained nodes)
+partition l40s : free_gpus=3/48 (excludes reserved/drained nodes)
+reservations : 9 defined (6 active) — scontrol show reservation
+quota        : | /home/ssci-haiyangw/ | 4.03 GB  | 100.00 GB |  4.03%   |
+quota        : | /scratch/ssci-anima/ | 33.34 TB |  40.00 TB |   83%    |
+OK           : request gpus=1 cpus=16 part=b200,l40s within policy (gpu<=4, no cpu cap)

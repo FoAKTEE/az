@@ -15,7 +15,7 @@
 ## 2. Success Criterion
 
 - **Needed evidence type:** `numerical simulation` (empirical measurement of a training run)
-- **Done when:** the summary JSON `evidence/converged_7x7/summary-<jobid>.json` reports `converged: true`, i.e. all four conjuncts below hold on artefacts the loop itself wrote.
+- **Done when:** the run has reached the PLATEAU rule of § 2a **and** the cumulative summary `evidence/converged_7x7/summary-t7.json` reports `converged: true`, i.e. all conjuncts below hold on artefacts the loop itself wrote. (`summary-301096.json` is the first segment's own record and is kept.)
 - **Verification command:**
   `bash results/ktg/paper_1902.10565/codes/eval/check_board_param.sh` (the parameterisation claim, login-node executable, PASSES today) and, once the job is terminal,
   `python3 results/ktg/paper_1902.10565/codes/eval/summarize_7x7_run.py <BASEDIR> --out <summary>`
@@ -27,8 +27,43 @@
 | S2 | policy loss below target | `min p0loss < 2.5` | same series. A value in `[2.5, 3.912)` is reported as PARTIAL, never as converged |
 | S3 | value loss falling | `min vloss < first logged vloss` | same series; a monotone-decreasing claim is NOT made — only that the minimum is below the first row |
 | S4 | gatekeeper acceptances | `len(models/) >= 2` | one directory per accepted candidate; the `Candidate won match` lines are recorded alongside |
-| S5 | fixed-visit match, positive score | Wilson 95 % lower bound on the score fraction `> 0.5` | 200 games, balanced colours by construction, 100 visits, latest accepted vs first exported |
+| S5 | fixed-visit match, positive score | Wilson 95 % lower bound on the score fraction `> 0.5` | 200 games, balanced colours by construction, 100 visits, latest accepted vs first exported. Run **only** when PLATEAU fires (§ 2a) |
 | S6 | dense loss log | `loss_log.rows >= 20` | one JSON row per `KTG_PRINT_EVERY = 8` batches |
+
+### 2a. Stopping rule — PLATEAU, not time (human directive, 2026-09-04)
+
+The run does **not** stop at a walltime. It trains, and the curve is watched, until no
+progress is being made. A Slurm walltime cannot be extended, so this is realised as a
+CHAIN of segments over ONE run directory (`codes/loop/t7_continue.sbatch`,
+`--dependency=afterany`), and the stop is a MEASURED property of the loss curve
+(`codes/eval/plateau_check.py`), evaluated after **every** cycle and logged as one line
+per evaluation in `evidence/converged_7x7/plateau_log.txt`.
+
+With `W = 50 000` samples and `N` the largest `nsamp` in the cumulative
+`metrics_train.json`, window `A = (N-W, N]` and window `B = (N-2W, N-W]`; for each of
+`p0loss` and `vloss` take the mean over each window and form
+`rel = (mean_B - mean_A) / |mean_B|` (positive = still improving).
+
+| Verdict | Condition | Effect |
+|---|---|---|
+| `INSUFFICIENT` | fewer than `2W` samples, or a window holds no rows | keep going |
+| `IMPROVING` | not FLAT | keep going, `consecutive_flat := 0` |
+| `FLAT` | `rel_p0 < 1 %` **AND** `rel_v < 1 %` | keep going, `consecutive_flat += 1` |
+| **`PLATEAU`** | FLAT on **two consecutive** evaluations **AND** no gatekeeper acceptance in the last **15 cycles** | write `$BASEDIR/PLATEAU`, run the closing match, end the chain |
+| **`DIVERGING`** | `rel_p0 < -5 %` (policy loss ROSE over the trailing 50 k samples) | write `$BASEDIR/ABORT`, end the chain, **report as measured — never retune** |
+
+Both halves of the PLATEAU conjunction are load-bearing and neither is redundant: the
+training loss can be flat while the gate still accepts candidates (the net keeps getting
+stronger in play because the DATA is improving), and the gate can be quiet for a stretch
+while the loss still falls. Only when both have stopped is there no progress left.
+
+**The closing match runs ONLY when PLATEAU fires.** A segment that ends on its walltime
+finishes its current cycle, writes the summary, submits its successor, and exits — no
+match. Segment cap `12` (≈ 4 GPU-days at the 8 h default) is a **safety bound, not a
+target**; reaching it means the plateau rule never fired, which is itself the finding.
+
+State (`consecutive_flat`, last-acceptance cycle) lives in `$BASEDIR/plateau_state.json`
+and the cycle counter in `$BASEDIR/.cycles_completed`, so both survive a job boundary.
 
 - **Open obligations before start:** none blocking. `o02_pos_len_matches_databoardlen` is *extended* by this node from a constant to a parameter and re-verified in both directions (C2–C5 of the verifier).
 - **Reduction-to-baseline test:** the 9×9 behaviour of every shared file with the new variables UNSET must be unchanged. Verifier checks C1, C2, C4, C6, C7, C9 and C11 are exactly that test, and they pass.
@@ -75,6 +110,8 @@ codes/cfg/match_first_latest_7.cfg  5 keys off match_first_latest_9.cfg
 codes/loop/t7_cycle.sh              exports KTG_POS_LEN=7 + the knob set, one cycle
 codes/loop/converged_7x7.sbatch     the ONE allocation: preflight, cycles, match, summary
 codes/eval/summarize_7x7_run.py     loss log + exports + gate + match -> summary JSON
+codes/eval/plateau_check.py          THE STOPPING RULE: trailing-window plateau + divergence
+codes/loop/t7_continue.sbatch        one continuation segment; chains on --dependency=afterany
 codes/eval/check_board_param.sh     the verifier (11 checks, both directions)
 codes/env/train-print-every.diff    the mission-owned one-line train.py patch
 --- parameterised, NOT forked -------------------------------------------------
@@ -128,8 +165,11 @@ codes/loop/synchronous_loop_9x9.sh  UNCHANGED (its knobs and configs were alread
 
 | Risk | Signature | Action |
 |---|---|---|
-| **A1** the window never fills, nothing exports | `export_count == 0` at the end of cycle 6 | STOP the cycle loop, write the summary, exit non-zero. Report. Do not retune |
-| **A2** it does not learn | 15 000 samples trained and `min p0loss >= 3.5` | same: STOP, summarise, report as measured |
+| **A1** the window never fills, nothing exports | `export_count == 0` at the end of cycle 6 | STOP the cycle loop, write the summary, exit non-zero. Report. Do not retune. **PASSED** — the first export landed in cycle 1 |
+| **A2** it does not learn | 15 000 samples trained and `min p0loss >= 3.5` | same: STOP, summarise, report as measured. **PASSED** — min p0loss 3.4905 at 11 776 samples |
+| **A3** it diverges | `rel_p0 < -5 %` over the trailing 50 k samples (§ 2a) | write `$BASEDIR/ABORT`, end the segment chain, report as measured. Never retune |
+| **A4** a segment restarts the run instead of continuing it | `Initializing new model!` (`train.py:799`) appears in the segment's first cycle log | fatal: write `$BASEDIR/ABORT`, end the chain. Asserted `== 0` by `t7_continue.sbatch` |
+| segment cap reached | segment 12 ends on walltime | submit no successor, exit non-zero, report that the plateau rule never fired |
 | a cycle fails | `t7_cycle.sh` exit ≠ 0 | STOP, record the exit code and the cycle log path in `abort` |
 | rows/game far off the 7×7 prior | cycle-1 measurement | games/cycle re-derived ONCE from the measurement (this is the brief, not a silent tune); recorded in `rows_per_game-<jobid>.json` |
 | the run is slower than budgeted | fewer cycles before the deadline | the loop is time-budgeted, not cycle-count-budgeted; the match still runs in the reserved 35 min |
