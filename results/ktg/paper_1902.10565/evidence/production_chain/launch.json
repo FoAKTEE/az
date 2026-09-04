@@ -1,17 +1,19 @@
 {
   "task_id": "production_chain_9x9",
   "paper": "arxiv-1902.10565",
-  "job_id": 299366,
+  "job_id": 299461,
   "job_name": "ktg-loop",
   "link": 1,
   "chain": {
-    "KTG_MAX_CHAIN": 3,
+    "KTG_MAX_CHAIN": 9,
+    "link_walltime": "23:30:00",
     "chain_depth_at_submit": 0,
-    "successor_policy": "sbatch --dependency=afterany issued at the top of each link body"
+    "successor_policy": "sbatch --dependency=afterany issued at the top of each link body; resubmit() passes no --time, so SBATCH_TIMELIMIT=23:30:00 (propagated by --export=ALL) is what holds the new link length for every successor",
+    "total_gpu_days": "9 links x 23.5 h = 8.81 GPU-days (the 3 x 71.5 h = 8.94 the plan budgeted)"
   },
-  "sbatch_command_line": "BASEDIR=/scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/runs/p1 KTG_MAX_CHAIN=3 KTG_MON_PS_INTERVAL=1 KTG_MON_GPU_INTERVAL=5 sbatch results/ktg/paper_1902.10565/codes/loop/loop.sbatch",
-  "submit_line_slurm_recorded": "sbatch results/ktg/paper_1902.10565/codes/loop/loop.sbatch",
-  "submitted_at": "2026-09-04T10:01:22-04:00",
+  "sbatch_command_line": "BASEDIR=/scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/runs/p1 KTG_MAX_CHAIN=9 KTG_MON_PS_INTERVAL=1 KTG_MON_GPU_INTERVAL=5 SBATCH_TIMELIMIT=23:30:00 sbatch --time=23:30:00 results/ktg/paper_1902.10565/codes/loop/loop.sbatch",
+  "submit_line_slurm_recorded": "sbatch --time=23:30:00 results/ktg/paper_1902.10565/codes/loop/loop.sbatch",
+  "submitted_at": "2026-09-04T10:40:24-04:00",
   "submitted_from": {
     "host": "login03",
     "cwd": "/weka/home/schmidt/ssci-haiyangw/az",
@@ -23,18 +25,26 @@
     "gres": "gpu:1",
     "cpus_per_task": 32,
     "mem": "120G",
-    "time": "2-23:30:00",
-    "req_tres": "cpu=32,mem=120G,node=1,billing=32,gres/gpu=1"
+    "time": "23:30:00",
+    "req_tres": "cpu=32,mem=120G,node=1,billing=32,gres/gpu=1",
+    "time_limit_confirmed_by_scontrol": "TimeLimit=23:30:00"
   },
   "partition_rationale": "mission.json decisions[2] (b200 while b300 is reserved); scontrol show reservation at submit time has gb301 held by ssci-ssci-yejinc-sep2026 to 2026-09-04T15:00 and ssci-adamgleave-sep2026 to 2026-09-07T00:00, and check.sh reported b300 free_gpus=0/8",
   "policy_check": {
     "script": ".claude/skills/compute-budget/check.sh (mission.json compute.policyCheck)",
     "invocation": "bash .claude/skills/compute-budget/check.sh --gpus 1 --cpus 32 --partition b200",
     "exit": 0,
-    "verdict": "OK : request gpus=1 cpus=32 part=b200 within policy (gpu<=4, no cpu cap)"
+    "verdict": "OK : request gpus=1 cpus=32 part=b200 within policy (gpu<=4, no cpu cap)",
+    "rerun_before_resubmission": {
+      "at": "2026-09-04T10:40:05-04:00",
+      "exit": 0,
+      "verdict": "OK : request gpus=1 cpus=32 part=b200 within policy (gpu<=4, no cpu cap)",
+      "b200_free_gpus": "2/128",
+      "b300_free_gpus": "0/8"
+    }
   },
   "basedir": "/scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/runs/p1",
-  "stdout_log": "/scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/logs/loop-299366.log",
+  "stdout_log": "/scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/logs/loop-299461.log",
   "git_head": "272b887986d015ca432c72580df4d46addebb959",
   "git_head_subject": "fix(eval,ktg): bin a full search at Root visits == maxVisits, not > cheap",
   "knobs_sha256": "5ae5358791974ae12dd2e635aa38b825637faf23e1963dae1d96f146fd266d62",
@@ -69,8 +79,24 @@
     "state": "PENDING",
     "reason": "Priority",
     "priority": 18181,
-    "squeue_start_estimate": "2026-09-05T13:44:02 (backfill estimate published ~2 min after submit; reason (Priority)) -- an estimate, not a reservation; the job can start earlier",
-    "b200_free_gpus": "10/128",
+    "squeue_start_estimate": "2026-09-05T13:44:02 at +60 s, then N/A at 10:45 -- the re-link did NOT move the estimate off the same block",
+    "open": "1-day requests already in the queue (278230, 299353) are pinned to the same 2026-09-05T13:44:02 block, so 23:30:00 improves backfill eligibility without guaranteeing a same-day start; escalated as data",
+    "b200_free_gpus": "2/128",
     "b300_free_gpus": "0/8"
+  },
+  "superseded": {
+    "job_id": 299366,
+    "reason": "re-linked on the coordinator's decision; cancelled at 2026-09-04T10:39:32 while still PENDING, never allocated, runs/p1 never created",
+    "sacct": "299366 CANCELLED+ Elapsed 00:00:00 Start None End 2026-09-04T10:39:32",
+    "time_limit": "2-23:30:00",
+    "KTG_MAX_CHAIN": 3,
+    "start_estimate_that_triggered_the_relink": "2026-09-05T13:44:02 (~31 h); every >=1-day b200 job carried the same estimate while the 12 h jobs 298846 and 299163 had same-day ones (17:31, 19:39)"
+  },
+  "scripts_unedited": "no admitted script or knob was changed for the re-link; git diff 6e4117d..3a3532c over codes/{loop,cfg,data_budget} and codes/eval/stage_monitor.sh is empty, and loop.sbatch sha256 0a03fbb230cc288f698da846d1f2619c97bc4963ead833e36b1c2c651358f389 is unchanged",
+  "validator": {
+    "commit": "3a3532c",
+    "verdict": "no chain-corrupting defect in the scripts this job runs; no scancel for repair was needed",
+    "export_ramp": "exports at cycles ~5, 10, 15, 19, 22 (the trainer consumes whole shuffled files, train.py:1303-1346,:1511, and shuffle.py writes ~70k-row files); first export at cycle 5 stands; no export at cycles 6-9 is NOT a fault",
+    "o42": "non-blocking: after a SIGKILLed link a successor failing pre-flight before its own stage_monitor start would run stop on stale monitor.pids; escalate before the successor starts if any link ends SIGKILLed"
   }
 }

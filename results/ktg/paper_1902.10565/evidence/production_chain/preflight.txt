@@ -403,3 +403,201 @@ $ squeue -j 299366 -o '%.10i %.8T %.20S %R'
 $ squeue -j 299366 --start
              JOBID PARTITION     NAME     USER ST          START_TIME  NODES SCHEDNODES           NODELIST(REASON)
             299366      b200 ktg-loop ssci-hai PD 2026-09-05T13:44:02      1 (null)               (Priority)
+
+==============================================================================
+RE-LINK (coordinator decision 2026-09-04, recorded verbatim in the ledger row)
+==============================================================================
+why: job 299366's backfill estimate was 2026-09-05T13:44 (~31 h out) and every
+     2-3-day b200 job is pinned to that same block, while 12 h jobs ahead of us
+     had estimates the same day (298846 17:31, 299163 19:39): backfill fills
+     short gaps and never a 71.5 h window. The chain is re-linked into ~1-day
+     links -- a resource request the scheduler can backfill -- with everything
+     else unchanged. This is a change of request, not a queue-jump.
+
+------------------------------------------------------------------------------
+(R1) does any admitted script carry a constant that assumes a 71.5 h link?
+------------------------------------------------------------------------------
+$ grep -n '257400|2-23:30|71.5|MIN_RUNTIME|--time' over the loop scripts
+  10:#SBATCH --time=2-23:30:00
+  20:#   contract   1 GPU, 32 CPUs, 120G, 2-23:30:00 (30 min inside MaxTime),
+  30:#              how the scheduler ends every HEALTHY link at --time (SIGKILL
+  116:# KTG_MIN_RUNTIME_SECONDS=0 left over from a test shell would wave every fast
+  124:KTG_MIN_RUNTIME_SECONDS="${KTG_MIN_RUNTIME_SECONDS:-600}"
+  175:    KNOBS_STRAY=$(grep -c -E '^[[:space:]]*(KTG_MAX_FAILS|KTG_MAX_CHAIN|KTG_MIN_RUNTIME_SECONDS)=' "$KNOBS_ENV" 2>/dev/null || true)
+  181:    say "loop knobs $KNOBS_ENV sets $KNOBS_STRAY classification knob(s) (KTG_MAX_FAILS/KTG_MAX_CHAIN/KTG_MIN_RUNTIME_SECONDS) -- not sourced, REQ_CPUS unresolved"
+  282:# step at --time and sends SIGKILL KillWait seconds later, and scancel takes the
+  373:       ! { [ "$LOOP_RC" -eq "$KTG_RC_SIGTERM" ] && [ "$elapsed" -ge "$KTG_MIN_RUNTIME_SECONDS" ]; }; then
+  388:    #     KTG_MIN_RUNTIME_SECONDS. A time-limit kill cannot arrive in the first
+  392:       { [ "$rc" -eq "$KTG_RC_SIGTERM" ] && [ "$elapsed" -ge "$KTG_MIN_RUNTIME_SECONDS" ]; }; then
+  433:    # faster than KTG_MIN_RUNTIME_SECONDS costs two of the three attempts, so a
+  435:    if [ "$elapsed" -lt "$KTG_MIN_RUNTIME_SECONDS" ]; then
+  436:        say "fast failure: ${elapsed}s < ${KTG_MIN_RUNTIME_SECONDS}s -- counting it twice"
+  582:    say "$KNOBS_ENV sets $KNOBS_STRAY classification knob(s) (KTG_MAX_FAILS/KTG_MAX_CHAIN/KTG_MIN_RUNTIME_SECONDS) -- pre-flight failure"
+
+  findings:
+  * loop.sbatch:10  #SBATCH --time=2-23:30:00 is the ONLY link-length constant.
+  * loop.sbatch:518-519 resubmit() runs
+      sbatch --parsable --partition=$part --dependency=afterany:$SLURM_JOB_ID $SELF
+    with NO --time, so a successor would fall back to the #SBATCH header and the
+    chain would revert to 3-day links after link 1. The environment, not the
+    script, is therefore where the new length must be set: sbatch's documented
+    precedence is command line > environment variable > #SBATCH directive, and
+    SBATCH_TIMELIMIT travels down the whole chain under --export=ALL, exactly as
+    BASEDIR and KTG_MAX_CHAIN already do. No admitted script is edited.
+  * KTG_MIN_RUNTIME_SECONDS=600 (loop.sbatch:124) is an absolute 10-minute floor
+    used only to tell a fast crash from a walltime kill. It does not scale with
+    the link and stays correct for a 23:30:00 link, so it is NOT changed.
+  * knobs_9x9.env:159 '23 whole cycles inside one 2-23:30:00 chain link' is a
+    comment on a projection, not a runtime constant: at 84600 s / 11182 s the
+    expectation becomes ~7 cycles per link, and 9 x 7 = 63 ~ 3 x 23 = 69 cycles.
+    No knob moves and check_knobs_9x9.py's K7 bound (cycle <= 60 h) is unaffected.
+  * codes/eval/chain_status.sh does not exist yet, so it carries no expectation.
+
+------------------------------------------------------------------------------
+(R2) evidence for the queue argument, and the cancel
+------------------------------------------------------------------------------
+$ squeue -p b200 -o '%.10i %.10u %.12l %.20S %.8T %R' | sort -k3
+     JOBID       USER   TIME_LIMIT           START_TIME    STATE NODELIST(REASON)
+    298846 ssci-emanu     12:00:00  2026-09-04T17:31:37  PENDING (Resources)
+299121_[8- ssci-agane   3-00:00:00                  N/A  PENDING (JobArrayTaskLimit)
+    105322 ssci-peter        10:00                  N/A  PENDING (ReqNodeNotAvail, May be reserved for other job)
+    299163 ssci-emanu     12:00:00  2026-09-04T19:39:55  PENDING (Priority)
+    277770 ssci-yw234   3-00:00:00  2026-09-05T13:44:02  PENDING (Priority)
+    277787 ssci-yw234   3-00:00:00  2026-09-05T13:44:02  PENDING (Priority)
+    277788 ssci-yw234   3-00:00:00  2026-09-05T13:44:02  PENDING (Priority)
+    277789 ssci-yw234   3-00:00:00  2026-09-05T13:44:02  PENDING (Priority)
+    288672 ssci-ckb73   2-00:00:00  2026-09-05T13:44:02  PENDING (Priority)
+    288673 ssci-ckb73   3-00:00:00  2026-09-05T13:44:02  PENDING (Priority)
+    288674 ssci-ckb73   3-00:00:00  2026-09-05T13:44:02  PENDING (Priority)
+    288675 ssci-ckb73   3-00:00:00  2026-09-05T13:44:02  PENDING (Priority)
+    278230 ssci-siyan   1-00:00:00  2026-09-05T13:44:02  PENDING (Priority)
+    244268 ssci-peter   2-00:00:00  2026-09-05T05:32:00  PENDING (Priority)
+    244678 ssci-peter   2-00:00:00  2026-09-05T13:44:02  PENDING (Priority)
+299353_[0- ssci-minsi   1-00:00:00  2026-09-05T13:44:02  PENDING (Priority)
+299352_[0- ssci-minsi   1-00:00:00  2026-09-05T07:40:00  PENDING (Priority)
+    248749 ssci-peter   2-00:00:00  2026-09-05T13:44:02  PENDING (Priority)
+    263240 ssci-czhan   2-00:00:00  2026-09-05T13:44:02  PENDING (Priority)
+    263241 ssci-czhan   2-00:00:00  2026-09-05T13:44:02  PENDING (Priority)
+    263242 ssci-czhan   2-00:00:00  2026-09-05T13:44:02  PENDING (Priority)
+    263243 ssci-czhan   2-00:00:00  2026-09-05T13:44:02  PENDING (Priority)
+    263244 ssci-czhan   2-00:00:00  2026-09-05T13:44:02  PENDING (Priority)
+    263245 ssci-czhan   2-00:00:00  2026-09-05T13:44:02  PENDING (Priority)
+    263246 ssci-czhan   2-00:00:00  2026-09-05T13:44:02  PENDING (Priority)
+    263247 ssci-czhan   2-00:00:00  2026-09-05T13:44:02  PENDING (Priority)
+    263248 ssci-czhan   2-00:00:00  2026-09-05T13:44:02  PENDING (Priority)
+    263249 ssci-czhan   2-00:00:00  2026-09-05T13:44:02  PENDING (Priority)
+    263250 ssci-czhan   2-00:00:00  2026-09-05T13:44:02  PENDING (Priority)
+
+$ date -Is
+2026-09-04T10:39:32-04:00
+$ squeue -j 299366 -o '%.10i %.8T %.12l %.20S %R'
+     JOBID    STATE   TIME_LIMIT           START_TIME NODELIST(REASON)
+    299366  PENDING   2-23:30:00  2026-09-05T13:44:02 (Priority)
+$ scancel 299366
+scancel exit 0
+$ sacct -j 299366 -X -n -o JobID,State,Elapsed,Start,End
+299366       CANCELLED+   00:00:00                None 2026-09-04T10:39:32 
+$ test ! -e $KTG_ROOT/runs/p1   [the cancelled job never ran, so BASEDIR is still fresh]
+  exit 0 -- runs/p1 absent
+$ ls /scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/logs/loop-299366.log
+ls: cannot access '/scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/logs/loop-299366.log': No such file or directory
+
+  NOTE (honest reading of the queue table above): the 12 h jobs 298846 and 299163
+  do carry same-day estimates (17:31, 19:39) while every 1-day-and-longer job is
+  pinned to 2026-09-05T13:44:02 -- including two 1-00:00:00 requests (278230,
+  299353_[0-]). A 23:30:00 request is therefore an improvement in backfill
+  eligibility but not a guarantee of a same-day start; 299352_[0-] (1-00:00:00)
+  is estimated 2026-09-05T07:40, ahead of the 13:44 block. Recorded, not claimed.
+
+------------------------------------------------------------------------------
+(R3) compute-policy check re-run before the new submission (cadence: every sbatch)
+------------------------------------------------------------------------------
+$ bash "$POLICY_CHECK" --gpus 1 --cpus 32 --partition b200   # POLICY_CHECK = mission.json compute.policyCheck
+== compute-budget self-check  2026-09-04T10:40:05-04:00 ==
+my jobs      : gpus=0 cpus=0  (0 jobs)
+partition b200 : free_gpus=2/128 (excludes reserved/drained nodes)
+partition b300 : free_gpus=0/8 (excludes reserved/drained nodes)
+reservations : 9 defined (6 active) — scontrol show reservation
+quota        : | /home/ssci-haiyangw/ | 3.46 GB  | 100.00 GB |  3.46%   |
+quota        : | /scratch/ssci-anima/ | 35.55 TB |  40.00 TB |   88%    |
+OK           : request gpus=1 cpus=32 part=b200 within policy (gpu<=4, no cpu cap)
+exit 0
+
+$ test ! -e $KTG_ROOT/runs/p1
+  exit 0 -- BASEDIR still fresh, unchanged from pre-flight step (6)
+$ env | grep -c '^KTG_\|^BASEDIR\|^OMP_\|^MKL_\|^SBATCH_'   [submitting shell]
+0
+  (0: the four override variables and SBATCH_TIMELIMIT are passed as a command
+   prefix on the sbatch line, so the shell itself stays clean -- o33 (d))
+$ sha256sum codes/loop/knobs_9x9.env  [unchanged from the pre-flight]
+5ae5358791974ae12dd2e635aa38b825637faf23e1963dae1d96f146fd266d62  codes/loop/knobs_9x9.env
+0a03fbb230cc288f698da846d1f2619c97bc4963ead833e36b1c2c651358f389  codes/loop/loop.sbatch
+$ git rev-parse HEAD
+3a3532cb7018b59b1dc3fcdcd51c9f7bb51c5357
+
+------------------------------------------------------------------------------
+(R4) RESUBMISSION -- the re-linked chain
+------------------------------------------------------------------------------
+$ git log --oneline -2   [the validator's commit landed and touched no chain script]
+3a3532c diag(validate,ktg): admit wave-3 repairs, narrow ramp, playout cap solid
+6e4117d exp(prod,ktg): launch the 3-link 9x9 production chain on one B200
+$ git diff --stat 6e4117d..HEAD -- codes/{loop,cfg,data_budget} codes/eval/stage_monitor.sh
+  (empty diff -- loop.sbatch sha256 0a03fbb2... and knobs sha256 5ae53587... unchanged)
+
+$ BASEDIR=/scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/runs/p1 KTG_MAX_CHAIN=9 \
+    KTG_MON_PS_INTERVAL=1 KTG_MON_GPU_INTERVAL=5 SBATCH_TIMELIMIT=23:30:00 \
+    sbatch --time=23:30:00 results/ktg/paper_1902.10565/codes/loop/loop.sbatch
+[BILLING] loaded!
+[BILLING] Re-emitting cost at job start!
+Submitted batch job 299461
+sbatch exit 0
+submitted at 2026-09-04T10:40:24-04:00
+
+  --time=23:30:00 on the command line sets link 1; SBATCH_TIMELIMIT=23:30:00 is
+  what every SUCCESSOR picks up, because resubmit() (loop.sbatch:518-519) passes
+  no --time and sbatch's precedence is command line > environment > #SBATCH.
+  Under --export=ALL the variable rides the whole chain, like BASEDIR and
+  KTG_MAX_CHAIN. No admitted script was edited; no knob was moved.
+
+job id: 299461   (supersedes the cancelled 299366)
+$ scontrol show job 299461
+JobId=299461 JobName=ktg-loop
+   UserId=ssci-haiyangw(30154) GroupId=users(30000) MCS_label=N/A
+   Priority=18181 Nice=0 Account=ssci-anima QOS=scavenger
+   JobState=PENDING Reason=None Dependency=(null)
+   Requeue=1 Restarts=0 BatchFlag=1 Reboot=0 ExitCode=0:0
+   RunTime=00:00:00 TimeLimit=23:30:00 TimeMin=N/A
+   SubmitTime=2026-09-04T10:40:24 EligibleTime=2026-09-04T10:40:24
+   AccrueTime=Unknown
+   StartTime=Unknown EndTime=Unknown Deadline=N/A
+   SuspendTime=None SecsPreSuspend=0 LastSchedEval=2026-09-04T10:40:24 Scheduler=Main
+   Partition=b200 AllocNode:Sid=login03:2876766
+   ReqNodeList=(null) ExcNodeList=(null)
+   NodeList=
+   NumNodes=1-1 NumCPUs=32 NumTasks=1 CPUs/Task=32 ReqB:S:C:T=0:0:*:*
+   ReqTRES=cpu=32,mem=120G,node=1,billing=32,gres/gpu=1
+   AllocTRES=(null)
+   Socks/Node=* NtasksPerN:B:S:C=1:0:*:* CoreSpec=*
+   MinCPUsNode=32 MinMemoryNode=120G MinTmpDiskNode=0
+   Features=(null) DelayBoot=00:00:00
+   OverSubscribe=OK Contiguous=0 Licenses=(null) LicensesAlloc=(null) Network=(null)
+   Command=/weka/home/schmidt/ssci-haiyangw/az/results/ktg/paper_1902.10565/codes/loop/loop.sbatch
+   SubmitLine=sbatch --time=23:30:00 results/ktg/paper_1902.10565/codes/loop/loop.sbatch
+   WorkDir=/weka/home/schmidt/ssci-haiyangw/az
+   StdErr=
+   StdIn=/dev/null
+   StdOut=/scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/logs/loop-299461.log
+   TresPerNode=gres/gpu:1
+   TresPerTask=cpu=32
+
+$ scontrol show job 299461 | grep -E 'TimeLimit|ReqTRES|Partition='
+   RunTime=00:00:00 TimeLimit=23:30:00 TimeMin=N/A
+   Partition=b200 AllocNode:Sid=login03:2876766
+   ReqTRES=cpu=32,mem=120G,node=1,billing=32,gres/gpu=1
+
+$ squeue -j 299461 --start   [60 s after submit]
+             JOBID PARTITION     NAME     USER ST          START_TIME  NODES SCHEDNODES           NODELIST(REASON)
+            299461      b200 ktg-loop ssci-hai PD 2026-09-05T13:44:02      1 (null)               (Priority)
+$ squeue -j 299461 -o '%.10i %.8T %.12l %.20S %.10Q %R'
+     JOBID    STATE   TIME_LIMIT           START_TIME   PRIORITY NODELIST(REASON)
+    299461  PENDING     23:30:00  2026-09-05T13:44:02      18181 (Priority)
