@@ -1,6 +1,6 @@
 ---
 name: compute-budget
-description: Recurring self-check of the project's compute-usage policy before launching, scaling, or re-queuing ANY GPU/CPU job on the Schmidt cluster (sbatch, srun, interact, self-play loops, training). Enforces: <=4 GPUs total, b200/b300 partitions only, 500 GiB scratch budget (CPU cap withdrawn by the human), take fewer GPUs when the cluster is scarce. Run it every time a job is about to be submitted and whenever a running workload is about to be scaled up.
+description: Recurring self-check of the project's compute-usage policy before launching, scaling, or re-queuing ANY GPU/CPU job on the Schmidt cluster (sbatch, srun, interact, self-play loops, training). Enforces: <=4 GPUs total, b200/b300/l40s partitions (l40s allowed by the human on 2026-09-04), 500 GiB scratch budget (CPU cap withdrawn by the human), take fewer GPUs when the cluster is scarce. Run it every time a job is about to be submitted and whenever a running workload is about to be scaled up.
 ---
 
 # Compute budget — policy self-check
@@ -10,7 +10,7 @@ Source of the policy: `progress/prompt/ktg-train.md` § Computation Usage.
 | Resource | Policy text | Concrete cap on skipjack |
 |---|---|---|
 | CPU | originally "no more than 20% of all CPUs"; **withdrawn by the human on 2026-09-03 — no CPU cap** | declare `--cpus-per-task` honestly (a node has 124); on the login node keep parallelism ≤ 2 (14 cores, 5 GB RAM cgroup) |
-| GPU | "at most only use the last 4 GPUs (B200 or B300)" | **≤ 4 GPUs total across all my running+pending jobs**, `--partition=b200` or `b300` only. Slurm assigns GPU indices; "last 4" is realised as a count cap, not indices. |
+| GPU | "at most only use the last 4 GPUs (B200 or B300)"; **l40s added by the human on 2026-09-04** | **≤ 4 GPUs total across all my running+pending jobs**, `--partition=b200`, `b300`, or `l40s` (multi-partition `b200,l40s` allowed). Slurm assigns GPU indices; "last 4" is realised as a count cap, not indices. |
 | GPU scarcity | "if GPUs are occupied, use maximal available GPUs" | Read the free-GPU count from the check; request `min(4, free, what the job actually needs)`. Never queue a 4-GPU request when only 1–2 are free and the job can run smaller. |
 | Target | "1-2 B300" | Prefer `b300` (1 node, `gb301`) with 1–2 GPUs. It is often fully reserved — fall back to `b200` at the same GPU count. |
 

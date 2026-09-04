@@ -28,7 +28,8 @@
     "account": "ssci-anima",
     "partitions": [
       "b300",
-      "b200"
+      "b200",
+      "l40s"
     ],
     "gpuCapTotal": 4,
     "cpuCapPerJob": null,
@@ -89,6 +90,16 @@
       "decision": "run on b200 while b300 is reserved; same GPU count",
       "affects": [
         "compute.partitions"
+      ]
+    },
+    {
+      "date": "2026-09-04",
+      "by": "human",
+      "decision": "the production chain may run on whichever of b200 / l40s frees first (multi-partition submission); b300 stays preferred when free",
+      "affects": [
+        "compute.partitions",
+        "policyCheck",
+        "production_chain_9x9 links"
       ]
     }
   ]

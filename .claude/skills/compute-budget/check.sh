@@ -3,7 +3,7 @@
 # compute job on skipjack. Encodes progress/prompt/ktg-train.md "Computation Usage".
 #
 #   CPU : no cap (human decision 2026-09-03) — reported for information only
-#   GPU : at most 4 GPUs, b200/b300 only; if GPUs are scarce, take what is free
+#   GPU : at most 4 GPUs, b200/b300/l40s (l40s allowed by human decision 2026-09-04); if GPUs are scarce, take what is free
 #
 # Usage:  check.sh [--gpus N] [--cpus N] [--partition b200|b300]
 # Exit 0 = request is within policy; exit 1 = violates policy; prints live state.
@@ -34,7 +34,7 @@ my_cpus=$(squeue -u "$USER" -t RUNNING,PENDING -h -o "%C" 2>/dev/null | awk '{s+
 echo "my jobs      : gpus=${my_gpus} cpus=${my_cpus}  ($(squeue -u "$USER" -h | wc -l) jobs)"
 
 # --- free GPUs on the allowed partitions -------------------------------------
-for p in b200 b300; do
+for p in b200 b300 l40s; do
   tot=0; free=0
   for n in $(sinfo -p "$p" -N -h -o "%N" | sort -u); do
     info=$(scontrol show node "$n" 2>/dev/null)
@@ -54,9 +54,10 @@ if [ -x /apps/helpers/quotas.py ] || [ -f /apps/helpers/quotas.py ]; then
 fi
 
 # --- policy checks on the requested job ---------------------------------------
-if [ -n "$PART" ] && [ "$PART" != b200 ] && [ "$PART" != b300 ]; then
-  echo "VIOLATION    : partition '$PART' — policy allows b200/b300 only"; ok=1
-fi
+case "${PART:-b200}" in
+  b200|b300|l40s|b200,l40s|l40s,b200|b300,b200|b300,b200,l40s) ;;
+  *) echo "VIOLATION    : partition '$PART' — policy allows b200/b300/l40s only (human decision 2026-09-04)"; ok=1 ;;
+esac
 if [ "$REQ_GPUS" -gt "$GPU_CAP" ]; then
   echo "VIOLATION    : --gpus $REQ_GPUS > cap $GPU_CAP"; ok=1
 fi
