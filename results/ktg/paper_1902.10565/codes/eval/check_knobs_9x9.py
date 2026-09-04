@@ -11,6 +11,12 @@ Closing check for the production cycle knobs.  Reads NOTHING by hand:
   * the knob values come from codes/loop/knobs_9x9.env,
   * the arithmetic comes from codes/eval/derive_knobs.py,
 
+Every MEASURED key the projections read is asserted to be PRESENT before any
+derivation runs (obligation o41): derive_knobs.py has no fallback constants left,
+and this script names every missing key at once instead of failing later on one of
+them.  The gate's game count is a measurement too -- it is the gatekeeper sgf line
+count of the audit, not a number typed here.
+
 then it asserts the mission tolerances and, unless --no-loop, that the
 ${VAR:-default} block of codes/loop/synchronous_loop_9x9.sh carries exactly the
 values in knobs_9x9.env.
@@ -29,6 +35,11 @@ Tolerances asserted (the work packet's four, on top of derive_knobs.py's K1-K7):
 Exit 0 iff every check passes.  Usage:
 
   python3 results/ktg/paper_1902.10565/codes/eval/check_knobs_9x9.py [--no-loop] [--json OUT]
+      [--throughput FILE] [--rows-file FILE] [--audit FILE]
+
+--throughput / --rows-file / --audit replace the frozen smoke evidence with a newer
+measurement (that is how measure_stage_throughput re-runs this check against its own
+output); with none of them the admitted -298712 / -299259 copies are used.
 """
 
 import argparse
@@ -55,6 +66,36 @@ TPUT_FILES = ("throughput_smoke-298712.json", "throughput_smoke.json")
 # the o37-clean one). The check takes the SLOWER of each pair, so K7 can only be
 # pessimistic. audit-298712.json / audit-299259.json carry the same numbers.
 RATE_FILES = ("throughput_smoke-298712.json", "throughput_smoke-299259.json")
+# The gatekeeper's game count is measured, not typed: it is the number of sgf lines the
+# gate wrote, which the audit records. o41 -- derive_knobs.py used to substitute 156 here.
+AUDIT_FILES = ("audit-298712.json", "audit-299259.json")
+
+# Every MEASURED key derive_knobs.py's projections read. Asserted here, before deriving,
+# so a missing measurement is reported as itself rather than as a nan downstream (o41,
+# validator break attempt B3).
+REQUIRED_SCALARS = ("train_samples_per_second", "bytes_per_row_on_disk",
+                    "selfplay_rows_total")
+REQUIRED_PHASE_ELAPSED = ("cycle2/gatekeeper", "cycle2/shuffle")
+
+
+def missing_measured_keys(tput):
+    """Names of the measured keys this check needs and the throughput JSON does not have."""
+    missing = []
+    for k in REQUIRED_SCALARS:
+        if tput.get(k) is None:
+            missing.append(k)
+    pps = tput.get("per_phase_stage") or {}
+    for phase in REQUIRED_PHASE_ELAPSED:
+        if (pps.get(phase) or {}).get("elapsed_s") is None:
+            missing.append("per_phase_stage['%s'].elapsed_s" % phase)
+    probe = tput.get("probe_search") or {}
+    ps = (pps.get("probe_search/selfplay") or {})
+    has_rate = bool(tput.get("selfplay_games_per_hour")) or bool(
+        probe.get("games") and ps.get("elapsed_s"))
+    if not has_rate:
+        missing.append("selfplay_games_per_hour (or probe_search.games with "
+                       "per_phase_stage['probe_search/selfplay'].elapsed_s)")
+    return missing
 
 
 def pick(names):
@@ -79,17 +120,48 @@ def main(argv=None):
     ap.add_argument("--no-loop", action="store_true",
                     help="skip the synchronous_loop_9x9.sh default-wiring assertion")
     ap.add_argument("--json", default=None)
+    ap.add_argument("--throughput", default=None,
+                    help="throughput JSON to read instead of the frozen smoke copies")
+    ap.add_argument("--rows-file", default=None,
+                    help="rows_per_game text to read instead of the frozen smoke copy")
+    ap.add_argument("--audit", default=None,
+                    help="audit JSON the gatekeeper game count is read from")
     a = ap.parse_args(argv)
 
     knobs = dk.read_budget_env(KNOBS_ENV)
-    rows_file = pick(ROWS_FILES)
-    tput_file = pick(TPUT_FILES)
+    rows_file = a.rows_file or pick(ROWS_FILES)
+    tput_file = a.throughput or pick(TPUT_FILES)
+    audit_file = a.audit or pick(AUDIT_FILES)
+    rate_files = [a.throughput] if a.throughput else list(RATE_FILES)
 
     print("check_knobs_9x9 -- node arxiv-1902.10565::derive_cycle_knobs_9x9")
     print("")
     print("INPUTS (content-hashed)")
-    for p in (rows_file, tput_file, KNOBS_ENV, BUDGET_ENV, LOOP_SH):
+    for p in (rows_file, tput_file, audit_file, KNOBS_ENV, BUDGET_ENV, LOOP_SH):
         print("  %s  %s" % (sha256(p), os.path.relpath(p, os.path.dirname(PAPER))))
+    print("")
+
+    # ---- o41: every measured key must be present BEFORE anything is derived --------
+    tput_json = json.load(open(tput_file))
+    missing = missing_measured_keys(tput_json)
+    if missing:
+        raise SystemExit(
+            "check_knobs_9x9: %s is missing the measured key(s) %s. derive_knobs.py has no "
+            "fallback constants (obligation o41), so the projections cannot be evaluated: "
+            "re-run the measurement, or pass --throughput with a file that carries them."
+            % (os.path.relpath(tput_file, os.path.dirname(PAPER)), ", ".join(missing)))
+    print("MEASURED KEYS PRESENT: %s and per_phase_stage %s"
+          % (", ".join(REQUIRED_SCALARS), ", ".join(REQUIRED_PHASE_ELAPSED)))
+
+    audit_json = json.load(open(audit_file))
+    gate_games = ((audit_json.get("S4_gatekeeper_sgfs") or {}).get("lines"))
+    if not gate_games:
+        raise SystemExit(
+            "check_knobs_9x9: %s carries no S4_gatekeeper_sgfs.lines, which is the MEASURED "
+            "gatekeeper game count the cycle-wall projection scales from (obligation o41)."
+            % os.path.relpath(audit_file, os.path.dirname(PAPER)))
+    print("GATE GAMES (measured, %s S4_gatekeeper_sgfs.lines): %s"
+          % (os.path.basename(audit_file), gate_games))
     print("")
 
     with open(rows_file) as f:
@@ -115,13 +187,13 @@ def main(argv=None):
 
     # slowest measured rate of the two jobs -> K7 is pessimistic by construction
     gph, sps = [], []
-    for name in RATE_FILES:
-        fp = os.path.join(EVID, name)
+    for name in rate_files:
+        fp = name if os.path.isabs(name) or os.sep in name else os.path.join(EVID, name)
         if not os.path.exists(fp):
             continue
         j = json.load(open(fp))
         if j.get("train_samples_per_second"):
-            sps.append((float(j["train_samples_per_second"]), name))
+            sps.append((float(j["train_samples_per_second"]), os.path.basename(name)))
         pr = j.get("probe_search", {}) or {}
         ps = (j.get("per_phase_stage", {}) or {}).get("probe_search/selfplay", {}) or {}
         stage_sp = (j.get("stage_elapsed_s", {}) or {}).get("selfplay")
@@ -129,11 +201,12 @@ def main(argv=None):
                 and abs(float(stage_sp) - float(ps["elapsed_s"])) < 1e-6):
             # the whole selfplay stage WAS the real-net probe (attempt-2 shape):
             # the file's own games/h already counts every real-net game it played
-            gph.append((float(j["selfplay_games_per_hour"]), name))
+            gph.append((float(j["selfplay_games_per_hour"]), os.path.basename(name)))
         elif pr.get("games") and ps.get("elapsed_s"):
             # mixed stage (random bootstrap + the real-net probe): pair the probe's
             # own game count with the probe pid's own elapsed time
-            gph.append((3600.0 * float(pr["games"]) / float(ps["elapsed_s"]), name))
+            gph.append((3600.0 * float(pr["games"]) / float(ps["elapsed_s"]),
+                        os.path.basename(name)))
     if gph:
         args.selfplay_games_per_hour = min(gph)[0]
         print("REAL-NET SELFPLAY games/h: %s -> taking %.1f (%s)"
@@ -145,6 +218,12 @@ def main(argv=None):
     print("")
     args.budget_env = BUDGET_ENV
     args.window_cycles = 20
+    # o41: the remaining measured inputs, all of them read from evidence, none defaulted.
+    args.gate_games_measured = float(gate_games)
+    args.bytes_per_row = None          # taken from --throughput, asserted present above
+    args.gate_elapsed_s = None
+    args.shuffle_elapsed_s = None
+    args.shuffle_rows_measured = None
     args = dk.finish(args)
 
     d = dk.derive(args)

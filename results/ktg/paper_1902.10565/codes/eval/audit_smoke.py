@@ -619,6 +619,10 @@ def audit(basedir, evidence, trainingname, strict, tag=None):
         "per_phase_stage": mon["per_phase_stage"],
         "selfplay_games_total": total_games,
         "selfplay_rows_total": total_rows,
+        # obligation o41: derive_knobs.py's gate projection scales from the number of games
+        # the gatekeeper actually played, and used to substitute a constant when the file
+        # did not carry it. It is the gate's own sgf line count, measured right here.
+        "gatekeeper_games_total": gk_sgfs["lines"],
         "selfplay_games_per_hour": round(total_games / sp_elapsed * 3600, 1) if sp_elapsed else None,
         "selfplay_rows_per_hour": round(total_rows / sp_elapsed * 3600, 1) if sp_elapsed else None,
         "per_net": per_net,

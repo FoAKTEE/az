@@ -1,0 +1,737 @@
+================================================================================
+repair R3 -- obligation o41_check_knobs_silent_fallback_constants
+  derive_knobs.py raises on a missing measured key instead of substituting a constant;
+  check_knobs_9x9.py asserts the keys before deriving and reads the gate's game count
+  from the audit; audit_smoke.py emits that key for the next measurement.
+  Worker, CHANDRA_ROLE=worker, login node, CPU only, no Slurm job, no GPU.
+  Host login03, 2026-09-04T09:46:11-04:00.  Tree state: HEAD 633b80b + the o41 edits only
+  (the o40 ramp model of R2 is the NEXT commit).
+================================================================================
+
+################################################################################
+PART 1 -- --self-test, verbatim
+################################################################################
+$ python3 results/ktg/paper_1902.10565/codes/eval/derive_knobs.py --self-test
+--- self-test: DESIGN pass-2 knobs (reuse 4, 50k/epoch) starve from cycle 2
+    pass=False failing=['K1_bucket_gain_clears_epoch', 'T1_freshness_rows_per_cycle_ge_1p2_E', 'K2_one_export_per_cycle', 'K5_random_bootstrap_reaches_min_rows']
+--- self-test: pass-1 data window keep 300k <= cap 500k
+    pass=False failing=['T1_freshness_rows_per_cycle_ge_1p2_E', 'K2_one_export_per_cycle', 'K2b_effective_reuse_within_cap', 'K3_keep_gt_cap', 'K5_random_bootstrap_reaches_min_rows', 'K4_window_holds_one_epoch']
+--- self-test: smoke knobs (40 games, 256/epoch, reuse 8, batch 32)
+    pass=False failing=['K4_window_holds_one_epoch', 'T4_threads_le_cpus']
+--- self-test: o41 missing measured keys raise, naming the key
+    dropped train_samples_per_second   -> SystemExit naming it: True
+    dropped bytes_per_row_on_disk      -> SystemExit naming it: True
+    dropped selfplay_games_per_hour    -> SystemExit naming it: True
+    dropped gatekeeper_games_total     -> SystemExit naming it: True
+    dropped selfplay_rows_total        -> SystemExit naming it: True
+    dropped cycle2/gatekeeper          -> SystemExit naming it: True
+    dropped cycle2/shuffle             -> SystemExit naming it: True
+    every key present            -> derives, no exit
+
+SELF-TEST: PASS  (3 knob cases: 2 negative, 1 executed-smoke; 7 o41 missing-key cases plus a positive control)
+EXIT=0
+
+################################################################################
+PART 2 -- check_knobs_9x9.py: the same eleven values and PASS
+################################################################################
+$ python3 results/ktg/paper_1902.10565/codes/eval/check_knobs_9x9.py
+check_knobs_9x9 -- node arxiv-1902.10565::derive_cycle_knobs_9x9
+
+INPUTS (content-hashed)
+  daed88eff2a9d4e8cfa70b538caf5597fc2addb71cbcb6a1adc169ba16c3c828  paper_1902.10565/evidence/smoke/rows_per_game-298712.txt
+  927fb04cd2ac97eef7c30d471f06ac2d67ba8a014ac92cfe2109aa1efc72c947  paper_1902.10565/evidence/smoke/throughput_smoke-298712.json
+  646e4ef1a9f295b10926fa10f43172482cf4f1ca7244ca9146919d358d09f282  paper_1902.10565/evidence/smoke/audit-298712.json
+  0809fe9ce6ca8e9566987def2b2a1806f95bc834856bff4493bbfec7cb750e23  paper_1902.10565/codes/loop/knobs_9x9.env
+  6f38681ea6befc64f1e0f0c4faced2ddd1d774ac7f445595997d07e4abf81f62  paper_1902.10565/codes/data_budget/budget.env
+  b5acb1d8ad1a313f8bd439076d0e61598d18f6c7ff7647a6eab672edad3d65f5  paper_1902.10565/codes/loop/synchronous_loop_9x9.sh
+
+MEASURED KEYS PRESENT: train_samples_per_second, bytes_per_row_on_disk, selfplay_rows_total and per_phase_stage cycle2/gatekeeper, cycle2/shuffle
+GATE GAMES (measured, audit-298712.json S4_gatekeeper_sgfs.lines): 156
+
+REAL-NET SELFPLAY games/h: 2341.5 (throughput_smoke-298712.json), 2031.7 (throughput_smoke-299259.json) -> taking 2031.7 (throughput_smoke-299259.json)
+TRAIN samples/s:           14.243 (throughput_smoke-298712.json), 17.202 (throughput_smoke-299259.json) -> taking 14.243 (throughput_smoke-298712.json)
+
+derive_knobs.py -- node arxiv-1902.10565::derive_cycle_knobs_9x9
+
+MEASURED INPUTS (Slurm job 298712, commit 5bb85ad)
+  rows/game real      r        = 32.3000     (lower90 25.0775 over 20 games)
+  rows/game random    r0       = 31.6750     (lower90 28.1336 over 80 games)
+  bytes/row on disk            = 353.8
+
+KNOB SET UNDER TEST
+  NUM_GAMES_PER_CYCLE          = 1000
+  NUM_THREADS_FOR_SHUFFLING    = 8
+  NUM_TRAIN_SAMPLES_PER_EPOCH  = 20000
+  MAX_TRAIN_PER_DATA           = 8.0
+  NUM_TRAIN_SAMPLES_PER_SWA    = 10000
+  BATCHSIZE                    = 128
+  SHUFFLE_MINROWS              = 25000
+  MAX_TRAIN_SAMPLES_PER_CYCLE  = 100000
+  TAPER_WINDOW_SCALE           = 50000
+  SHUFFLE_KEEPROWS             = 120000
+  EPOCHS_PER_EXPORT            = 5
+
+DERIVED QUANTITIES
+  rows_per_cycle    = games*r            = 32300.0   (lower90 25077.5)
+  bucket gain       = games*r*reuse      = 258400.0   (lower90 200620.0)
+  bucket cap_eff    = max(cap,E)         = 100000
+  epochs_per_export = max_epochs_this_instance = 5
+  batches_per_epoch = round(E/batch)     = 156
+  samples_per_cycle = epochs*E           = 100000
+  effective reuse   = epochs*E/rows      = 3.096  (lower90 3.988, cap 8.0)
+  first cycle with a full 5-epoch window = 13
+  swa_period_samples                     = 10000
+
+SHUFFLE WINDOW BY CYCLE (shuffle.py:414-435 at expand 0.4 / exponent 0.65)
+  cycle  usable_rows    desired_window   rows_available batches    epochs_supported
+  1      25000          25000            25000          195        1
+  2      50078          34305            34305          268        1
+  3      75155          42561            42561          332        2
+  4      100233         50116            50116          391        2
+  5      125310         57156            57156          446        2
+  6      150388         63794            63794          498        3
+  7      175465         70107            70107          547        3
+  8      200543         76149            76149          594        3
+  9      225620         81960            81960          640        4
+  10     250698         87570            87570          684        4
+  11     275775         93004            93004          726        4
+  12     300853         98282            98282          767        4
+  13     325930         103419           103419         807        5
+  14     351008         108430           108430         847        5
+  15     376085         113324           113324         885        5
+  16     401163         118113           118113         922        5
+  17     426240         122804           120000         937        6
+  18     451318         127404           120000         937        6
+  19     476395         131921           120000         937        6
+  20     501473         136358           120000         937        6
+
+THREAD BUDGET
+  selfplay_real_net            = 25
+  selfplay_with_net_switch     = 27
+  gatekeeper_one_real_net      = 25
+  gatekeeper_two_real_nets     = 29
+  train                        = 14
+  shuffle                      = 12
+  worst_case                   = 29
+  cpus_per_task                = 32
+
+CYCLE WALL PROJECTION  [PRELIMINARY]
+  selfplay_games_per_hour_measured   = 2031.700
+  games_per_hour_derate              = 0.500
+  selfplay_games_per_hour_planning   = 1015.850
+  train_samples_per_second           = 14.243
+  selfplay_s                         = 3543.830
+  train_s                            = 7020.993
+  gatekeeper_s                       = 179.974
+  shuffle_s                          = 377.285
+  export_s                           = 60.000
+  cycle_s                            = 11182.082
+  cycle_h                            = 3.106
+  cycles_per_link                    = 23
+
+STORAGE PROJECTION
+  per-cycle monotonic         = 16.11 MiB
+  bounded steady state        = 552.90 MiB
+  env + build allowance       = 20.00 GiB
+  after one 23-cycle link      = 20.902 GiB
+  hard cap (budget.env)       = 500 GiB
+  cycles until the cap        = 30480
+
+CHECKS
+  ok   K1_bucket_gain_clears_epoch            gain = games*r*reuse = 258400.0 (lower90 200620.0) vs 0.99*E = 19800.0; ratio gain/E = 12.920 (lower90 10.031)
+  ok   T1_freshness_rows_per_cycle_ge_1p2_E   rows_per_cycle = 32300.0 (lower90 25077.5) vs 1.2*E = 24000.0; ratio 1.615 (lower90 1.254)
+  ok   K2_one_export_per_cycle                epochs_per_export = max_epochs_this_instance = floor(min(gain,cap_eff)/E) = 5 (lower90 5); cap_eff = max(cap,E) = 100000; effective reuse 3.10 (lower90 3.99) <= 8.0
+  ok   K2b_effective_reuse_within_cap         epochs*E/rows_per_cycle = 3.10 (lower90 3.99) <= reuse cap 8.0
+  ok   K3_keep_gt_cap                         keep = 120000 > cap = 100000 (synchronous_loop.sh:66) and keep >= epochs*E = 100000
+  ok   K5_random_bootstrap_reaches_min_rows   cycle-1 random rows = games*r_random = 31675.0 (lower90 28133.6) >= min_rows = 25000 (shuffle.py:1090 exit-0 gate; :1077 caps the usable count at min_rows)
+  ok   K4_window_holds_one_epoch              worst of cycles 1..20 is cycle 1: min(window 25000, keep 120000) = 25000 rows = 195 batches >= round(E/batch) = 156 batches (= 19968 rows); ratio 1.250. Conservative: the file-granularity slack of shuffle.sh:48 (-approx-rows-per-out-file 70000) is not credited.
+  ok   K2c_at_most_one_export_per_cycle       epochs_per_export == max_epochs_this_instance == 5, so train.py's persistent export_cycle_counter (:871,:975,:1743,:1831) can advance by at most 5 per cycle: never more than one candidate per cycle. Exactly one per cycle from cycle 13 on, when the shuffled window first holds 100000 rows; before that the counter carries over and the export slips, which is upstream's own designed behaviour.
+  ok   K6_swa_period_is_half_epoch            swa_period_samples = samples_per_epoch // 2 = 10000 (train.py:441 default made explicit)
+  ok   T4_threads_le_cpus                     worst stage thread count 29 (selfplay real-net 25 +2 net switch = 27; gatekeeper two real nets 29; train 14; shuffle 4+8=12) <= --cpus-per-task 32, headroom 3
+  ok   K7_cycle_wall_under_bound              projected cycle = 11182 s = 3.11 h <= 60 h bound, and 23 whole cycles fit the 257400 s chain link. [PRELIMINARY] tiny-count throughput inputs.
+  ok   T3_storage_projection_under_budget     per-cycle monotonic write 16.1 MiB; bounded steady state 552.9 MiB; env+build 20.0 GiB; after one full 23-cycle link 20.90 GiB of 500 GiB cap; 30480 cycles fit before the cap
+
+RESULT: PASS
+
+MISSION TOLERANCES
+  ok   T1_no_train_starvation             rows_per_cycle 32300.0 (lower90 25077.5) >= 1.2*E = 24000.0
+  ok   T2_bucket_holds_batches            worst cycle 1 has 195 batches >= 156 needed; per-cycle bucket gain 258400 (lower90 200620) >= epochs*E = 100000
+  ok   T3_storage_projection_under_budget 20.902 GiB after one 23-cycle link < 500 GiB (KTG_SCRATCH_HARD_BYTES)
+  ok   T4_threads_le_cpus                 worst stage 29 <= KTG_CPUS_PER_TASK 32
+
+LOOP DEFAULT WIRING  (paper_1902.10565/codes/loop/synchronous_loop_9x9.sh)
+  ok   NUM_GAMES_PER_CYCLE          loop default 1000 == derived 1000
+  ok   NUM_THREADS_FOR_SHUFFLING    loop default 8 == derived 8
+  ok   NUM_TRAIN_SAMPLES_PER_EPOCH  loop default 20000 == derived 20000
+  ok   MAX_TRAIN_PER_DATA           loop default 8 == derived 8
+  ok   NUM_TRAIN_SAMPLES_PER_SWA    loop default 10000 == derived 10000
+  ok   BATCHSIZE                    loop default 128 == derived 128
+  ok   SHUFFLE_MINROWS              loop default 25000 == derived 25000
+  ok   MAX_TRAIN_SAMPLES_PER_CYCLE  loop default 100000 == derived 100000
+  ok   TAPER_WINDOW_SCALE           loop default 50000 == derived 50000
+  ok   SHUFFLE_KEEPROWS             loop default 120000 == derived 120000
+  ok   EPOCHS_PER_EXPORT            loop default 5 == derived 5
+
+CHECK_KNOBS_9X9: PASS
+EXIT=0
+
+################################################################################
+PART 3 -- the validator's B3 break attempt, replayed
+################################################################################
+########## B3: the ORIGINAL tree first (control)
+  original exit=0   last line: CHECK_KNOBS_9X9: PASS
+
+########## B3: delete train_samples_per_second and bytes_per_row_on_disk from BOTH copies
+  stripped throughput_smoke-298712.json -> keys present: train_samples_per_second=False bytes_per_row_on_disk=False
+  stripped throughput_smoke-299259.json -> keys present: train_samples_per_second=False bytes_per_row_on_disk=False
+
+########## B3: run the COPY's check_knobs_9x9.py
+  copy exit=1
+  copy stdout (tail):
+      INPUTS (content-hashed)
+        daed88eff2a9d4e8cfa70b538caf5597fc2addb71cbcb6a1adc169ba16c3c828  paper_1902.10565/evidence/smoke/rows_per_game-298712.txt
+        f042ed98d1b1cbd6f22f3a1a1c9e471cb02da75ac31051d90f104986f0b9b5af  paper_1902.10565/evidence/smoke/throughput_smoke-298712.json
+        646e4ef1a9f295b10926fa10f43172482cf4f1ca7244ca9146919d358d09f282  paper_1902.10565/evidence/smoke/audit-298712.json
+        0809fe9ce6ca8e9566987def2b2a1806f95bc834856bff4493bbfec7cb750e23  paper_1902.10565/codes/loop/knobs_9x9.env
+        6f38681ea6befc64f1e0f0c4faced2ddd1d774ac7f445595997d07e4abf81f62  paper_1902.10565/codes/data_budget/budget.env
+        b5acb1d8ad1a313f8bd439076d0e61598d18f6c7ff7647a6eab672edad3d65f5  paper_1902.10565/codes/loop/synchronous_loop_9x9.sh
+      
+  copy STDERR, verbatim:
+      check_knobs_9x9: paper_1902.10565/evidence/smoke/throughput_smoke-298712.json is missing the measured key(s) train_samples_per_second, bytes_per_row_on_disk. derive_knobs.py has no fallback constants (obligation o41), so the projections cannot be evaluated: re-run the measurement, or pass --throughput with a file that carries them.
+  stderr names train_samples_per_second: 1
+  stderr names bytes_per_row_on_disk:    1
+  copy printed 14.243 or 353.8 anywhere:  /scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/wave3/b3_copy.out:0 /scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/wave3/b3_copy.err:0
+  copy printed nan anywhere:              /scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/wave3/b3_copy.out:0 /scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/wave3/b3_copy.err:0
+
+########## B3b: the same copy with the two rates supplied on the command line must derive again
+  exit=0  emitted: NUM_GAMES_PER_CYCLE=1000 NUM_THREADS_FOR_SHUFFLING=8 NUM_TRAIN_SAMPLES_PER_EPOCH=20000 MAX_TRAIN_PER_DATA=8.0 NUM_TRAIN_SAMPLES_PER_SWA=10000 BATCHSIZE=128 SHUFFLE_MINROWS=25000 MAX_TRAIN_SAMPLES_PER_CYCLE=100000 TAPER_WINDOW_SCALE=50000 SHUFFLE_KEEPROWS=120000 EPOCHS_PER_EXPORT=5 
+
+########## no baked-in rate literal left in a code line of derive_knobs.py
+  grep exit=1 (1 = clean)
+done 2026-09-04T09:45:50-04:00
+
+################################################################################
+PART 4 -- what the throughput JSONs actually carry, and where the gate count comes from
+################################################################################
+  throughput_smoke-298712.json
+      train_samples_per_second     = 14.243
+      bytes_per_row_on_disk        = 353.8
+      selfplay_rows_total          = 2534
+      selfplay_games_per_hour      = 5569.5
+      gatekeeper_games_total       = None
+      per_phase_stage['cycle2/gatekeeper'   ].elapsed_s = 70.19
+      per_phase_stage['cycle2/shuffle'      ].elapsed_s = 3.35
+      per_phase_stage['probe_search/selfplay'].elapsed_s = 30.75
+  throughput_smoke-299259.json
+      train_samples_per_second     = 17.202
+      bytes_per_row_on_disk        = 353.8
+      selfplay_rows_total          = 2534
+      selfplay_games_per_hour      = 2031.7
+      gatekeeper_games_total       = None
+      per_phase_stage['cycle2/gatekeeper'   ].elapsed_s = None
+      per_phase_stage['cycle2/shuffle'      ].elapsed_s = None
+      per_phase_stage['probe_search/selfplay'].elapsed_s = 141.75
+  audit-298712.json S4_gatekeeper_sgfs = {'files': 1, 'lines': 156, 'rectangular': 0, 'sz9': 156, 'sz_other': 0}   <- the MEASURED gate game count check_knobs_9x9.py reads
+
+  (299259 has no cycle2/* phases: check_knobs_9x9.py's pick() takes the -298712 file,
+   which carries every key, and the two files are used only for the slower of each rate.)
+
+################################################################################
+PART 5 -- diffs of the files under test (633b80b -> working tree)
+################################################################################
+diff --git a/results/ktg/paper_1902.10565/codes/eval/audit_smoke.py b/results/ktg/paper_1902.10565/codes/eval/audit_smoke.py
+index f16a3fd..a7083e7 100755
+--- a/results/ktg/paper_1902.10565/codes/eval/audit_smoke.py
++++ b/results/ktg/paper_1902.10565/codes/eval/audit_smoke.py
+@@ -619,6 +619,10 @@ def audit(basedir, evidence, trainingname, strict, tag=None):
+         "per_phase_stage": mon["per_phase_stage"],
+         "selfplay_games_total": total_games,
+         "selfplay_rows_total": total_rows,
++        # obligation o41: derive_knobs.py's gate projection scales from the number of games
++        # the gatekeeper actually played, and used to substitute a constant when the file
++        # did not carry it. It is the gate's own sgf line count, measured right here.
++        "gatekeeper_games_total": gk_sgfs["lines"],
+         "selfplay_games_per_hour": round(total_games / sp_elapsed * 3600, 1) if sp_elapsed else None,
+         "selfplay_rows_per_hour": round(total_rows / sp_elapsed * 3600, 1) if sp_elapsed else None,
+         "per_net": per_net,
+diff --git a/results/ktg/paper_1902.10565/codes/eval/check_knobs_9x9.py b/results/ktg/paper_1902.10565/codes/eval/check_knobs_9x9.py
+index e86ca02..ade92fa 100644
+--- a/results/ktg/paper_1902.10565/codes/eval/check_knobs_9x9.py
++++ b/results/ktg/paper_1902.10565/codes/eval/check_knobs_9x9.py
+@@ -11,6 +11,12 @@ Closing check for the production cycle knobs.  Reads NOTHING by hand:
+   * the knob values come from codes/loop/knobs_9x9.env,
+   * the arithmetic comes from codes/eval/derive_knobs.py,
+ 
++Every MEASURED key the projections read is asserted to be PRESENT before any
++derivation runs (obligation o41): derive_knobs.py has no fallback constants left,
++and this script names every missing key at once instead of failing later on one of
++them.  The gate's game count is a measurement too -- it is the gatekeeper sgf line
++count of the audit, not a number typed here.
++
+ then it asserts the mission tolerances and, unless --no-loop, that the
+ ${VAR:-default} block of codes/loop/synchronous_loop_9x9.sh carries exactly the
+ values in knobs_9x9.env.
+@@ -29,6 +35,11 @@ Tolerances asserted (the work packet's four, on top of derive_knobs.py's K1-K7):
+ Exit 0 iff every check passes.  Usage:
+ 
+   python3 results/ktg/paper_1902.10565/codes/eval/check_knobs_9x9.py [--no-loop] [--json OUT]
++      [--throughput FILE] [--rows-file FILE] [--audit FILE]
++
++--throughput / --rows-file / --audit replace the frozen smoke evidence with a newer
++measurement (that is how measure_stage_throughput re-runs this check against its own
++output); with none of them the admitted -298712 / -299259 copies are used.
+ """
+ 
+ import argparse
+@@ -55,6 +66,36 @@ TPUT_FILES = ("throughput_smoke-298712.json", "throughput_smoke.json")
+ # the o37-clean one). The check takes the SLOWER of each pair, so K7 can only be
+ # pessimistic. audit-298712.json / audit-299259.json carry the same numbers.
+ RATE_FILES = ("throughput_smoke-298712.json", "throughput_smoke-299259.json")
++# The gatekeeper's game count is measured, not typed: it is the number of sgf lines the
++# gate wrote, which the audit records. o41 -- derive_knobs.py used to substitute 156 here.
++AUDIT_FILES = ("audit-298712.json", "audit-299259.json")
++
++# Every MEASURED key derive_knobs.py's projections read. Asserted here, before deriving,
++# so a missing measurement is reported as itself rather than as a nan downstream (o41,
++# validator break attempt B3).
++REQUIRED_SCALARS = ("train_samples_per_second", "bytes_per_row_on_disk",
++                    "selfplay_rows_total")
++REQUIRED_PHASE_ELAPSED = ("cycle2/gatekeeper", "cycle2/shuffle")
++
++
++def missing_measured_keys(tput):
++    """Names of the measured keys this check needs and the throughput JSON does not have."""
++    missing = []
++    for k in REQUIRED_SCALARS:
++        if tput.get(k) is None:
++            missing.append(k)
++    pps = tput.get("per_phase_stage") or {}
++    for phase in REQUIRED_PHASE_ELAPSED:
++        if (pps.get(phase) or {}).get("elapsed_s") is None:
++            missing.append("per_phase_stage['%s'].elapsed_s" % phase)
++    probe = tput.get("probe_search") or {}
++    ps = (pps.get("probe_search/selfplay") or {})
++    has_rate = bool(tput.get("selfplay_games_per_hour")) or bool(
++        probe.get("games") and ps.get("elapsed_s"))
++    if not has_rate:
++        missing.append("selfplay_games_per_hour (or probe_search.games with "
++                       "per_phase_stage['probe_search/selfplay'].elapsed_s)")
++    return missing
+ 
+ 
+ def pick(names):
+@@ -79,19 +120,50 @@ def main(argv=None):
+     ap.add_argument("--no-loop", action="store_true",
+                     help="skip the synchronous_loop_9x9.sh default-wiring assertion")
+     ap.add_argument("--json", default=None)
++    ap.add_argument("--throughput", default=None,
++                    help="throughput JSON to read instead of the frozen smoke copies")
++    ap.add_argument("--rows-file", default=None,
++                    help="rows_per_game text to read instead of the frozen smoke copy")
++    ap.add_argument("--audit", default=None,
++                    help="audit JSON the gatekeeper game count is read from")
+     a = ap.parse_args(argv)
+ 
+     knobs = dk.read_budget_env(KNOBS_ENV)
+-    rows_file = pick(ROWS_FILES)
+-    tput_file = pick(TPUT_FILES)
++    rows_file = a.rows_file or pick(ROWS_FILES)
++    tput_file = a.throughput or pick(TPUT_FILES)
++    audit_file = a.audit or pick(AUDIT_FILES)
++    rate_files = [a.throughput] if a.throughput else list(RATE_FILES)
+ 
+     print("check_knobs_9x9 -- node arxiv-1902.10565::derive_cycle_knobs_9x9")
+     print("")
+     print("INPUTS (content-hashed)")
+-    for p in (rows_file, tput_file, KNOBS_ENV, BUDGET_ENV, LOOP_SH):
++    for p in (rows_file, tput_file, audit_file, KNOBS_ENV, BUDGET_ENV, LOOP_SH):
+         print("  %s  %s" % (sha256(p), os.path.relpath(p, os.path.dirname(PAPER))))
+     print("")
+ 
++    # ---- o41: every measured key must be present BEFORE anything is derived --------
++    tput_json = json.load(open(tput_file))
++    missing = missing_measured_keys(tput_json)
++    if missing:
++        raise SystemExit(
++            "check_knobs_9x9: %s is missing the measured key(s) %s. derive_knobs.py has no "
++            "fallback constants (obligation o41), so the projections cannot be evaluated: "
++            "re-run the measurement, or pass --throughput with a file that carries them."
++            % (os.path.relpath(tput_file, os.path.dirname(PAPER)), ", ".join(missing)))
++    print("MEASURED KEYS PRESENT: %s and per_phase_stage %s"
++          % (", ".join(REQUIRED_SCALARS), ", ".join(REQUIRED_PHASE_ELAPSED)))
++
++    audit_json = json.load(open(audit_file))
++    gate_games = ((audit_json.get("S4_gatekeeper_sgfs") or {}).get("lines"))
++    if not gate_games:
++        raise SystemExit(
++            "check_knobs_9x9: %s carries no S4_gatekeeper_sgfs.lines, which is the MEASURED "
++            "gatekeeper game count the cycle-wall projection scales from (obligation o41)."
++            % os.path.relpath(audit_file, os.path.dirname(PAPER)))
++    print("GATE GAMES (measured, %s S4_gatekeeper_sgfs.lines): %s"
++          % (os.path.basename(audit_file), gate_games))
++    print("")
++
+     with open(rows_file) as f:
+         rows_blob = f.read()
+ 
+@@ -115,13 +187,13 @@ def main(argv=None):
+ 
+     # slowest measured rate of the two jobs -> K7 is pessimistic by construction
+     gph, sps = [], []
+-    for name in RATE_FILES:
+-        fp = os.path.join(EVID, name)
++    for name in rate_files:
++        fp = name if os.path.isabs(name) or os.sep in name else os.path.join(EVID, name)
+         if not os.path.exists(fp):
+             continue
+         j = json.load(open(fp))
+         if j.get("train_samples_per_second"):
+-            sps.append((float(j["train_samples_per_second"]), name))
++            sps.append((float(j["train_samples_per_second"]), os.path.basename(name)))
+         pr = j.get("probe_search", {}) or {}
+         ps = (j.get("per_phase_stage", {}) or {}).get("probe_search/selfplay", {}) or {}
+         stage_sp = (j.get("stage_elapsed_s", {}) or {}).get("selfplay")
+@@ -129,11 +201,12 @@ def main(argv=None):
+                 and abs(float(stage_sp) - float(ps["elapsed_s"])) < 1e-6):
+             # the whole selfplay stage WAS the real-net probe (attempt-2 shape):
+             # the file's own games/h already counts every real-net game it played
+-            gph.append((float(j["selfplay_games_per_hour"]), name))
++            gph.append((float(j["selfplay_games_per_hour"]), os.path.basename(name)))
+         elif pr.get("games") and ps.get("elapsed_s"):
+             # mixed stage (random bootstrap + the real-net probe): pair the probe's
+             # own game count with the probe pid's own elapsed time
+-            gph.append((3600.0 * float(pr["games"]) / float(ps["elapsed_s"]), name))
++            gph.append((3600.0 * float(pr["games"]) / float(ps["elapsed_s"]),
++                        os.path.basename(name)))
+     if gph:
+         args.selfplay_games_per_hour = min(gph)[0]
+         print("REAL-NET SELFPLAY games/h: %s -> taking %.1f (%s)"
+@@ -145,6 +218,12 @@ def main(argv=None):
+     print("")
+     args.budget_env = BUDGET_ENV
+     args.window_cycles = 20
++    # o41: the remaining measured inputs, all of them read from evidence, none defaulted.
++    args.gate_games_measured = float(gate_games)
++    args.bytes_per_row = None          # taken from --throughput, asserted present above
++    args.gate_elapsed_s = None
++    args.shuffle_elapsed_s = None
++    args.shuffle_rows_measured = None
+     args = dk.finish(args)
+ 
+     d = dk.derive(args)
+diff --git a/results/ktg/paper_1902.10565/codes/eval/derive_knobs.py b/results/ktg/paper_1902.10565/codes/eval/derive_knobs.py
+index 17fe007..2496d75 100644
+--- a/results/ktg/paper_1902.10565/codes/eval/derive_knobs.py
++++ b/results/ktg/paper_1902.10565/codes/eval/derive_knobs.py
+@@ -140,6 +140,42 @@ def compute_desired_num_rows(num_usable_rows, min_rows, add_to_data_rows,
+     return desired_num_rows
+ 
+ 
++def _req(tput, key, override, flag):
++    """A MEASURED scalar: the throughput JSON's value, an explicit override, or an exit.
++
++    Obligation o41. This function replaces a set of hard-coded fallbacks that let
++    check_knobs_9x9.py report a rate it had never measured when the key was missing
++    from the JSON (validator break attempt B3). There is deliberately no default
++    anywhere below it: a projection is either evaluated at a number some job actually
++    produced, or it is not evaluated at all.
++    """
++    if override is not None:
++        return float(override)
++    v = (tput or {}).get(key)
++    if v is None:
++        raise SystemExit(
++            "derive_knobs: measured key '%s' is missing from the throughput JSON and no "
++            "%s was given. There is no baked-in fallback for it (obligation o41): pass %s, "
++            "or point --throughput at a measurement that carries the key."
++            % (key, flag, flag))
++    return float(v)
++
++
++def _req_phase(tput, phase, key, override, flag):
++    """The same rule for a per_phase_stage entry, e.g. per_phase_stage['cycle2/shuffle']."""
++    if override is not None:
++        return float(override)
++    d = ((tput or {}).get("per_phase_stage") or {}).get(phase) or {}
++    v = d.get(key)
++    if v is None:
++        raise SystemExit(
++            "derive_knobs: measured key 'per_phase_stage[\"%s\"][\"%s\"]' is missing from "
++            "the throughput JSON and no %s was given. There is no baked-in fallback for it "
++            "(obligation o41): pass %s, or point --throughput at a measurement that carries "
++            "the entry." % (phase, key, flag, flag))
++    return float(v)
++
++
+ def rows_lower_bound(r, n_games_measured):
+     """Section 11's binomial-free 90 % lower bound on a rows/game measured over n games."""
+     if n_games_measured <= 0:
+@@ -151,6 +187,8 @@ def rows_lower_bound(r, n_games_measured):
+ # the derivation
+ # ---------------------------------------------------------------------------
+ 
++SMOKE_CYCLES = 2                 # the smoke ran two loop cycles; its selfplay_rows_total
++                                 # covers both, and each shuffle saw one cycle's rows
+ EXPAND_WINDOW_PER_ROW = 0.4      # shuffle.sh:44
+ TAPER_WINDOW_EXPONENT = 0.65     # shuffle.sh:45
+ APPROX_ROWS_PER_OUT_FILE = 70000  # shuffle.sh:48 (not credited by K4; slack only)
+@@ -317,31 +355,44 @@ def derive(args):
+     if args.throughput and os.path.exists(args.throughput):
+         with open(args.throughput) as f:
+             tput = json.load(f)
+-    bpr = float(tput.get("bytes_per_row_on_disk", 353.8))
+-    train_sps = float(tput.get("train_samples_per_second", 14.243))
++    bpr = _req(tput, "bytes_per_row_on_disk", args.bytes_per_row, "--bytes-per-row")
++    train_sps = _req(tput, "train_samples_per_second", args.train_samples_per_second,
++                     "--train-samples-per-second")
+     probe = tput.get("probe_search", {}) or {}
+     pps = (tput.get("per_phase_stage", {}) or {}).get("probe_search/selfplay", {}) or {}
+-    if tput.get("selfplay_games_per_hour") and not tput.get("per_net", {}).get("random"):
++    if args.selfplay_games_per_hour is not None:
++        gph_measured = float(args.selfplay_games_per_hour)
++    elif tput.get("selfplay_games_per_hour") and not (tput.get("per_net") or {}).get("random"):
+         # attempt-2 shape: the whole selfplay stage was the real-net probe
+         gph_measured = float(tput["selfplay_games_per_hour"])
+     elif probe.get("games") and pps.get("elapsed_s"):
++        # mixed stage: pair the probe's own game count with the probe pid's elapsed time
+         gph_measured = 3600.0 * float(probe["games"]) / float(pps["elapsed_s"])
+     else:
+-        gph_measured = float("nan")
+-    if args.selfplay_games_per_hour is not None:
+-        gph_measured = args.selfplay_games_per_hour
+-    if args.train_samples_per_second is not None:
+-        train_sps = args.train_samples_per_second
++        # o41: never nan, and never a constant -- the projection simply cannot be made.
++        raise SystemExit(
++            "derive_knobs: the throughput JSON carries no measured REAL-NET selfplay rate "
++            "('selfplay_games_per_hour' with no random per_net, or probe_search.games with "
++            "per_phase_stage['probe_search/selfplay'].elapsed_s) and no "
++            "--selfplay-games-per-hour was given. There is no baked-in fallback for it "
++            "(obligation o41).")
+     gph_plan = gph_measured * args.games_per_hour_derate
+ 
+-    gk = (tput.get("per_phase_stage", {}) or {}).get("cycle2/gatekeeper", {}) or {}
+-    gate_games_measured = 156.0
+-    gate_s = float(gk.get("elapsed_s", 70.19))
++    gate_games_measured = _req(tput, "gatekeeper_games_total", args.gate_games_measured,
++                               "--gate-games-measured")
++    gate_s = _req_phase(tput, "cycle2/gatekeeper", "elapsed_s", args.gate_elapsed_s,
++                        "--gate-elapsed-s")
+     gate_per_game = gate_s / gate_games_measured
+     gate_proj_s = 2.0 * gate_per_game * args.gate_games       # x2 for the two-real-net gate
+ 
+-    shuffle_s_measured = ((tput.get("per_phase_stage", {}) or {}).get("cycle2/shuffle", {}) or {}).get("elapsed_s", 3.35)
+-    shuffle_rows_measured = float(tput.get("selfplay_rows_total", 2534)) / 2.0
++    shuffle_s_measured = _req_phase(tput, "cycle2/shuffle", "elapsed_s", args.shuffle_elapsed_s,
++                                    "--shuffle-elapsed-s")
++    if args.shuffle_rows_measured is not None:
++        shuffle_rows_measured = float(args.shuffle_rows_measured)
++    else:
++        # the measured shuffle elapsed is ONE cycle's, and the smoke ran SMOKE_CYCLES of them
++        shuffle_rows_measured = _req(tput, "selfplay_rows_total", None,
++                                     "--shuffle-rows-measured") / SMOKE_CYCLES
+     shuffle_proj_s = 60.0 + float(shuffle_s_measured) * (keep / max(shuffle_rows_measured, 1.0))
+ 
+     selfplay_proj_s = 3600.0 * G / gph_plan if gph_plan == gph_plan and gph_plan > 0 else float("nan")
+@@ -566,6 +617,19 @@ def build_parser():
+                    help="override the rate read from --throughput (real-net selfplay)")
+     p.add_argument("--train-samples-per-second", type=float, default=None,
+                    help="override the rate read from --throughput")
++    # o41: one explicit override per MEASURED input the projections read, so a caller can
++    # state a number instead of a file -- and so --self-test never depends on an evidence
++    # file. None of them has a value baked into this module.
++    p.add_argument("--bytes-per-row", type=float, default=None,
++                   help="override bytes_per_row_on_disk read from --throughput")
++    p.add_argument("--gate-games-measured", type=float, default=None,
++                   help="override gatekeeper_games_total read from --throughput")
++    p.add_argument("--gate-elapsed-s", type=float, default=None,
++                   help="override per_phase_stage['cycle2/gatekeeper'].elapsed_s")
++    p.add_argument("--shuffle-elapsed-s", type=float, default=None,
++                   help="override per_phase_stage['cycle2/shuffle'].elapsed_s")
++    p.add_argument("--shuffle-rows-measured", type=float, default=None,
++                   help="override selfplay_rows_total / SMOKE_CYCLES")
+     p.add_argument("--throughput", default=None)
+     p.add_argument("--budget-env", default=None)
+     p.add_argument("--assert-loop-defaults", default=None)
+@@ -603,14 +667,28 @@ def finish(args):
+     return args
+ 
+ 
++# Synthetic, deliberately round MEASURED inputs for --self-test. They are stand-ins, not
++# measurements: giving every self-test case an explicit value is what keeps the self-test
++# independent of any evidence file, and is the other half of o41 -- this module must carry
++# no number that could be mistaken for something a job produced.
++SELF_TEST_RATES = ["--train-samples-per-second", "15.0",
++                   "--selfplay-games-per-hour", "2000.0",
++                   "--bytes-per-row", "400.0",
++                   "--gate-games-measured", "150",
++                   "--gate-elapsed-s", "60.0",
++                   "--shuffle-elapsed-s", "4.0",
++                   "--shuffle-rows-measured", "1200"]
++
++
+ def self_test():
+-    """DESIGN section 2's two negative cases and the smoke's executed case."""
++    """DESIGN section 2's two negative cases, the smoke's executed case, and the o41
++    missing-measured-key cases."""
+     P = build_parser()
+     fails = []
+ 
+     def run(label, argv, expect_pass, expect_failing=()):
+         print("--- self-test: %s" % label)
+-        a = finish(P.parse_args(argv))
++        a = finish(P.parse_args(argv + SELF_TEST_RATES))
+         d = derive(a)
+         got_failing = tuple(c["name"] for c in d["checks"] if not c["pass_"])
+         print("    pass=%s failing=%s" % (d["pass"], list(got_failing)))
+@@ -657,11 +735,66 @@ def self_test():
+     if d["derived"]["epochs_per_export"] < 1:
+         fails.append("smoke epochs_per_export < 1")
+ 
++    # o41 negative cases: every MEASURED key the projections read must raise, naming
++    # itself, when it is missing -- never fall back to a constant.
++    print("--- self-test: o41 missing measured keys raise, naming the key")
++    import tempfile
++    base_tput = {
++        "train_samples_per_second": 15.0,
++        "bytes_per_row_on_disk": 400.0,
++        "selfplay_rows_total": 2400,
++        "selfplay_games_per_hour": 2000.0,
++        "gatekeeper_games_total": 150,
++        "per_phase_stage": {"cycle2/gatekeeper": {"elapsed_s": 60.0},
++                            "cycle2/shuffle": {"elapsed_s": 4.0}},
++    }
++    base_argv = ["--rows-per-game", "32.3", "--rows-per-game-random", "31.675",
++                 "--reuse", "8", "--samples-per-epoch", "20000", "--games", "1000",
++                 "--keep", "120000", "--cap", "100000", "--min-rows", "25000",
++                 "--taper", "50000", "--batch", "128", "--cpus", "32", "--game-threads", "18"]
++    drops = [("train_samples_per_second", None), ("bytes_per_row_on_disk", None),
++             ("selfplay_games_per_hour", None), ("gatekeeper_games_total", None),
++             ("selfplay_rows_total", None),
++             ("cycle2/gatekeeper", "per_phase_stage"), ("cycle2/shuffle", "per_phase_stage")]
++    tmpdir = tempfile.mkdtemp(prefix="derive_knobs_selftest_")
++    for key, where in drops:
++        tp = dict(base_tput)
++        tp["per_phase_stage"] = dict(base_tput["per_phase_stage"])
++        if where == "per_phase_stage":
++            del tp["per_phase_stage"][key]
++        else:
++            del tp[key]
++        fp = os.path.join(tmpdir, "tput_no_%s.json" % key.replace("/", "_"))
++        with open(fp, "w") as f:
++            json.dump(tp, f)
++        try:
++            derive(finish(P.parse_args(base_argv + ["--throughput", fp,
++                                                    "--budget-env", ""])))
++        except SystemExit as exc:
++            msg = str(exc)
++            ok = key in msg and "fallback" in msg
++            print("    dropped %-26s -> SystemExit naming it: %s" % (key, ok))
++            if not ok:
++                fails.append("o41 %s: %s" % (key, msg[:120]))
++        else:
++            print("    dropped %-26s -> NO EXIT (a fallback survived)" % key)
++            fails.append("o41 %s did not raise" % key)
++    # and the positive control: with every key present the same call derives
++    fp = os.path.join(tmpdir, "tput_full.json")
++    with open(fp, "w") as f:
++        json.dump(base_tput, f)
++    derive(finish(P.parse_args(base_argv + ["--throughput", fp, "--budget-env", ""])))
++    print("    every key present            -> derives, no exit")
++    for f_ in os.listdir(tmpdir):
++        os.remove(os.path.join(tmpdir, f_))
++    os.rmdir(tmpdir)
++
+     print("")
+     if fails:
+         print("SELF-TEST: FAIL  %s" % fails)
+         return 1
+-    print("SELF-TEST: PASS  (3 cases: 2 negative, 1 executed-smoke)")
++    print("SELF-TEST: PASS  (3 knob cases: 2 negative, 1 executed-smoke; "
++          "7 o41 missing-key cases plus a positive control)")
+     return 0
+ 
+ 
+diff --git a/results/ktg/paper_1902.10565/codes/loop/knobs_9x9.env b/results/ktg/paper_1902.10565/codes/loop/knobs_9x9.env
+index 9f92433..4143aaa 100644
+--- a/results/ktg/paper_1902.10565/codes/loop/knobs_9x9.env
++++ b/results/ktg/paper_1902.10565/codes/loop/knobs_9x9.env
+@@ -16,9 +16,17 @@
+ #   python3 codes/eval/derive_knobs.py \
+ #     --rows-per-game "$(cat evidence/smoke/rows_per_game-298712.txt)" \
+ #     --reuse 8 --samples-per-epoch 20000 --games 1000 --keep 120000 --cap 100000 \
+-#     --min-rows 25000 --taper 50000 --batch 128 --cpus 32 --game-threads 18
++#     --min-rows 25000 --taper 50000 --batch 128 --cpus 32 --game-threads 18 \
++#     --gate-games-measured 156
+ # and re-check against the measured JSON with codes/eval/check_knobs_9x9.py.
+ #
++# --gate-games-measured is needed only for the two -298712 / -299259 files, which were
++# written before audit_smoke.py emitted `gatekeeper_games_total` (156 is that job's
++# measured gatekeeper sgf line count, audit-298712.json S4_gatekeeper_sgfs.lines, and
++# check_knobs_9x9.py reads it from there rather than taking it as an argument). Obligation
++# o41: derive_knobs.py has no fallback for any measured key -- a missing one is an exit
++# naming the key, never a constant.
++#
+ # MEASURED INPUTS -- jobs 298712 (attempt 1) and 299259 (attempt 2, ppid-filtered sampler,
+ # no foreign pids). Cited by name: evidence/smoke/audit-298712.json and audit-299259.json;
+ # sha256 of every file read is in evidence/derive_cycle_knobs/derivation.md section 1.
+
+################################################################################
+harness source added for this repair, verbatim
+################################################################################
+================================================================================
+w3_b3.sh source, verbatim
+================================================================================
+#!/bin/bash
+# R3 (o41): the validator's break attempt B3, replayed against the repaired check.
+# A copy of the paper tree whose throughput JSONs have lost the two measured rate keys must
+# now FAIL, naming them -- not report 14.243 / 353.8 from constants and pass K7 on a nan.
+AZ=${AZ:-$HOME/az}; RT=${RT:-/scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/wave3}
+P="$AZ/results/ktg/paper_1902.10565"
+C="$RT/b3copy/paper_1902.10565"
+rm -rf "$RT/b3copy"; mkdir -p "$C/codes" "$C/evidence"
+cp -r "$P/codes/eval" "$P/codes/loop" "$P/codes/data_budget" "$P/codes/cfg" "$C/codes/"
+mkdir -p "$C/evidence/smoke"
+cp "$P"/evidence/smoke/rows_per_game-*.txt "$P"/evidence/smoke/throughput_smoke-*.json "$P"/evidence/smoke/audit-*.json "$C/evidence/smoke/"
+rm -rf "$C/codes/eval/__pycache__"
+echo "########## B3: the ORIGINAL tree first (control)"
+( cd "$AZ" && python3 "$P/codes/eval/check_knobs_9x9.py" > "$RT/b3_orig.txt" 2>&1 )
+echo "  original exit=$?   last line: $(tail -1 "$RT/b3_orig.txt")"
+echo
+echo "########## B3: delete train_samples_per_second and bytes_per_row_on_disk from BOTH copies"
+python3 - "$C" <<'PY'
+import json, sys, glob, os
+c = sys.argv[1]
+for f in sorted(glob.glob(os.path.join(c, "evidence", "smoke", "throughput_smoke-*.json"))):
+    j = json.load(open(f))
+    for k in ("train_samples_per_second", "bytes_per_row_on_disk"):
+        j.pop(k, None)
+    json.dump(j, open(f, "w"), indent=1, sort_keys=True)
+    print("  stripped %s -> keys present: train_samples_per_second=%s bytes_per_row_on_disk=%s"
+          % (os.path.basename(f), "train_samples_per_second" in j, "bytes_per_row_on_disk" in j))
+PY
+echo
+echo "########## B3: run the COPY's check_knobs_9x9.py"
+python3 "$C/codes/eval/check_knobs_9x9.py" > "$RT/b3_copy.out" 2> "$RT/b3_copy.err"
+rc=$?
+echo "  copy exit=$rc"
+echo "  copy stdout (tail):"; tail -8 "$RT/b3_copy.out" | sed 's/^/      /'
+echo "  copy STDERR, verbatim:"; sed 's/^/      /' "$RT/b3_copy.err"
+echo "  stderr names train_samples_per_second: $(grep -c train_samples_per_second "$RT/b3_copy.err")"
+echo "  stderr names bytes_per_row_on_disk:    $(grep -c bytes_per_row_on_disk "$RT/b3_copy.err")"
+echo "  copy printed 14.243 or 353.8 anywhere:  $(grep -cE '14\.243|353\.8' "$RT/b3_copy.out" "$RT/b3_copy.err" | paste -sd' ')"
+echo "  copy printed nan anywhere:              $(grep -ci nan "$RT/b3_copy.out" "$RT/b3_copy.err" | paste -sd' ')"
+echo
+echo "########## B3b: the same copy with the two rates supplied on the command line must derive again"
+python3 "$C/codes/eval/derive_knobs.py" --rows-per-game 32.3 --rows-per-game-random 31.675 \
+  --reuse 8 --samples-per-epoch 20000 --games 1000 --keep 120000 --cap 100000 --min-rows 25000 \
+  --taper 50000 --batch 128 --cpus 32 --game-threads 18 \
+  --train-samples-per-second 14.243 --bytes-per-row 353.8 --selfplay-games-per-hour 2031.7 \
+  --gate-games-measured 156 --emit-env > "$RT/b3_env.txt" 2>&1
+echo "  exit=$?  emitted: $(tr '\n' ' ' < "$RT/b3_env.txt")"
+echo
+echo "########## no baked-in rate literal left in a code line of derive_knobs.py"
+grep -nE '^[^#"]*\b(14\.243|353\.8|70\.19|3\.35|2534)\b' "$P/codes/eval/derive_knobs.py"
+echo "  grep exit=$? (1 = clean)"
+rm -rf "$RT/b3copy"
+echo "done $(date -Is)"

@@ -140,6 +140,42 @@ def compute_desired_num_rows(num_usable_rows, min_rows, add_to_data_rows,
     return desired_num_rows
 
 
+def _req(tput, key, override, flag):
+    """A MEASURED scalar: the throughput JSON's value, an explicit override, or an exit.
+
+    Obligation o41. This function replaces a set of hard-coded fallbacks that let
+    check_knobs_9x9.py report a rate it had never measured when the key was missing
+    from the JSON (validator break attempt B3). There is deliberately no default
+    anywhere below it: a projection is either evaluated at a number some job actually
+    produced, or it is not evaluated at all.
+    """
+    if override is not None:
+        return float(override)
+    v = (tput or {}).get(key)
+    if v is None:
+        raise SystemExit(
+            "derive_knobs: measured key '%s' is missing from the throughput JSON and no "
+            "%s was given. There is no baked-in fallback for it (obligation o41): pass %s, "
+            "or point --throughput at a measurement that carries the key."
+            % (key, flag, flag))
+    return float(v)
+
+
+def _req_phase(tput, phase, key, override, flag):
+    """The same rule for a per_phase_stage entry, e.g. per_phase_stage['cycle2/shuffle']."""
+    if override is not None:
+        return float(override)
+    d = ((tput or {}).get("per_phase_stage") or {}).get(phase) or {}
+    v = d.get(key)
+    if v is None:
+        raise SystemExit(
+            "derive_knobs: measured key 'per_phase_stage[\"%s\"][\"%s\"]' is missing from "
+            "the throughput JSON and no %s was given. There is no baked-in fallback for it "
+            "(obligation o41): pass %s, or point --throughput at a measurement that carries "
+            "the entry." % (phase, key, flag, flag))
+    return float(v)
+
+
 def rows_lower_bound(r, n_games_measured):
     """Section 11's binomial-free 90 % lower bound on a rows/game measured over n games."""
     if n_games_measured <= 0:
@@ -151,6 +187,8 @@ def rows_lower_bound(r, n_games_measured):
 # the derivation
 # ---------------------------------------------------------------------------
 
+SMOKE_CYCLES = 2                 # the smoke ran two loop cycles; its selfplay_rows_total
+                                 # covers both, and each shuffle saw one cycle's rows
 EXPAND_WINDOW_PER_ROW = 0.4      # shuffle.sh:44
 TAPER_WINDOW_EXPONENT = 0.65     # shuffle.sh:45
 APPROX_ROWS_PER_OUT_FILE = 70000  # shuffle.sh:48 (not credited by K4; slack only)
@@ -317,31 +355,44 @@ def derive(args):
     if args.throughput and os.path.exists(args.throughput):
         with open(args.throughput) as f:
             tput = json.load(f)
-    bpr = float(tput.get("bytes_per_row_on_disk", 353.8))
-    train_sps = float(tput.get("train_samples_per_second", 14.243))
+    bpr = _req(tput, "bytes_per_row_on_disk", args.bytes_per_row, "--bytes-per-row")
+    train_sps = _req(tput, "train_samples_per_second", args.train_samples_per_second,
+                     "--train-samples-per-second")
     probe = tput.get("probe_search", {}) or {}
     pps = (tput.get("per_phase_stage", {}) or {}).get("probe_search/selfplay", {}) or {}
-    if tput.get("selfplay_games_per_hour") and not tput.get("per_net", {}).get("random"):
+    if args.selfplay_games_per_hour is not None:
+        gph_measured = float(args.selfplay_games_per_hour)
+    elif tput.get("selfplay_games_per_hour") and not (tput.get("per_net") or {}).get("random"):
         # attempt-2 shape: the whole selfplay stage was the real-net probe
         gph_measured = float(tput["selfplay_games_per_hour"])
     elif probe.get("games") and pps.get("elapsed_s"):
+        # mixed stage: pair the probe's own game count with the probe pid's elapsed time
         gph_measured = 3600.0 * float(probe["games"]) / float(pps["elapsed_s"])
     else:
-        gph_measured = float("nan")
-    if args.selfplay_games_per_hour is not None:
-        gph_measured = args.selfplay_games_per_hour
-    if args.train_samples_per_second is not None:
-        train_sps = args.train_samples_per_second
+        # o41: never nan, and never a constant -- the projection simply cannot be made.
+        raise SystemExit(
+            "derive_knobs: the throughput JSON carries no measured REAL-NET selfplay rate "
+            "('selfplay_games_per_hour' with no random per_net, or probe_search.games with "
+            "per_phase_stage['probe_search/selfplay'].elapsed_s) and no "
+            "--selfplay-games-per-hour was given. There is no baked-in fallback for it "
+            "(obligation o41).")
     gph_plan = gph_measured * args.games_per_hour_derate
 
-    gk = (tput.get("per_phase_stage", {}) or {}).get("cycle2/gatekeeper", {}) or {}
-    gate_games_measured = 156.0
-    gate_s = float(gk.get("elapsed_s", 70.19))
+    gate_games_measured = _req(tput, "gatekeeper_games_total", args.gate_games_measured,
+                               "--gate-games-measured")
+    gate_s = _req_phase(tput, "cycle2/gatekeeper", "elapsed_s", args.gate_elapsed_s,
+                        "--gate-elapsed-s")
     gate_per_game = gate_s / gate_games_measured
     gate_proj_s = 2.0 * gate_per_game * args.gate_games       # x2 for the two-real-net gate
 
-    shuffle_s_measured = ((tput.get("per_phase_stage", {}) or {}).get("cycle2/shuffle", {}) or {}).get("elapsed_s", 3.35)
-    shuffle_rows_measured = float(tput.get("selfplay_rows_total", 2534)) / 2.0
+    shuffle_s_measured = _req_phase(tput, "cycle2/shuffle", "elapsed_s", args.shuffle_elapsed_s,
+                                    "--shuffle-elapsed-s")
+    if args.shuffle_rows_measured is not None:
+        shuffle_rows_measured = float(args.shuffle_rows_measured)
+    else:
+        # the measured shuffle elapsed is ONE cycle's, and the smoke ran SMOKE_CYCLES of them
+        shuffle_rows_measured = _req(tput, "selfplay_rows_total", None,
+                                     "--shuffle-rows-measured") / SMOKE_CYCLES
     shuffle_proj_s = 60.0 + float(shuffle_s_measured) * (keep / max(shuffle_rows_measured, 1.0))
 
     selfplay_proj_s = 3600.0 * G / gph_plan if gph_plan == gph_plan and gph_plan > 0 else float("nan")
@@ -566,6 +617,19 @@ def build_parser():
                    help="override the rate read from --throughput (real-net selfplay)")
     p.add_argument("--train-samples-per-second", type=float, default=None,
                    help="override the rate read from --throughput")
+    # o41: one explicit override per MEASURED input the projections read, so a caller can
+    # state a number instead of a file -- and so --self-test never depends on an evidence
+    # file. None of them has a value baked into this module.
+    p.add_argument("--bytes-per-row", type=float, default=None,
+                   help="override bytes_per_row_on_disk read from --throughput")
+    p.add_argument("--gate-games-measured", type=float, default=None,
+                   help="override gatekeeper_games_total read from --throughput")
+    p.add_argument("--gate-elapsed-s", type=float, default=None,
+                   help="override per_phase_stage['cycle2/gatekeeper'].elapsed_s")
+    p.add_argument("--shuffle-elapsed-s", type=float, default=None,
+                   help="override per_phase_stage['cycle2/shuffle'].elapsed_s")
+    p.add_argument("--shuffle-rows-measured", type=float, default=None,
+                   help="override selfplay_rows_total / SMOKE_CYCLES")
     p.add_argument("--throughput", default=None)
     p.add_argument("--budget-env", default=None)
     p.add_argument("--assert-loop-defaults", default=None)
@@ -603,14 +667,28 @@ def finish(args):
     return args
 
 
+# Synthetic, deliberately round MEASURED inputs for --self-test. They are stand-ins, not
+# measurements: giving every self-test case an explicit value is what keeps the self-test
+# independent of any evidence file, and is the other half of o41 -- this module must carry
+# no number that could be mistaken for something a job produced.
+SELF_TEST_RATES = ["--train-samples-per-second", "15.0",
+                   "--selfplay-games-per-hour", "2000.0",
+                   "--bytes-per-row", "400.0",
+                   "--gate-games-measured", "150",
+                   "--gate-elapsed-s", "60.0",
+                   "--shuffle-elapsed-s", "4.0",
+                   "--shuffle-rows-measured", "1200"]
+
+
 def self_test():
-    """DESIGN section 2's two negative cases and the smoke's executed case."""
+    """DESIGN section 2's two negative cases, the smoke's executed case, and the o41
+    missing-measured-key cases."""
     P = build_parser()
     fails = []
 
     def run(label, argv, expect_pass, expect_failing=()):
         print("--- self-test: %s" % label)
-        a = finish(P.parse_args(argv))
+        a = finish(P.parse_args(argv + SELF_TEST_RATES))
         d = derive(a)
         got_failing = tuple(c["name"] for c in d["checks"] if not c["pass_"])
         print("    pass=%s failing=%s" % (d["pass"], list(got_failing)))
@@ -657,11 +735,66 @@ def self_test():
     if d["derived"]["epochs_per_export"] < 1:
         fails.append("smoke epochs_per_export < 1")
 
+    # o41 negative cases: every MEASURED key the projections read must raise, naming
+    # itself, when it is missing -- never fall back to a constant.
+    print("--- self-test: o41 missing measured keys raise, naming the key")
+    import tempfile
+    base_tput = {
+        "train_samples_per_second": 15.0,
+        "bytes_per_row_on_disk": 400.0,
+        "selfplay_rows_total": 2400,
+        "selfplay_games_per_hour": 2000.0,
+        "gatekeeper_games_total": 150,
+        "per_phase_stage": {"cycle2/gatekeeper": {"elapsed_s": 60.0},
+                            "cycle2/shuffle": {"elapsed_s": 4.0}},
+    }
+    base_argv = ["--rows-per-game", "32.3", "--rows-per-game-random", "31.675",
+                 "--reuse", "8", "--samples-per-epoch", "20000", "--games", "1000",
+                 "--keep", "120000", "--cap", "100000", "--min-rows", "25000",
+                 "--taper", "50000", "--batch", "128", "--cpus", "32", "--game-threads", "18"]
+    drops = [("train_samples_per_second", None), ("bytes_per_row_on_disk", None),
+             ("selfplay_games_per_hour", None), ("gatekeeper_games_total", None),
+             ("selfplay_rows_total", None),
+             ("cycle2/gatekeeper", "per_phase_stage"), ("cycle2/shuffle", "per_phase_stage")]
+    tmpdir = tempfile.mkdtemp(prefix="derive_knobs_selftest_")
+    for key, where in drops:
+        tp = dict(base_tput)
+        tp["per_phase_stage"] = dict(base_tput["per_phase_stage"])
+        if where == "per_phase_stage":
+            del tp["per_phase_stage"][key]
+        else:
+            del tp[key]
+        fp = os.path.join(tmpdir, "tput_no_%s.json" % key.replace("/", "_"))
+        with open(fp, "w") as f:
+            json.dump(tp, f)
+        try:
+            derive(finish(P.parse_args(base_argv + ["--throughput", fp,
+                                                    "--budget-env", ""])))
+        except SystemExit as exc:
+            msg = str(exc)
+            ok = key in msg and "fallback" in msg
+            print("    dropped %-26s -> SystemExit naming it: %s" % (key, ok))
+            if not ok:
+                fails.append("o41 %s: %s" % (key, msg[:120]))
+        else:
+            print("    dropped %-26s -> NO EXIT (a fallback survived)" % key)
+            fails.append("o41 %s did not raise" % key)
+    # and the positive control: with every key present the same call derives
+    fp = os.path.join(tmpdir, "tput_full.json")
+    with open(fp, "w") as f:
+        json.dump(base_tput, f)
+    derive(finish(P.parse_args(base_argv + ["--throughput", fp, "--budget-env", ""])))
+    print("    every key present            -> derives, no exit")
+    for f_ in os.listdir(tmpdir):
+        os.remove(os.path.join(tmpdir, f_))
+    os.rmdir(tmpdir)
+
     print("")
     if fails:
         print("SELF-TEST: FAIL  %s" % fails)
         return 1
-    print("SELF-TEST: PASS  (3 cases: 2 negative, 1 executed-smoke)")
+    print("SELF-TEST: PASS  (3 knob cases: 2 negative, 1 executed-smoke; "
+          "7 o41 missing-key cases plus a positive control)")
     return 0
 
 
