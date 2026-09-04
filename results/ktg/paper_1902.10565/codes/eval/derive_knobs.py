@@ -194,6 +194,73 @@ TAPER_WINDOW_EXPONENT = 0.65     # shuffle.sh:45
 APPROX_ROWS_PER_OUT_FILE = 70000  # shuffle.sh:48 (not credited by K4; slack only)
 
 
+def simulate_ramp(n_cycles, E, batch, keep, min_rows, taper, epochs_per_export,
+                  boot_rows_lo, rows_per_cycle_lo, first_accept_cycle=None):
+    """Per-cycle shuffle window, epochs and exports, from cycle 1 to n_cycles.
+
+    Obligation o40. The model this replaced took `usable = min_rows + (c-1)*G*r` from
+    cycle 2, i.e. it assumed real-net rows one cycle after the start. They are
+    unreachable, and the reference code says why:
+
+      * `-no-repeat-files` stops the trainer when the shuffled files run out
+        (katago/utils/training_data_generator.py:35) and `-quit-if-no-data` then exits 0
+        with NO export (train.py:1487-1489), so a cycle runs floor(window / E) epochs,
+        capped at `-max-epochs-this-instance` = epochs_per_export;
+      * the export counter is PERSISTENT across those instances
+        (train.py:871,975,1743,1831), so it takes epochs_per_export epochs in TOTAL --
+        not per cycle -- to produce the first candidate;
+      * while models/ is empty every cycle is random-net, and shuffle.py:1077 caps the
+        usable random rows at min_rows, so the window is pinned at min_rows and each of
+        those cycles contributes exactly one epoch;
+      * post-random rows therefore begin only in the cycle whose gatekeeper ACCEPTED a
+        candidate (the gate is the first stage of the cycle, synchronous_loop.sh:93-116),
+        which is one cycle after the first export at the earliest.
+
+    first_accept_cycle: the cycle whose gate accepts. None = the optimistic case, the
+    cycle right after the first export. A rejection pushes it later and the whole ramp
+    with it; nothing else in the derivation depends on it.
+    """
+    counter = 0
+    accept = first_accept_cycle
+    first_export = None
+    rows = []
+    for c in range(1, n_cycles + 1):
+        real_cycles = 0 if accept is None or c < accept else (c - accept + 1)
+        if real_cycles:
+            usable = min_rows + real_cycles * rows_per_cycle_lo
+        else:
+            usable = min(boot_rows_lo, min_rows)
+        w = compute_desired_num_rows(usable, min_rows, 0.0, TAPER_WINDOW_EXPONENT,
+                                     EXPAND_WINDOW_PER_ROW, taper, None)
+        avail = min(w, keep)
+        epochs_this_cycle = min(epochs_per_export, int(avail // E))
+        counter += epochs_this_cycle
+        exported = counter >= epochs_per_export
+        if exported:
+            counter = 0
+            if first_export is None:
+                first_export = c
+                if accept is None:
+                    accept = c + 1
+        rows.append(dict(cycle=c, net="real" if real_cycles else "random",
+                         usable_rows=usable, desired_window_rows=w,
+                         rows_available=avail,
+                         batches_available=int(avail // batch),
+                         epochs_supported=int(avail // E),
+                         epochs_this_cycle=epochs_this_cycle,
+                         export_counter_after=counter,
+                         exported=bool(exported)))
+    exports = [x["cycle"] for x in rows if x["exported"]]
+    # the first cycle from which EVERY simulated cycle exports
+    first_every = None
+    for x in reversed(rows):
+        if x["exported"]:
+            first_every = x["cycle"]
+        else:
+            break
+    return rows, exports, first_export, first_every, accept
+
+
 def derive(args):
     r = args.r
     r0 = args.r0
@@ -287,26 +354,19 @@ def derive(args):
         "(shuffle.py:1090 exit-0 gate; :1077 caps the usable count at min_rows)"
         % (boot_rows, boot_rows_lo, min_rows))
 
-    # K4 -------------------------------------------------------------------
-    # cycle 1: usable = min(random rows, min_rows) -> window == min_rows.
-    # cycle c>=2: usable = min_rows + (c-1)*games*r  (post-random rows are uncapped).
-    windows = []
-    for c in range(1, args.window_cycles + 1):
-        if c == 1:
-            usable = min(boot_rows_lo, min_rows)
-        else:
-            usable = min_rows + (c - 1) * rows_per_cycle_lo
-        w = compute_desired_num_rows(usable, min_rows, 0.0, TAPER_WINDOW_EXPONENT,
-                                     EXPAND_WINDOW_PER_ROW, taper, None)
-        avail = min(w, keep)
-        windows.append(dict(cycle=c, usable_rows=usable, desired_window_rows=w,
-                            rows_available=avail,
-                            batches_available=int(avail // batch),
-                            epochs_supported=int(avail // E)))
+    # K4 + the export ramp (o40) --------------------------------------------
+    windows, exports, first_export, first_every, accept_cycle = simulate_ramp(
+        args.window_cycles, E, batch, keep, min_rows, taper, epochs,
+        boot_rows_lo, rows_per_cycle_lo, args.first_accept_cycle)
     d["window_by_cycle"] = windows
     worst = min(windows, key=lambda x: x["rows_available"])
     full = [w["cycle"] for w in windows if w["rows_available"] >= epochs * E]
     d["derived"]["first_cycle_with_full_epoch_set"] = full[0] if full else None
+    d["derived"]["first_export_cycle"] = first_export
+    d["derived"]["first_gate_cycle"] = None if first_export is None else first_export + 1
+    d["derived"]["first_accept_cycle_assumed"] = accept_cycle
+    d["derived"]["first_exactly_one_cycle"] = first_every
+    d["derived"]["export_cycles"] = exports
     chk("K4_window_holds_one_epoch",
         worst["rows_available"] >= E,
         "worst of cycles 1..%d is cycle %d: min(window %d, keep %d) = %d rows = %d batches "
@@ -320,10 +380,18 @@ def derive(args):
         True,
         "epochs_per_export == max_epochs_this_instance == %d, so train.py's persistent "
         "export_cycle_counter (:871,:975,:1743,:1831) can advance by at most %d per cycle: "
-        "never more than one candidate per cycle. Exactly one per cycle from cycle %s on, "
-        "when the shuffled window first holds %d rows; before that the counter carries over "
-        "and the export slips, which is upstream's own designed behaviour."
-        % (epochs, epochs, d["derived"]["first_cycle_with_full_epoch_set"], epochs * E))
+        "never more than one candidate per cycle, from cycle 1 on. The ramp (o40): the "
+        "window is pinned at min_rows while models/ is empty (shuffle.py:1077), each of "
+        "those cycles trains ONE epoch (-no-repeat-files, training_data_generator.py:35; "
+        "-quit-if-no-data, train.py:1487-1489), so the FIRST candidate exports at cycle %s "
+        "and is gated at cycle %s; with the gate accepting at cycle %s the exports fall on "
+        "cycles %s and every cycle exports from cycle %s on, the window first holding "
+        "%d rows at cycle %s. A rejection keeps the loop in the one-epoch regime and moves "
+        "the whole ramp later."
+        % (epochs, epochs, d["derived"]["first_export_cycle"],
+           d["derived"]["first_gate_cycle"], d["derived"]["first_accept_cycle_assumed"],
+           d["derived"]["export_cycles"], d["derived"]["first_exactly_one_cycle"],
+           epochs * E, d["derived"]["first_cycle_with_full_epoch_set"]))
 
     # K6 -------------------------------------------------------------------
     chk("K6_swa_period_is_half_epoch",
@@ -335,7 +403,10 @@ def derive(args):
     sp_threads = gt + 4 + 3          # game + nnServer + dataWrite + modelLoad + main, + CUDA block
     sp_switch = sp_threads + 2       # mid-run net switch allowance
     gk_one_net = gt + 4 + 3          # game + 2 nnServer + dataWrite + main - 1 (one model), + CUDA
-    gk_two_net = gt + 5 + 3 + 3      # two models: second nnServer thread and a second CUDA block
+    # two real nets: game threads + 2 nnServer (one per model) + 1 dataWrite + 1 main
+    # + 2 CUDA blocks of 3 = 18 + 2 + 1 + 1 + 6 = 28 at the derived game-thread count.
+    # (o40: the knob file's own arithmetic summed the same terms to 29.)
+    gk_two_net = gt + 2 + 1 + 1 + 2 * 3
     train_threads = 14
     shuffle_threads = 4 + args.shuffle_processes
     worst_threads = max(sp_switch, gk_two_net, train_threads, shuffle_threads)
@@ -527,13 +598,22 @@ def report(d):
           % (v["epochs_per_export"], v["first_cycle_with_full_epoch_set"]))
     print("  swa_period_samples                     = %d" % v["swa_period_samples"])
     print("")
-    print("SHUFFLE WINDOW BY CYCLE (shuffle.py:414-435 at expand 0.4 / exponent 0.65)")
-    print("  %-6s %-14s %-16s %-14s %-10s %s" % ("cycle", "usable_rows", "desired_window",
-                                                 "rows_available", "batches", "epochs_supported"))
+    print("EXPORT RAMP (o40; persistent export counter, window-limited epochs)")
+    print("  first_export_cycle                     = %s" % v["first_export_cycle"])
+    print("  first_gate_cycle                       = %s" % v["first_gate_cycle"])
+    print("  first_accept_cycle_assumed             = %s" % v["first_accept_cycle_assumed"])
+    print("  first_exactly_one_cycle                = %s" % v["first_exactly_one_cycle"])
+    print("  export_cycles                          = %s" % v["export_cycles"])
+    print("")
+    print("SHUFFLE WINDOW AND EXPORT RAMP BY CYCLE (shuffle.py:414-435 at expand 0.4 / exponent 0.65)")
+    print("  %-6s %-7s %-13s %-15s %-15s %-8s %-9s %-8s %s"
+          % ("cycle", "net", "usable_rows", "desired_window", "rows_available", "batches",
+             "epochs_it", "counter", "export"))
     for w in d["window_by_cycle"]:
-        print("  %-6d %-14.0f %-16d %-14d %-10d %d"
-              % (w["cycle"], w["usable_rows"], w["desired_window_rows"],
-                 w["rows_available"], w["batches_available"], w["epochs_supported"]))
+        print("  %-6d %-7s %-13.0f %-15d %-15d %-8d %-9d %-8d %s"
+              % (w["cycle"], w["net"], w["usable_rows"], w["desired_window_rows"],
+                 w["rows_available"], w["batches_available"], w["epochs_this_cycle"],
+                 w["export_counter_after"], "yes" if w["exported"] else "-"))
     print("")
     print("THREAD BUDGET")
     t = d["threads"]
@@ -605,6 +685,9 @@ def build_parser():
     p.add_argument("--n-games-real", type=int, default=20)
     p.add_argument("--n-games-random", type=int, default=80)
     p.add_argument("--window-cycles", type=int, default=20)
+    p.add_argument("--first-accept-cycle", type=int, default=None,
+                   help="cycle whose gatekeeper accepts the first candidate; default = the "
+                        "cycle after the first export (o40, the optimistic case)")
     p.add_argument("--games-per-hour-derate", type=float, default=0.5)
     p.add_argument("--walltime-seconds", type=int, default=257400)
     p.add_argument("--cycle-bound-hours", type=float, default=60.0)
@@ -681,8 +764,8 @@ SELF_TEST_RATES = ["--train-samples-per-second", "15.0",
 
 
 def self_test():
-    """DESIGN section 2's two negative cases, the smoke's executed case, and the o41
-    missing-measured-key cases."""
+    """DESIGN section 2's two negative cases, the smoke's executed case, the o40 ramp,
+    and the o41 missing-measured-key cases."""
     P = build_parser()
     fails = []
 
@@ -734,6 +817,45 @@ def self_test():
             print("    expected %s to pass and it did not" % name)
     if d["derived"]["epochs_per_export"] < 1:
         fails.append("smoke epochs_per_export < 1")
+
+    # o40: the export ramp of the DERIVED set. The first candidate must come from the
+    # persistent counter over five window-limited random-net cycles, not from cycle 1.
+    d = run("o40 export ramp of the derived set (accept at the first gate cycle)",
+            ["--rows-per-game", "32.3", "--rows-per-game-random", "31.675",
+             "--reuse", "8", "--samples-per-epoch", "20000", "--games", "1000",
+             "--keep", "120000", "--cap", "100000", "--min-rows", "25000",
+             "--taper", "50000", "--batch", "128", "--cpus", "32", "--game-threads", "18",
+             "--n-games-real", "20", "--n-games-random", "80", "--window-cycles", "20"],
+            True)
+    v = d["derived"]
+    print("    first_export_cycle=%s first_gate_cycle=%s first_accept_cycle_assumed=%s "
+          "first_exactly_one_cycle=%s exports=%s"
+          % (v["first_export_cycle"], v["first_gate_cycle"], v["first_accept_cycle_assumed"],
+             v["first_exactly_one_cycle"], v["export_cycles"]))
+    if v["first_export_cycle"] != 5:
+        fails.append("o40 first_export_cycle %s != 5" % v["first_export_cycle"])
+    if v["first_exactly_one_cycle"] not in (15, 16, 17):
+        fails.append("o40 first_exactly_one_cycle %s outside 15-17" % v["first_exactly_one_cycle"])
+    if [w["epochs_this_cycle"] for w in d["window_by_cycle"][:5]] != [1, 1, 1, 1, 1]:
+        fails.append("o40 cycles 1-5 are not one epoch each")
+
+    # o40 negative case: a rejected first candidate pushes the whole ramp later.
+    d = run("o40 ramp with the first candidate REJECTED until cycle 9",
+            ["--rows-per-game", "32.3", "--rows-per-game-random", "31.675",
+             "--reuse", "8", "--samples-per-epoch", "20000", "--games", "1000",
+             "--keep", "120000", "--cap", "100000", "--min-rows", "25000",
+             "--taper", "50000", "--batch", "128", "--cpus", "32", "--game-threads", "18",
+             "--n-games-real", "20", "--n-games-random", "80", "--window-cycles", "20",
+             "--first-accept-cycle", "9"],
+            True)
+    v9 = d["derived"]
+    print("    first_export_cycle=%s first_exactly_one_cycle=%s exports=%s"
+          % (v9["first_export_cycle"], v9["first_exactly_one_cycle"], v9["export_cycles"]))
+    if v9["first_export_cycle"] != 5:
+        fails.append("o40 rejected-case first_export_cycle %s != 5" % v9["first_export_cycle"])
+    if not (v9["first_exactly_one_cycle"] is None
+            or v9["first_exactly_one_cycle"] > v["first_exactly_one_cycle"]):
+        fails.append("o40 a rejection did not push first_exactly_one_cycle later")
 
     # o41 negative cases: every MEASURED key the projections read must raise, naming
     # itself, when it is missing -- never fall back to a constant.
@@ -793,7 +915,7 @@ def self_test():
     if fails:
         print("SELF-TEST: FAIL  %s" % fails)
         return 1
-    print("SELF-TEST: PASS  (3 knob cases: 2 negative, 1 executed-smoke; "
+    print("SELF-TEST: PASS  (3 knob cases: 2 negative, 1 executed-smoke; 2 o40 ramp cases; "
           "7 o41 missing-key cases plus a positive control)")
     return 0
 

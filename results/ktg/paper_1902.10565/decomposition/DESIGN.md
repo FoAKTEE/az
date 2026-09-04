@@ -105,20 +105,30 @@ request):
   took the first — **raise the declaration, keep `numGameThreads = 18`** — because with the CPU cap withdrawn a
   larger declaration is free, while cutting game threads would lower the very NN queue depth this section already
   blames for the 21.5 % mean GPU duty cycle. The re-summed budget, worst stage first: gatekeeper with two real nets
-  18 + 2 nnServer + 1 dataWrite + 1 main + 2x3 CUDA = 29; selfplay real-net 25 measured + 2 net-switch transient = 27;
-  train 14; shuffle 4 + 8 = 12. Declaration **32**, headroom 3, on a 124-core node.
+  18 + 2 nnServer + 1 dataWrite + 1 main + 2x3 CUDA = 28; selfplay real-net 25 measured + 2 net-switch transient = 27;
+  train 14; shuffle 4 + 8 = 12. Declaration **32**, headroom 4, on a 124-core node. (The 29 printed here before
+  2026-09-04 mis-added the same gatekeeper terms; obligation `o40`. Nothing downstream moves — the declaration was
+  already 32 and T4 asserts worst <= 32.)
   verify: `../evidence/smoke/nlwp_max-298712.txt` rows `probe_search/selfplay nlwp_max=25` and `cycle2/gatekeeper
   nlwp_max=25` against `cpus_per_task = 24`; `codes/loop/knobs_9x9.env` `KTG_CPUS_PER_TASK=32` /
-  `KTG_NUM_GAME_THREADS=18`; `python3 codes/eval/check_knobs_9x9.py` line `T4_threads_le_cpus  worst stage 29 <=
+  `KTG_NUM_GAME_THREADS=18`; `python3 codes/eval/check_knobs_9x9.py` line `T4_threads_le_cpus  worst stage 28 <=
   KTG_CPUS_PER_TASK 32`, exit 0; obligation `o03`, claim `c06` (real-net clause, refuted).
-- [OPEN] The 32 is decided but not yet *wired*: `codes/loop/loop.sbatch` still carries `#SBATCH --cpus-per-task=24`
-  and `REQ_CPUS=24`. `derive_cycle_knobs_9x9`'s task file § 13 forbids it touching anything outside the loop's knob
-  block, so the edit belongs to `loop_resume_under_walltime` (obligation `o38`). Closes when both numbers read 32,
-  the check script named by `mission.json` `compute.policyCheck` passes at `--gpus 1 --cpus 32`, and a real-net production cycle re-measures `nlwp_max <= 32`.
-  verify: `grep -n 'cpus-per-task\|REQ_CPUS' codes/loop/loop.sbatch` = 32; node `selfplay_stage` re-measurement.
-- [OPEN] The 29 for a **two**-real-net gatekeeper is arithmetic on a one-net measurement, not a measurement. Job
+- [SOLID] The 32 is now *wired* (`o39`, 2026-09-04): `codes/loop/loop.sbatch` declares `#SBATCH --cpus-per-task=32`
+  and no longer types a CPU count at all — `REQ_CPUS` is read from `codes/loop/knobs_9x9.env`'s `KTG_CPUS_PER_TASK`,
+  and the pre-flight refuses (exit 2) a link whose granted `SLURM_CPUS_PER_TASK` disagrees with it or whose engine
+  configs declare a `numGameThreads` other than `KTG_NUM_GAME_THREADS`.
+  verify: `grep -n 'cpus-per-task=\|REQ_CPUS' codes/loop/loop.sbatch`; the check script named by `mission.json`
+  `compute.policyCheck` at `--gpus 1 --cpus 32 --partition b200`, exit 0;
+  `../evidence/wave3_prelaunch_repairs/repair_R1.txt`.
+- [OPEN] `o39`'s third conjunct: one executed real-net production cycle must re-measure `nlwp_max <= 32` with a
+  ppid-filtered sampler. Shared with `o03`; owned by `tasks/production_chain_9x9`. The sampler now runs inside the
+  link (`loop.sbatch` starts `codes/eval/stage_monitor.sh`, the loop retags each cycle), so the link produces the
+  measurement it needs.
+  verify: node `selfplay_stage` re-measurement; `$BASEDIR/monitor/ps_samples-<jobid>.tsv`;
+  `../evidence/wave3_prelaunch_repairs/repair_R6.txt`.
+- [OPEN] The 28 for a **two**-real-net gatekeeper is arithmetic on a one-net measurement, not a measurement. Job
   298712's gate ran one exported net against the random baseline, so only one CUDA context existed; 25 is a lower
-  bound for the two-net case and 29 the projection the declaration is sized against. First measurable at
+  bound for the two-net case and 28 the projection the declaration is sized against. First measurable at
   `gatekeeper_stage`, cycle 3 or later, once a candidate has been accepted into `models/`.
   verify: node `gatekeeper_stage`; claim `c13`.
 - [OPEN] The unsuffixed smoke evidence names (`nlwp_max.txt`, `throughput_smoke.json`, `rows_per_game.txt`) were
@@ -173,15 +183,21 @@ request):
   verify: `python3 codes/eval/check_knobs_9x9.py` exits 0 with `CHECK_KNOBS_9X9: PASS` (K1-K7 plus the four mission
   tolerances, and the loop copy's `${VAR:-default}` block equal to the derived set); full trace
   `../evidence/derive_cycle_knobs/derivation.md`, verbatim output `../evidence/knobs/derivation.txt`; obligation `o24`.
-- [PRELIMINARY] Exactly one candidate **per cycle** holds from cycle 13, not cycle 1: `-epochs-per-export 5
-  -max-epochs-this-instance 5` makes train.py's persistent `export_cycle_counter` (`:871,975,1743,1831`) advance by at
-  most 5 per cycle, so **at most** one candidate per cycle is guaranteed from cycle 1, but the shuffle window only
-  reaches 5 × 20 000 = 100 000 rows at cycle 13 (`shuffle.py:414-435` at expand 0.4 / exponent 0.65, evaluated at r_lo),
-  and until then a window-limited cycle carries the counter forward and the export slips. Forcing exactly one from
-  cycle 1 would need MINROWS ≥ 100 000 and therefore ≥ 3554 random bootstrap games, which re-enters the NUM_GAMES
-  derivation and diverges. `scale_data_window` may shorten the ramp once a real bootstrap is measured.
-  verify: cycle-by-cycle window table in `../evidence/knobs/derivation.txt` block 3; smoke log lines `Fill per data`,
-  `New rows in bucket`, `Exceeding train bucket`, count of `SAVING MODEL FOR EXPORT` per cycle.
+- [PRELIMINARY] The export ramp (corrected 2026-09-04, obligation `o40`): **the first candidate exports at cycle 5 and
+  is gated at cycle 6**, and exactly one candidate per cycle begins at **cycle 16** if that first candidate is accepted
+  (later for each rejection). `-epochs-per-export 5 -max-epochs-this-instance 5` makes train.py's persistent
+  `export_cycle_counter` (`:871,975,1743,1831`) advance by at most 5 per cycle, so **at most** one candidate per cycle
+  holds from cycle 1. But while `models/` is empty every cycle is random-net and `shuffle.py:1077` caps its usable rows
+  at MINROWS, so the window is pinned at 25 000 rows = one epoch per cycle (`-no-repeat-files`,
+  `katago/utils/training_data_generator.py:35`; `-quit-if-no-data` exits 0 with no export, `train.py:1487-1489`): five
+  such cycles are needed to reach the counter's 5. Real-net rows therefore cannot exist before the cycle whose gate
+  accepts, and the window reaches 5 × 20 000 = 100 000 rows only at cycle 17. The earlier reading — "exactly one from
+  cycle 13, cycles 1-12 window-limited to 1-4 epochs" — assumed real-net rows from cycle 2 and is withdrawn. Forcing
+  exactly one from cycle 1 would need MINROWS ≥ 100 000 and therefore ≥ 3554 random bootstrap games, which re-enters the
+  NUM_GAMES derivation and diverges. `scale_data_window` may shorten the ramp once a real bootstrap is measured.
+  verify: `python3 codes/eval/derive_knobs.py … ` prints `first_export_cycle = 5` and `first_exactly_one_cycle = 16`
+  (cycle-by-cycle table under EXPORT RAMP BY CYCLE, reproduced in `../evidence/knobs/derivation.txt`); the executed
+  first-export cycle is `o40 (c)`, owned by `train_stage` / `export_stage`.
 - [SOLID] Random-play rows are capped at `min_rows` by the shuffler (`shuffle.py:1058,1077`), so the random bootstrap cannot flood the window.
   verify: `sed -n 1077p ref-code/lightvector-KataGo/python/shuffle.py`; node `training_window_shuffle`.
 - [FUTURE] Asynchronous layout (selfplay and train as concurrent processes on 2–4 GPUs with disjoint device masks) is how upstream
@@ -346,11 +362,11 @@ Code-map nodes (15, `preliminary`) are promoted to solid by the two probe **task
 
 - Code-first: v1.18.2 is authoritative; paper values (lr 6e-5, c_value 1.5, S = 421, 300-node gating) are not targets. [SOLID] verify: assumption `a09`; `derivation.md` §3.
 - Start config `b7c96h3tfrs`; ladder b8 → b14 as fresh runs; `b5c48h3tfr` excluded (unservable), kept as negative fixture. [SOLID] verify: nodes `engine_ffn_swiglu_constraint` (solid), `select_transformer_ladder`; jobs 297952 (FAILED 1:0) vs 298018 (COMPLETED 0:0); a06, o07/o18 discharged.
-- One GPU, `--cpus-per-task=32`, five stages sequential; multi-GPU only as `async_multi_gpu_layout` after measured saturation. The 24 held through the smoke and was falsified by it (25 measured on every CUDA-context stage); `derive_cycle_knobs_9x9` raised the declaration rather than cutting `numGameThreads`, because with the CPU cap withdrawn the declaration is the free side of the trade and the game threads are what feed the GPU. [SOLID] verify: §1; `codes/loop/knobs_9x9.env` `KTG_CPUS_PER_TASK=32`; a02 amended; `[OPEN]` o38 wires it into `loop.sbatch`.
+- One GPU, `--cpus-per-task=32`, five stages sequential; multi-GPU only as `async_multi_gpu_layout` after measured saturation. The 24 held through the smoke and was falsified by it (25 measured on every CUDA-context stage); `derive_cycle_knobs_9x9` raised the declaration rather than cutting `numGameThreads`, because with the CPU cap withdrawn the declaration is the free side of the trade and the game threads are what feed the GPU. [SOLID] verify: §1; `codes/loop/knobs_9x9.env` `KTG_CPUS_PER_TASK=32`; a02 amended; wired into `loop.sbatch` (`#SBATCH --cpus-per-task=32`, `REQ_CPUS` read from the knob file, granted-CPU assert) by `o39`.
 - No CPU usage limit (human, 2026-09-03): the 20 % clause is withdrawn, so 24 CPUs is a derived honest declaration (22 live threads + 2 transient), not a ceiling; `a11` and `o22` are moot and `o03`'s "24-CPU cap" wording is superseded by "declared ≥ measured". [SOLID] verify: `mission.json` `decisions[0]`, `compute.cpuCapPerJob = null`, `compute.cpuPolicy`; §1 `NLWP_MAX` measurement.
-- Threads: selfplay 18 / gatekeeper 18 game threads (data-write thread counted), shuffle 8, train OMP 4. All four rows are now measured, in two jobs: random-net selfplay 22, **any CUDA-context stage 25**, train 14, shuffle 4 + 8 = 12; job 299259 reproduced 25 / 14 with a ppid-filtered sampler and no foreign pids at all. Only the two-real-net gatekeeper is still arithmetic (29). [SOLID] verify: `../evidence/smoke/nlwp_max-298712.txt`, `audit-299259.json` `S13_throughput.nlwp_max_per_stage`; `../evidence/cfg_9x9/check_cfg_9x9-298359.txt`; c06 (real-net clause refuted), o03; the two-net row at `gatekeeper_stage`.
+- Threads: selfplay 18 / gatekeeper 18 game threads (data-write thread counted), shuffle 8, train OMP 4. All four rows are now measured, in two jobs: random-net selfplay 22, **any CUDA-context stage 25**, train 14, shuffle 4 + 8 = 12; job 299259 reproduced 25 / 14 with a ppid-filtered sampler and no foreign pids at all. Only the two-real-net gatekeeper is still arithmetic: 18 game + 2 nnServer + 1 dataWrite + 1 main + 2 × 3 CUDA = **28**, headroom 4 against the declared 32 (the 29 printed before 2026-09-04 mis-summed the same terms, o40). [SOLID] verify: `../evidence/smoke/nlwp_max-298712.txt`, `audit-299259.json` `S13_throughput.nlwp_max_per_stage`; `../evidence/cfg_9x9/check_cfg_9x9-298359.txt`; c06 (real-net clause refuted), o03; the two-net row at `gatekeeper_stage`.
 - USEGATING = 1 throughout; cycle 1 gates the first candidate against the random baseline; first dir in `models/` is the frozen baseline. [SOLID] verify: `gating_rule` node; o10, o16 discharged; o19 runtime confirmation.
-- Cycle knobs are derived from measured rows/game (32.3 real, 31.675 random), never hand-picked: NUM_GAMES 1000, epoch 20 000, batch 128, reuse 8, SWA 10 000, EPOCHS_PER_EXPORT 5, MINROWS 25 000, TAPER 50 000, KEEPROWS 120 000 > cap 100 000. **At most** one exported candidate per cycle from cycle 1 (`-epochs-per-export` = `-max-epochs-this-instance`), exactly one from cycle 13, when the shuffle window first holds 5 × 20 000 rows. The §2 500-game pilot set is refuted: it produces fewer new rows per cycle than an epoch draws, and its 10 000 MINROWS gives cycle 1 a 78-batch window against 156. [SOLID] verify: o24; `python3 codes/eval/check_knobs_9x9.py` exit 0; `codes/loop/knobs_9x9.env`; `../evidence/derive_cycle_knobs/derivation.md`; smoke `rows_per_game-298712.txt`.
+- Cycle knobs are derived from measured rows/game (32.3 real, 31.675 random), never hand-picked: NUM_GAMES 1000, epoch 20 000, batch 128, reuse 8, SWA 10 000, EPOCHS_PER_EXPORT 5, MINROWS 25 000, TAPER 50 000, KEEPROWS 120 000 > cap 100 000. **At most** one exported candidate per cycle from cycle 1 (`-epochs-per-export` = `-max-epochs-this-instance`); the first candidate is exported at cycle 5 and gated at cycle 6, and exactly one per cycle begins at cycle 16 under acceptance at 6 (o40 — the window is pinned at MINROWS while `models/` is empty). The §2 500-game pilot set is refuted: it produces fewer new rows per cycle than an epoch draws, and its 10 000 MINROWS gives cycle 1 a 78-batch window against 156. [SOLID] verify: o24; `python3 codes/eval/check_knobs_9x9.py` exit 0; `codes/loop/knobs_9x9.env`; `../evidence/derive_cycle_knobs/derivation.md`; smoke `rows_per_game-298712.txt`.
 - Data windows: KEEPROWS > MAX_TRAIN_SAMPLES_PER_CYCLE always; random rows capped at `min_rows`, which makes SHUFFLE_MINROWS — not the game count — the knob that decides whether cycle 1 can train at all. [SOLID] verify: `synchronous_loop.sh:66`, `shuffle.py:1077`, `:414-435`; K3/K4 in `codes/eval/check_knobs_9x9.py`.
 - Cycle-wall and storage projections ride with the knob set and are re-derived whenever a rate is re-measured: 3.11 h/cycle → 23 cycles per chain link, 16.11 MiB/cycle → 30 480 cycles before the 500 GiB cap. Both take the SLOWER of the two smoke jobs’ rates. [PRELIMINARY] verify: K7 and T3 in `codes/eval/check_knobs_9x9.py`; node `measure_stage_throughput` owns the real bound.
 - Scratch: 500 GiB cap on the whole mission root, projected-write pre-cycle guard, 1 TiB group free-space floor, logged bounded retention. [PRELIMINARY] verify: o04, c11; node `data_budget`.

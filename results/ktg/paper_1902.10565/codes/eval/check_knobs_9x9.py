@@ -224,6 +224,7 @@ def main(argv=None):
     args.gate_elapsed_s = None
     args.shuffle_elapsed_s = None
     args.shuffle_rows_measured = None
+    args.first_accept_cycle = None     # o40: the optimistic case, the cycle after the export
     args = dk.finish(args)
 
     d = dk.derive(args)

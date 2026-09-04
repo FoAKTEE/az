@@ -1,0 +1,1253 @@
+================================================================================
+repair R2 -- obligation o40_export_ramp_first_candidate_cycle5, conjuncts (a) and (b)
+  derive_knobs.py models the export ramp as the validator derived it: the window is
+  pinned at SHUFFLE_MINROWS while models/ is empty, so five one-epoch random-net cycles
+  produce the first candidate at cycle 5, gated at cycle 6, and the export becomes
+  per-cycle at 16 under acceptance at 6.
+  Worker, CHANDRA_ROLE=worker, login node, CPU only, no Slurm job, no GPU.
+  Host login03, 2026-09-04T09:48:40-04:00.  Tree state: HEAD e2d258a (R3) + the o40 edits.
+================================================================================
+
+################################################################################
+PART 1 -- the section 2 R2 command and the closing check
+################################################################################
+########## R2 section 2 command, verbatim
+$ python3 results/ktg/paper_1902.10565/codes/eval/derive_knobs.py --self-test && python3 results/ktg/paper_1902.10565/codes/eval/check_knobs_9x9.py | grep -E 'first_export_cycle *= 5$|first_exactly_one_cycle *= 1[5-7]$' | wc -l
+    every key present            -> derives, no exit
+
+SELF-TEST: PASS  (3 knob cases: 2 negative, 1 executed-smoke; 2 o40 ramp cases; 7 o41 missing-key cases plus a positive control)
+  --self-test EXIT=0
+2
+  (the two lines themselves:)
+    first_export_cycle                     = 5
+    first_gate_cycle                       = 6
+    first_accept_cycle_assumed             = 6
+    first_exactly_one_cycle                = 16
+    export_cycles                          = [5, 8, 10, 12, 14, 16, 17, 18, 19, 20]
+
+########## check_knobs_9x9.py, full, exit code and the eleven knob values
+  EXIT=0
+    NUM_GAMES_PER_CYCLE          = 1000
+    NUM_THREADS_FOR_SHUFFLING    = 8
+    NUM_TRAIN_SAMPLES_PER_EPOCH  = 20000
+    MAX_TRAIN_PER_DATA           = 8.0
+    NUM_TRAIN_SAMPLES_PER_SWA    = 10000
+    BATCHSIZE                    = 128
+    SHUFFLE_MINROWS              = 25000
+    MAX_TRAIN_SAMPLES_PER_CYCLE  = 100000
+    TAPER_WINDOW_SCALE           = 50000
+    SHUFFLE_KEEPROWS             = 120000
+    EPOCHS_PER_EXPORT            = 5
+  CHECK_KNOBS_9X9: PASS
+
+########## the --first-accept-cycle 6 form the task file names
+  first_export_cycle                     = 5
+  first_exactly_one_cycle                = 16
+  export_cycles                          = [5, 8, 10, 12, 14, 16, 17, 18, 19, 20]
+  EXIT=0
+
+################################################################################
+PART 2 -- the ramp table, and the validator's simulation it must reproduce
+################################################################################
+--- validation.md section 2.7, the validator's own simulation (quoted verbatim):
+      c= 1..5  usable=25000 window=25000 epochs=1 each  -> counter 1,2,3,4,5 ; export at cycle 5
+      c= 6 usable=50077  window=34305  epochs=1  c=7 42561/2  c=8 50116/2 export  c=9 57156/2
+      c=10 63794/3 export  c=11 70107/3  c=12 76149/3 export  c=13 81960/4  c=14 87570/4 export
+      c=15 93004/4  c=16 98282/4 export  c=17 103419/5 export  c=18.. 5 epochs, export every cycle
+      exports at cycles [5, 8, 10, 12, 14, 16, 17, 18, 19, 20, ...] -> exactly one per cycle from cycle 16
+      ```
+      If the first candidate (trained on 100000 samples of random-play rows) is rejected, the loop stays in
+      the one-epoch / one-export-per-five-cycles regime until a candidate is accepted.
+    - What DOES hold from cycle 1, structurally: at most one export per cycle (`-epochs-per-export` =
+      `-max-epochs-this-instance` = 5). Every K1-K7/T1-T4 inequality is unaffected: cycle 1 is still the
+      binding window case and a random-net cycle never goes below it, so K4's conservatism runs in the safe
+      direction everywhere.
+    
+    Consequence: the knob set is admitted; the claim is NARROWED in the admitted row (no "cycle 13", no
+    "1-4 epochs in cycles 1-12"), o24's discharge carries the narrowed wording, and the ramp is opened as
+    obligation `o40_export_ramp_first_candidate_cycle5` (correct `derive_knobs.py`'s window-by-cycle model; owners `scale_data_window` /
+    `bootstrap_accepted_model`; first measurable at `train_stage`/`export_stage`).
+    
+    ### 2.8 Claim / status honesty
+    
+    `conditional` is right: inputs measured, nothing measured at the derived point. The candidate's
+    `evidence_type` value `symbolic_derivation_with_executed_numerical_check` is not in the ledger enum and
+    would have been refused; the admitted row uses `symbolic_derivation` (the task file's own type). Two
+    `open_obligations` names in the candidate do not resolve to ledger ids: `o03_thread_budget` is
+    `o03_thread_budget_24cpu`, `o37_mutable_smoke_evidence` is
+    `o37_smoke_monitor_append_and_evidence_overwrite`; corrected in the admitted row.
+    
+    ### 2.9 o13 / o24 / o39 references
+    
+    - o13: conjunct (i) `SELFPLAY_CONFIG`/`GATING_CONFIG` default to the mission cfgs
+      (`synchronous_loop_9x9.sh:160-161`); (ii) the `KATAGO_SRC` git-root guard (`:100-111`); both were
+      executed by the validator of `r_loop_resume_under_walltime_static` (row `7edac62a…`); (iii) the knob
+      conjunct is now met by measurement (this node). Discharged.
+    - o24: every derivation conjunct met and executed; the "exactly one per cycle" conjunct is narrowed to
+      "at most one per cycle from cycle 1, exactly one once the shuffled window holds 5 x E rows" (section 2.7).
+      Discharged with the amended statement; the residual is o40_export_ramp_first_candidate_cycle5.
+    - o39_cpus_per_task_wiring (the worker proposed it as o38; o38 was taken by o38_full_frac_discriminator_reused_tree in 97b44ba): `codes/loop/loop.sbatch:8` `#SBATCH --cpus-per-task=24` and `:90` `REQ_CPUS=24` — read and
+      confirmed. The candidate's statement also says the compute-budget skill's sizing table "lists 24 for
+      single-GPU training": it does not — `SKILL.md:33` lists 12 for single-GPU and `:35` 24 for 2-GPU; both
+      presets are below the measured 25 and the table is documentation, not wiring. o39 is opened with the
+      loop.sbatch facts only and the SKILL.md note as a non-binding remark.
+    
+    ### 2.10 Substitution of the closing check
+    
+    The task file's section 2 command is defective as the worker says (hard-coded refuted pilot `--games 500`,
+    `--min-rows` default 10000 fails K4 from cycle 1 at any r, unquoted `$(cat …)` over a prose file naming
+    the mutable copy). Adopted as `verification.command` on the admitted rows:
+    `python3 results/ktg/paper_1902.10565/codes/eval/check_knobs_9x9.py` (parameterless; exit 0 required and
+    re-run by the gate at append). The substitution is recorded on the result row's `provenance` and `notes`.
+    
+    ## 3. Verdict
+    
+    **ADMIT, narrowed.** Result `r_cycle_knobs_9x9_derived` at `conditional` with the ramp statement replaced
+    by the section 2.7 finding and the thread sum corrected; knowledge node `derive_cycle_knobs_9x9` at
+    `preliminary` (predecessor `synchronous_loop_smoke` is preliminary, `data_budget` is hypothesis; no cycle
+    has executed at the set). Claim ledger: o24 discharged (amended wording), o13 discharged, o03 re-appended
+    open with the 32/18 decision recorded, o39_cpus_per_task_wiring opened (loop.sbatch wiring), o40_export_ramp_first_candidate_cycle5 opened (export ramp / first
+    export at cycle 5), o41_check_knobs_silent_fallback_constants opened (silent fallbacks in `derive_knobs.py:320-321`). Row hashes and the exact
+    appended commands are in the commit body.
+
+--- this repair's table, --rows-per-game 32.3 --rows-per-game-random 31.675, derived set:
+    EXPORT RAMP (o40; persistent export counter, window-limited epochs)
+      first_export_cycle                     = 5
+      first_gate_cycle                       = 6
+      first_accept_cycle_assumed             = 6
+      first_exactly_one_cycle                = 16
+      export_cycles                          = [5, 8, 10, 12, 14, 16, 17, 18, 19, 20]
+    
+    SHUFFLE WINDOW AND EXPORT RAMP BY CYCLE (shuffle.py:414-435 at expand 0.4 / exponent 0.65)
+      cycle  net     usable_rows   desired_window  rows_available  batches  epochs_it counter  export
+      1      random  25000         25000           25000           195      1         1        -
+      2      random  25000         25000           25000           195      1         2        -
+      3      random  25000         25000           25000           195      1         3        -
+      4      random  25000         25000           25000           195      1         4        -
+      5      random  25000         25000           25000           195      1         0        yes
+      6      real    50078         34305           34305           268      1         1        -
+      7      real    75155         42561           42561           332      2         3        -
+      8      real    100233        50116           50116           391      2         0        yes
+      9      real    125310        57156           57156           446      2         2        -
+      10     real    150388        63794           63794           498      3         0        yes
+      11     real    175465        70107           70107           547      3         3        -
+      12     real    200543        76149           76149           594      3         0        yes
+      13     real    225620        81960           81960           640      4         4        -
+      14     real    250698        87570           87570           684      4         0        yes
+      15     real    275775        93004           93004           726      4         4        -
+      16     real    300853        98282           98282           767      4         0        yes
+      17     real    325930        103419          103419          807      5         0        yes
+      18     real    351008        108430          108430          847      5         0        yes
+      19     real    376085        113324          113324          885      5         0        yes
+      20     real    401163        118113          118113          922      5         0        yes
+    
+--- and with the first candidate REJECTED until cycle 9 (--first-accept-cycle 9):
+    EXPORT RAMP (o40; persistent export counter, window-limited epochs)
+      first_export_cycle                     = 5
+      first_gate_cycle                       = 6
+      first_accept_cycle_assumed             = 9
+      first_exactly_one_cycle                = 19
+      export_cycles                          = [5, 10, 13, 15, 17, 19, 20]
+    
+
+################################################################################
+PART 3 -- the thread-budget correction (29 -> 28) that comes with the ramp fix
+################################################################################
+  THREAD BUDGET
+    selfplay_real_net            = 25
+    selfplay_with_net_switch     = 27
+    gatekeeper_one_real_net      = 25
+    gatekeeper_two_real_nets     = 28
+    train                        = 14
+    shuffle                      = 12
+    worst_case                   = 28
+    cpus_per_task                = 32
+  
+  CYCLE WALL PROJECTION  [PRELIMINARY]
+    ok   T4_threads_le_cpus                     worst stage thread count 28 (selfplay real-net 25 +2 net switch = 27; gatekeeper two real nets 28; train 14; shuffle 4+8=12) <= --cpus-per-task 32, headroom 4
+    ok   T4_threads_le_cpus                 worst stage 28 <= KTG_CPUS_PER_TASK 32
+
+################################################################################
+PART 4 -- the regenerated evidence/knobs/derivation.txt (eight blocks)
+################################################################################
+derivation.txt -- node arxiv-1902.10565::derive_cycle_knobs_9x9
+date: 2026-09-04T13:48:14Z   host: login03   git: e2d258a
+regenerated after the o40 export-ramp correction and the o41 measured-key rule (task wave3_prelaunch_repairs).
+login node, CPU only, no Slurm allocation, no GPU.
+
+############################################################################
+# 1. self-test: two DESIGN section 2 negative cases, the executed smoke's
+#    knob set, the o40 ramp (accepted and rejected), and the o41
+#    missing-measured-key cases with a positive control
+############################################################################
+$ python3 results/ktg/paper_1902.10565/codes/eval/derive_knobs.py --self-test
+--- self-test: DESIGN pass-2 knobs (reuse 4, 50k/epoch) starve from cycle 2
+    pass=False failing=['K1_bucket_gain_clears_epoch', 'T1_freshness_rows_per_cycle_ge_1p2_E', 'K2_one_export_per_cycle', 'K5_random_bootstrap_reaches_min_rows']
+--- self-test: pass-1 data window keep 300k <= cap 500k
+    pass=False failing=['T1_freshness_rows_per_cycle_ge_1p2_E', 'K2_one_export_per_cycle', 'K2b_effective_reuse_within_cap', 'K3_keep_gt_cap', 'K5_random_bootstrap_reaches_min_rows', 'K4_window_holds_one_epoch']
+--- self-test: smoke knobs (40 games, 256/epoch, reuse 8, batch 32)
+    pass=False failing=['K4_window_holds_one_epoch', 'T4_threads_le_cpus']
+--- self-test: o40 export ramp of the derived set (accept at the first gate cycle)
+    pass=True failing=[]
+    first_export_cycle=5 first_gate_cycle=6 first_accept_cycle_assumed=6 first_exactly_one_cycle=16 exports=[5, 8, 10, 12, 14, 16, 17, 18, 19, 20]
+--- self-test: o40 ramp with the first candidate REJECTED until cycle 9
+    pass=True failing=[]
+    first_export_cycle=5 first_exactly_one_cycle=19 exports=[5, 10, 13, 15, 17, 19, 20]
+--- self-test: o41 missing measured keys raise, naming the key
+    dropped train_samples_per_second   -> SystemExit naming it: True
+    dropped bytes_per_row_on_disk      -> SystemExit naming it: True
+    dropped selfplay_games_per_hour    -> SystemExit naming it: True
+    dropped gatekeeper_games_total     -> SystemExit naming it: True
+    dropped selfplay_rows_total        -> SystemExit naming it: True
+    dropped cycle2/gatekeeper          -> SystemExit naming it: True
+    dropped cycle2/shuffle             -> SystemExit naming it: True
+    every key present            -> derives, no exit
+
+SELF-TEST: PASS  (3 knob cases: 2 negative, 1 executed-smoke; 2 o40 ramp cases; 7 o41 missing-key cases plus a positive control)
+EXIT=0
+
+############################################################################
+# 2. the task file section 2 verification command, VERBATIM
+#    (it exits 1; see derivation.md section 7 for the three reasons)
+############################################################################
+$ python3 results/ktg/paper_1902.10565/codes/eval/derive_knobs.py --rows-per-game $(cat results/ktg/paper_1902.10565/evidence/smoke/rows_per_game.txt) --reuse 8 --samples-per-epoch 20000 --games 500 --keep 300000 --cap 200000 --gate-games-measured 156
+derive_knobs.py -- node arxiv-1902.10565::derive_cycle_knobs_9x9
+
+MEASURED INPUTS (Slurm job 298712, commit 5bb85ad)
+  rows/game real      r        = 31.9500     (lower90 24.8058 over 20 games)
+  rows/game random    r0       = 31.6750     (lower90 28.1336 over 80 games)
+  bytes/row on disk            = 353.8
+
+KNOB SET UNDER TEST
+  NUM_GAMES_PER_CYCLE          = 500
+  NUM_THREADS_FOR_SHUFFLING    = 8
+  NUM_TRAIN_SAMPLES_PER_EPOCH  = 20000
+  MAX_TRAIN_PER_DATA           = 8.0
+  NUM_TRAIN_SAMPLES_PER_SWA    = 10000
+  BATCHSIZE                    = 128
+  SHUFFLE_MINROWS              = 10000
+  MAX_TRAIN_SAMPLES_PER_CYCLE  = 200000
+  TAPER_WINDOW_SCALE           = 50000
+  SHUFFLE_KEEPROWS             = 300000
+  EPOCHS_PER_EXPORT            = 6
+
+DERIVED QUANTITIES
+  rows_per_cycle    = games*r            = 15975.0   (lower90 12402.9)
+  bucket gain       = games*r*reuse      = 127800.0   (lower90 99223.1)
+  bucket cap_eff    = max(cap,E)         = 200000
+  epochs_per_export = max_epochs_this_instance = 6
+  batches_per_epoch = round(E/batch)     = 156
+  samples_per_cycle = epochs*E           = 120000
+  effective reuse   = epochs*E/rows      = 7.512  (lower90 9.675, cap 8.0)
+  first cycle with a full 6-epoch window = None
+  swa_period_samples                     = 10000
+
+EXPORT RAMP (o40; persistent export counter, window-limited epochs)
+  first_export_cycle                     = None
+  first_gate_cycle                       = None
+  first_accept_cycle_assumed             = None
+  first_exactly_one_cycle                = None
+  export_cycles                          = []
+
+SHUFFLE WINDOW AND EXPORT RAMP BY CYCLE (shuffle.py:414-435 at expand 0.4 / exponent 0.65)
+  cycle  net     usable_rows   desired_window  rows_available  batches  epochs_it counter  export
+  1      random  10000         10000           10000           78       0         0        -
+  2      random  10000         10000           10000           78       0         0        -
+  3      random  10000         10000           10000           78       0         0        -
+  4      random  10000         10000           10000           78       0         0        -
+  5      random  10000         10000           10000           78       0         0        -
+  6      random  10000         10000           10000           78       0         0        -
+  7      random  10000         10000           10000           78       0         0        -
+  8      random  10000         10000           10000           78       0         0        -
+  9      random  10000         10000           10000           78       0         0        -
+  10     random  10000         10000           10000           78       0         0        -
+  11     random  10000         10000           10000           78       0         0        -
+  12     random  10000         10000           10000           78       0         0        -
+  13     random  10000         10000           10000           78       0         0        -
+  14     random  10000         10000           10000           78       0         0        -
+  15     random  10000         10000           10000           78       0         0        -
+  16     random  10000         10000           10000           78       0         0        -
+  17     random  10000         10000           10000           78       0         0        -
+  18     random  10000         10000           10000           78       0         0        -
+  19     random  10000         10000           10000           78       0         0        -
+  20     random  10000         10000           10000           78       0         0        -
+
+THREAD BUDGET
+  selfplay_real_net            = 25
+  selfplay_with_net_switch     = 27
+  gatekeeper_one_real_net      = 25
+  gatekeeper_two_real_nets     = 28
+  train                        = 14
+  shuffle                      = 12
+  worst_case                   = 28
+  cpus_per_task                = 32
+
+CYCLE WALL PROJECTION  [PRELIMINARY]
+  selfplay_games_per_hour_measured   = 2341.463
+  games_per_hour_derate              = 0.500
+  selfplay_games_per_hour_planning   = 1170.732
+  train_samples_per_second           = 14.243
+  selfplay_s                         = 1537.500
+  train_s                            = 8425.191
+  gatekeeper_s                       = 179.974
+  shuffle_s                          = 853.212
+  export_s                           = 60.000
+  cycle_s                            = 11055.878
+  cycle_h                            = 3.071
+  cycles_per_link                    = 23
+
+STORAGE PROJECTION
+  per-cycle monotonic         = 9.62 MiB
+  bounded steady state        = 735.10 MiB
+  env + build allowance       = 20.00 GiB
+  after one 23-cycle link      = 20.934 GiB
+  hard cap (budget.env)       = 500 GiB
+  cycles until the cap        = 51001
+
+CHECKS
+  ok   K1_bucket_gain_clears_epoch            gain = games*r*reuse = 127800.0 (lower90 99223.1) vs 0.99*E = 19800.0; ratio gain/E = 6.390 (lower90 4.961)
+  FAIL T1_freshness_rows_per_cycle_ge_1p2_E   rows_per_cycle = 15975.0 (lower90 12402.9) vs 1.2*E = 24000.0; ratio 0.799 (lower90 0.620)
+  FAIL K2_one_export_per_cycle                epochs_per_export = max_epochs_this_instance = floor(min(gain,cap_eff)/E) = 6 (lower90 4); cap_eff = max(cap,E) = 200000; effective reuse 7.51 (lower90 9.68) <= 8.0
+  FAIL K2b_effective_reuse_within_cap         epochs*E/rows_per_cycle = 7.51 (lower90 9.68) <= reuse cap 8.0
+  ok   K3_keep_gt_cap                         keep = 300000 > cap = 200000 (synchronous_loop.sh:66) and keep >= epochs*E = 120000
+  ok   K5_random_bootstrap_reaches_min_rows   cycle-1 random rows = games*r_random = 15837.5 (lower90 14066.8) >= min_rows = 10000 (shuffle.py:1090 exit-0 gate; :1077 caps the usable count at min_rows)
+  FAIL K4_window_holds_one_epoch              worst of cycles 1..20 is cycle 1: min(window 10000, keep 300000) = 10000 rows = 78 batches >= round(E/batch) = 156 batches (= 19968 rows); ratio 0.500. Conservative: the file-granularity slack of shuffle.sh:48 (-approx-rows-per-out-file 70000) is not credited.
+  ok   K2c_at_most_one_export_per_cycle       epochs_per_export == max_epochs_this_instance == 6, so train.py's persistent export_cycle_counter (:871,:975,:1743,:1831) can advance by at most 6 per cycle: never more than one candidate per cycle, from cycle 1 on. The ramp (o40): the window is pinned at min_rows while models/ is empty (shuffle.py:1077), each of those cycles trains ONE epoch (-no-repeat-files, training_data_generator.py:35; -quit-if-no-data, train.py:1487-1489), so the FIRST candidate exports at cycle None and is gated at cycle None; with the gate accepting at cycle None the exports fall on cycles [] and every cycle exports from cycle None on, the window first holding 120000 rows at cycle None. A rejection keeps the loop in the one-epoch regime and moves the whole ramp later.
+  ok   K6_swa_period_is_half_epoch            swa_period_samples = samples_per_epoch // 2 = 10000 (train.py:441 default made explicit)
+  ok   T4_threads_le_cpus                     worst stage thread count 28 (selfplay real-net 25 +2 net switch = 27; gatekeeper two real nets 28; train 14; shuffle 4+8=12) <= --cpus-per-task 32, headroom 4
+  ok   K7_cycle_wall_under_bound              projected cycle = 11056 s = 3.07 h <= 60 h bound, and 23 whole cycles fit the 257400 s chain link. [PRELIMINARY] tiny-count throughput inputs.
+  ok   T3_storage_projection_under_budget     per-cycle monotonic write 9.6 MiB; bounded steady state 735.1 MiB; env+build 20.0 GiB; after one full 23-cycle link 20.93 GiB of 500 GiB cap; 51001 cycles fit before the cap
+
+RESULT: FAIL
+EXIT=1
+
+############################################################################
+# 3. the DERIVED closing check: same script, the parameters this node solved
+#    for, against the immutable evidence copy rows_per_game-298712.txt
+############################################################################
+$ python3 results/ktg/paper_1902.10565/codes/eval/derive_knobs.py --rows-per-game "$(cat results/ktg/paper_1902.10565/evidence/smoke/rows_per_game-298712.txt)" --reuse 8 --samples-per-epoch 20000 --games 1000 --keep 120000 --cap 100000 --min-rows 25000 --taper 50000 --batch 128 --cpus 32 --game-threads 18 --gate-games-measured 156 --assert-loop-defaults results/ktg/paper_1902.10565/codes/loop/synchronous_loop_9x9.sh
+derive_knobs.py -- node arxiv-1902.10565::derive_cycle_knobs_9x9
+
+MEASURED INPUTS (Slurm job 298712, commit 5bb85ad)
+  rows/game real      r        = 32.3000     (lower90 25.0775 over 20 games)
+  rows/game random    r0       = 31.6750     (lower90 28.1336 over 80 games)
+  bytes/row on disk            = 353.8
+
+KNOB SET UNDER TEST
+  NUM_GAMES_PER_CYCLE          = 1000
+  NUM_THREADS_FOR_SHUFFLING    = 8
+  NUM_TRAIN_SAMPLES_PER_EPOCH  = 20000
+  MAX_TRAIN_PER_DATA           = 8.0
+  NUM_TRAIN_SAMPLES_PER_SWA    = 10000
+  BATCHSIZE                    = 128
+  SHUFFLE_MINROWS              = 25000
+  MAX_TRAIN_SAMPLES_PER_CYCLE  = 100000
+  TAPER_WINDOW_SCALE           = 50000
+  SHUFFLE_KEEPROWS             = 120000
+  EPOCHS_PER_EXPORT            = 5
+
+DERIVED QUANTITIES
+  rows_per_cycle    = games*r            = 32300.0   (lower90 25077.5)
+  bucket gain       = games*r*reuse      = 258400.0   (lower90 200620.0)
+  bucket cap_eff    = max(cap,E)         = 100000
+  epochs_per_export = max_epochs_this_instance = 5
+  batches_per_epoch = round(E/batch)     = 156
+  samples_per_cycle = epochs*E           = 100000
+  effective reuse   = epochs*E/rows      = 3.096  (lower90 3.988, cap 8.0)
+  first cycle with a full 5-epoch window = 17
+  swa_period_samples                     = 10000
+
+EXPORT RAMP (o40; persistent export counter, window-limited epochs)
+  first_export_cycle                     = 5
+  first_gate_cycle                       = 6
+  first_accept_cycle_assumed             = 6
+  first_exactly_one_cycle                = 16
+  export_cycles                          = [5, 8, 10, 12, 14, 16, 17, 18, 19, 20]
+
+SHUFFLE WINDOW AND EXPORT RAMP BY CYCLE (shuffle.py:414-435 at expand 0.4 / exponent 0.65)
+  cycle  net     usable_rows   desired_window  rows_available  batches  epochs_it counter  export
+  1      random  25000         25000           25000           195      1         1        -
+  2      random  25000         25000           25000           195      1         2        -
+  3      random  25000         25000           25000           195      1         3        -
+  4      random  25000         25000           25000           195      1         4        -
+  5      random  25000         25000           25000           195      1         0        yes
+  6      real    50078         34305           34305           268      1         1        -
+  7      real    75155         42561           42561           332      2         3        -
+  8      real    100233        50116           50116           391      2         0        yes
+  9      real    125310        57156           57156           446      2         2        -
+  10     real    150388        63794           63794           498      3         0        yes
+  11     real    175465        70107           70107           547      3         3        -
+  12     real    200543        76149           76149           594      3         0        yes
+  13     real    225620        81960           81960           640      4         4        -
+  14     real    250698        87570           87570           684      4         0        yes
+  15     real    275775        93004           93004           726      4         4        -
+  16     real    300853        98282           98282           767      4         0        yes
+  17     real    325930        103419          103419          807      5         0        yes
+  18     real    351008        108430          108430          847      5         0        yes
+  19     real    376085        113324          113324          885      5         0        yes
+  20     real    401163        118113          118113          922      5         0        yes
+
+THREAD BUDGET
+  selfplay_real_net            = 25
+  selfplay_with_net_switch     = 27
+  gatekeeper_one_real_net      = 25
+  gatekeeper_two_real_nets     = 28
+  train                        = 14
+  shuffle                      = 12
+  worst_case                   = 28
+  cpus_per_task                = 32
+
+CYCLE WALL PROJECTION  [PRELIMINARY]
+  selfplay_games_per_hour_measured   = 2341.463
+  games_per_hour_derate              = 0.500
+  selfplay_games_per_hour_planning   = 1170.732
+  train_samples_per_second           = 14.243
+  selfplay_s                         = 3075.000
+  train_s                            = 7020.993
+  gatekeeper_s                       = 179.974
+  shuffle_s                          = 377.285
+  export_s                           = 60.000
+  cycle_s                            = 10713.252
+  cycle_h                            = 2.976
+  cycles_per_link                    = 24
+
+STORAGE PROJECTION
+  per-cycle monotonic         = 16.11 MiB
+  bounded steady state        = 552.90 MiB
+  env + build allowance       = 20.00 GiB
+  after one 24-cycle link      = 20.917 GiB
+  hard cap (budget.env)       = 500 GiB
+  cycles until the cap        = 30480
+
+CHECKS
+  ok   K1_bucket_gain_clears_epoch            gain = games*r*reuse = 258400.0 (lower90 200620.0) vs 0.99*E = 19800.0; ratio gain/E = 12.920 (lower90 10.031)
+  ok   T1_freshness_rows_per_cycle_ge_1p2_E   rows_per_cycle = 32300.0 (lower90 25077.5) vs 1.2*E = 24000.0; ratio 1.615 (lower90 1.254)
+  ok   K2_one_export_per_cycle                epochs_per_export = max_epochs_this_instance = floor(min(gain,cap_eff)/E) = 5 (lower90 5); cap_eff = max(cap,E) = 100000; effective reuse 3.10 (lower90 3.99) <= 8.0
+  ok   K2b_effective_reuse_within_cap         epochs*E/rows_per_cycle = 3.10 (lower90 3.99) <= reuse cap 8.0
+  ok   K3_keep_gt_cap                         keep = 120000 > cap = 100000 (synchronous_loop.sh:66) and keep >= epochs*E = 100000
+  ok   K5_random_bootstrap_reaches_min_rows   cycle-1 random rows = games*r_random = 31675.0 (lower90 28133.6) >= min_rows = 25000 (shuffle.py:1090 exit-0 gate; :1077 caps the usable count at min_rows)
+  ok   K4_window_holds_one_epoch              worst of cycles 1..20 is cycle 1: min(window 25000, keep 120000) = 25000 rows = 195 batches >= round(E/batch) = 156 batches (= 19968 rows); ratio 1.250. Conservative: the file-granularity slack of shuffle.sh:48 (-approx-rows-per-out-file 70000) is not credited.
+  ok   K2c_at_most_one_export_per_cycle       epochs_per_export == max_epochs_this_instance == 5, so train.py's persistent export_cycle_counter (:871,:975,:1743,:1831) can advance by at most 5 per cycle: never more than one candidate per cycle, from cycle 1 on. The ramp (o40): the window is pinned at min_rows while models/ is empty (shuffle.py:1077), each of those cycles trains ONE epoch (-no-repeat-files, training_data_generator.py:35; -quit-if-no-data, train.py:1487-1489), so the FIRST candidate exports at cycle 5 and is gated at cycle 6; with the gate accepting at cycle 6 the exports fall on cycles [5, 8, 10, 12, 14, 16, 17, 18, 19, 20] and every cycle exports from cycle 16 on, the window first holding 100000 rows at cycle 17. A rejection keeps the loop in the one-epoch regime and moves the whole ramp later.
+  ok   K6_swa_period_is_half_epoch            swa_period_samples = samples_per_epoch // 2 = 10000 (train.py:441 default made explicit)
+  ok   T4_threads_le_cpus                     worst stage thread count 28 (selfplay real-net 25 +2 net switch = 27; gatekeeper two real nets 28; train 14; shuffle 4+8=12) <= --cpus-per-task 32, headroom 4
+  ok   K7_cycle_wall_under_bound              projected cycle = 10713 s = 2.98 h <= 60 h bound, and 24 whole cycles fit the 257400 s chain link. [PRELIMINARY] tiny-count throughput inputs.
+  ok   T3_storage_projection_under_budget     per-cycle monotonic write 16.1 MiB; bounded steady state 552.9 MiB; env+build 20.0 GiB; after one full 24-cycle link 20.92 GiB of 500 GiB cap; 30480 cycles fit before the cap
+
+RESULT: PASS
+
+LOOP DEFAULT WIRING  (results/ktg/paper_1902.10565/codes/loop/synchronous_loop_9x9.sh)
+  ok   NUM_GAMES_PER_CYCLE          loop default 1000 == derived 1000
+  ok   NUM_THREADS_FOR_SHUFFLING    loop default 8 == derived 8
+  ok   NUM_TRAIN_SAMPLES_PER_EPOCH  loop default 20000 == derived 20000
+  ok   MAX_TRAIN_PER_DATA           loop default 8 == derived 8.0
+  ok   NUM_TRAIN_SAMPLES_PER_SWA    loop default 10000 == derived 10000
+  ok   BATCHSIZE                    loop default 128 == derived 128
+  ok   SHUFFLE_MINROWS              loop default 25000 == derived 25000
+  ok   MAX_TRAIN_SAMPLES_PER_CYCLE  loop default 100000 == derived 100000
+  ok   TAPER_WINDOW_SCALE           loop default 50000 == derived 50000
+  ok   SHUFFLE_KEEPROWS             loop default 120000 == derived 120000
+  ok   EPOCHS_PER_EXPORT            loop default 5 == derived 5
+  WIRING: PASS
+EXIT=0
+
+############################################################################
+# 4. sensitivity of the derived set to every rows/game the two smoke jobs
+#    measured: 31.95 (299259, 639/20), 32.3 (298712, 646/20, the one used),
+#    34.4 (299259 nofork, 2064/60)
+############################################################################
+$ ... --rows-per-game 31.95 --rows-per-game-random 31.675 <derived set>
+  epochs_per_export = max_epochs_this_instance = 5
+  effective reuse   = epochs*E/rows      = 3.130  (lower90 4.031, cap 8.0)
+  first_export_cycle                     = 5
+  first_exactly_one_cycle                = 16
+  ok   K2_one_export_per_cycle                epochs_per_export = max_epochs_this_instance = floor(min(gain,cap_eff)/E) = 5 (lower90 5); cap_eff = max(cap,E) = 100000; effective reuse 3.13 (lower90 4.03) <= 8.0
+RESULT: PASS
+EXIT=0
+$ ... --rows-per-game 32.3 --rows-per-game-random 31.675 <derived set>
+  epochs_per_export = max_epochs_this_instance = 5
+  effective reuse   = epochs*E/rows      = 3.096  (lower90 3.988, cap 8.0)
+  first_export_cycle                     = 5
+  first_exactly_one_cycle                = 16
+  ok   K2_one_export_per_cycle                epochs_per_export = max_epochs_this_instance = floor(min(gain,cap_eff)/E) = 5 (lower90 5); cap_eff = max(cap,E) = 100000; effective reuse 3.10 (lower90 3.99) <= 8.0
+RESULT: PASS
+EXIT=0
+$ ... --rows-per-game 34.4 --rows-per-game-random 31.675 <derived set>
+  epochs_per_export = max_epochs_this_instance = 5
+  effective reuse   = epochs*E/rows      = 2.907  (lower90 3.744, cap 8.0)
+  first_export_cycle                     = 5
+  first_exactly_one_cycle                = 16
+  ok   K2_one_export_per_cycle                epochs_per_export = max_epochs_this_instance = floor(min(gain,cap_eff)/E) = 5 (lower90 5); cap_eff = max(cap,E) = 100000; effective reuse 2.91 (lower90 3.74) <= 8.0
+RESULT: PASS
+EXIT=0
+
+############################################################################
+# 5. the closing check: check_knobs_9x9.py -- knobs from knobs_9x9.env,
+#    measurements from the job-suffixed evidence of BOTH smoke jobs (slower
+#    rate of each pair), the gate's game count from audit-298712.json,
+#    storage constants from budget.env, loop wiring
+############################################################################
+$ python3 results/ktg/paper_1902.10565/codes/eval/check_knobs_9x9.py
+check_knobs_9x9 -- node arxiv-1902.10565::derive_cycle_knobs_9x9
+
+INPUTS (content-hashed)
+  daed88eff2a9d4e8cfa70b538caf5597fc2addb71cbcb6a1adc169ba16c3c828  paper_1902.10565/evidence/smoke/rows_per_game-298712.txt
+  927fb04cd2ac97eef7c30d471f06ac2d67ba8a014ac92cfe2109aa1efc72c947  paper_1902.10565/evidence/smoke/throughput_smoke-298712.json
+  646e4ef1a9f295b10926fa10f43172482cf4f1ca7244ca9146919d358d09f282  paper_1902.10565/evidence/smoke/audit-298712.json
+  5ae5358791974ae12dd2e635aa38b825637faf23e1963dae1d96f146fd266d62  paper_1902.10565/codes/loop/knobs_9x9.env
+  6f38681ea6befc64f1e0f0c4faced2ddd1d774ac7f445595997d07e4abf81f62  paper_1902.10565/codes/data_budget/budget.env
+  b5acb1d8ad1a313f8bd439076d0e61598d18f6c7ff7647a6eab672edad3d65f5  paper_1902.10565/codes/loop/synchronous_loop_9x9.sh
+
+MEASURED KEYS PRESENT: train_samples_per_second, bytes_per_row_on_disk, selfplay_rows_total and per_phase_stage cycle2/gatekeeper, cycle2/shuffle
+GATE GAMES (measured, audit-298712.json S4_gatekeeper_sgfs.lines): 156
+
+REAL-NET SELFPLAY games/h: 2341.5 (throughput_smoke-298712.json), 2031.7 (throughput_smoke-299259.json) -> taking 2031.7 (throughput_smoke-299259.json)
+TRAIN samples/s:           14.243 (throughput_smoke-298712.json), 17.202 (throughput_smoke-299259.json) -> taking 14.243 (throughput_smoke-298712.json)
+
+derive_knobs.py -- node arxiv-1902.10565::derive_cycle_knobs_9x9
+
+MEASURED INPUTS (Slurm job 298712, commit 5bb85ad)
+  rows/game real      r        = 32.3000     (lower90 25.0775 over 20 games)
+  rows/game random    r0       = 31.6750     (lower90 28.1336 over 80 games)
+  bytes/row on disk            = 353.8
+
+KNOB SET UNDER TEST
+  NUM_GAMES_PER_CYCLE          = 1000
+  NUM_THREADS_FOR_SHUFFLING    = 8
+  NUM_TRAIN_SAMPLES_PER_EPOCH  = 20000
+  MAX_TRAIN_PER_DATA           = 8.0
+  NUM_TRAIN_SAMPLES_PER_SWA    = 10000
+  BATCHSIZE                    = 128
+  SHUFFLE_MINROWS              = 25000
+  MAX_TRAIN_SAMPLES_PER_CYCLE  = 100000
+  TAPER_WINDOW_SCALE           = 50000
+  SHUFFLE_KEEPROWS             = 120000
+  EPOCHS_PER_EXPORT            = 5
+
+DERIVED QUANTITIES
+  rows_per_cycle    = games*r            = 32300.0   (lower90 25077.5)
+  bucket gain       = games*r*reuse      = 258400.0   (lower90 200620.0)
+  bucket cap_eff    = max(cap,E)         = 100000
+  epochs_per_export = max_epochs_this_instance = 5
+  batches_per_epoch = round(E/batch)     = 156
+  samples_per_cycle = epochs*E           = 100000
+  effective reuse   = epochs*E/rows      = 3.096  (lower90 3.988, cap 8.0)
+  first cycle with a full 5-epoch window = 17
+  swa_period_samples                     = 10000
+
+EXPORT RAMP (o40; persistent export counter, window-limited epochs)
+  first_export_cycle                     = 5
+  first_gate_cycle                       = 6
+  first_accept_cycle_assumed             = 6
+  first_exactly_one_cycle                = 16
+  export_cycles                          = [5, 8, 10, 12, 14, 16, 17, 18, 19, 20]
+
+SHUFFLE WINDOW AND EXPORT RAMP BY CYCLE (shuffle.py:414-435 at expand 0.4 / exponent 0.65)
+  cycle  net     usable_rows   desired_window  rows_available  batches  epochs_it counter  export
+  1      random  25000         25000           25000           195      1         1        -
+  2      random  25000         25000           25000           195      1         2        -
+  3      random  25000         25000           25000           195      1         3        -
+  4      random  25000         25000           25000           195      1         4        -
+  5      random  25000         25000           25000           195      1         0        yes
+  6      real    50078         34305           34305           268      1         1        -
+  7      real    75155         42561           42561           332      2         3        -
+  8      real    100233        50116           50116           391      2         0        yes
+  9      real    125310        57156           57156           446      2         2        -
+  10     real    150388        63794           63794           498      3         0        yes
+  11     real    175465        70107           70107           547      3         3        -
+  12     real    200543        76149           76149           594      3         0        yes
+  13     real    225620        81960           81960           640      4         4        -
+  14     real    250698        87570           87570           684      4         0        yes
+  15     real    275775        93004           93004           726      4         4        -
+  16     real    300853        98282           98282           767      4         0        yes
+  17     real    325930        103419          103419          807      5         0        yes
+  18     real    351008        108430          108430          847      5         0        yes
+  19     real    376085        113324          113324          885      5         0        yes
+  20     real    401163        118113          118113          922      5         0        yes
+
+THREAD BUDGET
+  selfplay_real_net            = 25
+  selfplay_with_net_switch     = 27
+  gatekeeper_one_real_net      = 25
+  gatekeeper_two_real_nets     = 28
+  train                        = 14
+  shuffle                      = 12
+  worst_case                   = 28
+  cpus_per_task                = 32
+
+CYCLE WALL PROJECTION  [PRELIMINARY]
+  selfplay_games_per_hour_measured   = 2031.700
+  games_per_hour_derate              = 0.500
+  selfplay_games_per_hour_planning   = 1015.850
+  train_samples_per_second           = 14.243
+  selfplay_s                         = 3543.830
+  train_s                            = 7020.993
+  gatekeeper_s                       = 179.974
+  shuffle_s                          = 377.285
+  export_s                           = 60.000
+  cycle_s                            = 11182.082
+  cycle_h                            = 3.106
+  cycles_per_link                    = 23
+
+STORAGE PROJECTION
+  per-cycle monotonic         = 16.11 MiB
+  bounded steady state        = 552.90 MiB
+  env + build allowance       = 20.00 GiB
+  after one 23-cycle link      = 20.902 GiB
+  hard cap (budget.env)       = 500 GiB
+  cycles until the cap        = 30480
+
+CHECKS
+  ok   K1_bucket_gain_clears_epoch            gain = games*r*reuse = 258400.0 (lower90 200620.0) vs 0.99*E = 19800.0; ratio gain/E = 12.920 (lower90 10.031)
+  ok   T1_freshness_rows_per_cycle_ge_1p2_E   rows_per_cycle = 32300.0 (lower90 25077.5) vs 1.2*E = 24000.0; ratio 1.615 (lower90 1.254)
+  ok   K2_one_export_per_cycle                epochs_per_export = max_epochs_this_instance = floor(min(gain,cap_eff)/E) = 5 (lower90 5); cap_eff = max(cap,E) = 100000; effective reuse 3.10 (lower90 3.99) <= 8.0
+  ok   K2b_effective_reuse_within_cap         epochs*E/rows_per_cycle = 3.10 (lower90 3.99) <= reuse cap 8.0
+  ok   K3_keep_gt_cap                         keep = 120000 > cap = 100000 (synchronous_loop.sh:66) and keep >= epochs*E = 100000
+  ok   K5_random_bootstrap_reaches_min_rows   cycle-1 random rows = games*r_random = 31675.0 (lower90 28133.6) >= min_rows = 25000 (shuffle.py:1090 exit-0 gate; :1077 caps the usable count at min_rows)
+  ok   K4_window_holds_one_epoch              worst of cycles 1..20 is cycle 1: min(window 25000, keep 120000) = 25000 rows = 195 batches >= round(E/batch) = 156 batches (= 19968 rows); ratio 1.250. Conservative: the file-granularity slack of shuffle.sh:48 (-approx-rows-per-out-file 70000) is not credited.
+  ok   K2c_at_most_one_export_per_cycle       epochs_per_export == max_epochs_this_instance == 5, so train.py's persistent export_cycle_counter (:871,:975,:1743,:1831) can advance by at most 5 per cycle: never more than one candidate per cycle, from cycle 1 on. The ramp (o40): the window is pinned at min_rows while models/ is empty (shuffle.py:1077), each of those cycles trains ONE epoch (-no-repeat-files, training_data_generator.py:35; -quit-if-no-data, train.py:1487-1489), so the FIRST candidate exports at cycle 5 and is gated at cycle 6; with the gate accepting at cycle 6 the exports fall on cycles [5, 8, 10, 12, 14, 16, 17, 18, 19, 20] and every cycle exports from cycle 16 on, the window first holding 100000 rows at cycle 17. A rejection keeps the loop in the one-epoch regime and moves the whole ramp later.
+  ok   K6_swa_period_is_half_epoch            swa_period_samples = samples_per_epoch // 2 = 10000 (train.py:441 default made explicit)
+  ok   T4_threads_le_cpus                     worst stage thread count 28 (selfplay real-net 25 +2 net switch = 27; gatekeeper two real nets 28; train 14; shuffle 4+8=12) <= --cpus-per-task 32, headroom 4
+  ok   K7_cycle_wall_under_bound              projected cycle = 11182 s = 3.11 h <= 60 h bound, and 23 whole cycles fit the 257400 s chain link. [PRELIMINARY] tiny-count throughput inputs.
+  ok   T3_storage_projection_under_budget     per-cycle monotonic write 16.1 MiB; bounded steady state 552.9 MiB; env+build 20.0 GiB; after one full 23-cycle link 20.90 GiB of 500 GiB cap; 30480 cycles fit before the cap
+
+RESULT: PASS
+
+MISSION TOLERANCES
+  ok   T1_no_train_starvation             rows_per_cycle 32300.0 (lower90 25077.5) >= 1.2*E = 24000.0
+  ok   T2_bucket_holds_batches            worst cycle 1 has 195 batches >= 156 needed; per-cycle bucket gain 258400 (lower90 200620) >= epochs*E = 100000
+  ok   T3_storage_projection_under_budget 20.902 GiB after one 23-cycle link < 500 GiB (KTG_SCRATCH_HARD_BYTES)
+  ok   T4_threads_le_cpus                 worst stage 28 <= KTG_CPUS_PER_TASK 32
+
+LOOP DEFAULT WIRING  (paper_1902.10565/codes/loop/synchronous_loop_9x9.sh)
+  ok   NUM_GAMES_PER_CYCLE          loop default 1000 == derived 1000
+  ok   NUM_THREADS_FOR_SHUFFLING    loop default 8 == derived 8
+  ok   NUM_TRAIN_SAMPLES_PER_EPOCH  loop default 20000 == derived 20000
+  ok   MAX_TRAIN_PER_DATA           loop default 8 == derived 8
+  ok   NUM_TRAIN_SAMPLES_PER_SWA    loop default 10000 == derived 10000
+  ok   BATCHSIZE                    loop default 128 == derived 128
+  ok   SHUFFLE_MINROWS              loop default 25000 == derived 25000
+  ok   MAX_TRAIN_SAMPLES_PER_CYCLE  loop default 100000 == derived 100000
+  ok   TAPER_WINDOW_SCALE           loop default 50000 == derived 50000
+  ok   SHUFFLE_KEEPROWS             loop default 120000 == derived 120000
+  ok   EPOCHS_PER_EXPORT            loop default 5 == derived 5
+
+CHECK_KNOBS_9X9: PASS
+EXIT=0
+
+############################################################################
+# 6. bash -n on the edited loop copy
+############################################################################
+$ bash -n results/ktg/paper_1902.10565/codes/loop/synchronous_loop_9x9.sh
+EXIT=0
+
+############################################################################
+# 7. the o40 ramp, isolated: the section 2 R2 command and the two
+#    acceptance cases side by side
+############################################################################
+$ python3 results/ktg/paper_1902.10565/codes/eval/check_knobs_9x9.py | grep -E 'first_export_cycle *= 5$|first_exactly_one_cycle *= 1[5-7]$' | wc -l
+  first_export_cycle                     = 5
+  first_exactly_one_cycle                = 16
+  matching lines: 2
+$ ... --rows-per-game 32.3 --rows-per-game-random 31.675 <derived set>    (EXPORT RAMP table)
+EXPORT RAMP (o40; persistent export counter, window-limited epochs)
+  first_export_cycle                     = 5
+  first_gate_cycle                       = 6
+  first_accept_cycle_assumed             = 6
+  first_exactly_one_cycle                = 16
+  export_cycles                          = [5, 8, 10, 12, 14, 16, 17, 18, 19, 20]
+
+SHUFFLE WINDOW AND EXPORT RAMP BY CYCLE (shuffle.py:414-435 at expand 0.4 / exponent 0.65)
+  cycle  net     usable_rows   desired_window  rows_available  batches  epochs_it counter  export
+  1      random  25000         25000           25000           195      1         1        -
+  2      random  25000         25000           25000           195      1         2        -
+  3      random  25000         25000           25000           195      1         3        -
+  4      random  25000         25000           25000           195      1         4        -
+  5      random  25000         25000           25000           195      1         0        yes
+  6      real    50078         34305           34305           268      1         1        -
+  7      real    75155         42561           42561           332      2         3        -
+  8      real    100233        50116           50116           391      2         0        yes
+  9      real    125310        57156           57156           446      2         2        -
+  10     real    150388        63794           63794           498      3         0        yes
+  11     real    175465        70107           70107           547      3         3        -
+  12     real    200543        76149           76149           594      3         0        yes
+  13     real    225620        81960           81960           640      4         4        -
+  14     real    250698        87570           87570           684      4         0        yes
+  15     real    275775        93004           93004           726      4         4        -
+  16     real    300853        98282           98282           767      4         0        yes
+  17     real    325930        103419          103419          807      5         0        yes
+  18     real    351008        108430          108430          847      5         0        yes
+  19     real    376085        113324          113324          885      5         0        yes
+  20     real    401163        118113          118113          922      5         0        yes
+
+$ ... --rows-per-game 32.3 --rows-per-game-random 31.675 <derived set> --first-accept-cycle 6   (EXPORT RAMP table)
+EXPORT RAMP (o40; persistent export counter, window-limited epochs)
+  first_export_cycle                     = 5
+  first_gate_cycle                       = 6
+  first_accept_cycle_assumed             = 6
+  first_exactly_one_cycle                = 16
+  export_cycles                          = [5, 8, 10, 12, 14, 16, 17, 18, 19, 20]
+
+SHUFFLE WINDOW AND EXPORT RAMP BY CYCLE (shuffle.py:414-435 at expand 0.4 / exponent 0.65)
+  cycle  net     usable_rows   desired_window  rows_available  batches  epochs_it counter  export
+  1      random  25000         25000           25000           195      1         1        -
+  2      random  25000         25000           25000           195      1         2        -
+  3      random  25000         25000           25000           195      1         3        -
+  4      random  25000         25000           25000           195      1         4        -
+  5      random  25000         25000           25000           195      1         0        yes
+  6      real    50078         34305           34305           268      1         1        -
+  7      real    75155         42561           42561           332      2         3        -
+  8      real    100233        50116           50116           391      2         0        yes
+  9      real    125310        57156           57156           446      2         2        -
+  10     real    150388        63794           63794           498      3         0        yes
+  11     real    175465        70107           70107           547      3         3        -
+  12     real    200543        76149           76149           594      3         0        yes
+  13     real    225620        81960           81960           640      4         4        -
+  14     real    250698        87570           87570           684      4         0        yes
+  15     real    275775        93004           93004           726      4         4        -
+  16     real    300853        98282           98282           767      4         0        yes
+  17     real    325930        103419          103419          807      5         0        yes
+  18     real    351008        108430          108430          847      5         0        yes
+  19     real    376085        113324          113324          885      5         0        yes
+  20     real    401163        118113          118113          922      5         0        yes
+
+$ ... --rows-per-game 32.3 --rows-per-game-random 31.675 <derived set> --first-accept-cycle 9   (EXPORT RAMP table)
+EXPORT RAMP (o40; persistent export counter, window-limited epochs)
+  first_export_cycle                     = 5
+  first_gate_cycle                       = 6
+  first_accept_cycle_assumed             = 9
+  first_exactly_one_cycle                = 19
+  export_cycles                          = [5, 10, 13, 15, 17, 19, 20]
+
+SHUFFLE WINDOW AND EXPORT RAMP BY CYCLE (shuffle.py:414-435 at expand 0.4 / exponent 0.65)
+  cycle  net     usable_rows   desired_window  rows_available  batches  epochs_it counter  export
+  1      random  25000         25000           25000           195      1         1        -
+  2      random  25000         25000           25000           195      1         2        -
+  3      random  25000         25000           25000           195      1         3        -
+  4      random  25000         25000           25000           195      1         4        -
+  5      random  25000         25000           25000           195      1         0        yes
+  6      random  25000         25000           25000           195      1         1        -
+  7      random  25000         25000           25000           195      1         2        -
+  8      random  25000         25000           25000           195      1         3        -
+  9      real    50078         34305           34305           268      1         4        -
+  10     real    75155         42561           42561           332      2         0        yes
+  11     real    100233        50116           50116           391      2         2        -
+  12     real    125310        57156           57156           446      2         4        -
+  13     real    150388        63794           63794           498      3         0        yes
+  14     real    175465        70107           70107           547      3         3        -
+  15     real    200543        76149           76149           594      3         0        yes
+  16     real    225620        81960           81960           640      4         4        -
+  17     real    250698        87570           87570           684      4         0        yes
+  18     real    275775        93004           93004           726      4         4        -
+  19     real    300853        98282           98282           767      4         0        yes
+  20     real    325930        103419          103419          807      5         0        yes
+
+
+############################################################################
+# 8. o41: no fallback constant survives
+############################################################################
+$ grep -nE '^[^#"]*\b(14\.243|353\.8|70\.19|3\.35|2534)\b' results/ktg/paper_1902.10565/codes/eval/derive_knobs.py
+  grep exit=1 (1 = no baked-in rate literal in a code line)
+$ grep -n 'def _req' results/ktg/paper_1902.10565/codes/eval/derive_knobs.py
+143:def _req(tput, key, override, flag):
+164:def _req_phase(tput, phase, key, override, flag):
+done 2026-09-04T13:48:20Z
+
+################################################################################
+PART 5 -- diffs of the files under test (e2d258a -> working tree)
+################################################################################
+diff --git a/results/ktg/paper_1902.10565/codes/eval/check_knobs_9x9.py b/results/ktg/paper_1902.10565/codes/eval/check_knobs_9x9.py
+index ade92fa..b7f73e8 100644
+--- a/results/ktg/paper_1902.10565/codes/eval/check_knobs_9x9.py
++++ b/results/ktg/paper_1902.10565/codes/eval/check_knobs_9x9.py
+@@ -224,6 +224,7 @@ def main(argv=None):
+     args.gate_elapsed_s = None
+     args.shuffle_elapsed_s = None
+     args.shuffle_rows_measured = None
++    args.first_accept_cycle = None     # o40: the optimistic case, the cycle after the export
+     args = dk.finish(args)
+ 
+     d = dk.derive(args)
+diff --git a/results/ktg/paper_1902.10565/codes/eval/derive_knobs.py b/results/ktg/paper_1902.10565/codes/eval/derive_knobs.py
+index 2496d75..faafc68 100644
+--- a/results/ktg/paper_1902.10565/codes/eval/derive_knobs.py
++++ b/results/ktg/paper_1902.10565/codes/eval/derive_knobs.py
+@@ -194,6 +194,73 @@ TAPER_WINDOW_EXPONENT = 0.65     # shuffle.sh:45
+ APPROX_ROWS_PER_OUT_FILE = 70000  # shuffle.sh:48 (not credited by K4; slack only)
+ 
+ 
++def simulate_ramp(n_cycles, E, batch, keep, min_rows, taper, epochs_per_export,
++                  boot_rows_lo, rows_per_cycle_lo, first_accept_cycle=None):
++    """Per-cycle shuffle window, epochs and exports, from cycle 1 to n_cycles.
++
++    Obligation o40. The model this replaced took `usable = min_rows + (c-1)*G*r` from
++    cycle 2, i.e. it assumed real-net rows one cycle after the start. They are
++    unreachable, and the reference code says why:
++
++      * `-no-repeat-files` stops the trainer when the shuffled files run out
++        (katago/utils/training_data_generator.py:35) and `-quit-if-no-data` then exits 0
++        with NO export (train.py:1487-1489), so a cycle runs floor(window / E) epochs,
++        capped at `-max-epochs-this-instance` = epochs_per_export;
++      * the export counter is PERSISTENT across those instances
++        (train.py:871,975,1743,1831), so it takes epochs_per_export epochs in TOTAL --
++        not per cycle -- to produce the first candidate;
++      * while models/ is empty every cycle is random-net, and shuffle.py:1077 caps the
++        usable random rows at min_rows, so the window is pinned at min_rows and each of
++        those cycles contributes exactly one epoch;
++      * post-random rows therefore begin only in the cycle whose gatekeeper ACCEPTED a
++        candidate (the gate is the first stage of the cycle, synchronous_loop.sh:93-116),
++        which is one cycle after the first export at the earliest.
++
++    first_accept_cycle: the cycle whose gate accepts. None = the optimistic case, the
++    cycle right after the first export. A rejection pushes it later and the whole ramp
++    with it; nothing else in the derivation depends on it.
++    """
++    counter = 0
++    accept = first_accept_cycle
++    first_export = None
++    rows = []
++    for c in range(1, n_cycles + 1):
++        real_cycles = 0 if accept is None or c < accept else (c - accept + 1)
++        if real_cycles:
++            usable = min_rows + real_cycles * rows_per_cycle_lo
++        else:
++            usable = min(boot_rows_lo, min_rows)
++        w = compute_desired_num_rows(usable, min_rows, 0.0, TAPER_WINDOW_EXPONENT,
++                                     EXPAND_WINDOW_PER_ROW, taper, None)
++        avail = min(w, keep)
++        epochs_this_cycle = min(epochs_per_export, int(avail // E))
++        counter += epochs_this_cycle
++        exported = counter >= epochs_per_export
++        if exported:
++            counter = 0
++            if first_export is None:
++                first_export = c
++                if accept is None:
++                    accept = c + 1
++        rows.append(dict(cycle=c, net="real" if real_cycles else "random",
++                         usable_rows=usable, desired_window_rows=w,
++                         rows_available=avail,
++                         batches_available=int(avail // batch),
++                         epochs_supported=int(avail // E),
++                         epochs_this_cycle=epochs_this_cycle,
++                         export_counter_after=counter,
++                         exported=bool(exported)))
++    exports = [x["cycle"] for x in rows if x["exported"]]
++    # the first cycle from which EVERY simulated cycle exports
++    first_every = None
++    for x in reversed(rows):
++        if x["exported"]:
++            first_every = x["cycle"]
++        else:
++            break
++    return rows, exports, first_export, first_every, accept
++
++
+ def derive(args):
+     r = args.r
+     r0 = args.r0
+@@ -287,26 +354,19 @@ def derive(args):
+         "(shuffle.py:1090 exit-0 gate; :1077 caps the usable count at min_rows)"
+         % (boot_rows, boot_rows_lo, min_rows))
+ 
+-    # K4 -------------------------------------------------------------------
+-    # cycle 1: usable = min(random rows, min_rows) -> window == min_rows.
+-    # cycle c>=2: usable = min_rows + (c-1)*games*r  (post-random rows are uncapped).
+-    windows = []
+-    for c in range(1, args.window_cycles + 1):
+-        if c == 1:
+-            usable = min(boot_rows_lo, min_rows)
+-        else:
+-            usable = min_rows + (c - 1) * rows_per_cycle_lo
+-        w = compute_desired_num_rows(usable, min_rows, 0.0, TAPER_WINDOW_EXPONENT,
+-                                     EXPAND_WINDOW_PER_ROW, taper, None)
+-        avail = min(w, keep)
+-        windows.append(dict(cycle=c, usable_rows=usable, desired_window_rows=w,
+-                            rows_available=avail,
+-                            batches_available=int(avail // batch),
+-                            epochs_supported=int(avail // E)))
++    # K4 + the export ramp (o40) --------------------------------------------
++    windows, exports, first_export, first_every, accept_cycle = simulate_ramp(
++        args.window_cycles, E, batch, keep, min_rows, taper, epochs,
++        boot_rows_lo, rows_per_cycle_lo, args.first_accept_cycle)
+     d["window_by_cycle"] = windows
+     worst = min(windows, key=lambda x: x["rows_available"])
+     full = [w["cycle"] for w in windows if w["rows_available"] >= epochs * E]
+     d["derived"]["first_cycle_with_full_epoch_set"] = full[0] if full else None
++    d["derived"]["first_export_cycle"] = first_export
++    d["derived"]["first_gate_cycle"] = None if first_export is None else first_export + 1
++    d["derived"]["first_accept_cycle_assumed"] = accept_cycle
++    d["derived"]["first_exactly_one_cycle"] = first_every
++    d["derived"]["export_cycles"] = exports
+     chk("K4_window_holds_one_epoch",
+         worst["rows_available"] >= E,
+         "worst of cycles 1..%d is cycle %d: min(window %d, keep %d) = %d rows = %d batches "
+@@ -320,10 +380,18 @@ def derive(args):
+         True,
+         "epochs_per_export == max_epochs_this_instance == %d, so train.py's persistent "
+         "export_cycle_counter (:871,:975,:1743,:1831) can advance by at most %d per cycle: "
+-        "never more than one candidate per cycle. Exactly one per cycle from cycle %s on, "
+-        "when the shuffled window first holds %d rows; before that the counter carries over "
+-        "and the export slips, which is upstream's own designed behaviour."
+-        % (epochs, epochs, d["derived"]["first_cycle_with_full_epoch_set"], epochs * E))
++        "never more than one candidate per cycle, from cycle 1 on. The ramp (o40): the "
++        "window is pinned at min_rows while models/ is empty (shuffle.py:1077), each of "
++        "those cycles trains ONE epoch (-no-repeat-files, training_data_generator.py:35; "
++        "-quit-if-no-data, train.py:1487-1489), so the FIRST candidate exports at cycle %s "
++        "and is gated at cycle %s; with the gate accepting at cycle %s the exports fall on "
++        "cycles %s and every cycle exports from cycle %s on, the window first holding "
++        "%d rows at cycle %s. A rejection keeps the loop in the one-epoch regime and moves "
++        "the whole ramp later."
++        % (epochs, epochs, d["derived"]["first_export_cycle"],
++           d["derived"]["first_gate_cycle"], d["derived"]["first_accept_cycle_assumed"],
++           d["derived"]["export_cycles"], d["derived"]["first_exactly_one_cycle"],
++           epochs * E, d["derived"]["first_cycle_with_full_epoch_set"]))
+ 
+     # K6 -------------------------------------------------------------------
+     chk("K6_swa_period_is_half_epoch",
+@@ -335,7 +403,10 @@ def derive(args):
+     sp_threads = gt + 4 + 3          # game + nnServer + dataWrite + modelLoad + main, + CUDA block
+     sp_switch = sp_threads + 2       # mid-run net switch allowance
+     gk_one_net = gt + 4 + 3          # game + 2 nnServer + dataWrite + main - 1 (one model), + CUDA
+-    gk_two_net = gt + 5 + 3 + 3      # two models: second nnServer thread and a second CUDA block
++    # two real nets: game threads + 2 nnServer (one per model) + 1 dataWrite + 1 main
++    # + 2 CUDA blocks of 3 = 18 + 2 + 1 + 1 + 6 = 28 at the derived game-thread count.
++    # (o40: the knob file's own arithmetic summed the same terms to 29.)
++    gk_two_net = gt + 2 + 1 + 1 + 2 * 3
+     train_threads = 14
+     shuffle_threads = 4 + args.shuffle_processes
+     worst_threads = max(sp_switch, gk_two_net, train_threads, shuffle_threads)
+@@ -527,13 +598,22 @@ def report(d):
+           % (v["epochs_per_export"], v["first_cycle_with_full_epoch_set"]))
+     print("  swa_period_samples                     = %d" % v["swa_period_samples"])
+     print("")
+-    print("SHUFFLE WINDOW BY CYCLE (shuffle.py:414-435 at expand 0.4 / exponent 0.65)")
+-    print("  %-6s %-14s %-16s %-14s %-10s %s" % ("cycle", "usable_rows", "desired_window",
+-                                                 "rows_available", "batches", "epochs_supported"))
++    print("EXPORT RAMP (o40; persistent export counter, window-limited epochs)")
++    print("  first_export_cycle                     = %s" % v["first_export_cycle"])
++    print("  first_gate_cycle                       = %s" % v["first_gate_cycle"])
++    print("  first_accept_cycle_assumed             = %s" % v["first_accept_cycle_assumed"])
++    print("  first_exactly_one_cycle                = %s" % v["first_exactly_one_cycle"])
++    print("  export_cycles                          = %s" % v["export_cycles"])
++    print("")
++    print("SHUFFLE WINDOW AND EXPORT RAMP BY CYCLE (shuffle.py:414-435 at expand 0.4 / exponent 0.65)")
++    print("  %-6s %-7s %-13s %-15s %-15s %-8s %-9s %-8s %s"
++          % ("cycle", "net", "usable_rows", "desired_window", "rows_available", "batches",
++             "epochs_it", "counter", "export"))
+     for w in d["window_by_cycle"]:
+-        print("  %-6d %-14.0f %-16d %-14d %-10d %d"
+-              % (w["cycle"], w["usable_rows"], w["desired_window_rows"],
+-                 w["rows_available"], w["batches_available"], w["epochs_supported"]))
++        print("  %-6d %-7s %-13.0f %-15d %-15d %-8d %-9d %-8d %s"
++              % (w["cycle"], w["net"], w["usable_rows"], w["desired_window_rows"],
++                 w["rows_available"], w["batches_available"], w["epochs_this_cycle"],
++                 w["export_counter_after"], "yes" if w["exported"] else "-"))
+     print("")
+     print("THREAD BUDGET")
+     t = d["threads"]
+@@ -605,6 +685,9 @@ def build_parser():
+     p.add_argument("--n-games-real", type=int, default=20)
+     p.add_argument("--n-games-random", type=int, default=80)
+     p.add_argument("--window-cycles", type=int, default=20)
++    p.add_argument("--first-accept-cycle", type=int, default=None,
++                   help="cycle whose gatekeeper accepts the first candidate; default = the "
++                        "cycle after the first export (o40, the optimistic case)")
+     p.add_argument("--games-per-hour-derate", type=float, default=0.5)
+     p.add_argument("--walltime-seconds", type=int, default=257400)
+     p.add_argument("--cycle-bound-hours", type=float, default=60.0)
+@@ -681,8 +764,8 @@ SELF_TEST_RATES = ["--train-samples-per-second", "15.0",
+ 
+ 
+ def self_test():
+-    """DESIGN section 2's two negative cases, the smoke's executed case, and the o41
+-    missing-measured-key cases."""
++    """DESIGN section 2's two negative cases, the smoke's executed case, the o40 ramp,
++    and the o41 missing-measured-key cases."""
+     P = build_parser()
+     fails = []
+ 
+@@ -735,6 +818,45 @@ def self_test():
+     if d["derived"]["epochs_per_export"] < 1:
+         fails.append("smoke epochs_per_export < 1")
+ 
++    # o40: the export ramp of the DERIVED set. The first candidate must come from the
++    # persistent counter over five window-limited random-net cycles, not from cycle 1.
++    d = run("o40 export ramp of the derived set (accept at the first gate cycle)",
++            ["--rows-per-game", "32.3", "--rows-per-game-random", "31.675",
++             "--reuse", "8", "--samples-per-epoch", "20000", "--games", "1000",
++             "--keep", "120000", "--cap", "100000", "--min-rows", "25000",
++             "--taper", "50000", "--batch", "128", "--cpus", "32", "--game-threads", "18",
++             "--n-games-real", "20", "--n-games-random", "80", "--window-cycles", "20"],
++            True)
++    v = d["derived"]
++    print("    first_export_cycle=%s first_gate_cycle=%s first_accept_cycle_assumed=%s "
++          "first_exactly_one_cycle=%s exports=%s"
++          % (v["first_export_cycle"], v["first_gate_cycle"], v["first_accept_cycle_assumed"],
++             v["first_exactly_one_cycle"], v["export_cycles"]))
++    if v["first_export_cycle"] != 5:
++        fails.append("o40 first_export_cycle %s != 5" % v["first_export_cycle"])
++    if v["first_exactly_one_cycle"] not in (15, 16, 17):
++        fails.append("o40 first_exactly_one_cycle %s outside 15-17" % v["first_exactly_one_cycle"])
++    if [w["epochs_this_cycle"] for w in d["window_by_cycle"][:5]] != [1, 1, 1, 1, 1]:
++        fails.append("o40 cycles 1-5 are not one epoch each")
++
++    # o40 negative case: a rejected first candidate pushes the whole ramp later.
++    d = run("o40 ramp with the first candidate REJECTED until cycle 9",
++            ["--rows-per-game", "32.3", "--rows-per-game-random", "31.675",
++             "--reuse", "8", "--samples-per-epoch", "20000", "--games", "1000",
++             "--keep", "120000", "--cap", "100000", "--min-rows", "25000",
++             "--taper", "50000", "--batch", "128", "--cpus", "32", "--game-threads", "18",
++             "--n-games-real", "20", "--n-games-random", "80", "--window-cycles", "20",
++             "--first-accept-cycle", "9"],
++            True)
++    v9 = d["derived"]
++    print("    first_export_cycle=%s first_exactly_one_cycle=%s exports=%s"
++          % (v9["first_export_cycle"], v9["first_exactly_one_cycle"], v9["export_cycles"]))
++    if v9["first_export_cycle"] != 5:
++        fails.append("o40 rejected-case first_export_cycle %s != 5" % v9["first_export_cycle"])
++    if not (v9["first_exactly_one_cycle"] is None
++            or v9["first_exactly_one_cycle"] > v["first_exactly_one_cycle"]):
++        fails.append("o40 a rejection did not push first_exactly_one_cycle later")
++
+     # o41 negative cases: every MEASURED key the projections read must raise, naming
+     # itself, when it is missing -- never fall back to a constant.
+     print("--- self-test: o41 missing measured keys raise, naming the key")
+@@ -793,7 +915,7 @@ def self_test():
+     if fails:
+         print("SELF-TEST: FAIL  %s" % fails)
+         return 1
+-    print("SELF-TEST: PASS  (3 knob cases: 2 negative, 1 executed-smoke; "
++    print("SELF-TEST: PASS  (3 knob cases: 2 negative, 1 executed-smoke; 2 o40 ramp cases; "
+           "7 o41 missing-key cases plus a positive control)")
+     return 0
+ 
+diff --git a/results/ktg/paper_1902.10565/codes/loop/knobs_9x9.env b/results/ktg/paper_1902.10565/codes/loop/knobs_9x9.env
+index 4143aaa..274f8a7 100644
+--- a/results/ktg/paper_1902.10565/codes/loop/knobs_9x9.env
++++ b/results/ktg/paper_1902.10565/codes/loop/knobs_9x9.env
+@@ -111,9 +111,17 @@ SHUFFLE_KEEPROWS=120000
+ # 200620) and cap_eff = max(cap, E) = 100000 -> 5, the same at r and at r_lo.
+ # Passed to train.py as BOTH -epochs-per-export and -max-epochs-this-instance, so the
+ # persistent export_cycle_counter (train.py:871,975,1743,1831) can advance by at most 5 per
+-# cycle: never more than ONE candidate per cycle. Exactly one per cycle from cycle 13 on,
+-# when the shuffle window first holds 5*E rows; before that the counter carries across
+-# cycles and the export slips, which is upstream's own designed behaviour.
++# cycle: never more than ONE candidate per cycle, from cycle 1 on.
++# THE RAMP (obligation o40, corrected 2026-09-04): while models/ is empty every cycle plays
++# the random net and shuffle.py:1077 caps its usable rows at SHUFFLE_MINROWS, so the window
++# is pinned at 25000 rows = ONE epoch per cycle (-no-repeat-files ends the instance when the
++# shuffled files run out, training_data_generator.py:35; -quit-if-no-data then exits 0 with
++# no export, train.py:1487-1489). The persistent counter therefore needs five such cycles:
++# the FIRST candidate exports at cycle 5 and is gated at cycle 6, real-net rows exist only
++# from the cycle whose gate ACCEPTS, and exactly one export per cycle begins at cycle 16
++# under acceptance at 6 (later per rejection). No knob moves: every K1-K7/T1-T4 inequality is
++# evaluated at cycle 1's window, which a random-net cycle never goes below.
++# Re-derive the table with codes/eval/derive_knobs.py (EXPORT RAMP BY CYCLE).
+ EPOCHS_PER_EXPORT=5
+ 
+ # --- the two allocation-side knobs, coupled to the ones above --------------------
+@@ -132,13 +140,15 @@ EPOCHS_PER_EXPORT=5
+ # rises.
+ #
+ # Thread budget at numGameThreads 18, worst stage first:
+-#   gatekeeper, two real nets  18 + 2 nnServer + 1 dataWrite + 1 main + 2x3 CUDA = 29
++#   gatekeeper, two real nets  18 + 2 nnServer + 1 dataWrite + 1 main + 2x3 CUDA = 28
+ #   selfplay, real net + switch 18 + 1 nnServer + 1 dataWrite + 1 modelLoad + 1 main
+ #                               + 3 CUDA = 25 (measured), + 2 net-switch transient = 27
+ #   train                       14 (measured, OMP_NUM_THREADS=MKL_NUM_THREADS=4)
+ #   shuffle                     4-thread parent + 8 worker processes = 12 (measured)
+-# max = 29 <= 32, headroom 3. One node has 124 CPUs and there is no CPU cap; the rule that
+-# survives is only "declared >= used".
++# max = 28 <= 32, headroom 4. (The 28 is the sum of the terms on the gatekeeper line; the 29
++# printed here before 2026-09-04 mis-added them -- obligation o40. Nothing downstream moves:
++# the declaration was already 32 and T4 asserts worst <= 32.) One node has 124 CPUs and there
++# is no CPU cap; the rule that survives is only "declared >= used".
+ KTG_CPUS_PER_TASK=32
+ KTG_NUM_GAME_THREADS=18
+ 
+@@ -162,4 +172,6 @@ KTG_NUM_GAME_THREADS=18
+ #        net-switch allowance) with 4 more for the still-unmeasured two-real-net gate.
+ # [OPEN] the two-real-net gatekeeper's thread count is unmeasured; 29 is arithmetic on the
+ #        one-net measurement of 25. First measurable at gatekeeper_stage, cycle 3 or later.
+-# [OPEN] the loop copy and the two cfgs still declare 24 CPUs; o38 wires KTG_CPUS_PER_TASK.
++# WIRED 2026-09-04 (o39): codes/loop/loop.sbatch declares --cpus-per-task=32, reads REQ_CPUS
++#        from KTG_CPUS_PER_TASK in this file, and refuses to start a link whose granted
++#        SLURM_CPUS_PER_TASK or whose cfg numGameThreads disagrees with these two values.
+diff --git a/results/ktg/paper_1902.10565/decomposition/DESIGN.md b/results/ktg/paper_1902.10565/decomposition/DESIGN.md
+index 899e3a2..5beaa81 100644
+--- a/results/ktg/paper_1902.10565/decomposition/DESIGN.md
++++ b/results/ktg/paper_1902.10565/decomposition/DESIGN.md
+@@ -105,20 +105,30 @@ request):
+   took the first — **raise the declaration, keep `numGameThreads = 18`** — because with the CPU cap withdrawn a
+   larger declaration is free, while cutting game threads would lower the very NN queue depth this section already
+   blames for the 21.5 % mean GPU duty cycle. The re-summed budget, worst stage first: gatekeeper with two real nets
+-  18 + 2 nnServer + 1 dataWrite + 1 main + 2x3 CUDA = 29; selfplay real-net 25 measured + 2 net-switch transient = 27;
+-  train 14; shuffle 4 + 8 = 12. Declaration **32**, headroom 3, on a 124-core node.
++  18 + 2 nnServer + 1 dataWrite + 1 main + 2x3 CUDA = 28; selfplay real-net 25 measured + 2 net-switch transient = 27;
++  train 14; shuffle 4 + 8 = 12. Declaration **32**, headroom 4, on a 124-core node. (The 29 printed here before
++  2026-09-04 mis-added the same gatekeeper terms; obligation `o40`. Nothing downstream moves — the declaration was
++  already 32 and T4 asserts worst <= 32.)
+   verify: `../evidence/smoke/nlwp_max-298712.txt` rows `probe_search/selfplay nlwp_max=25` and `cycle2/gatekeeper
+   nlwp_max=25` against `cpus_per_task = 24`; `codes/loop/knobs_9x9.env` `KTG_CPUS_PER_TASK=32` /
+-  `KTG_NUM_GAME_THREADS=18`; `python3 codes/eval/check_knobs_9x9.py` line `T4_threads_le_cpus  worst stage 29 <=
++  `KTG_NUM_GAME_THREADS=18`; `python3 codes/eval/check_knobs_9x9.py` line `T4_threads_le_cpus  worst stage 28 <=
+   KTG_CPUS_PER_TASK 32`, exit 0; obligation `o03`, claim `c06` (real-net clause, refuted).
+-- [OPEN] The 32 is decided but not yet *wired*: `codes/loop/loop.sbatch` still carries `#SBATCH --cpus-per-task=24`
+-  and `REQ_CPUS=24`. `derive_cycle_knobs_9x9`'s task file § 13 forbids it touching anything outside the loop's knob
+-  block, so the edit belongs to `loop_resume_under_walltime` (obligation `o38`). Closes when both numbers read 32,
+-  the check script named by `mission.json` `compute.policyCheck` passes at `--gpus 1 --cpus 32`, and a real-net production cycle re-measures `nlwp_max <= 32`.
+-  verify: `grep -n 'cpus-per-task\|REQ_CPUS' codes/loop/loop.sbatch` = 32; node `selfplay_stage` re-measurement.
+-- [OPEN] The 29 for a **two**-real-net gatekeeper is arithmetic on a one-net measurement, not a measurement. Job
++- [SOLID] The 32 is now *wired* (`o39`, 2026-09-04): `codes/loop/loop.sbatch` declares `#SBATCH --cpus-per-task=32`
++  and no longer types a CPU count at all — `REQ_CPUS` is read from `codes/loop/knobs_9x9.env`'s `KTG_CPUS_PER_TASK`,
++  and the pre-flight refuses (exit 2) a link whose granted `SLURM_CPUS_PER_TASK` disagrees with it or whose engine
++  configs declare a `numGameThreads` other than `KTG_NUM_GAME_THREADS`.
++  verify: `grep -n 'cpus-per-task=\|REQ_CPUS' codes/loop/loop.sbatch`; the check script named by `mission.json`
++  `compute.policyCheck` at `--gpus 1 --cpus 32 --partition b200`, exit 0;
++  `../evidence/wave3_prelaunch_repairs/repair_R1.txt`.
++- [OPEN] `o39`'s third conjunct: one executed real-net production cycle must re-measure `nlwp_max <= 32` with a
++  ppid-filtered sampler. Shared with `o03`; owned by `tasks/production_chain_9x9`. The sampler now runs inside the
++  link (`loop.sbatch` starts `codes/eval/stage_monitor.sh`, the loop retags each cycle), so the link produces the
++  measurement it needs.
++  verify: node `selfplay_stage` re-measurement; `$BASEDIR/monitor/ps_samples-<jobid>.tsv`;
++  `../evidence/wave3_prelaunch_repairs/repair_R6.txt`.
++- [OPEN] The 28 for a **two**-real-net gatekeeper is arithmetic on a one-net measurement, not a measurement. Job
+   298712's gate ran one exported net against the random baseline, so only one CUDA context existed; 25 is a lower
+-  bound for the two-net case and 29 the projection the declaration is sized against. First measurable at
++  bound for the two-net case and 28 the projection the declaration is sized against. First measurable at
+   `gatekeeper_stage`, cycle 3 or later, once a candidate has been accepted into `models/`.
+   verify: node `gatekeeper_stage`; claim `c13`.
+ - [OPEN] The unsuffixed smoke evidence names (`nlwp_max.txt`, `throughput_smoke.json`, `rows_per_game.txt`) were
+@@ -173,15 +183,21 @@ request):
+   verify: `python3 codes/eval/check_knobs_9x9.py` exits 0 with `CHECK_KNOBS_9X9: PASS` (K1-K7 plus the four mission
+   tolerances, and the loop copy's `${VAR:-default}` block equal to the derived set); full trace
+   `../evidence/derive_cycle_knobs/derivation.md`, verbatim output `../evidence/knobs/derivation.txt`; obligation `o24`.
+-- [PRELIMINARY] Exactly one candidate **per cycle** holds from cycle 13, not cycle 1: `-epochs-per-export 5
+-  -max-epochs-this-instance 5` makes train.py's persistent `export_cycle_counter` (`:871,975,1743,1831`) advance by at
+-  most 5 per cycle, so **at most** one candidate per cycle is guaranteed from cycle 1, but the shuffle window only
+-  reaches 5 × 20 000 = 100 000 rows at cycle 13 (`shuffle.py:414-435` at expand 0.4 / exponent 0.65, evaluated at r_lo),
+-  and until then a window-limited cycle carries the counter forward and the export slips. Forcing exactly one from
+-  cycle 1 would need MINROWS ≥ 100 000 and therefore ≥ 3554 random bootstrap games, which re-enters the NUM_GAMES
+-  derivation and diverges. `scale_data_window` may shorten the ramp once a real bootstrap is measured.
+-  verify: cycle-by-cycle window table in `../evidence/knobs/derivation.txt` block 3; smoke log lines `Fill per data`,
+-  `New rows in bucket`, `Exceeding train bucket`, count of `SAVING MODEL FOR EXPORT` per cycle.
++- [PRELIMINARY] The export ramp (corrected 2026-09-04, obligation `o40`): **the first candidate exports at cycle 5 and
++  is gated at cycle 6**, and exactly one candidate per cycle begins at **cycle 16** if that first candidate is accepted
++  (later for each rejection). `-epochs-per-export 5 -max-epochs-this-instance 5` makes train.py's persistent
++  `export_cycle_counter` (`:871,975,1743,1831`) advance by at most 5 per cycle, so **at most** one candidate per cycle
++  holds from cycle 1. But while `models/` is empty every cycle is random-net and `shuffle.py:1077` caps its usable rows
++  at MINROWS, so the window is pinned at 25 000 rows = one epoch per cycle (`-no-repeat-files`,
++  `katago/utils/training_data_generator.py:35`; `-quit-if-no-data` exits 0 with no export, `train.py:1487-1489`): five
++  such cycles are needed to reach the counter's 5. Real-net rows therefore cannot exist before the cycle whose gate
++  accepts, and the window reaches 5 × 20 000 = 100 000 rows only at cycle 17. The earlier reading — "exactly one from
++  cycle 13, cycles 1-12 window-limited to 1-4 epochs" — assumed real-net rows from cycle 2 and is withdrawn. Forcing
++  exactly one from cycle 1 would need MINROWS ≥ 100 000 and therefore ≥ 3554 random bootstrap games, which re-enters the
++  NUM_GAMES derivation and diverges. `scale_data_window` may shorten the ramp once a real bootstrap is measured.
++  verify: `python3 codes/eval/derive_knobs.py … ` prints `first_export_cycle = 5` and `first_exactly_one_cycle = 16`
++  (cycle-by-cycle table under EXPORT RAMP BY CYCLE, reproduced in `../evidence/knobs/derivation.txt`); the executed
++  first-export cycle is `o40 (c)`, owned by `train_stage` / `export_stage`.
+ - [SOLID] Random-play rows are capped at `min_rows` by the shuffler (`shuffle.py:1058,1077`), so the random bootstrap cannot flood the window.
+   verify: `sed -n 1077p ref-code/lightvector-KataGo/python/shuffle.py`; node `training_window_shuffle`.
+ - [FUTURE] Asynchronous layout (selfplay and train as concurrent processes on 2–4 GPUs with disjoint device masks) is how upstream
+@@ -346,11 +362,11 @@ Code-map nodes (15, `preliminary`) are promoted to solid by the two probe **task
+ 
+ - Code-first: v1.18.2 is authoritative; paper values (lr 6e-5, c_value 1.5, S = 421, 300-node gating) are not targets. [SOLID] verify: assumption `a09`; `derivation.md` §3.
+ - Start config `b7c96h3tfrs`; ladder b8 → b14 as fresh runs; `b5c48h3tfr` excluded (unservable), kept as negative fixture. [SOLID] verify: nodes `engine_ffn_swiglu_constraint` (solid), `select_transformer_ladder`; jobs 297952 (FAILED 1:0) vs 298018 (COMPLETED 0:0); a06, o07/o18 discharged.
+-- One GPU, `--cpus-per-task=32`, five stages sequential; multi-GPU only as `async_multi_gpu_layout` after measured saturation. The 24 held through the smoke and was falsified by it (25 measured on every CUDA-context stage); `derive_cycle_knobs_9x9` raised the declaration rather than cutting `numGameThreads`, because with the CPU cap withdrawn the declaration is the free side of the trade and the game threads are what feed the GPU. [SOLID] verify: §1; `codes/loop/knobs_9x9.env` `KTG_CPUS_PER_TASK=32`; a02 amended; `[OPEN]` o38 wires it into `loop.sbatch`.
++- One GPU, `--cpus-per-task=32`, five stages sequential; multi-GPU only as `async_multi_gpu_layout` after measured saturation. The 24 held through the smoke and was falsified by it (25 measured on every CUDA-context stage); `derive_cycle_knobs_9x9` raised the declaration rather than cutting `numGameThreads`, because with the CPU cap withdrawn the declaration is the free side of the trade and the game threads are what feed the GPU. [SOLID] verify: §1; `codes/loop/knobs_9x9.env` `KTG_CPUS_PER_TASK=32`; a02 amended; wired into `loop.sbatch` (`#SBATCH --cpus-per-task=32`, `REQ_CPUS` read from the knob file, granted-CPU assert) by `o39`.
+ - No CPU usage limit (human, 2026-09-03): the 20 % clause is withdrawn, so 24 CPUs is a derived honest declaration (22 live threads + 2 transient), not a ceiling; `a11` and `o22` are moot and `o03`'s "24-CPU cap" wording is superseded by "declared ≥ measured". [SOLID] verify: `mission.json` `decisions[0]`, `compute.cpuCapPerJob = null`, `compute.cpuPolicy`; §1 `NLWP_MAX` measurement.
+-- Threads: selfplay 18 / gatekeeper 18 game threads (data-write thread counted), shuffle 8, train OMP 4. All four rows are now measured, in two jobs: random-net selfplay 22, **any CUDA-context stage 25**, train 14, shuffle 4 + 8 = 12; job 299259 reproduced 25 / 14 with a ppid-filtered sampler and no foreign pids at all. Only the two-real-net gatekeeper is still arithmetic (29). [SOLID] verify: `../evidence/smoke/nlwp_max-298712.txt`, `audit-299259.json` `S13_throughput.nlwp_max_per_stage`; `../evidence/cfg_9x9/check_cfg_9x9-298359.txt`; c06 (real-net clause refuted), o03; the two-net row at `gatekeeper_stage`.
++- Threads: selfplay 18 / gatekeeper 18 game threads (data-write thread counted), shuffle 8, train OMP 4. All four rows are now measured, in two jobs: random-net selfplay 22, **any CUDA-context stage 25**, train 14, shuffle 4 + 8 = 12; job 299259 reproduced 25 / 14 with a ppid-filtered sampler and no foreign pids at all. Only the two-real-net gatekeeper is still arithmetic: 18 game + 2 nnServer + 1 dataWrite + 1 main + 2 × 3 CUDA = **28**, headroom 4 against the declared 32 (the 29 printed before 2026-09-04 mis-summed the same terms, o40). [SOLID] verify: `../evidence/smoke/nlwp_max-298712.txt`, `audit-299259.json` `S13_throughput.nlwp_max_per_stage`; `../evidence/cfg_9x9/check_cfg_9x9-298359.txt`; c06 (real-net clause refuted), o03; the two-net row at `gatekeeper_stage`.
+ - USEGATING = 1 throughout; cycle 1 gates the first candidate against the random baseline; first dir in `models/` is the frozen baseline. [SOLID] verify: `gating_rule` node; o10, o16 discharged; o19 runtime confirmation.
+-- Cycle knobs are derived from measured rows/game (32.3 real, 31.675 random), never hand-picked: NUM_GAMES 1000, epoch 20 000, batch 128, reuse 8, SWA 10 000, EPOCHS_PER_EXPORT 5, MINROWS 25 000, TAPER 50 000, KEEPROWS 120 000 > cap 100 000. **At most** one exported candidate per cycle from cycle 1 (`-epochs-per-export` = `-max-epochs-this-instance`), exactly one from cycle 13, when the shuffle window first holds 5 × 20 000 rows. The §2 500-game pilot set is refuted: it produces fewer new rows per cycle than an epoch draws, and its 10 000 MINROWS gives cycle 1 a 78-batch window against 156. [SOLID] verify: o24; `python3 codes/eval/check_knobs_9x9.py` exit 0; `codes/loop/knobs_9x9.env`; `../evidence/derive_cycle_knobs/derivation.md`; smoke `rows_per_game-298712.txt`.
++- Cycle knobs are derived from measured rows/game (32.3 real, 31.675 random), never hand-picked: NUM_GAMES 1000, epoch 20 000, batch 128, reuse 8, SWA 10 000, EPOCHS_PER_EXPORT 5, MINROWS 25 000, TAPER 50 000, KEEPROWS 120 000 > cap 100 000. **At most** one exported candidate per cycle from cycle 1 (`-epochs-per-export` = `-max-epochs-this-instance`); the first candidate is exported at cycle 5 and gated at cycle 6, and exactly one per cycle begins at cycle 16 under acceptance at 6 (o40 — the window is pinned at MINROWS while `models/` is empty). The §2 500-game pilot set is refuted: it produces fewer new rows per cycle than an epoch draws, and its 10 000 MINROWS gives cycle 1 a 78-batch window against 156. [SOLID] verify: o24; `python3 codes/eval/check_knobs_9x9.py` exit 0; `codes/loop/knobs_9x9.env`; `../evidence/derive_cycle_knobs/derivation.md`; smoke `rows_per_game-298712.txt`.
+ - Data windows: KEEPROWS > MAX_TRAIN_SAMPLES_PER_CYCLE always; random rows capped at `min_rows`, which makes SHUFFLE_MINROWS — not the game count — the knob that decides whether cycle 1 can train at all. [SOLID] verify: `synchronous_loop.sh:66`, `shuffle.py:1077`, `:414-435`; K3/K4 in `codes/eval/check_knobs_9x9.py`.
+ - Cycle-wall and storage projections ride with the knob set and are re-derived whenever a rate is re-measured: 3.11 h/cycle → 23 cycles per chain link, 16.11 MiB/cycle → 30 480 cycles before the 500 GiB cap. Both take the SLOWER of the two smoke jobs’ rates. [PRELIMINARY] verify: K7 and T3 in `codes/eval/check_knobs_9x9.py`; node `measure_stage_throughput` owns the real bound.
+ - Scratch: 500 GiB cap on the whole mission root, projected-write pre-cycle guard, 1 TiB group free-space floor, logged bounded retention. [PRELIMINARY] verify: o04, c11; node `data_budget`.
+diff --git a/results/ktg/paper_1902.10565/evidence/derive_cycle_knobs/derivation.md b/results/ktg/paper_1902.10565/evidence/derive_cycle_knobs/derivation.md
+index ecc8e4c..39a6c47 100644
+--- a/results/ktg/paper_1902.10565/evidence/derive_cycle_knobs/derivation.md
++++ b/results/ktg/paper_1902.10565/evidence/derive_cycle_knobs/derivation.md
+@@ -111,17 +111,44 @@ advances by at most 5 per cycle and **never more than one candidate is exported
+ 
+ **`NUM_TRAIN_SAMPLES_PER_SWA` = 10000** = `E // 2`, C9's own default made explicit (K6).
+ 
+-### The export ramp — stated, not smoothed
+-
+-`[PRELIMINARY]` "Exactly one candidate per cycle" holds from the cycle where the shuffled
+-window first holds `5·E = 100000` rows. Evaluating C5 at `r_lo` cycle by cycle (block 3 of
+-`derivation.txt`) that is **cycle 13**; cycles 1–12 are window-limited to 1–4 epochs and the
+-persistent counter carries the remainder forward, so the export *slips* rather than
+-duplicating. Upstream behaves the same way and the invariant that matters — at most one gated
+-candidate per cycle, which is what DESIGN § 2 and pass 1's four-candidate defect are about —
+-holds from cycle 1. Making it *exactly* one from cycle 1 would need `min_rows ≥ 5·E = 100000`
+-and therefore ≥ 3554 random games in the bootstrap cycle, which then re-enters the `G`
+-derivation and diverges; the ramp is the cheaper honest answer.
++### The export ramp — amended 2026-09-04 (o40)
++
++`[PRELIMINARY]` **The first candidate exports at cycle 5, is gated at cycle 6, and exactly one
++candidate per cycle begins at cycle 16 if that first candidate is accepted** (later for each
++rejection). Three code facts fix the ramp, and the earlier reading missed the third:
++
++1. `-epochs-per-export` = `-max-epochs-this-instance` = 5, and the export counter is
++   PERSISTENT across trainer instances (`train.py:871,975,1743,1831`) — so five epochs in
++   TOTAL, not per cycle, produce the first candidate.
++2. `-no-repeat-files` stops a trainer instance when the shuffled files run out
++   (`katago/utils/training_data_generator.py:35`) and `-quit-if-no-data` then exits 0 with no
++   export (`train.py:1487-1489`) — so a cycle runs `floor(window / E)` epochs, capped at 5.
++3. While `models/` is empty every cycle plays the RANDOM net, and `shuffle.py:1077` caps the
++   usable random rows at `min_rows` — so the window is pinned at 25000 rows = 195 batches =
++   ONE epoch, cycle after cycle, and post-random rows cannot appear before the cycle whose
++   gatekeeper ACCEPTS. The withdrawn model (`usable = min_rows + (c-1)·G·r_lo` from cycle 2)
++   assumed real-net rows one cycle after the start, which is unreachable.
++
++Simulated at `r_lo` with acceptance at cycle 6 (the optimistic case;
++`codes/eval/derive_knobs.py`, table `EXPORT RAMP BY CYCLE`, reproduced in `derivation.txt`):
++
++```
++c 1-5   random, window 25000, 1 epoch each -> counter 1,2,3,4,5 ; EXPORT at cycle 5
++c 6     real,   usable 50077  window 34305  1 epoch
++c 7     42561/2   c 8 50116/2 EXPORT   c 9 57156/2   c10 63794/3 EXPORT
++c11     70107/3   c12 76149/3 EXPORT   c13 81960/4   c14 87570/4 EXPORT
++c15     93004/4   c16 98282/4 EXPORT   c17 103419/5 EXPORT   c18.. 5 epochs, every cycle
++exports at cycles [5, 8, 10, 12, 14, 16, 17, 18, ...] -> exactly one per cycle from 16
++```
++
++`[SOLID]` What holds from cycle 1 regardless: **at most** one gated candidate per cycle, which
++is what DESIGN § 2 and pass 1's four-candidate defect are about. No knob moves: every
++K1–K7/T1–T4 inequality is evaluated at cycle 1's window (25000 rows), which a random-net cycle
++never goes below, so the conservatism runs in the safe direction. Making the export *exactly*
++one from cycle 1 would need `min_rows ≥ 5·E = 100000` and therefore ≥ 3554 random games in the
++bootstrap cycle, which re-enters the `G` derivation and diverges; the ramp is the cheaper
++honest answer. Planning consequence: the first gate happens after ~5 × (selfplay + a
++one-epoch train + shuffle/export), not after one cycle.
+ 
+ ## 4. The thread / CPU coupling — DESIGN § 1's `[BLOCKING]`
+ 
+@@ -237,16 +264,20 @@ it re-runs whenever any of those four files changes.
+ 
+ ## 8. Open items
+ 
+-- `[OPEN]` `o38` — wire `KTG_CPUS_PER_TASK = 32` into `loop.sbatch` (`--cpus-per-task`,
+-  `REQ_CPUS`); owner `loop_resume_under_walltime`. Until then DESIGN § 1's thread finding is
+-  *decided* but not *wired*.
+-- `[OPEN]` two-real-net gatekeeper threads: 29 is arithmetic, 25 is the one-net measurement.
++- `[CLOSED 2026-09-04]` `o39` — `KTG_CPUS_PER_TASK = 32` is wired into `loop.sbatch`
++  (`#SBATCH --cpus-per-task=32`, `REQ_CPUS` read from this node's knob file, and a pre-flight
++  that refuses a link whose granted `SLURM_CPUS_PER_TASK` or whose cfg `numGameThreads`
++  disagrees). Only o39's third conjunct — one executed real-net cycle re-measuring
++  `nlwp_max ≤ 32` — is still open, with `o03` and the production chain.
++- `[OPEN]` two-real-net gatekeeper threads: 28 is arithmetic, 25 is the one-net measurement.
+   First measurable at `gatekeeper_stage`, cycle 3 or later (claim `c13`).
+ - `[OPEN]` real-net games/hour (n = 20) and train samples/s at batch 128 —
+   `measure_stage_throughput`; re-run `check_knobs_9x9.py` after it.
+ - `[OPEN]` `o37` — until the sampler defect is fixed, the unsuffixed evidence names cannot be
+   used as this node's inputs.
+-- `[OPEN]` the export ramp of § 3: exactly one candidate per cycle only from cycle 13.
+-  `scale_data_window` may shorten it by raising `min_rows` once a real bootstrap is measured.
++- `[OPEN]` the export ramp of § 3 (amended, o40): first candidate at cycle 5, gated at 6,
++  exactly one per cycle from 16 under acceptance at 6. The EXECUTED first-export cycle is
++  o40 (c), owned by `train_stage` / `export_stage`; `scale_data_window` may shorten the ramp
++  by raising `min_rows` once a real bootstrap is measured.
+ - `[FUTURE]` `shuffle.py -exclude-qvalues` (`o21`) would cut 492 B of the 2145 B row and with
+   it the storage line; not adopted here.

@@ -111,17 +111,44 @@ advances by at most 5 per cycle and **never more than one candidate is exported 
 
 **`NUM_TRAIN_SAMPLES_PER_SWA` = 10000** = `E // 2`, C9's own default made explicit (K6).
 
-### The export ramp — stated, not smoothed
+### The export ramp — amended 2026-09-04 (o40)
 
-`[PRELIMINARY]` "Exactly one candidate per cycle" holds from the cycle where the shuffled
-window first holds `5·E = 100000` rows. Evaluating C5 at `r_lo` cycle by cycle (block 3 of
-`derivation.txt`) that is **cycle 13**; cycles 1–12 are window-limited to 1–4 epochs and the
-persistent counter carries the remainder forward, so the export *slips* rather than
-duplicating. Upstream behaves the same way and the invariant that matters — at most one gated
-candidate per cycle, which is what DESIGN § 2 and pass 1's four-candidate defect are about —
-holds from cycle 1. Making it *exactly* one from cycle 1 would need `min_rows ≥ 5·E = 100000`
-and therefore ≥ 3554 random games in the bootstrap cycle, which then re-enters the `G`
-derivation and diverges; the ramp is the cheaper honest answer.
+`[PRELIMINARY]` **The first candidate exports at cycle 5, is gated at cycle 6, and exactly one
+candidate per cycle begins at cycle 16 if that first candidate is accepted** (later for each
+rejection). Three code facts fix the ramp, and the earlier reading missed the third:
+
+1. `-epochs-per-export` = `-max-epochs-this-instance` = 5, and the export counter is
+   PERSISTENT across trainer instances (`train.py:871,975,1743,1831`) — so five epochs in
+   TOTAL, not per cycle, produce the first candidate.
+2. `-no-repeat-files` stops a trainer instance when the shuffled files run out
+   (`katago/utils/training_data_generator.py:35`) and `-quit-if-no-data` then exits 0 with no
+   export (`train.py:1487-1489`) — so a cycle runs `floor(window / E)` epochs, capped at 5.
+3. While `models/` is empty every cycle plays the RANDOM net, and `shuffle.py:1077` caps the
+   usable random rows at `min_rows` — so the window is pinned at 25000 rows = 195 batches =
+   ONE epoch, cycle after cycle, and post-random rows cannot appear before the cycle whose
+   gatekeeper ACCEPTS. The withdrawn model (`usable = min_rows + (c-1)·G·r_lo` from cycle 2)
+   assumed real-net rows one cycle after the start, which is unreachable.
+
+Simulated at `r_lo` with acceptance at cycle 6 (the optimistic case;
+`codes/eval/derive_knobs.py`, table `EXPORT RAMP BY CYCLE`, reproduced in `derivation.txt`):
+
+```
+c 1-5   random, window 25000, 1 epoch each -> counter 1,2,3,4,5 ; EXPORT at cycle 5
+c 6     real,   usable 50077  window 34305  1 epoch
+c 7     42561/2   c 8 50116/2 EXPORT   c 9 57156/2   c10 63794/3 EXPORT
+c11     70107/3   c12 76149/3 EXPORT   c13 81960/4   c14 87570/4 EXPORT
+c15     93004/4   c16 98282/4 EXPORT   c17 103419/5 EXPORT   c18.. 5 epochs, every cycle
+exports at cycles [5, 8, 10, 12, 14, 16, 17, 18, ...] -> exactly one per cycle from 16
+```
+
+`[SOLID]` What holds from cycle 1 regardless: **at most** one gated candidate per cycle, which
+is what DESIGN § 2 and pass 1's four-candidate defect are about. No knob moves: every
+K1–K7/T1–T4 inequality is evaluated at cycle 1's window (25000 rows), which a random-net cycle
+never goes below, so the conservatism runs in the safe direction. Making the export *exactly*
+one from cycle 1 would need `min_rows ≥ 5·E = 100000` and therefore ≥ 3554 random games in the
+bootstrap cycle, which re-enters the `G` derivation and diverges; the ramp is the cheaper
+honest answer. Planning consequence: the first gate happens after ~5 × (selfplay + a
+one-epoch train + shuffle/export), not after one cycle.
 
 ## 4. The thread / CPU coupling — DESIGN § 1's `[BLOCKING]`
 
@@ -237,16 +264,20 @@ it re-runs whenever any of those four files changes.
 
 ## 8. Open items
 
-- `[OPEN]` `o38` — wire `KTG_CPUS_PER_TASK = 32` into `loop.sbatch` (`--cpus-per-task`,
-  `REQ_CPUS`); owner `loop_resume_under_walltime`. Until then DESIGN § 1's thread finding is
-  *decided* but not *wired*.
-- `[OPEN]` two-real-net gatekeeper threads: 29 is arithmetic, 25 is the one-net measurement.
+- `[CLOSED 2026-09-04]` `o39` — `KTG_CPUS_PER_TASK = 32` is wired into `loop.sbatch`
+  (`#SBATCH --cpus-per-task=32`, `REQ_CPUS` read from this node's knob file, and a pre-flight
+  that refuses a link whose granted `SLURM_CPUS_PER_TASK` or whose cfg `numGameThreads`
+  disagrees). Only o39's third conjunct — one executed real-net cycle re-measuring
+  `nlwp_max ≤ 32` — is still open, with `o03` and the production chain.
+- `[OPEN]` two-real-net gatekeeper threads: 28 is arithmetic, 25 is the one-net measurement.
   First measurable at `gatekeeper_stage`, cycle 3 or later (claim `c13`).
 - `[OPEN]` real-net games/hour (n = 20) and train samples/s at batch 128 —
   `measure_stage_throughput`; re-run `check_knobs_9x9.py` after it.
 - `[OPEN]` `o37` — until the sampler defect is fixed, the unsuffixed evidence names cannot be
   used as this node's inputs.
-- `[OPEN]` the export ramp of § 3: exactly one candidate per cycle only from cycle 13.
-  `scale_data_window` may shorten it by raising `min_rows` once a real bootstrap is measured.
+- `[OPEN]` the export ramp of § 3 (amended, o40): first candidate at cycle 5, gated at 6,
+  exactly one per cycle from 16 under acceptance at 6. The EXECUTED first-export cycle is
+  o40 (c), owned by `train_stage` / `export_stage`; `scale_data_window` may shorten the ramp
+  by raising `min_rows` once a real bootstrap is measured.
 - `[FUTURE]` `shuffle.py -exclude-qvalues` (`o21`) would cut 492 B of the 2145 B row and with
   it the storage line; not adopted here.
