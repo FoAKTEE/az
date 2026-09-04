@@ -1,0 +1,63 @@
+{
+  "paper": "arxiv-1902.10565",
+  "project": "ktg",
+  "mission": "ktg-train",
+  "title": "9x9 transformer-based KataGo: full self-play training loop on the Schmidt B200/B300 cluster",
+  "maxWorkers": 4,
+  "maxWaves": 200,
+  "packetSize": 3,
+  "digestThreshold": 5,
+  "noProgressLimit": 3,
+  "maxWallSeconds": 259200,
+  "models": {
+    "jobs": "fable xhigh   (decompose, design, DAG reformulation, escalation)",
+    "worker": "opus max     (acquire, build, code, run, ledger appends)",
+    "refuter": "fable high  (cross-model: never the worker's model)",
+    "judge": "fable high",
+    "observer": "sonnet medium"
+  },
+  "externalReviewers": {
+    "codex": "gpt-5.6-sol at model_reasoning_effort=xhigh via `codex exec`; owns the second giant-DAG pass and one seat of the two-model DAG review"
+  },
+  "sources": {
+    "ref-paper": "arxiv-1902.10565  (Wu, Accelerating Self-Play Learning in Go)",
+    "ref-code": "lightvector/KataGo @ v1.18.2 fd0723fdbc0e9d82cf269c9630af8c27c57c07c4"
+  },
+  "compute": {
+    "cluster": "skipjack (login03-05.schmidtsciences.jhu.edu)",
+    "account": "ssci-anima",
+    "partitions": [
+      "b300",
+      "b200"
+    ],
+    "gpuCapTotal": 4,
+    "cpuCapPerJob": 24,
+    "maxWalltime": "3-00:00:00",
+    "scratch": "/scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train",
+    "policyCheck": ".claude/skills/compute-budget/check.sh"
+  },
+  "gitPolicy": {
+    "branch": "az: main (consumer artifacts) \u00b7 phys-agentic-loop: ssci (framework changes)",
+    "commitGrammar": "phys-agentic-loop/_common/contracts/commit_template.md",
+    "noAiAttribution": true,
+    "neverCommit": [
+      "ref-code/* contents (submodule pointer only)",
+      "*.npz",
+      "*.bin.gz",
+      "*.ckpt",
+      "*.pt",
+      "*.sgf",
+      "selfplay / shuffled data",
+      "venvs, wheels, binaries"
+    ]
+  },
+  "layout": {
+    "consumerRepo": "az (this repo, branch main) \u2014 results/, progress/, ref-code/, ref-paper/, mission.json tracked here",
+    "framework": "phys-agentic-loop/ submodule, branch ssci \u2014 methodology source only; ledger CLIs are run from the az root: python3 phys-agentic-loop/_common/<ledger>.py \u2026"
+  },
+  "sourcePriority": {
+    "primary": "ref-code/lightvector-KataGo @ v1.18.2 (most recent release; master is +3 commits touching only OpenCL/poswriter/docs)",
+    "background": "ref-paper/arxiv-1902.10565 \u2014 2019 paper, outdated; cite only where the current code still implements the idea",
+    "note": "paper id arxiv-1902.10565 stays as the ledger namespace label only"
+  }
+}

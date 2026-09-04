@@ -1,0 +1,137 @@
+\begin{thebibliography}{10}
+
+\bibitem{Benson}
+David Benson.
+\newblock Life in the game of go.
+\newblock {\em Information Sciences}, 10:17--29, 1976.
+
+\bibitem{MultiNLP}
+Joachim Bingel and Anders Søgaard.
+\newblock Identifying beneficial task relations for multi-task learning in deep
+  neural networks.
+\newblock In {\em European Chapter of the Association for Computational
+  Linguistics}, 2017.
+
+\bibitem{Cazenave}
+Tristan Cazenave.
+\newblock Residual networks for computer go.
+\newblock {\em IEEE Transactions on Games}, 10(1):107--110, 2017.
+
+\bibitem{ClarkStorkey}
+Christopher Clark and Amos Storkey.
+\newblock Training deep convolutional neural networks to play go.
+\newblock In {\em 32nd International Conference on Machine Learning}, page
+  1766–1774, 2015.
+
+\bibitem{BayesElo}
+Remi Coulom.
+\newblock Bayesian elo rating, 2010.
+\newblock https://www.remi-coulom.fr/Bayesian-Elo/.
+
+\bibitem{OptimalVisits}
+Henrik Forsten.
+\newblock Optimal amount of visits per move, 2019.
+\newblock Leela Zero project issue,
+  https://github.com/leela-zero/leela-zero/issues/1416.
+
+\bibitem{IDMapRes}
+Kaiming He, Xiangyu Zhang, Shaoqing Ren, and Jian Sun.
+\newblock Identity mappings in deep residual networks.
+\newblock In {\em European Conference on Computer Vision}, page 630–645.
+  Springer, 2016.
+
+\bibitem{SE}
+Jie Hu, Li~Shen, Samuel Albanie, Gang Sun, and Enhua Wu.
+\newblock Squeeze-and-excitation networks.
+\newblock In {\em IEEE Conference on Computer Vision and Pattern Recognition},
+  pages 7132--7141, 2018.
+
+\bibitem{SWA}
+Pavel Izmailov, Dmitrii Podoprikhin, Timur Garipov, Dmitry Vetrov, and
+  Andrew~Gordon Wilson.
+\newblock Averaging weights leads to wider optima and better generalization.
+\newblock In {\em Conference on Uncertainty in Artificial Intelligence}, 2018.
+
+\bibitem{LeelaChessZero}
+Gary Linscott et~al., 2019.
+\newblock Leela Chess Zero project main webpage, https://lczero.org/.
+
+\bibitem{MiniGo}
+Tom Madams, Andrew Jackson, et~al., 2019.
+\newblock MiniGo project main GitHub page,
+  https://github.com/tensorflow/minigo/.
+
+\bibitem{DeepGoConv}
+Chris Maddison, Aja Huang, Ilya Sutskever, and David Silver.
+\newblock Move evaluation in go using deep convolutional neural networks.
+\newblock In {\em International Conference on Learning Representations}, 2015.
+
+\bibitem{SAI}
+Francesco Morandin, Gianluca Amato, Marco Fantozzi, Rosa Gini, Carlo Metta, and
+  Maurizio Parton.
+\newblock Sai: a sensible artificial intelligence that plays with handicap and
+  targets high scores in 9x9 go (extended version), 2019.
+\newblock arXiv preprint, arXiv:1905.10863.
+
+\bibitem{LeelaZero}
+Gian-Carlo Pascutto et~al., 2019.
+\newblock Leela Zero project main webpage, https://zero.sjeng.org/.
+
+\bibitem{LCB}
+Jonathan Roy.
+\newblock Fresh max\_lcb\_root experiments, 2019.
+\newblock Leela Zero project issue,
+  https://github.com/leela-zero/leela-zero/issues/2282.
+
+\bibitem{AG}
+David Silver, Aja Huang, Chris~J. Maddison, Arthur Guez, Laurent Sifre, George
+  van~den Driessche, Julian Schrittwieser, Ioannis Antonoglou, Veda
+  Panneershelvam, Marc Lanctot, et~al.
+\newblock Mastering the game of go with deep neural networks and tree search.
+\newblock {\em Nature}, 529:484–489, 2016.
+
+\bibitem{AZ}
+David Silver, Thomas Hubert, Julian Schrittwieser, Ioannis Antonoglou, Matthew
+  Lai, Arthur Guez, Marc Lanctot, Laurent Sifre, Dharshan Kumaran, Thore
+  Graepel, et~al.
+\newblock A general reinforcement learning algorithm that masters chess, shogi,
+  and go through selfplay.
+\newblock {\em Science}, 362(6419):1140--1144, 2018.
+
+\bibitem{AGZ}
+David Silver, Julian Schrittwieser, Karen Simonyan, Ioannis Antonoglou, Aja
+  Huang, Arthur Guez, Thomas Hubert, Lucas Baker, Matthew Lai, Adrian Bolton,
+  et~al.
+\newblock Mastering the game of go without human knowledge.
+\newblock {\em Nature}, 550:354–359, 2017.
+
+\bibitem{FB2}
+Yuandong Tian, Jerry Ma, Qucheng Gong, Shubho Sengupta, Zhuoyuan Chen, James
+  Pinkerton, and C.~Lawrence Zitnick.
+\newblock Elf opengo: An analysis and open reimplementation of alphazero.
+\newblock In {\em Thirty-Sixth International Conference on Machine Learning},
+  2019.
+
+\bibitem{Darkforest}
+Yuandong Tian and Yan Zhu.
+\newblock Better computer go player with neural network and long-term
+  prediction.
+\newblock In {\em International Conference on Learning Representations}, 2016.
+
+\bibitem{TrompTaylor}
+John Tromp.
+\newblock The game of go, 2014.
+\newblock http://tromp.github.io/go.html.
+
+\bibitem{MLVGo}
+Ti-Rong Wu, I-Chen Wu, Guan-Wun Chen, Ting han Wei, Tung-Yi Lai, Hung-Chun Wu,
+  and Li-Cheng Lan.
+\newblock Multi-labelled value networks for computer go.
+\newblock {\em IEEE Transactions on Games}, 10(4):378--389, 2018.
+
+\bibitem{MultiSurvey}
+Yu~Zhang and Qiang Yang.
+\newblock A survey on multi-task learning, 2017.
+\newblock arXiv preprint, arXiv:1707.08114.
+
+\end{thebibliography}
