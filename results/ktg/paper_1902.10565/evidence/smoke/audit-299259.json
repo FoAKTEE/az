@@ -756,10 +756,10 @@
  ],
  "evidence_dir": "results/ktg/paper_1902.10565/evidence/smoke",
  "evidence_files": {
-  "audit": "results/ktg/paper_1902.10565/evidence/smoke/audit.json",
-  "nlwp_max": "results/ktg/paper_1902.10565/evidence/smoke/nlwp_max.txt",
-  "rows_per_game": "results/ktg/paper_1902.10565/evidence/smoke/rows_per_game.txt",
-  "throughput_smoke": "results/ktg/paper_1902.10565/evidence/smoke/throughput_smoke.json"
+  "audit": "results/ktg/paper_1902.10565/evidence/smoke/audit-299259.json",
+  "nlwp_max": "results/ktg/paper_1902.10565/evidence/smoke/nlwp_max-299259.txt",
+  "rows_per_game": "results/ktg/paper_1902.10565/evidence/smoke/rows_per_game-299259.txt",
+  "throughput_smoke": "results/ktg/paper_1902.10565/evidence/smoke/throughput_smoke-299259.json"
  },
  "hard_failures": [
   "S9_nlwp_max_within_cpus"

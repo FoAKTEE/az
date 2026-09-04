@@ -1,0 +1,262 @@
+======================================================================
+ktg-smoke  job=299259  host=gb207  start=2026-09-04T09:53:38Z
+  basedir       = /scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/runs/smoke
+  codes         = /home/schmidt/ssci-haiyangw/az/results/ktg/paper_1902.10565/codes
+  evidence      = /home/schmidt/ssci-haiyangw/az/results/ktg/paper_1902.10565/evidence/smoke
+  cpus_per_task = 24   mem = 65536   gres = gpu:1
+======================================================================
+JobId=299259 JobName=ktg-smoke
+   UserId=ssci-haiyangw(30154) GroupId=users(30000) MCS_label=N/A
+   Priority=18178 Nice=0 Account=ssci-anima QOS=scavenger
+   JobState=RUNNING Reason=Prolog Dependency=(null)
+   Requeue=1 Restarts=0 BatchFlag=1 Reboot=0 ExitCode=0:0
+   RunTime=00:00:02 TimeLimit=03:00:00 TimeMin=N/A
+   SubmitTime=2026-09-04T05:39:51 EligibleTime=2026-09-04T05:39:51
+   AccrueTime=2026-09-04T05:39:51
+   StartTime=2026-09-04T05:53:37 EndTime=2026-09-04T08:53:37 Deadline=N/A
+   PreemptEligibleTime=2026-09-04T05:53:37 PreemptTime=None
+   SuspendTime=None SecsPreSuspend=0 LastSchedEval=2026-09-04T05:53:37 Scheduler=Backfill
+   Partition=b200 AllocNode:Sid=login03:2059061
+0, NVIDIA B200, 183359 MiB
+stage_monitor: root pid = 339140 (only its descendants are sampled)
+stage_monitor: started (ps pid 339201, gpu pid 339202) -> /scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/runs/smoke/monitor
+
+=== leg A: SKIPPED (marker /scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/runs/smoke/markers/A.done from 2026-09-04T09:20:58Z)
+
+=== leg B: SKIPPED (marker /scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/runs/smoke/markers/B.done from 2026-09-04T09:23:17Z)
+
+=== leg C: SKIPPED (marker /scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/runs/smoke/markers/C.done from 2026-09-04T09:25:34Z)
+
+=== leg D1: START  2026-09-04T09:53:39Z  (soft)
+probe_search_9x9.sh
+  ngames     = 20
+  basedir    = /scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/runs/smoke
+  probe dir  = /scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/runs/smoke_probe/search
+  katago_bin = /scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/build/KataGo/cpp/build/katago
+  config     = /home/schmidt/ssci-haiyangw/az/results/ktg/paper_1902.10565/codes/cfg/selfplay_9x9.cfg
+  model      = /scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/runs/smoke/rejectedmodels/t9-s1216-d1221/model.bin.gz  (name t9-s1216-d1221)
+  overrides  = logSearchInfo=true,logGamesEvery=1,reduceVisits=false,normalAsymmetricPlayoutProb=0.0,handicapAsymmetricPlayoutProb=0.0,estimateLeadProb=0.0
+  running selfplay ...
+  selfplay exit_code = 0   elapsed_s = 45   log_bytes = 3910965
+  --- last 8 log lines:
+    2026-09-04 05:54:24-0400: Final NN batches: 98331
+    2026-09-04 05:54:24-0400: Final NN avg batch size: 3.98725
+    2026-09-04 05:54:24-0400: Final NN cache hits: 46408
+    2026-09-04 05:54:24-0400: GPU -1 finishing, processed 392070 rows 98331 batches
+    2026-09-04 05:54:24-0400: Data write loop cleaned up and terminating for t9-s1216-d1221
+    2026-09-04 05:54:24-0400: Total games: 38
+    2026-09-04 05:54:24-0400: Total selfplay runtime (seconds): 44.338
+    2026-09-04 05:54:24-0400: All cleaned up, quitting
+
+probe_search_9x9
+  selfplay_dir      = /scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/runs/smoke_probe/search/selfplay
+  log_files         = 1
+  searched_turns    = 2406  (full 828 / cheap 1578)
+  root_visits_range = [100, 600]  (cfg cheap=100 max=600)
+  FULL_FRAC         = 0.3441   expected 0.25, band [0.20, 0.30]
+  games (.sgfs lines) = 20   sz9 = 20   SZ_OTHER = 0   rectangular = 0
+  rows              = 639 over 1 npz
+  ROWS_PER_GAME     = 31.950   band [12, 35]
+  ok     searched_turns_sufficient    searched_turns=2406 >= 500
+  FAIL   a_full_frac_in_band          full_frac=0.34413965087281795 band=[0.2, 0.3]
+  ok     b_rows_per_game_in_band      rows_per_game=31.95 band=[12, 35]
+  ok     c_sz_other_zero              games=20 sz_other=0 rectangular=0
+PROBE_SEARCH_9X9: FAIL
+  json -> /scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/runs/smoke_probe/search/probe_search.json
+  deleted /scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/runs/smoke_probe/search/logs/probe_search.log (3910965 bytes); kept the first 400 lines at /scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/runs/smoke_probe/search/logs/probe_search_head.txt
+leg D1: probe_search (forks at cfg values) exit=1 searched_turns=2406
+leg D1: full_frac=0.34413965087281795 in_band=0
+leg D1: full_frac outside [0.20, 0.30] -- recording the prescribed fork-free second row
+probe_search_9x9.sh
+  ngames     = 60
+  basedir    = /scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/runs/smoke
+  probe dir  = /scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/runs/smoke_probe/search
+  katago_bin = /scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/build/KataGo/cpp/build/katago
+  config     = /home/schmidt/ssci-haiyangw/az/results/ktg/paper_1902.10565/codes/cfg/selfplay_9x9.cfg
+  model      = /scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/runs/smoke/rejectedmodels/t9-s1216-d1221/model.bin.gz  (name t9-s1216-d1221)
+  fork-free variant: earlyForkGameProb and forkGameProb forced to 0 (only keys the cfg defines are overridden)
+  overrides  = logSearchInfo=true,logGamesEvery=1,reduceVisits=false,normalAsymmetricPlayoutProb=0.0,handicapAsymmetricPlayoutProb=0.0,estimateLeadProb=0.0,earlyForkGameProb=0.0,forkGameProb=0.0
+  running selfplay ...
+  selfplay exit_code = 0   elapsed_s = 97   log_bytes = 11985614
+  --- last 8 log lines:
+    2026-09-04 05:56:00-0400: Final NN batches: 214042
+    2026-09-04 05:56:00-0400: Final NN avg batch size: 5.65547
+    2026-09-04 05:56:00-0400: Final NN cache hits: 131493
+    2026-09-04 05:56:00-0400: GPU -1 finishing, processed 1210509 rows 214042 batches
+    2026-09-04 05:56:01-0400: Data write loop cleaned up and terminating for t9-s1216-d1221
+    2026-09-04 05:56:01-0400: Total games: 78
+    2026-09-04 05:56:01-0400: Total selfplay runtime (seconds): 96.3159
+    2026-09-04 05:56:01-0400: All cleaned up, quitting
+
+probe_search_9x9
+  selfplay_dir      = /scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/runs/smoke_probe/search/selfplay
+  log_files         = 1
+  searched_turns    = 7401  (full 2529 / cheap 4872)
+  root_visits_range = [100, 600]  (cfg cheap=100 max=600)
+  FULL_FRAC         = 0.3417   expected 0.25, band [0.20, 0.30]
+  games (.sgfs lines) = 60   sz9 = 60   SZ_OTHER = 0   rectangular = 0
+  rows              = 2064 over 1 npz
+  ROWS_PER_GAME     = 34.400   band [12, 35]
+  ok     searched_turns_sufficient    searched_turns=7401 >= 500
+  FAIL   a_full_frac_in_band          full_frac=0.34171057965139845 band=[0.2, 0.3]
+  ok     b_rows_per_game_in_band      rows_per_game=34.4 band=[12, 35]
+  ok     c_sz_other_zero              games=60 sz_other=0 rectangular=0
+PROBE_SEARCH_9X9: FAIL
+  json -> /scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/runs/smoke_probe/search/probe_search_nofork.json
+  deleted /scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/runs/smoke_probe/search/logs/probe_search.log (11985614 bytes); kept the first 400 lines at /scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/runs/smoke_probe/search/logs/probe_search_head.txt
+leg D1: fork-free full_frac=0.34171057965139845 (forks were the hypothesis for the 298712 excess)
+
+probe_gate_9x9.sh
+  gatekeeper log = /scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/runs/smoke/gatekeepersgf/stdout.txt
+  GATE_RANDOM       = 1   (Loaded accepted neural net random)
+  gate_candidate    = 1
+  CANDIDATE_GATED   = 1   (won 0 / lost 1)
+  numGamesPerGating_200_lines = 2
+  --- matching lines:
+    150:2026-09-04 05:23:21-0400: Loaded candidate neural net t9-s1216-d1221 from: /weka/scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/runs/smoke/modelstobetested/t9-s1216-d1221/model.bin.gz
+    154:2026-09-04 05:23:21-0400: Loaded accepted neural net random from: /dev/null
+    347:2026-09-04 05:24:26-0400: Candidate has already lost too many games, terminating remaning games
+    368:2026-09-04 05:24:26-0400: Candidate lost match, score 55.500 to 100.500 in 156 games, rejecting candidate t9-s1216-d1221
+  FAILURES = 0
+PROBE_GATE_9X9: PASS
+leg D1: probe_gate exit=0
+=== leg D1: END    2026-09-04T09:56:02Z  exit=1  elapsed_s=143
+
+=== leg D2: START  2026-09-04T09:56:02Z  (soft)
+probe_train_9x9.sh
+  npz dir     = /scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/runs/smoke/selfplay/random/tdata
+  probe dir   = /scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/runs/smoke_probe/train
+  OMP/MKL     = 4 / 4
+
+=== assertions 1-3 (+ scorebelief_len): probe_train_9x9.py
+probe_train_9x9
+  torch      = 2.11.0+cu128
+  model_kind = b7c96h3tfrs   pos_len = 9
+  block_kind        = ['attnrope', 'ffnsg', 'attnrope', 'ffnsg', 'attnrope', 'ffnsg', 'attnrope', 'ffnsg', 'attnrope', 'ffnsg', 'attnrope', 'ffnsg', 'attnrope', 'ffnsg']
+  TRUNK_GPOOL_COUNT = 0   (KataConvAndGPool anywhere in the model: 0)
+  value_head_gpool  = 1   params = 825837
+  mask_sum_hw = 81 -> sqrt(mask_sum_hw) - 14 = -5.0
+  max|pool2 + 0.5*pool1| = 0.000e+00   (tol 1e-05)
+  max|pool3 - 0.15*pool1| = 0.000e+00   (tol 1e-05)
+  npz        = /scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/runs/smoke/selfplay/random/tdata/33785D4998C6F9A3.npz  (1221 rows)
+    binaryInputNCHWPacked    |u1    [1221, 22, 11]       242 B/row
+    globalInputNC            <f4    [1221, 19]            76 B/row
+    globalTargetsNC          <f4    [1221, 80]           320 B/row
+    policyTargetsNCMove      <i2    [1221, 2, 82]        328 B/row
+    qValueTargetsNCMove      <i2    [1221, 3, 82]        492 B/row
+    scoreDistrN              |i1    [1221, 282]          282 B/row
+    valueTargetsNCHW         |i1    [1221, 5, 9, 9]      405 B/row
+  ROW_BYTES  = 2145   expected 2145
+  SCOREBELIEF_LEN = 282   expected 282
+  ok     1_no_trunk_gpool               trunk_gpool_count=0 == 0
+  ok     2a_pool2_is_minus_half_pool1   max|pool2 + 0.5*pool1| = 0.000e+00 < 1e-05
+  ok     2b_pool3_is_015_pool1          max|pool3 - 0.15*pool1| = 0.000e+00 < 1e-05
+  ok     3_row_bytes_2145               row_bytes=2145 == 2145
+  ok     4_scorebelief_len_282          scorebelief_len=282 == 282
+PROBE_TRAIN_9X9: PASS
+  json -> /scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/runs/smoke_probe/train/probe_train.json
+  probe_train_9x9.py exit = 0
+
+=== assertion 4: probe_resume_9x9.sh
+probe_resume_9x9.sh
+  src npz dir = /scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/runs/smoke/selfplay/random/tdata
+  probe dir   = /scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/runs/smoke_probe/train
+  katago_src  = /scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/build/KataGo
+source rows = 2534 over 2 file(s)
+synthetic rows = 5068 in 4 files (tiled x2, each with its num_rows sidecar); train.json range = [0, 5068]
+  command = python3 /scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/build/KataGo/python/train.py -traindir /scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/runs/smoke_probe/train/traindir -datadir /scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/runs/smoke_probe/train/data -exportdir /scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/runs/smoke_probe/train/export -exportprefix proberesume -pos-len 9 -batch-size 32 -model-kind b7c96h3tfrs -samples-per-epoch 2048 -swa-period-samples 1024 -max-epochs-this-instance 6 -no-compile
+
+=== phase 1: train, then SIGKILL after >= 4096 samples
+  phase1 pid = 343312
+  phase1 elapsed_s = 61
+  state_at_kill = {"global_step_samples": 4992, "total_num_data_rows": 5068, "export_cycle_counter": 0, "running_metrics_present": true}
+  --- phase 1 log tail:
+    Yielding training file for dataset: /weka/scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/runs/smoke_probe/train/data/train/data0.npz
+    Yielding training file for dataset: /weka/scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/runs/smoke_probe/train/data/train/data2.npz
+    Beginning training subepoch!
+    This subepoch, using files: ['/weka/scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/runs/smoke_probe/train/data/train/data0.npz', '/weka/scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/runs/smoke_probe/train/data/train/data2.npz']
+    Currently up to data row 5068
+    Beginning /weka/scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/runs/smoke_probe/train/data/train/data0.npz with 39 usable batches, my rank is 0
+
+=== phase 2: re-run the identical command (resume from checkpoint.ckpt)
+  phase2 exit_code = 0   elapsed_s = 81
+  state_after = {"global_step_samples": 14976, "total_num_data_rows": 5068, "export_cycle_counter": 0, "running_metrics_present": true}
+  --- phase 2 log tail:
+    Export cycle counter = 1
+    SAVING MODEL FOR EXPORT TO: /scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/runs/smoke_probe/train/export/proberesume-s14976-d5068
+    Saving checkpoint: /scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/runs/smoke_probe/train/export/proberesume-s14976-d5068.tmp/model.ckpt
+    Saving checkpoint: /scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/runs/smoke_probe/train/traindir/checkpoint.ckpt
+    Hit max epochs this instance, done
+    Exiting with code exit_code=0
+
+  GLOBAL_STEP_SAMPLES_AT_KILL = 4992
+  GLOBAL_STEP_SAMPLES_AFTER   = 14976
+  TOTAL_NUM_DATA_ROWS         = 5068 -> 5068
+  ok     phase1_reached_two_epochs          global_step_samples_at_kill=4992 >= 4096
+  ok     phase1_initialized_fresh           'Initializing new model!' in phase 1 log = 1 (expected >= 1)
+  ok     4a_samples_increase_after_resume   global_step_samples 4992 -> 14976
+  ok     4b_no_reinitialisation_on_resume   'Initializing new model!' = 0, 'No preexisting checkpoint found' = 0 in phase 2
+  ok     4c_total_num_data_rows_unchanged   total_num_data_rows 5068 -> 5068
+  ok     phase2_exit_zero                   phase 2 exit_code = 0
+PROBE_RESUME_9X9: PASS
+  json -> /scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/runs/smoke_probe/train/probe_resume.json
+  probe_resume_9x9.sh exit = 0
+
+  FAILURES = 0
+PROBE_TRAIN_PACKET: PASS
+=== leg D2: END    2026-09-04T09:58:37Z  exit=0  elapsed_s=155
+
+=== leg E: START  2026-09-04T09:58:37Z  (soft)
+stage_monitor: stopped; 5148 ps samples, 315 gpu samples
+
+audit_smoke -- node arxiv-1902.10565::synchronous_loop_smoke
+  basedir       = /scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/runs/smoke
+  evidence      = /home/schmidt/ssci-haiyangw/az/results/ktg/paper_1902.10565/evidence/smoke
+  cpus_per_task = 24   slurm job = 299259
+
+  S1  CYCLES_COMPLETED   = 2   (expected 2)
+  S2  CANDIDATE_EXPORTED = 2   CANDIDATE_GATED = 1 (won 0 / lost 1)
+  S3  GATE_RANDOM        = 1
+  S4  SZ_OTHER           = 0   rectangular = 0   (sgf lines 80 selfplay + 156 gatekeeper)
+  S5  ROW_BYTES raw      = [2145] over 2 npz / 2534 rows;  shuffled = [2145] over 2 npz / 2534 rows
+  S6  GLOBAL_STEP_SAMPLES cycle1 = 1216 -> cycle2 = 2528;  metrics lines = 0, nonfinite = none;  reinit in cycle-2 log = 0
+  S7  FULL_FRAC          = 0.34413965087281795   band [0.20, 0.30]
+  S8  ROWS_PER_GAME real = 31.95 over 20 games;  random = 31.675 over 80 games;  band [12, 35]
+  S9  NLWP_MAX per stage = {'train': 36, 'selfplay': 25, 'gatekeeper': 25, 'shuffle': 4}   (cpus_per_task 24)
+  S11 probe_train pass   = None   trunk_gpool_count = None
+  S12 probe_resume pass  = True   4992 -> 14976
+  S13 peak VRAM = 6112 MiB   gpu util max/mean = 80/28.2 %   bytes/row on disk = 353.8
+
+  ok     hard     S1_cycles_completed_eq_2             'one cycle done' lines = 2, expected 2, over 2 log(s)
+  ok     hard     S2_candidate_exported_ge_1           exported model.bin.gz dirs = 2 (rejectedmodels/t9-s1216-d1221, modelstobetested/t9-s2528-d2534)
+  ok     hard     S2_candidate_gated_ge_1              'Candidate (won|lost) match' lines = 1 (won 0, lost 1)
+  ok     hard     S3_gate_random_ge_1                  'Loaded accepted neural net random' lines = 1 in /scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/runs/smoke/gatekeepersgf/stdout.txt
+  ok     hard     S4_sz_other_eq_0                     sgf lines selfplay=80 gatekeeper=156, sz_other=0, rectangular=0
+  ok     hard     S5_raw_npz_pos_len_9_2145            raw npz files=2 rows=2534 row_bytes=[2145] problems=0
+  ok     hard     S5_shuffled_npz_pos_len_9_2145       shuffled npz files=2 rows=2534 row_bytes=[2145] problems=0
+  ok     hard     S6_global_step_samples_increases     global_step_samples cycle1=1216 -> cycle2=2528
+  ok     hard     S6_metrics_finite                    running_metrics numeric terms=172 nonfinite=none (metrics_train.json lines=0, empty by scale)
+  ok     hard     S6_no_reinit_in_cycle2               'Initializing new model!' in the cycle-2 log = 0 (train stdout total over both cycles = 1, 1 expected from cycle 1)
+  FAIL   hard     S9_nlwp_max_within_cpus              nlwp_max per stage = {'train': 36, 'selfplay': 25, 'gatekeeper': 25, 'shuffle': 4}, cpus_per_task = 24, over budget = {'train': 36, 'selfplay': 25, 'gatekeeper': 25} (scope: descendants of the job script (ppid-filtered sampler); foreign pids excluded: none)
+  FAIL   recorded S7_full_frac_in_band                 full_frac=0.34413965087281795 band=[0.20, 0.30] searched_turns=2406
+  FAIL   recorded S11_probe_train_pass                 trunk_gpool_count=None res2=None res3=None row_bytes=None
+  ok     recorded S12_probe_resume_pass                global_step_samples 4992 -> 14976, reinit_phase2=0
+  ok     recorded S8_rows_per_game_real_in_band        rows_per_game_real=31.95 over 20 games band=[12, 35] (random-net 31.675 over 80 games)
+
+  wrote /home/schmidt/ssci-haiyangw/az/results/ktg/paper_1902.10565/evidence/smoke/audit.json, rows_per_game.txt, throughput_smoke.json, nlwp_max.txt
+AUDIT_SMOKE: FAIL
+RECORDED FINDINGS (not fatal): S7_full_frac_in_band, S11_probe_train_pass
+
+--- du of /scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/runs/smoke
+97M	/scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/runs/smoke
+114M	/scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/runs/smoke_probe
+=== leg E: END    2026-09-04T09:58:41Z  exit=1  elapsed_s=4
+
+======================================================================
+ktg-smoke  job=299259  end=2026-09-04T09:58:43Z
+  legs      : A=skipped B=skipped C=skipped D1=1 D2=0 E=1
+  skipped   : A B C
+  failed    : D1 E
+  markers   : A.done B.done C.done D2.done 
+  overall   = 1
+======================================================================

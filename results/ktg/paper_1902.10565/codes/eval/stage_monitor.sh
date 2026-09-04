@@ -17,7 +17,7 @@
 #   stage_monitor.sh stop  <outdir>          stop both samplers
 #
 # outputs under <outdir>:
-#   ps_samples.tsv   epoch_s \t phase \t stage \t pid \t nlwp \t rss_kb \t ppid
+#   ps_samples-<jobid>.tsv   epoch_s \t phase \t stage \t pid \t nlwp \t rss_kb \t ppid
 #   gpu_samples.csv  timestamp, index, utilization.gpu [%], memory.used [MiB]
 #   phase            the current phase label
 #   monitor.pids     sampler pids
@@ -47,8 +47,13 @@ if [ -z "$ACTION" ] || [ -z "$OUT" ]; then
   exit 2
 fi
 
-PS_FILE="$OUT/ps_samples.tsv"
-GPU_FILE="$OUT/gpu_samples.csv"
+# o37: one file per JOB, never a shared appended one. A resubmission used to append
+# its samples to the previous attempt's ps_samples.tsv, mixing two sampling scopes in
+# one table; any aggregate over that mixture is meaningless, and it is what made S9
+# report a foreign process's 36 threads again in job 299259.
+PS_TAG="${SLURM_JOB_ID:-$$}"
+PS_FILE="$OUT/ps_samples-${PS_TAG}.tsv"
+GPU_FILE="$OUT/gpu_samples-${SLURM_JOB_ID:-$$}.csv"
 RUN_FILE="$OUT/monitor.run"
 PID_FILE="$OUT/monitor.pids"
 PHASE_FILE="$OUT/phase"
@@ -114,7 +119,7 @@ case "$ACTION" in
     sample_ps  & PS_PID=$!
     sample_gpu & GPU_PID=$!
     printf '%s\n%s\n' "$PS_PID" "$GPU_PID" > "$PID_FILE"
-    echo "stage_monitor: started (ps pid $PS_PID, gpu pid $GPU_PID) -> $OUT"
+    echo "stage_monitor: started (ps pid $PS_PID, gpu pid $GPU_PID) -> $PS_FILE"
     ;;
   phase)
     LABEL="${3:-}"

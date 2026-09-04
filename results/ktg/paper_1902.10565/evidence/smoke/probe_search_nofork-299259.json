@@ -1,0 +1,54 @@
+{
+ "cheap_search_turns": 4872,
+ "cheap_search_visits_cfg": 100,
+ "checks": [
+  {
+   "detail": "searched_turns=7401 >= 500",
+   "name": "searched_turns_sufficient",
+   "pass": true
+  },
+  {
+   "detail": "full_frac=0.34171057965139845 band=[0.2, 0.3]",
+   "name": "a_full_frac_in_band",
+   "pass": false
+  },
+  {
+   "detail": "rows_per_game=34.4 band=[12, 35]",
+   "name": "b_rows_per_game_in_band",
+   "pass": true
+  },
+  {
+   "detail": "games=60 sz_other=0 rectangular=0",
+   "name": "c_sz_other_zero",
+   "pass": true
+  }
+ ],
+ "full_frac": 0.34171057965139845,
+ "full_frac_band": [
+  0.2,
+  0.3
+ ],
+ "full_frac_expected": 0.25,
+ "full_search_turns": 2529,
+ "games": 60,
+ "games_sz9": 60,
+ "log_files": [
+  "/scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/runs/smoke_probe/search/logs/probe_search.log"
+ ],
+ "max_root_visits_seen": 600,
+ "max_visits_cfg": 600,
+ "min_root_visits_seen": 100,
+ "npz_files": 1,
+ "pass": false,
+ "rectangular_games": 0,
+ "rows": 2064,
+ "rows_per_game": 34.4,
+ "rows_per_game_band": [
+  12,
+  35
+ ],
+ "searched_turns": 7401,
+ "selfplay_dir": "/scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/runs/smoke_probe/search/selfplay",
+ "sgfs_files": 1,
+ "sz_other": 0
+}

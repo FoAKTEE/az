@@ -1,0 +1,40 @@
+audit_smoke -- node arxiv-1902.10565::synchronous_loop_smoke
+  basedir       = /scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/runs/smoke
+  evidence      = results/ktg/paper_1902.10565/evidence/smoke
+  cpus_per_task = 24   slurm job = 299259
+
+  S1  CYCLES_COMPLETED   = 2   (expected 2)
+  S2  CANDIDATE_EXPORTED = 2   CANDIDATE_GATED = 1 (won 0 / lost 1)
+  S3  GATE_RANDOM        = 1
+  S4  SZ_OTHER           = 0   rectangular = 0   (sgf lines 80 selfplay + 156 gatekeeper)
+  S5  ROW_BYTES raw      = [2145] over 2 npz / 2534 rows;  shuffled = [2145] over 2 npz / 2534 rows
+  S6  GLOBAL_STEP_SAMPLES cycle1 = 1216 -> cycle2 = 2528;  metrics lines = 0, nonfinite = none;  reinit in cycle-2 log = 0
+  S7  FULL_FRAC          = 0.34413965087281795   band [0.20, 0.30]
+  S8  ROWS_PER_GAME real = 31.95 over 20 games;  random = 31.675 over 80 games;  band [12, 35]
+  S8  BYTES_PER_GAME     = 11206.7 B = 10.944 KiB over 80 loop games;  c10 bound 10 KiB
+  S9  NLWP_MAX per stage = {'selfplay': 25, 'train': 14}   (cpus_per_task 24)
+  S11 probe_train pass   = True   trunk_gpool_count = 0
+  S12 probe_resume pass  = True   4992 -> 14976
+  S13 peak VRAM = 6112 MiB   gpu util max/mean = 80/28.2 %   bytes/row on disk = 353.8
+
+  ok     hard     S1_cycles_completed_eq_2             'one cycle done' lines = 2, expected 2, over 2 log(s)
+  ok     hard     S2_candidate_exported_ge_1           exported model.bin.gz dirs = 2 (rejectedmodels/t9-s1216-d1221, modelstobetested/t9-s2528-d2534)
+  ok     hard     S2_candidate_gated_ge_1              'Candidate (won|lost) match' lines = 1 (won 0, lost 1)
+  ok     hard     S3_gate_random_ge_1                  'Loaded accepted neural net random' lines = 1 in /scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/runs/smoke/gatekeepersgf/stdout.txt
+  ok     hard     S4_sz_other_eq_0                     sgf lines selfplay=80 gatekeeper=156, sz_other=0, rectangular=0
+  ok     hard     S5_raw_npz_pos_len_9_2145            raw npz files=2 rows=2534 row_bytes=[2145] problems=0
+  ok     hard     S5_shuffled_npz_pos_len_9_2145       shuffled npz files=2 rows=2534 row_bytes=[2145] problems=0
+  ok     hard     S6_global_step_samples_increases     global_step_samples cycle1=1216 -> cycle2=2528
+  ok     hard     S6_metrics_finite                    running_metrics numeric terms=172 nonfinite=none (metrics_train.json lines=0, empty by scale)
+  ok     hard     S6_no_reinit_in_cycle2               'Initializing new model!' in the cycle-2 log = 0 (train stdout total over both cycles = 1, 1 expected from cycle 1)
+  FAIL   hard     S9_nlwp_max_within_cpus              nlwp_max per stage = {'selfplay': 25, 'train': 14}, cpus_per_task = 24, over budget = {'selfplay': 25} (scope: descendants of the job script (ppid-filtered sampler); foreign pids excluded: none)
+  FAIL   recorded S7_full_frac_in_band                 full_frac=0.34413965087281795 band=[0.20, 0.30] searched_turns=2406
+  ok     recorded S11_probe_train_pass                 trunk_gpool_count=0 res2=0.0 res3=0.0 row_bytes=2145
+  ok     recorded S12_probe_resume_pass                global_step_samples 4992 -> 14976, reinit_phase2=0
+  FAIL   recorded S8_bytes_per_game_within_10KiB       bytes_per_game_on_disk=11206.7 B (10.944 KiB) over 80 games, c10 bound 10240 B (10 KiB)
+  ok     recorded S8_rows_per_game_real_in_band        rows_per_game_real=31.95 over 20 games band=[12, 35] (random-net 31.675 over 80 games)
+
+  wrote results/ktg/paper_1902.10565/evidence/smoke/audit-299259.json, results/ktg/paper_1902.10565/evidence/smoke/nlwp_max-299259.txt, results/ktg/paper_1902.10565/evidence/smoke/rows_per_game-299259.txt, results/ktg/paper_1902.10565/evidence/smoke/throughput_smoke-299259.json
+  ps samples from /scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/runs/smoke/monitor/ps_samples-299259.tsv (1287 rows)
+AUDIT_SMOKE: FAIL
+RECORDED FINDINGS (not fatal): S7_full_frac_in_band, S8_bytes_per_game_within_10KiB

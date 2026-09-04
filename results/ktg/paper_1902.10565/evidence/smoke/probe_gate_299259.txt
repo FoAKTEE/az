@@ -1,0 +1,13 @@
+probe_gate_9x9.sh
+  gatekeeper log = /scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/runs/smoke/gatekeepersgf/stdout.txt
+  GATE_RANDOM       = 1   (Loaded accepted neural net random)
+  gate_candidate    = 1
+  CANDIDATE_GATED   = 1   (won 0 / lost 1)
+  numGamesPerGating_200_lines = 2
+  --- matching lines:
+    150:2026-09-04 05:23:21-0400: Loaded candidate neural net t9-s1216-d1221 from: /weka/scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/runs/smoke/modelstobetested/t9-s1216-d1221/model.bin.gz
+    154:2026-09-04 05:23:21-0400: Loaded accepted neural net random from: /dev/null
+    347:2026-09-04 05:24:26-0400: Candidate has already lost too many games, terminating remaning games
+    368:2026-09-04 05:24:26-0400: Candidate lost match, score 55.500 to 100.500 in 156 games, rejecting candidate t9-s1216-d1221
+  FAILURES = 0
+PROBE_GATE_9X9: PASS

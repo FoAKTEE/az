@@ -1,12 +1,14 @@
 {
- "note": "Candidate rows for the VALIDATOR. The worker appended only: the two error-ledger rows for job 298712 (4566497308b2445511a64d660419bcc74009bf7648db42b5b1410a8d1739edd2 and d3e3dcb75124ca004a1f092f9fa4663e8e6d2941839a1a40ab27b1d649ee2c49) and leg A's o30 knowledge row (a1f26db6fc8efc14f9085f1d5a3851fd4833e1be666c24ca2b1c2b28537ad27c). Nothing below is appended by the worker. Every verification.command is CPU-only and exits 0 on the login node; each reads the immutable evidence/smoke/audit-298712.json snapshot rather than audit.json, which a later attempt overwrites.",
+ "note": "Candidate rows for the VALIDATOR. The worker appended only: the two error-ledger rows for job 298712 (4566497308b2445511a64d660419bcc74009bf7648db42b5b1410a8d1739edd2 and d3e3dcb75124ca004a1f092f9fa4663e8e6d2941839a1a40ab27b1d649ee2c49) and leg A's o30 knowledge row (a1f26db6fc8efc14f9085f1d5a3851fd4833e1be666c24ca2b1c2b28537ad27c). Nothing below is appended by the worker. Every verification.command is CPU-only and exits 0 on the login node; each reads the immutable evidence/smoke/audit-298712.json snapshot rather than audit.json, which a later attempt overwrites. ATTEMPT 2 UPDATE: the worker additionally appended the attempt-2 error row 49709314258e1d3451284d5197a5b58d8201be2a0cdbcc5f613444ff92e8e0ca. The three core groups were ADMITTED by the validator from attempt 1 and are retained here for provenance only. The two probe groups below are rewritten against BOTH attempts: r_smoke_probe_training is now a clean 4/4 pass, and r_smoke_probe_search is proposed as REFUTED for the full_frac band hypothesis with 0.342 recorded as the measured fact -- the band is not re-tuned to fit.",
  "job": {
-  "attempt_1": "298712 COMPLETED 0:0, gb207, 00:05:53, legs A/B/C ok, D1/D2/E failed",
-  "attempt_2": "299259 queued -- runs only D1 (with the prescribed fork-free second row), D2 and E; markers A/B/C are present"
+  "attempt_1": "298712 COMPLETED 0:0, gb207, 00:05:53; legs A/B/C ok, D1/D2/E failed",
+  "attempt_2": "299259 FAILED 1:0, gb207, 00:05:06; A/B/C skipped from markers, D2 ok, D1 and E failed",
+  "attempts_used": "2 of 3; no third allocation is requested"
  },
  "pending_after_attempt_2": [
-  "S7 full_frac fork-free row -> playout_cap_randomization",
-  "S12 kill-and-resume -> train_optimizer_schedule and the second half of train_resume_semantics"
+  "[OPEN] the mechanism behind full_frac = 0.342 -- resolvable from the root_visits_histogram probe_search_9x9.py now records, at no extra allocation cost",
+  "[BLOCKING] o03 / c06 real-net clause -- 25 threads against 24 declared CPUs; derive_cycle_knobs_9x9's to fix",
+  "[OPEN] c10 amendment -- the validator decides refuted-and-amended vs narrowed; the measured pair is rows/game in [12, 35] and bytes/game 10.944 KiB"
  ],
  "groups": [
   {
@@ -38,7 +40,7 @@
     "evidence_type": "numerical_simulation",
     "evidence": "results/ktg/paper_1902.10565/evidence/smoke/smoke-298712.txt",
     "verification": {
-     "command": "python3 -c \"import json,sys; d=json.load(open('results/ktg/paper_1902.10565/evidence/smoke/audit-298712.json')); c={x['name']:x['pass'] for x in d['checks']}; need=['S1_cycles_completed_eq_2','S2_candidate_exported_ge_1','S2_candidate_gated_ge_1','S3_gate_random_ge_1','S4_sz_other_eq_0','S5_raw_npz_pos_len_9_2145','S5_shuffled_npz_pos_len_9_2145','S6_global_step_samples_increases','S6_metrics_finite','S6_no_reinit_in_cycle2']; bad=[n for n in need if not c.get(n)]; sys.exit(0 if not bad else print('failed:',bad) or 1)\" && test -s results/ktg/paper_1902.10565/evidence/smoke/rows_per_game.txt",
+     "command": "python3 -c \"import json,sys; d=json.load(open('results/ktg/paper_1902.10565/evidence/smoke/audit-298712.json')); c={x['name']:x['pass'] for x in d['checks']}; need=['S1_cycles_completed_eq_2','S2_candidate_exported_ge_1','S2_candidate_gated_ge_1','S3_gate_random_ge_1','S4_sz_other_eq_0','S5_raw_npz_pos_len_9_2145','S5_shuffled_npz_pos_len_9_2145','S6_global_step_samples_increases','S6_metrics_finite','S6_no_reinit_in_cycle2']; bad=[n for n in need if not c.get(n)]; sys.exit(0 if not bad else print('failed:',bad) or 1)\" && test -s results/ktg/paper_1902.10565/evidence/smoke/rows_per_game-298712.txt",
      "timeout_s": 120
     },
     "verifier_result": {
@@ -108,7 +110,7 @@
     "concept_advance": false,
     "evidence": "results/ktg/paper_1902.10565/evidence/smoke/smoke-298712.txt",
     "verification": {
-     "command": "python3 -c \"import json,sys; d=json.load(open('results/ktg/paper_1902.10565/evidence/smoke/audit-298712.json')); c={x['name']:x['pass'] for x in d['checks']}; need=['S1_cycles_completed_eq_2','S2_candidate_exported_ge_1','S2_candidate_gated_ge_1','S3_gate_random_ge_1','S4_sz_other_eq_0','S5_raw_npz_pos_len_9_2145','S5_shuffled_npz_pos_len_9_2145','S6_global_step_samples_increases','S6_metrics_finite','S6_no_reinit_in_cycle2']; bad=[n for n in need if not c.get(n)]; sys.exit(0 if not bad else print('failed:',bad) or 1)\" && test -s results/ktg/paper_1902.10565/evidence/smoke/rows_per_game.txt",
+     "command": "python3 -c \"import json,sys; d=json.load(open('results/ktg/paper_1902.10565/evidence/smoke/audit-298712.json')); c={x['name']:x['pass'] for x in d['checks']}; need=['S1_cycles_completed_eq_2','S2_candidate_exported_ge_1','S2_candidate_gated_ge_1','S3_gate_random_ge_1','S4_sz_other_eq_0','S5_raw_npz_pos_len_9_2145','S5_shuffled_npz_pos_len_9_2145','S6_global_step_samples_increases','S6_metrics_finite','S6_no_reinit_in_cycle2']; bad=[n for n in need if not c.get(n)]; sys.exit(0 if not bad else print('failed:',bad) or 1)\" && test -s results/ktg/paper_1902.10565/evidence/smoke/rows_per_game-298712.txt",
      "timeout_s": 120
     },
     "metric_at_landing": {
@@ -126,7 +128,9 @@
      "az_git_commit": "9fdeb6b"
     },
     "notes": "Worker candidate row, NOT appended by the worker. Legs D1/D2/E of the same job failed; see the error-ledger rows for job 298712 (row_hash 4566497308b2445511a64d660419bcc74009bf7648db42b5b1410a8d1739edd2) and the post-hoc recovery (d3e3dcb75124ca004a1f092f9fa4663e8e6d2941839a1a40ab27b1d649ee2c49). o30 is already discharged by leg A's own append (knowledge node_seq 4, row_hash a1f26db6fc8efc14f9085f1d5a3851fd4833e1be666c24ca2b1c2b28537ad27c)."
-   }
+   },
+   "landed_by_validator": "686b052f97d2f428247bb39d4842cf853e89ef4c903f691b6f0dfc76aa0e07ba (empirical)",
+   "note": "ADMITTED by the validator from attempt 1; see evidence/smoke/validation_core.md. Kept here for provenance only -- do not re-append."
   },
   {
    "group": "r_smoke_threads_realnet",
@@ -149,9 +153,9 @@
      "scope": "ONE allocation, six legs A-E; legs A/B/C exited 0, legs D1/D2/E exited 1 (see the error-ledger row for job 298712)",
      "metric": "ps -o nlwp= sampled at 0.2 s over every process descended from the job, 3861 samples, attributed per pid"
     },
-    "claim": "Measured inside Slurm job 298712 with --cpus-per-task=24. Random-net selfplay peaks at exactly 22 OS threads in both cycles (pids 324406, 330480) and in leg A's config check (pid 323745), reproducing DESIGN section 1's arithmetic 18 game + 1 nnServer + 1 dataWrite + 1 modelLoad + 1 main for a third and fourth time. A stage that holds a live CUDA context costs three more: the leg-D1 selfplay probe running the exported net t9-s1216-d1221 (pid 332406) and the cycle-2 gatekeeper running that candidate against the random baseline (pid 328662) both peak at 25, which EXCEEDS the 24 CPUs the job declared. The delta is the CUDA runtime/driver threads that debugSkipNeuralNet (cpp/program/setup.cpp:126) never creates. train peaks at 14 threads with OMP_NUM_THREADS=MKL_NUM_THREADS=4 (pids 325065, 331077); shuffle runs the configured 8 worker processes at 1 thread each behind a 4-thread parent, 12 concurrent threads. CONSEQUENCE: obligation o03 and claim c06 hold for every random-net stage and for train and shuffle, and are REFUTED for real-net selfplay and the gatekeeper at 24 declared CPUs. MEASUREMENT CAVEAT recorded rather than hidden: this job's sampler used a node-wide ps -e on a shared b200 node and three foreign pids (317109, 322317, 323223) whose command lines contain 'train.py' were swept in, putting a spurious 36 on the train stage. They are excluded by a provable rule -- leg A starts no trainer at all, so any pid classified train during phase legA is foreign -- and the sampler now records only descendants of the job script. NOT measured: a gatekeeper with TWO real nets (two CUDA contexts), so 25 is a lower bound for that case.",
+    "claim": "Measured inside Slurm job 298712 with --cpus-per-task=24. Random-net selfplay peaks at exactly 22 OS threads in both cycles (pids 324406, 330480) and in leg A's config check (pid 323745), reproducing DESIGN section 1's arithmetic 18 game + 1 nnServer + 1 dataWrite + 1 modelLoad + 1 main for a third and fourth time. A stage that holds a live CUDA context costs three more: the leg-D1 selfplay probe running the exported net t9-s1216-d1221 (pid 332406) and the cycle-2 gatekeeper running that candidate against the random baseline (pid 328662) both peak at 25, which EXCEEDS the 24 CPUs the job declared. The delta is the CUDA runtime/driver threads that debugSkipNeuralNet (cpp/program/setup.cpp:126) never creates. train peaks at 14 threads with OMP_NUM_THREADS=MKL_NUM_THREADS=4 (pids 325065, 331077); shuffle runs the configured 8 worker processes at 1 thread each behind a 4-thread parent, 12 concurrent threads. CONSEQUENCE: obligation o03 and claim c06 hold for every random-net stage and for train and shuffle, and are REFUTED for real-net selfplay and the gatekeeper at 24 declared CPUs. MEASUREMENT CAVEAT recorded rather than hidden: this job's sampler used a node-wide ps -e on a shared b200 node and three foreign pids (317109, 322317, 323223) whose command lines contain 'train.py' were swept in, putting a spurious 36 on the train stage. They are excluded by a provable rule -- leg A starts no trainer at all, so any pid classified train during phase legA is foreign -- and the sampler now records only descendants of the job script. NOT measured: a gatekeeper with TWO real nets (two CUDA contexts), so 25 is a lower bound for that case. CONFIRMED INDEPENDENTLY in attempt 2 (job 299259) with a correctly scoped sampler: the ancestry-filtered per-job table ps_samples-299259.tsv, which contains no foreign process at all, gives selfplay 25 and train 14 for that job's real-net probe and resume trainer. The 25 is therefore not an artefact of the attempt-1 sampler defect; re-scoping attempt 1's own rows reproduces its admitted numbers unchanged (selfplay 25, gatekeeper 25, train 14, shuffle 4).",
     "evidence_type": "empirical_measurement",
-    "evidence": "results/ktg/paper_1902.10565/evidence/smoke/nlwp_max.txt",
+    "evidence": "results/ktg/paper_1902.10565/evidence/smoke/nlwp_max-298712.txt",
     "verification": {
      "command": "python3 -c \"import json,sys; d=json.load(open('results/ktg/paper_1902.10565/evidence/smoke/audit-298712.json')); m=d['S13_throughput']; p=m['nlwp_max_per_phase_stage']; s=m['nlwp_max_per_stage']; ok = p['cycle1/selfplay']==22 and p['cycle2/selfplay']==22 and p['probe_search/selfplay']==25 and p['cycle2/gatekeeper']==25 and s['train']==14 and d['cpus_per_task']==24 and m['foreign_pids_excluded']==[317109,322317,323223]; sys.exit(0 if ok else print('S9 numbers moved:',p,s) or 1)\"",
      "timeout_s": 120
@@ -186,69 +190,95 @@
      "o03 stays OPEN: --cpus-per-task must rise to >= 25 (28 keeps the net-switch allowance) with numGameThreads unchanged, or numGameThreads must drop to 15; tasks/synchronous_loop_smoke section 13 forbids moving either alone and the choice is derive_cycle_knobs_9x9's",
      "two-real-net gatekeeper threads -- first measurable at gatekeeper_stage, cycle 3+"
     ]
-   }
+   },
+   "landed_by_validator": "6e210ec384baad4a566a1c5f88431455ede4e914d1128e35d52a9b2d4cbe98e4 (refuted)",
+   "note": "ADMITTED by the validator from attempt 1; see evidence/smoke/validation_core.md. Kept here for provenance only -- do not re-append."
   },
   {
    "group": "r_smoke_probe_search",
    "settles": [
-    "c15 (search half, partial)",
     "c04",
-    "c10 (first measurement)",
-    "S7",
+    "c10",
+    "c15 (search half, partial)",
+    "S7 (band REFUTED by measurement)",
     "S8"
    ],
    "nodes_supported": [
     "arxiv-1902.10565::selfplay_search_params",
     "arxiv-1902.10565::game_randomization_9x9",
     "arxiv-1902.10565::root_explore_and_target_pruning",
-    "arxiv-1902.10565::score_utility_search",
+    "arxiv-1902.10565::score_utility_search (partial: parameters live in a running search, not the arctan form)",
     "arxiv-1902.10565::gating_rule (cycle-1 baseline behaviour only, partial by design)"
    ],
    "nodes_NOT_supported": [
-    "arxiv-1902.10565::playout_cap_randomization -- assertion (a) full_frac is OUT of band; the fork-free second row prescribed by the risk table is job 299259"
+    "arxiv-1902.10565::playout_cap_randomization -- the band derived from full_frac = 1 - cheapSearchProb is REFUTED by three independent measurements; the node cannot be promoted on a prediction the run contradicts, and the mechanism behind 0.342 is [OPEN]"
    ],
    "result_row": {
     "paper": "arxiv-1902.10565",
     "result_id": "r_smoke_probe_search",
-    "name": "Search-side probe of the 9x9 selfplay config on a real exported net: 9x9 only, 32.3 rows/game, cycle-1 gate against the random baseline; the full-search fraction overshoots its band",
+    "name": "Search-side probe on a real exported net across three runs: 9x9 only, 31.95-34.40 rows/game, a cycle-1 gate against the random baseline -- and a full-search fraction of 0.342, not the 0.25 the config predicts",
     "working_context": {
-     "cluster": "skipjack, partition b200, account ssci-anima; Slurm job 298712 on gb207, 1 GPU, --cpus-per-task=24, --mem=64G, --time=03:00:00, elapsed 00:05:53, sacct COMPLETED 0:0",
+     "cluster": "skipjack b200 gb207; attempt 1 job 298712 (COMPLETED 0:0, 00:05:53) and attempt 2 job 299259 (FAILED 1:0, 00:05:06, legs A/B/C skipped from markers, D1/D2/E run)",
      "engine": "lightvector/KataGo v1.18.2 @ fd0723fdbc0e9d82cf269c9630af8c27c57c07c4, CUDA backend built by node env_build; torch 2.11.0+cu128, python 3.11.9",
      "model": "b7c96h3tfrs, pos_len 9, 825837 parameters",
      "configs": "codes/cfg/selfplay_9x9.cfg and codes/cfg/gatekeeper_9x9.cfg (node cfg_9x9_override), USEGATING=1",
      "knobs": "smoke scale: NUM_GAMES_PER_CYCLE 40, NUM_TRAIN_SAMPLES_PER_EPOCH 256, BATCHSIZE 32, MAX_TRAIN_PER_DATA 8, NUM_TRAIN_SAMPLES_PER_SWA 128, EPOCHS_PER_EXPORT 1, SHUFFLE_MINROWS 200, TAPER_WINDOW_SCALE 200, SHUFFLE_KEEPROWS 5000, MAX_TRAIN_SAMPLES_PER_CYCLE 4000",
      "scripts_at_run_time": "az git commit 9fdeb6b; codes/loop/synchronous_loop_9x9.sh WITH the o34/o35 repairs (6b83dc0, 0c6d38d)",
      "scope": "ONE allocation, six legs A-E; legs A/B/C exited 0, legs D1/D2/E exited 1 (see the error-ledger row for job 298712)",
-     "probe": "leg D1: katago selfplay -max-games-total 20 -models-dir <symlink to the cycle-1 candidate> -override-config logSearchInfo=true,logGamesEvery=1,reduceVisits=false,normalAsymmetricPlayoutProb=0.0,handicapAsymmetricPlayoutProb=0.0,estimateLeadProb=0.0; the four MEASURED keys cheapSearchProb, cheapSearchVisits, maxVisits and rootDesiredPerChildVisitsCoeff were never touched"
+     "probe": "three recorded rows, all with logSearchInfo=true, logGamesEvery=1, reduceVisits=false, normalAsymmetricPlayoutProb=0, handicapAsymmetricPlayoutProb=0, estimateLeadProb=0, on the exported net t9-s1216-d1221: (i) job 298712, 20 games, forks at cfg values; (ii) job 299259, 20 games, forks at cfg values; (iii) job 299259, 60 games, earlyForkGameProb = forkGameProb = 0. The four MEASURED keys cheapSearchProb, cheapSearchVisits, maxVisits and rootDesiredPerChildVisitsCoeff were never touched in any row."
     },
-    "claim": "Twenty games of the mission 9x9 selfplay config, played by the REAL exported net t9-s1216-d1221, logged 2312 searched turns whose root visits fall in [100, 600] exactly as cheapSearchVisits=100 and maxVisits=600 predict (cpp/program/play.cpp:779,1141-1142,:115). Three of the four assertions hold: (c) sz_other = 0 and 0 rectangular games over 20 sgf lines, so bSizes=9 with allowRectangleProb=0 admits nothing but 9x9; (b) rows_per_game = 32.300, inside the c10 band [12, 35], with the random-net figure 31.675 over 80 games from the same job -- c10's first executed measurement, and the input derive_cycle_knobs_9x9 needs; (d) gate_random = 1, the cycle-2 gatekeeper logging 'Loaded accepted neural net random from: /dev/null' (cpp/command/gatekeeper.cpp:427), which shows cycle 1 GATES against a random baseline rather than skipping the gate -- findLatestModel returns true unconditionally (cpp/dataio/loadmodel.cpp:93). Assertion (a) FAILS: full_frac = 0.33304 (770 full of 2312 searched turns) against the band [0.20, 0.30] around the configured 1 - cheapSearchProb = 0.25. The leading hypothesis is the one the task's own risk table names: a fork halves cheapSearchProb for six turns (cpp/program/play.cpp:1127-1129) and the config leaves earlyForkGameProb = 0.04 and forkGameProb = 0.01 on. The prescribed fork-free second row is job 299259; until it lands, playout_cap_randomization is NOT promoted.",
+    "claim": "Three assertions hold and one is refuted. HOLD: (c) sz_other = 0 and 0 rectangular games over 20, 20 and 60 sgf lines, so bSizes=9 with allowRectangleProb=0 admits nothing but 9x9; (b) rows_per_game = 31.950 and 34.400 real-net, with 31.675 random-net over 80 games in the same run directory, all inside the c10 band [12, 35] -- c10's executed measurement and the input derive_cycle_knobs_9x9 needs; (d) gate_random = 1, the cycle-2 gatekeeper logging 'Loaded accepted neural net random from: /dev/null' (cpp/command/gatekeeper.cpp:427), so cycle 1 GATES against a random baseline rather than skipping the gate (cpp/dataio/loadmodel.cpp:93). REFUTED: (a) the full-search fraction is NOT 1 - cheapSearchProb. Measured 0.33304 (2312 searched turns), 0.34414 (2406) and 0.34171 (7401) -- 0.342 +- 0.006 -- against the predicted 0.25 and its band [0.20, 0.30]. The task's own named hypothesis, that forks halve cheapSearchProb for six turns (cpp/program/play.cpp:1127-1129), was tested DIRECTLY by forcing earlyForkGameProb = forkGameProb = 0 and the value did not move (0.34414 -> 0.34171, inside run-to-run scatter over three times the sample). The band is therefore refuted by measurement and is NOT re-tuned to fit: 0.342 is recorded as the new [PRELIMINARY] fact and the mechanism is [OPEN]. cpp/program/play.cpp:1131 makes the cheap branch a plain Bernoulli(cheapSearchProb) whenever hintLoc is NULL, which it always is with no hint directory configured, so the excess is not yet accounted for. Root visits stayed inside [100, 600] in every run, so no run exceeded maxVisits. SECOND REFUTATION, c10's byte conjunct: 'on-disk bytes per game <= 10 KiB at pos_len 9' does not hold. The two loop cycles wrote 896536 B of tdata for 80 games = 11206.7 B = 10.944 KiB per game, 9.4 % over the 10240 B bound. The row bound itself is right (353.8 B/row on disk against 2145 uncompressed, a 6.06x compression); what the bound underestimated is rows per game -- it was written for ~22 rows/game and the measurement is 31.675 random-net and 31.95-34.40 real-net. At the measured 353.8 B/row the bound is consistent only up to 28.9 rows/game. c10 is proposed REFUTED AS WRITTEN and amended to the measured pair: rows/game in [12, 35] HOLDS, and bytes/game is 10.94 KiB, not <= 10 KiB. The band is not re-tuned; the measured value is recorded and the bound restated as a consequence of rows/game, which derive_cycle_knobs_9x9 and the data_budget calibration must both use.",
     "evidence_type": "numerical_simulation",
-    "evidence": "results/ktg/paper_1902.10565/evidence/smoke/probe_search-298712.json",
+    "evidence": "results/ktg/paper_1902.10565/evidence/smoke/probe_search_nofork-299259.json",
     "verification": {
-     "command": "python3 -c \"import json,sys; a=json.load(open('results/ktg/paper_1902.10565/evidence/smoke/audit-298712.json')); p=a['S7_probe_search']; s=a['S8']; ok = p['sz_other']==0 and p['games']==20 and abs(p['rows_per_game']-32.3)<1e-6 and p['searched_turns']==2312 and abs(p['full_frac']-0.33304498269896193)<1e-9 and 12<=s['rows_per_game_real']<=35 and a['S3_gate_random']>=1; sys.exit(0 if ok else print('search probe numbers moved') or 1)\"",
+     "command": "python3 -c \"import json,sys; a=json.load(open('results/ktg/paper_1902.10565/evidence/smoke/audit-298712.json')); b=json.load(open('results/ktg/paper_1902.10565/evidence/smoke/probe_search-299259.json')); c=json.load(open('results/ktg/paper_1902.10565/evidence/smoke/probe_search_nofork-299259.json')); ff=[a['S7_probe_search']['full_frac'], b['full_frac'], c['full_frac']]; ok = all(0.32 < f < 0.36 for f in ff) and all(f > 0.30 for f in ff) and b['searched_turns']==2406 and c['searched_turns']==7401 and b['sz_other']==0 and c['sz_other']==0 and 12 <= b['rows_per_game'] <= 35 and 12 <= c['rows_per_game'] <= 35 and a['S3_gate_random']>=1 and not json.load(open('results/ktg/paper_1902.10565/evidence/smoke/audit-299259.json'))['S8']['bytes_per_game_within_c10']; sys.exit(0 if ok else print('search numbers moved:',ff) or 1)\"",
      "timeout_s": 120
     },
     "verifier_result": {
      "verdict": "partial",
      "metric": {
-      "name": "search_assertions_passed",
-      "value": 3,
-      "threshold": 4,
+      "name": "full_search_fraction",
+      "value": 0.34171057965139845,
+      "threshold": 0.3,
       "pass": false,
-      "a_full_frac": 0.33304498269896193,
-      "a_band": [
+      "measurements": [
+       {
+        "job": "298712",
+        "games": 20,
+        "forks": "cfg",
+        "searched_turns": 2312,
+        "full_frac": 0.33304498269896193
+       },
+       {
+        "job": "299259",
+        "games": 20,
+        "forks": "cfg",
+        "searched_turns": 2406,
+        "full_frac": 0.34413965087281795
+       },
+       {
+        "job": "299259",
+        "games": 60,
+        "forks": "off",
+        "searched_turns": 7401,
+        "full_frac": 0.34171057965139845
+       }
+      ],
+      "predicted": 0.25,
+      "band": [
        0.2,
        0.3
       ],
-      "searched_turns": 2312,
-      "b_rows_per_game_real": 32.3,
-      "b_rows_per_game_random": 31.675,
-      "b_band": [
-       12,
-       35
+      "rows_per_game": [
+       32.3,
+       31.95,
+       34.4
       ],
-      "c_sz_other": 0,
-      "d_gate_random": 1
+      "sz_other": 0,
+      "gate_random": 1,
+      "bytes_per_game_on_disk": 11206.7,
+      "bytes_per_game_bound": 10240,
+      "bytes_per_game_within_bound": false
      }
     },
     "dependencies": [
@@ -262,70 +292,78 @@
      "a09_code_first",
      "a10_random_bootstrap_ok"
     ],
-    "status": "conditional",
-    "provenance": "worker, Slurm job 298712 leg D1; codes/eval/{probe_search_9x9.sh,probe_search_9x9.py,probe_gate_9x9.sh}",
+    "status": "refuted",
+    "provenance": "worker, jobs 298712 leg D1 and 299259 leg D1 (two rows); codes/eval/{probe_search_9x9.sh,probe_search_9x9.py,probe_gate_9x9.sh}",
     "open_obligations": [
-     "full_frac out of band -- fork-free re-run recorded as a second row (job 299259) before playout_cap_randomization may be promoted",
-     "score_utility_search stays partial: the probe shows the parameters live in a running search, not the arctan form",
-     "gating_rule stays partial: the accept/reject decision belongs to c13 at gatekeeper_stage",
-     "visit-caps-9x9: 600/100 are 19x19-derived and are recorded here, not justified"
+     "[OPEN] the mechanism behind full_frac = 0.342. Candidates, all resolvable from one root_visits_histogram, which probe_search_9x9.py now writes: (a) a third root-visit value between 100 and 600 that the '> cheapSearchVisits' discriminator bins as full, which would make full_frac an over-count rather than a physical excess; (b) log lines from the ~18 in-flight games beyond -max-games-total (the engine reports 38 games for 20 and 78 for 60, exactly +18 = numGameThreads); (c) sekiForkHackProb = 0.02, the one fork channel the nofork row did not disable. Needs no allocation of its own -- the next search probe produces it for free.",
+     "c10 must NOT be proposed as written: its 10 KiB/game conjunct is falsified at 10.944 KiB. Propose it refuted and amended, with rows/game and bytes/game as the two measured facts.",
+     "playout_cap_randomization must NOT be promoted until (a) is excluded",
+     "score_utility_search stays partial; gating_rule stays partial (c13 is gatekeeper_stage's)",
+     "visit-caps-9x9: 600/100 are 19x19-derived, recorded here and not justified"
     ]
    }
   },
   {
    "group": "r_smoke_probe_training",
    "settles": [
-    "c05 preconditions",
-    "c15 (training half, partial)",
+    "c05",
+    "c15 (training half)",
     "o02 (measurement half)",
     "S5",
     "S11",
-    "S6 resume half of assertion 4"
+    "S12"
    ],
    "nodes_supported": [
     "arxiv-1902.10565::transformer_trunk_b7c96h3tfrs",
     "arxiv-1902.10565::head_gpool_degeneracy_9x9",
     "arxiv-1902.10565::data_format_pos_len",
     "arxiv-1902.10565::loss_targets_metrics",
-    "arxiv-1902.10565::train_resume_semantics (resume half only -- the cycle-2 checkpoint resume)"
+    "arxiv-1902.10565::train_resume_semantics",
+    "arxiv-1902.10565::train_optimizer_schedule (the kill-and-resume half; the lr/wd schedule itself is still read, not measured)"
    ],
-   "nodes_NOT_supported": [
-    "arxiv-1902.10565::train_optimizer_schedule and the kill-and-resume half of train_resume_semantics -- assertion 4's SIGKILL protocol did not execute; job 299259"
-   ],
+   "nodes_NOT_supported": [],
    "result_row": {
     "paper": "arxiv-1902.10565",
     "result_id": "r_smoke_probe_training",
-    "name": "Training-side probe at pos_len 9: no trunk global pooling in b7c96h3tfrs, an exactly degenerate value-head gpool, 2145-byte rows on real data, and a checkpoint resume across cycles",
+    "name": "Training-side probe at pos_len 9, all four assertions executed: no trunk global pooling, an exactly degenerate value-head gpool, 2145-byte rows on real data, and a checkpoint that survives SIGKILL",
     "working_context": {
-     "cluster": "skipjack, partition b200, account ssci-anima; Slurm job 298712 on gb207, 1 GPU, --cpus-per-task=24, --mem=64G, --time=03:00:00, elapsed 00:05:53, sacct COMPLETED 0:0",
+     "cluster": "skipjack b200 gb207; attempt 1 job 298712 (COMPLETED 0:0, 00:05:53) and attempt 2 job 299259 (FAILED 1:0, 00:05:06, legs A/B/C skipped from markers, D1/D2/E run)",
      "engine": "lightvector/KataGo v1.18.2 @ fd0723fdbc0e9d82cf269c9630af8c27c57c07c4, CUDA backend built by node env_build; torch 2.11.0+cu128, python 3.11.9",
      "model": "b7c96h3tfrs, pos_len 9, 825837 parameters",
      "configs": "codes/cfg/selfplay_9x9.cfg and codes/cfg/gatekeeper_9x9.cfg (node cfg_9x9_override), USEGATING=1",
      "knobs": "smoke scale: NUM_GAMES_PER_CYCLE 40, NUM_TRAIN_SAMPLES_PER_EPOCH 256, BATCHSIZE 32, MAX_TRAIN_PER_DATA 8, NUM_TRAIN_SAMPLES_PER_SWA 128, EPOCHS_PER_EXPORT 1, SHUFFLE_MINROWS 200, TAPER_WINDOW_SCALE 200, SHUFFLE_KEEPROWS 5000, MAX_TRAIN_SAMPLES_PER_CYCLE 4000",
      "scripts_at_run_time": "az git commit 9fdeb6b; codes/loop/synchronous_loop_9x9.sh WITH the o34/o35 repairs (6b83dc0, 0c6d38d)",
      "scope": "ONE allocation, six legs A-E; legs A/B/C exited 0, legs D1/D2/E exited 1 (see the error-ledger row for job 298712)",
-     "probe": "leg D2 assertions 1-3 re-run on the login node on CPU after the Model.blocks repair; the npz is runs/smoke/selfplay/random/tdata/33785D4998C6F9A3.npz written by job 298712 cycle 1"
+     "probe": "job 299259 leg D2 (exit 0). Assertions 1-3 re-run on CPU on the login node after probe_resume_9x9.sh's rm -rf removed the in-job json; assertion 4 executed in the allocation on 5068 synthetic rows tiled from 2534 real cycle-1 rows, each npz carrying its num_rows sidecar"
     },
-    "claim": "Four training-side facts measured on the artifacts of job 298712. (1) b7c96h3tfrs contains NO trunk global-pooling block: 0 KataConvAndGPool modules over Model.blocks (14 blocks, 7 x [attnrope, ffnsg], 825837 parameters) and 0 anywhere in the model, because a trunk gpool block is built only for a block kind ending in 'gpool' (katago/train/model_pytorch.py:3157-3160). The paper's global-pooling trunk residual block is therefore not in the mission model. (2) The value head's gpool is EXACTLY degenerate at 9x9: with mask_sum_hw = 81, sqrt(81) - 14 = -5, so max|pool2 + 0.5*pool1| = 0.000e+00 and max|pool3 - 0.15*pool1| = 0.000e+00 in float32 (model_pytorch.py:534-540) -- the three pooled channels are collinear and carry no board-size information on a single-board-size run. (3) A real dataBoardLen=9 training row is 2145 bytes: 242 + 76 + 328 + 320 + 282 + 405 + 492 over the seven written arrays, with qValueTargetsNCMove present unconditionally (cpp/dataio/trainingwrite.cpp:292-299,880-883), measured on 1221 real rows and reproduced on the shuffled side. This is o02's measurement half: no pos_len-19 row exists in the run. (+) Metrics(world_size=1, raw_model=model).scorebelief_len = 282 = 2*(81+60). (4) PARTIAL: the resume half is witnessed by the smoke's own cycle 2 -- global_step_samples 1216 -> 2528, total_num_data_rows 1221 -> 2534, no 'Initializing new model!' in the cycle-2 trainer -- but the SIGKILL protocol of assertion 4 did not execute in this job and is job 299259's.",
+    "claim": "All four assertions of tasks/paper_code_map_training section 2 executed and hold. (1) b7c96h3tfrs contains NO trunk global-pooling block: 0 KataConvAndGPool modules over Model.blocks (14 blocks, 7 x [attnrope, ffnsg], 825837 parameters) and 0 anywhere in the model, because a trunk gpool block is built only for a block kind ending in 'gpool' (model_pytorch.py:3157-3160) -- the paper's global-pooling trunk residual block is not in the mission model. (2) The value head's gpool is EXACTLY degenerate at 9x9: with mask_sum_hw = 81, sqrt(81) - 14 = -5, so max|pool2 + 0.5*pool1| = 0.000e+00 and max|pool3 - 0.15*pool1| = 0.000e+00 in float32 (model_pytorch.py:534-540); the three pooled channels are collinear and carry no board-size information on a single-board-size run. (3) A real dataBoardLen=9 training row is 2145 bytes -- 242 + 76 + 328 + 320 + 282 + 405 + 492 over the seven written arrays, qValueTargetsNCMove written unconditionally (cpp/dataio/trainingwrite.cpp:292-299,880-883) -- measured on 1221 real rows and reproduced on the shuffled side; this is o02's measurement half, and no pos_len-19 row exists anywhere in the run. (4) The checkpoint survives a real SIGKILL: the trainer was killed at global_step_samples 4992 (past the 4096 two epochs need) and the IDENTICAL command re-run reached 14976 with total_num_data_rows unchanged at 5068, no 'Initializing new model!' and no 'No preexisting checkpoint found' in the resumed log, exit 0. The same resume semantics are independently witnessed by the smoke's own cycle 2 (1216 -> 2528 with no re-initialisation). (+) Metrics(world_size=1, raw_model=model).scorebelief_len = 282 = 2*(81+60).",
     "evidence_type": "numerical_simulation",
-    "evidence": "results/ktg/paper_1902.10565/evidence/smoke/probe_train_rerun_cpu-298712.json",
+    "evidence": "results/ktg/paper_1902.10565/evidence/smoke/probe_resume-299259.json",
     "verification": {
-     "command": "python3 -c \"import json,sys; a=json.load(open('results/ktg/paper_1902.10565/evidence/smoke/audit-298712.json')); t=a['S11_probe_train']; s6=a['S6']; ok = t['trunk_gpool_count']==0 and t['residual_pool2_plus_half_pool1']<1e-5 and t['residual_pool3_minus_015_pool1']<1e-5 and t['row_bytes']==2145 and t['scorebelief_len']==282 and s6['global_step_samples_cycle2']>s6['global_step_samples_cycle1'] and s6['initializing_new_model_in_cycle2_log']==0; sys.exit(0 if ok else print('training probe numbers moved') or 1)\"",
+     "command": "python3 -c \"import json,sys; t=json.load(open('results/ktg/paper_1902.10565/evidence/smoke/probe_train_rerun_cpu-299259.json')); u=json.load(open('results/ktg/paper_1902.10565/evidence/smoke/probe_resume-299259.json')); a=json.load(open('results/ktg/paper_1902.10565/evidence/smoke/audit-299259.json')); s6=a['S6']; ok = t['trunk_gpool_count']==0 and t['residual_pool2_plus_half_pool1']<1e-5 and t['residual_pool3_minus_015_pool1']<1e-5 and t['row_bytes']==2145 and t['scorebelief_len']==282 and u['pass'] and u['global_step_samples_after']>u['global_step_samples_at_kill'] and u['initializing_new_model_phase2']==0 and u['total_num_data_rows_at_kill']==u['total_num_data_rows_after'] and s6['global_step_samples_cycle2']>s6['global_step_samples_cycle1']; sys.exit(0 if ok else print('training probe numbers moved') or 1)\"",
      "timeout_s": 120
     },
     "verifier_result": {
-     "verdict": "partial",
+     "verdict": "pass",
      "metric": {
       "name": "training_assertions_passed",
-      "value": 3,
+      "value": 4,
       "threshold": 4,
-      "pass": false,
+      "pass": true,
       "trunk_gpool_count": 0,
       "residual_pool2": 0.0,
       "residual_pool3": 0.0,
       "row_bytes": 2145,
       "scorebelief_len": 282,
-      "global_step_samples": [
+      "resume_global_step_samples": [
+       4992,
+       14976
+      ],
+      "resume_total_num_data_rows": [
+       5068,
+       5068
+      ],
+      "cycle_resume_global_step_samples": [
        1216,
        2528
       ]
@@ -340,11 +378,11 @@
      "a05_9x9_only",
      "a09_code_first"
     ],
-    "status": "conditional",
-    "provenance": "worker; assertions 1-3 re-run on CPU on the login node after the Model.blocks repair, on job 298712's npz and checkpoints; codes/eval/{probe_train_9x9.py,probe_train_9x9.sh,probe_resume_9x9.sh,check_pos_len_npz.py}",
+    "status": "empirical",
+    "provenance": "worker, job 299259 leg D2 (exit 0) plus a CPU re-run of assertions 1-3 on the login node; codes/eval/{probe_train_9x9.py,probe_train_9x9.sh,probe_resume_9x9.sh,check_pos_len_npz.py}",
     "open_obligations": [
-     "assertion 4's kill-and-resume protocol -- job 299259",
-     "o21 shuffle.py -exclude-qvalues would drop 492 B/row; unchanged here",
+     "train_optimizer_schedule is supported only for its resume half; the SGD/Lookahead lr and weight-decay schedule itself is read at train.py:844,942,1059-1094 and not measured",
+     "o21 shuffle.py -exclude-qvalues would drop the 492 B/row of zero q targets; unchanged here",
      "o02's WIRING half (a pre-shuffle call of check_pos_len_npz.py inside the loop copy) stays with shuffle_stage"
     ]
    }
@@ -373,9 +411,9 @@
     },
     "claim": "Recorded, not asserted -- section 2 gives S13 no threshold. Over job 298712: two selfplay stages of 6.25 s and 6.95 s produced 80 games and 2534 rows (31.675 rows/game); two train stages of 139.03 s and 136.61 s each ran one epoch of 38 batches at batch 32, so the wall time is dominated by torch.compile (mode=default) and not by the 1216 samples; two shuffle stages of 3.35 s each; one gatekeeper stage of 70.19 s for 156 games at 150 visits with one real net. Peak VRAM 4094 MiB on a 180 GB B200 and GPU utilisation max 80 % / mean 21.5 % over 170 samples -- the single-GPU duty cycle that DESIGN section 1's [PRELIMINARY] starvation argument and claim c09 need. Peak RSS per stage: gatekeeper 4.55 GB, train 3.43 GB, selfplay 1.76 GB, shuffle 39 MB, against 8.48 GB for the whole job (seff) and 64 GB requested. Storage: 353.8 bytes per row on disk against 2145 uncompressed, a compression factor of 6.06 that the 500 GiB budget arithmetic should use; the whole two-cycle BASEDIR is 97 MB.",
     "evidence_type": "empirical_measurement",
-    "evidence": "results/ktg/paper_1902.10565/evidence/smoke/throughput_smoke.json",
+    "evidence": "results/ktg/paper_1902.10565/evidence/smoke/throughput_smoke-298712.json",
     "verification": {
-     "command": "python3 -c \"import json,sys; t=json.load(open('results/ktg/paper_1902.10565/evidence/smoke/throughput_smoke.json')); ok = t['peak_vram_mib']==4094 and t['row_bytes_uncompressed']==2145 and t['selfplay_rows_total']==2534 and t['selfplay_games_total']==80 and t['cpus_per_task']==24 and t['bytes_per_row_on_disk']>0; sys.exit(0 if ok else print('throughput record moved') or 1)\"",
+     "command": "python3 -c \"import json,sys; t=json.load(open('results/ktg/paper_1902.10565/evidence/smoke/throughput_smoke-298712.json')); ok = t['peak_vram_mib']==4094 and t['row_bytes_uncompressed']==2145 and t['selfplay_rows_total']==2534 and t['selfplay_games_total']==80 and t['cpus_per_task']==24 and t['bytes_per_row_on_disk']>0; sys.exit(0 if ok else print('throughput record moved') or 1)\"",
      "timeout_s": 120
     },
     "verifier_result": {
@@ -409,7 +447,9 @@
      "train wall time here is torch.compile-dominated and says nothing about samples/s at scale",
      "the same measurement-scope caveat as r_smoke_threads_realnet applies to the per-stage RSS of the train stage"
     ]
-   }
+   },
+   "landed_by_validator": "9070dfb080837aade6d1a8e6e5f4399deec2d484142375ca81f70fe170588000 (empirical)",
+   "note": "ADMITTED by the validator from attempt 1; see evidence/smoke/validation_core.md. Kept here for provenance only -- do not re-append."
   }
  ],
  "claim_transitions": [
@@ -419,21 +459,24 @@
    "status": "discharged",
    "discharged_by": "arxiv-1902.10565::cfg_9x9_override",
    "statement": "Re-append the cfg_9x9_override knowledge row with verification.command EXECUTED inside a Slurm allocation instead of --skip-exec.",
-   "note": "ALREADY APPENDED BY THE WORKER inside the allocation: knowledge node_seq 4, row_hash a1f26db6fc8efc14f9085f1d5a3851fd4833e1be666c24ca2b1c2b28537ad27c, actor_role worker, admission_flags absent, verification_run.exit_code 0 in 8.761 s, CHECK_CFG_9X9: PASS with NLWP_MAX 22 <= CPU_BUDGET 24. Only the claim-ledger transition is left for the validator."
+   "note": "ALREADY APPENDED BY THE WORKER inside the allocation: knowledge node_seq 4, row_hash a1f26db6fc8efc14f9085f1d5a3851fd4833e1be666c24ca2b1c2b28537ad27c, actor_role worker, admission_flags absent, verification_run.exit_code 0 in 8.761 s, CHECK_CFG_9X9: PASS with NLWP_MAX 22 <= CPU_BUDGET 24. Only the claim-ledger transition is left for the validator.",
+   "status_note": "ALREADY SETTLED by the validator (commit 0fab404, evidence/smoke/validation_core.md). Do not re-append."
   },
   {
    "entry_id": "c07_loop_cycle_completes",
    "kind": "claim",
    "status": "admitted",
    "result_ref": "r_synchronous_loop_smoke",
-   "note": "Two cycles completed with an exported and gated candidate and a resumed checkpoint. The validator may want to narrow the wording 'models/<name>': the candidate was REJECTED, so it landed in rejectedmodels/."
+   "note": "Two cycles completed with an exported and gated candidate and a resumed checkpoint. The validator may want to narrow the wording 'models/<name>': the candidate was REJECTED, so it landed in rejectedmodels/.",
+   "status_note": "ALREADY SETTLED by the validator (commit 0fab404, evidence/smoke/validation_core.md). Do not re-append."
   },
   {
    "entry_id": "o19",
    "kind": "obligation",
    "status": "discharged",
    "discharged_by": "r_synchronous_loop_smoke",
-   "note": "Cycle 1's candidate was gated against the random baseline inside the executed loop."
+   "note": "Cycle 1's candidate was gated against the random baseline inside the executed loop.",
+   "status_note": "ALREADY SETTLED by the validator (commit 0fab404, evidence/smoke/validation_core.md). Do not re-append."
   },
   {
    "entry_id": "c04",
@@ -445,9 +488,9 @@
   {
    "entry_id": "c10",
    "kind": "claim",
-   "status": "admitted",
+   "status": "refuted",
    "result_ref": "r_smoke_probe_search",
-   "note": "First executed measurement: 32.300 rows/game real-net, 31.675 random-net, both inside [12, 35]."
+   "note": "REFUTED AS WRITTEN on the second conjunct: bytes per game on disk is 11206.7 B = 10.944 KiB against the stated <= 10 KiB, measured over the two cycles' 896536 B of tdata for 80 games. The first conjunct HOLDS: rows/game 31.675 random-net, 31.95 and 34.40 real-net, all inside [12, 35]. Amend to the measured pair rather than re-tuning the bound; note the bound is a consequence of rows/game at 353.8 B/row on disk and is consistent only up to 28.9 rows/game."
   },
   {
    "entry_id": "c05",
@@ -461,25 +504,47 @@
    "kind": "claim",
    "status": "refuted",
    "result_ref": "r_smoke_threads_realnet",
-   "note": "REFUTED for the real-net clause at 24 declared CPUs: 25 measured on real-net selfplay and on the gatekeeper. Holds for random-net selfplay (22), train (14) and shuffle (12). The validator may prefer to narrow rather than refute; either way o03 stays open."
+   "note": "REFUTED for the real-net clause at 24 declared CPUs: 25 measured on real-net selfplay and on the gatekeeper. Holds for random-net selfplay (22), train (14) and shuffle (12). The validator may prefer to narrow rather than refute; either way o03 stays open.",
+   "status_note": "ALREADY SETTLED (refuted) by the validator. Do not re-append."
   },
   {
    "entry_id": "o03",
    "kind": "obligation",
    "status": "open",
-   "note": "NOT discharged. --cpus-per-task must rise to >= 25 with numGameThreads unchanged, or numGameThreads must drop to 15; the choice is derive_cycle_knobs_9x9's and section 13 forbids moving either alone."
+   "note": "NOT discharged. --cpus-per-task must rise to >= 25 with numGameThreads unchanged, or numGameThreads must drop to 15; the choice is derive_cycle_knobs_9x9's and section 13 forbids moving either alone.",
+   "status_note": "ALREADY re-appended open with the measurement by the validator. Do not re-append."
   },
   {
    "entry_id": "c15_paper_ideas_in_code",
    "kind": "claim",
    "status": "in_progress",
-   "note": "Search half 3/4 (full_frac out of band) and training half 3/4 (kill-and-resume unmeasured). Job 299259 carries both remainders."
+   "note": "Training half COMPLETE: all four assertions executed and pass (r_smoke_probe_training). Search half 3/4: sz_other, rows/game and the random-baseline gate hold; the full_frac band is refuted by measurement and its mechanism is [OPEN]."
   },
   {
    "entry_id": "o02",
    "kind": "obligation",
    "status": "open",
-   "note": "Measurement half settled (no pos_len-19 row exists; 2145 B/row on real data). The WIRING half -- a pre-shuffle call of check_pos_len_npz.py inside the loop copy -- stays with shuffle_stage."
+   "note": "Measurement half settled on real data across both attempts (2145 B/row, no pos_len-19 row exists). The WIRING half stays with shuffle_stage."
+  },
+  {
+   "entry_id": "c05",
+   "kind": "claim",
+   "status": "admitted",
+   "result_ref": "r_smoke_probe_training",
+   "note": "Now a clean 4/4: assertion 4's kill-and-resume executed in job 299259 (4992 -> 14976, rows unchanged, no re-init)."
+  },
+  {
+   "entry_id": "o13_visit_and_knob_conjunct",
+   "kind": "obligation",
+   "status": "open",
+   "note": "rows_per_game is measured (31.675 random-net, 31.95 and 34.40 real-net); derive_cycle_knobs_9x9 still owes the production knobs, and must now also account for full_frac = 0.342 rather than 0.25 when it sizes rows per cycle."
+  },
+  {
+   "entry_id": "o37",
+   "kind": "obligation",
+   "status": "open",
+   "note": "Opened by the validator for the sampler-append and evidence-overwrite defects. The WORKER's half is repaired in this commit and verified: stage_monitor.sh writes ps_samples-<jobid>.tsv and gpu_samples-<jobid>.csv per job (never a shared appended file); audit_smoke.py picks one attempt's table via pick_ps_file and, with --tag, writes only <name>-<tag>.<ext> so leg E can no longer overwrite admitted evidence; smoke_loop.sbatch passes --tag $SLURM_JOB_ID. The existing mixed ps_samples.tsv was split into ps_samples-298712.tsv (3861 six-column rows) and ps_samples-299259.tsv (1287 seven-column rows); re-scoping attempt 1 reproduces its admitted S9 numbers exactly and attempt 2 independently gives selfplay 25 / train 14. The o37 transition is the validator's to append."
   }
- ]
+ ],
+ "evidence_naming": "Attempt-scoped from now on: every audit output is <name>-<jobid>.<ext>. The unstamped audit.json / rows_per_game.txt / throughput_smoke.json / nlwp_max.txt are the login-node closing-check form and always reflect the NEWEST attempt (currently 299259); the admitted attempt-1 rows point at the frozen *-298712.* copies, which this commit does not touch."
 }

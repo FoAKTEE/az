@@ -266,10 +266,13 @@ leg_d2() {
 leg_e() {
   phase audit
   bash "$KTG_CODES/eval/stage_monitor.sh" stop "$MON" || true
-  cp "$MON/ps_samples.tsv" "$EVID/ps_samples-${JOBID}.tsv" 2>/dev/null || true
-  cp "$MON/gpu_samples.csv" "$EVID/gpu_samples-${JOBID}.csv" 2>/dev/null || true
+  cp "$MON/ps_samples-${JOBID}.tsv" "$EVID/ps_samples-${JOBID}.tsv" 2>/dev/null || true
+  cp "$MON/gpu_samples-${JOBID}.csv" "$EVID/gpu_samples-${JOBID}.csv" 2>/dev/null || true
   echo
-  python3 "$KTG_CODES/eval/audit_smoke.py" "$W" --evidence "$EVID"
+  # --tag: every output is written as <name>-<jobid>.<ext> and nothing unstamped is
+  # touched, so a resubmission can never overwrite evidence an earlier attempt's rows
+  # were admitted against (obligation o37).
+  python3 "$KTG_CODES/eval/audit_smoke.py" "$W" --evidence "$EVID" --tag "$JOBID"
   local rc=$?
   echo
   echo "--- du of $W"

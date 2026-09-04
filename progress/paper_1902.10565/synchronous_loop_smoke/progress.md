@@ -9,7 +9,7 @@ Also carries the § 2 probes of `paper_code_map_search` (leg D1) and `paper_code
 | # | job | state | legs | outcome |
 |---|---|---|---|---|
 | 1 | **298712** | `COMPLETED 0:0`, gb207, `00:05:53` | A=0 B=0 C=0 **D1=1 D2=1 E=1** | all six legs RAN; nothing skipped, no `STOP`, no marker reuse. `A.done B.done C.done` written |
-| 2 | **299259** | queued, est. `2026-09-04T07:21` | resumes at D1 (markers A/B/C present) | fork-free `full_frac` row + the kill-and-resume probe |
+| 2 | **299259** | `FAILED 1:0`, gb207, `00:05:06` | A/B/C **skipped** from markers, D1=1 **D2=0** E=1 | `D2.done` written; the exit code is now correct |
 
 Job 298712 ran the working tree at az commit `9fdeb6b`, i.e. `codes/loop/synchronous_loop_9x9.sh`
 **with** the o34/o35 repairs (`6b83dc0` `set -eu -o pipefail`, `0c6d38d` base-10 counters, the
@@ -25,13 +25,15 @@ Job 298712 ran the working tree at az commit `9fdeb6b`, i.e. `codes/loop/synchro
 | S4 `sz_other` | **0** over 236 sgf lines ✓ |
 | S5 row bytes | **2145** raw and shuffled ✓ |
 | S6 resume | **1216 → 2528** samples, 0 re-inits, 172 finite metric terms ✓ |
-| S7 `full_frac` | **0.33304** — outside `[0.20, 0.30]`, fork-free row is attempt 2 |
-| S8 rows/game | real **32.300**, random **31.675** — both in `[12, 35]` ✓ |
-| S9 `nlwp_max` | random-net 22, **real-net 25 > 24** ✗, train 14, shuffle 4+8 |
-| S10 `o30` | **discharged** — `node_seq 4`, `a1f26db6…`, `verification_run.exit_code 0`, no `admission_flags` |
-| S11 gpool / row bytes | **PASS** 4/4 after the `Model.blocks` repair (CPU re-run) |
-| S12 kill+resume | did not execute — attempt 2 |
-| S13 throughput | recorded: 4094 MiB VRAM, GPU 80 %/21.5 %, 353.8 B/row on disk |
+| S7 `full_frac` | **0.33304 / 0.34414 / 0.34171** over three runs — band **refuted**, forks excluded by direct test |
+| S8 rows/game | real **31.95 / 34.40**, random **31.675** — in `[12, 35]` ✓ |
+| S8 bytes/game | **10.944 KiB** vs c10's `≤ 10 KiB` — **refuted** |
+| S9 `nlwp_max` | real-net **25 > 24** (reproduced by two independently scoped samplers), train 14 |
+| S10 `o30` | **discharged** — `a1f26db6…`, `verification_run.exit_code 0`, no `admission_flags` |
+| S11 gpool / row bytes | **PASS** 4/4 |
+| S12 kill+resume | **PASS** 6/6 — `4992 → 14976`, rows `5068 → 5068`, no re-init |
+| S13 throughput | 6112 MiB VRAM, GPU 80 %/28.2 %, 353.8 B/row |
+
 
 ## Ledger appends by the worker
 
@@ -62,4 +64,7 @@ Everything else is staged for the validator in `evidence/smoke/candidate_rows.js
 - `[OPEN]` S7, S12 — attempt 2.
 - `[OPEN]` two-real-net gatekeeper threads — first measurable at `gatekeeper_stage`, cycle 3+.
 - `[OPEN]` `c13` acceptance is **not** settled here; one gate on a 256-sample net is not evidence.
-- Attempts used: 2 of 3.
+- `[OPEN]` mechanism behind `full_frac = 0.342` — the `root_visits_histogram` the probe now records resolves it at no extra allocation cost.
+- `[OPEN]` `c10` amendment — refuted as written on the byte conjunct; the validator decides the wording.
+- `[OPEN]` `o37` worker half repaired here (per-job sampler files, `--tag` outputs); the transition is the validator's.
+- Attempts used: **2 of 3. No third allocation requested** — every remaining gap is recorded or CPU-settleable.

@@ -55,7 +55,11 @@ echo "  src npz dir = $SRC_NPZ_DIR"
 echo "  probe dir   = $WP"
 echo "  katago_src  = ${KATAGO_SRC:-<unset>}"
 
-rm -rf "$WP"
+# Clear only the directories this probe owns. `rm -rf "$WP"` also removed
+# probe_train.json, which probe_train_9x9.py had just written into the SAME dir a
+# moment earlier -- in job 299259 that silently deleted a PASSING result and left
+# the audit reading S11 as trunk_gpool_count=None.
+rm -rf "$WP/data" "$WP/traindir" "$WP/export" "$WP/logs"
 mkdir -p "$WP/data/train" "$WP/traindir" "$WP/export" "$WP/logs"
 
 # ---- 1. synthetic data from real rows ---------------------------------------

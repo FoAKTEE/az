@@ -1,0 +1,124 @@
+{
+ "block_kinds": [
+  "attnrope",
+  "ffnsg",
+  "attnrope",
+  "ffnsg",
+  "attnrope",
+  "ffnsg",
+  "attnrope",
+  "ffnsg",
+  "attnrope",
+  "ffnsg",
+  "attnrope",
+  "ffnsg",
+  "attnrope",
+  "ffnsg"
+ ],
+ "checks": [
+  {
+   "detail": "trunk_gpool_count=0 == 0",
+   "name": "1_no_trunk_gpool",
+   "pass": true
+  },
+  {
+   "detail": "max|pool2 + 0.5*pool1| = 0.000e+00 < 1e-05",
+   "name": "2a_pool2_is_minus_half_pool1",
+   "pass": true
+  },
+  {
+   "detail": "max|pool3 - 0.15*pool1| = 0.000e+00 < 1e-05",
+   "name": "2b_pool3_is_015_pool1",
+   "pass": true
+  },
+  {
+   "detail": "row_bytes=2145 == 2145",
+   "name": "3_row_bytes_2145",
+   "pass": true
+  },
+  {
+   "detail": "scorebelief_len=282 == 282",
+   "name": "4_scorebelief_len_282",
+   "pass": true
+  }
+ ],
+ "gpool_out_channels": 96,
+ "gpool_tol": 1e-05,
+ "mask_sum_hw": 81,
+ "model_gpool_count": 0,
+ "model_kind": "b7c96h3tfrs",
+ "npz": "/scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/runs/smoke/selfplay/random/tdata/33785D4998C6F9A3.npz",
+ "npz_arrays": {
+  "binaryInputNCHWPacked": {
+   "dtype": "|u1",
+   "shape": [
+    1221,
+    22,
+    11
+   ]
+  },
+  "globalInputNC": {
+   "dtype": "<f4",
+   "shape": [
+    1221,
+    19
+   ]
+  },
+  "globalTargetsNC": {
+   "dtype": "<f4",
+   "shape": [
+    1221,
+    80
+   ]
+  },
+  "policyTargetsNCMove": {
+   "dtype": "<i2",
+   "shape": [
+    1221,
+    2,
+    82
+   ]
+  },
+  "qValueTargetsNCMove": {
+   "dtype": "<i2",
+   "shape": [
+    1221,
+    3,
+    82
+   ]
+  },
+  "scoreDistrN": {
+   "dtype": "|i1",
+   "shape": [
+    1221,
+    282
+   ]
+  },
+  "valueTargetsNCHW": {
+   "dtype": "|i1",
+   "shape": [
+    1221,
+    5,
+    9,
+    9
+   ]
+  }
+ },
+ "npz_rows": 1221,
+ "num_params": 825837,
+ "pass": true,
+ "pos_len": 9,
+ "residual_pool2_plus_half_pool1": 0.0,
+ "residual_pool3_minus_015_pool1": 0.0,
+ "row_bytes": 2145,
+ "scorebelief_len": 282,
+ "scorebelief_len_from_metrics": 282,
+ "sqrt_offset": -5.0,
+ "torch_version": "2.11.0+cu128",
+ "trunk_block_container": "Model.blocks (model_pytorch.py:3153)",
+ "trunk_blocks": 14,
+ "trunk_gpool_count": 0,
+ "trunk_num_channels": 96,
+ "v1_num_channels": 32,
+ "value_head_gpool_count": 1
+}

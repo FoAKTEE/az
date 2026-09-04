@@ -1,0 +1,9 @@
+{
+ "slurm_job_id": "299259",
+ "node": "gb207",
+ "ended_utc": "2026-09-04T09:58:41Z",
+ "leg_exit_codes": " A=skipped B=skipped C=skipped D1=1 D2=0 E=1",
+ "resumed_from_leg": " A B C",
+ "failed_legs": " D1 E",
+ "overall": 1
+}

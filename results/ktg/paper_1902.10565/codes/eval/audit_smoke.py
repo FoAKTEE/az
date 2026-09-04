@@ -59,6 +59,7 @@ from check_pos_len_npz import npz_array_meta, row_bytes, num_rows, EXPECTED_SHAP
 EXPECTED_ROW_BYTES = 2145
 EXPECTED_CYCLES = 2
 ROWS_PER_GAME_LO, ROWS_PER_GAME_HI = 12, 35
+BYTES_PER_GAME_MAX = 10 * 1024   # c10's second conjunct: <= 10 KiB on disk per 9x9 game
 FULL_FRAC_LO, FULL_FRAC_HI = 0.20, 0.30
 DEFAULT_CPUS = 24
 
@@ -218,7 +219,28 @@ def snapshot(basedir, label, trainingname):
 
 
 # ----------------------------------------------------------------- monitor parse
-def parse_monitor(basedir):
+def pick_ps_file(basedir, tag):
+    """The sampler's file for ONE attempt.
+
+    Obligation o37: stage_monitor.sh used to APPEND to a single ps_samples.tsv, so a
+    resubmission mixed attempts in one file and any aggregate over it is a mixture of
+    two different sampling scopes. The sampler now writes ps_samples-<jobid>.tsv; this
+    picks the file for `tag` when given, else the newest per-job file, else the legacy
+    shared file (which parse_monitor then handles row by row).
+    """
+    mon = os.path.join(basedir, "monitor")
+    if tag:
+        cand = os.path.join(mon, "ps_samples-%s.tsv" % tag)
+        if os.path.exists(cand):
+            return cand
+    per_job = sorted(glob.glob(os.path.join(mon, "ps_samples-*.tsv")),
+                     key=lambda f: os.path.getmtime(f))
+    if per_job:
+        return per_job[-1]
+    return os.path.join(mon, "ps_samples.tsv")
+
+
+def parse_monitor(basedir, ps_file=None):
     """Per-stage and per-(phase, stage) thread/RSS peaks, attributed per PID.
 
     Scope repair after job 298712: the pre-repair sampler used a node-wide `ps -e` on a
@@ -231,15 +253,22 @@ def parse_monitor(basedir):
     trainer at all, so ANY pid classified `train` during phase legA is foreign to this
     job and is dropped everywhere. Excluded pids are reported, never silently removed.
     """
-    path = os.path.join(basedir, "monitor", "ps_samples.tsv")
-    rows, ncols = [], 0
+    path = ps_file or os.path.join(basedir, "monitor", "ps_samples.tsv")
+    # A legacy shared file may still APPEND across resubmissions, so one file can hold both the
+    # pre-repair 6-column rows of an earlier attempt and the ancestry-filtered
+    # 7-column rows of a later one. Job 299259 proved that a per-FILE decision is
+    # wrong: max(columns) was 7, which switched the legA exclusion off and let the
+    # earlier attempt's foreign pids back in (train read 36 again). The scope is a
+    # property of each ROW, so decide per row and let the exclusion apply to the
+    # unfiltered rows only.
+    rows, ncols_seen = [], set()
     if os.path.exists(path):
         with open(path, "r", errors="replace") as fh:
             for line in fh:
                 parts = line.rstrip("\n").split("\t")
                 if len(parts) < 6:
                     continue
-                ncols = max(ncols, len(parts))
+                ncols_seen.add(len(parts))
                 try:
                     t = float(parts[0])
                     pid = int(parts[3])
@@ -247,12 +276,17 @@ def parse_monitor(basedir):
                     rss = int(parts[5])
                 except ValueError:
                     continue
-                rows.append((t, parts[1], parts[2], pid, nlwp, rss))
+                rows.append((t, parts[1], parts[2], pid, nlwp, rss, len(parts)))
+    rows = [r[:6] + (r[6],) for r in rows]
+    ncols = max(ncols_seen) if ncols_seen else 0
 
-    foreign = sorted({pid for (_t, ph, st, pid, _n, _r) in rows
-                      if ncols < 7 and st == "train" and ph == "legA"})
+    # A pid is foreign if it was classified `train` during phase legA in an
+    # UNFILTERED (6-column) sample: leg A runs only codes/eval/check_cfg_9x9.sh,
+    # which starts katago selfplay and no trainer at all.
+    foreign = sorted({pid for (_t, ph, st, pid, _n, _r, nc) in rows
+                      if nc < 7 and st == "train" and ph == "legA"})
     per_pid = {}
-    for (t, ph, st, pid, nlwp, rss) in rows:
+    for (t, ph, st, pid, nlwp, rss, _nc) in rows:
         e = per_pid.setdefault(pid, {"pid": pid, "stage": st, "phases": set(),
                                      "nlwp_max": 0, "rss_kb_max": 0, "samples": 0,
                                      "t_min": t, "t_max": t,
@@ -272,7 +306,7 @@ def parse_monitor(basedir):
     per_stage, per_ps, samples = {}, {}, 0
     if True:
         if True:
-            for (t, phase, stage, pid, nlwp, rss) in rows:
+            for (t, phase, stage, pid, nlwp, rss, _nc) in rows:
                 if pid in foreign:
                     continue
                 samples += 1
@@ -312,10 +346,13 @@ def parse_monitor(basedir):
         if mems:
             gpu["mem_used_mib_max"] = max(mems)
     return {"ps_samples": samples,
+            "ps_file": path,
             "ps_sample_columns": ncols,
-            "ps_scope": ("descendants of the job script (ppid-filtered sampler)"
-                         if ncols >= 7 else
-                         "node-wide ps -e (pre-repair sampler); foreign pids excluded by the legA rule"),
+            "ps_scope": ("mixed: %d ancestry-filtered rows and %d unfiltered rows; the unfiltered ones are subject to the legA exclusion"
+                         % (sum(1 for r in rows if r[6] >= 7), sum(1 for r in rows if r[6] < 7))
+                         if len(ncols_seen) > 1 else
+                         ("descendants of the job script (ppid-filtered sampler)" if ncols >= 7 else
+                          "node-wide ps -e (pre-repair sampler); foreign pids excluded by the legA rule")),
             "foreign_pids_excluded": foreign,
             "per_pid": sorted(per_pid.values(), key=lambda e: e["pid"]),
             "per_stage": per_stage,
@@ -323,7 +360,13 @@ def parse_monitor(basedir):
 
 
 # ----------------------------------------------------------------- full audit
-def audit(basedir, evidence, trainingname, strict):
+def audit(basedir, evidence, trainingname, strict, tag=None):
+    """With --tag, every output is written as <name>-<tag>.<ext> and NOTHING unstamped
+    is touched. Obligation o37: attempt 2's leg E overwrote audit.json, nlwp_max.txt,
+    rows_per_game.txt and throughput_smoke.json, the very files the validator had
+    already admitted rows against for attempt 1. The job script always passes --tag
+    $SLURM_JOB_ID, so a run can no longer clobber another run's admitted evidence; the
+    untagged form stays for the login-node closing check."""
     W = basedir
     ev = evidence
     os.makedirs(ev, exist_ok=True)
@@ -468,7 +511,7 @@ def audit(basedir, evidence, trainingname, strict):
         % (reinit_cycle2, reinit_total))
 
     # ---- S9 threads ---------------------------------------------------------
-    mon = parse_monitor(W)
+    mon = parse_monitor(W, pick_ps_file(W, tag))
     r["S9_monitor"] = mon
     stage_max = {k: v["nlwp_max"] for k, v in mon["per_stage"].items()}
     over = {k: v for k, v in stage_max.items() if v > cpus}
@@ -532,13 +575,26 @@ def audit(basedir, evidence, trainingname, strict):
     rpg_real = (real_rows / real_games) if real_games else None
     rpg_rand = (rand_rows / rand_games) if rand_games else None
     in_band = rpg_real is not None and ROWS_PER_GAME_LO <= rpg_real <= ROWS_PER_GAME_HI
+    # c10's SECOND conjunct: on-disk bytes per game <= 10 KiB at pos_len 9.
+    loop_bytes = sum(v["tdata_bytes"] for v in per_net.values())
+    loop_games = sum(v["games"] for v in per_net.values())
+    bytes_per_game = (loop_bytes / loop_games) if loop_games else None
+    bytes_ok = bytes_per_game is not None and bytes_per_game <= BYTES_PER_GAME_MAX
     r["S8"] = {"per_net": per_net,
                "probe_search_games": probe_games, "probe_search_rows": probe_rows,
                "rows_per_game_real": rpg_real, "real_games": real_games, "real_rows": real_rows,
                "rows_per_game_random": rpg_rand, "random_games": rand_games,
                "random_rows": rand_rows,
                "band": [ROWS_PER_GAME_LO, ROWS_PER_GAME_HI],
-               "real_in_band": in_band}
+               "real_in_band": in_band,
+               "tdata_bytes_on_disk": loop_bytes,
+               "bytes_per_game_on_disk": bytes_per_game,
+               "bytes_per_game_max": BYTES_PER_GAME_MAX,
+               "bytes_per_game_within_c10": bytes_ok}
+    add("S8_bytes_per_game_within_10KiB", False, bytes_ok,
+        "bytes_per_game_on_disk=%s B (%.3f KiB) over %d games, c10 bound %d B (10 KiB)"
+        % (round(bytes_per_game, 1) if bytes_per_game else None,
+           (bytes_per_game / 1024.0) if bytes_per_game else 0.0, loop_games, BYTES_PER_GAME_MAX))
     add("S8_rows_per_game_real_in_band", False, in_band,
         "rows_per_game_real=%s over %d games band=[%d, %d] (random-net %s over %d games)"
         % (rpg_real, real_games, ROWS_PER_GAME_LO, ROWS_PER_GAME_HI, rpg_rand, rand_games))
@@ -598,11 +654,16 @@ def audit(basedir, evidence, trainingname, strict):
     r["pass"] = not hard_fail
 
     # ---- evidence files -----------------------------------------------------
-    with open(os.path.join(ev, "audit.json"), "w") as fh:
+    def out(stem, ext):
+        return os.path.join(ev, "%s-%s.%s" % (stem, tag, ext) if tag else "%s.%s" % (stem, ext))
+
+    r["evidence_files"] = {k: out(k, "json" if k not in ("rows_per_game", "nlwp_max") else "txt")
+                           for k in ("audit", "throughput_smoke", "rows_per_game", "nlwp_max")}
+    with open(out("audit", "json"), "w") as fh:
         json.dump(r, fh, indent=1, sort_keys=True, default=str)
-    with open(os.path.join(ev, "throughput_smoke.json"), "w") as fh:
+    with open(out("throughput_smoke", "json"), "w") as fh:
         json.dump(thr, fh, indent=1, sort_keys=True, default=str)
-    with open(os.path.join(ev, "rows_per_game.txt"), "w") as fh:
+    with open(out("rows_per_game", "txt"), "w") as fh:
         fh.write("rows_per_game -- node arxiv-1902.10565::synchronous_loop_smoke, S8; claim c10\n")
         fh.write("basedir = %s\n" % W)
         fh.write("games = one line of a .sgfs file (cpp/program/selfplaymanager.cpp:377-378)\n")
@@ -613,6 +674,13 @@ def audit(basedir, evidence, trainingname, strict):
                  % (rpg_rand, rand_rows, rand_games))
         fh.write("band (c10)           = [%d, %d]   real_in_band = %s\n"
                  % (ROWS_PER_GAME_LO, ROWS_PER_GAME_HI, in_band))
+        fh.write("\nc10 second conjunct -- on-disk bytes per game at pos_len 9:\n")
+        fh.write("  tdata_bytes_on_disk  = %d over %d loop games\n" % (loop_bytes, loop_games))
+        fh.write("  BYTES_PER_GAME       = %s B = %.3f KiB\n"
+                 % (round(bytes_per_game, 1) if bytes_per_game else None,
+                    (bytes_per_game / 1024.0) if bytes_per_game else 0.0))
+        fh.write("  bound                = %d B (10 KiB)   within_bound = %s\n"
+                 % (BYTES_PER_GAME_MAX, bytes_ok))
         fh.write("\nper selfplay net directory (name = the net that played, 'random' = bootstrap):\n")
         for name, v in sorted(per_net.items()):
             fh.write("  %-28s real_net=%-5s games=%-6d rows=%-8d rows/game=%s\n"
@@ -620,7 +688,7 @@ def audit(basedir, evidence, trainingname, strict):
         fh.write("  %-28s real_net=%-5s games=%-6d rows=%-8d rows/game=%s\n"
                  % ("probe_search_9x9 (leg D1)", True, probe_games, probe_rows,
                     (probe_rows / probe_games) if probe_games else None))
-    with open(os.path.join(ev, "nlwp_max.txt"), "w") as fh:
+    with open(out("nlwp_max", "txt"), "w") as fh:
         fh.write("nlwp_max -- node arxiv-1902.10565::synchronous_loop_smoke, S9; obligation o03, claim c06\n")
         fh.write("cpus_per_task = %d   ps samples = %d\n\n" % (cpus, mon["ps_samples"]))
         fh.write("per stage:\n")
@@ -661,6 +729,9 @@ def audit(basedir, evidence, trainingname, strict):
     print("  S7  FULL_FRAC          = %s   band [%.2f, %.2f]" % (ff, FULL_FRAC_LO, FULL_FRAC_HI))
     print("  S8  ROWS_PER_GAME real = %s over %d games;  random = %s over %d games;  band [%d, %d]"
           % (rpg_real, real_games, rpg_rand, rand_games, ROWS_PER_GAME_LO, ROWS_PER_GAME_HI))
+    print("  S8  BYTES_PER_GAME     = %s B = %.3f KiB over %d loop games;  c10 bound 10 KiB"
+          % (round(bytes_per_game, 1) if bytes_per_game else None,
+             (bytes_per_game / 1024.0) if bytes_per_game else 0.0, loop_games))
     print("  S9  NLWP_MAX per stage = %s   (cpus_per_task %d)" % (stage_max, cpus))
     print("  S11 probe_train pass   = %s   trunk_gpool_count = %s"
           % (probe_train.get("pass"), probe_train.get("trunk_gpool_count")))
@@ -678,8 +749,8 @@ def audit(basedir, evidence, trainingname, strict):
     print()
     for p in raw["problems"][:10] + shuf["problems"][:10]:
         print("  npz problem: %s" % p)
-    print("  wrote %s, rows_per_game.txt, throughput_smoke.json, nlwp_max.txt" %
-          os.path.join(ev, "audit.json"))
+    print("  wrote %s" % ", ".join(sorted(r["evidence_files"].values())))
+    print("  ps samples from %s (%d rows)" % (mon["ps_file"], mon["ps_samples"]))
     print("AUDIT_SMOKE: %s" % ("PASS" if r["pass"] else "FAIL"))
     if soft_fail:
         print("RECORDED FINDINGS (not fatal): %s" % ", ".join(c["name"] for c in soft_fail))
@@ -687,7 +758,7 @@ def audit(basedir, evidence, trainingname, strict):
 
 
 def main(argv):
-    args, evidence, snap_label, strict = [], None, None, False
+    args, evidence, snap_label, strict, tag = [], None, None, False, None
     trainingname = os.environ.get("KTG_SMOKE_TRAININGNAME", "t9")
     it = iter(argv[1:])
     for a in it:
@@ -697,6 +768,8 @@ def main(argv):
             snap_label = next(it, None)
         elif a == "--trainingname":
             trainingname = next(it, None)
+        elif a == "--tag":
+            tag = next(it, None)
         elif a == "--strict":
             strict = True
         else:
@@ -710,7 +783,7 @@ def main(argv):
     if evidence is None:
         print("--evidence <dir> is required for the audit mode")
         return 2
-    return audit(basedir, evidence, trainingname, strict)
+    return audit(basedir, evidence, trainingname, strict, tag)
 
 
 if __name__ == "__main__":

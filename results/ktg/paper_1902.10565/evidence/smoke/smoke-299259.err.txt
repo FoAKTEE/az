@@ -1,0 +1,2 @@
+leg D1 failed but is not a prerequisite; continuing so the allocation still yields the other legs (the job still exits non-zero).
+leg E failed but is not a prerequisite; continuing so the allocation still yields the other legs (the job still exits non-zero).

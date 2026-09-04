@@ -100,9 +100,21 @@ def analyse(selfplay_dir, log_target):
     rows_per_game = (rows / n_all) if n_all else None
     sz_other = n_all - n9
 
+    # Job 298712 and 299259 measured full_frac ~ 0.34 against the 0.25 that
+    # 1 - cheapSearchProb predicts, with and without forks. The counts alone cannot
+    # say why, and the logSearchInfo log is deleted after extraction, so record the
+    # full distribution of root-visit values here: a full search should log exactly
+    # maxVisits and a cheap one exactly cheapSearchVisits, and any third value means
+    # something else is altering the visit budget.
+    hist = {}
+    for v in visits:
+        hist[v] = hist.get(v, 0) + 1
+
     return {
         "selfplay_dir": selfplay_dir,
         "log_files": logs,
+        "root_visits_histogram": dict(sorted(hist.items())),
+        "root_visits_distinct_values": len(hist),
         "searched_turns": searched,
         "full_search_turns": full,
         "cheap_search_turns": cheap,
@@ -174,6 +186,9 @@ def main(argv):
     print("  root_visits_range = [%s, %s]  (cfg cheap=%d max=%d)"
           % (r["min_root_visits_seen"], r["max_root_visits_seen"],
              CHEAP_SEARCH_VISITS, MAX_VISITS))
+    top = sorted(r["root_visits_histogram"].items(), key=lambda kv: -kv[1])[:8]
+    print("  root_visits_hist  = %s   (%d distinct values)"
+          % (", ".join("%s:%d" % kv for kv in top), r["root_visits_distinct_values"]))
     print("  FULL_FRAC         = %s   expected %.2f, band [%.2f, %.2f]"
           % (("%.4f" % r["full_frac"]) if r["full_frac"] is not None else "NA",
              r["full_frac_expected"], FULL_FRAC_LO, FULL_FRAC_HI))
