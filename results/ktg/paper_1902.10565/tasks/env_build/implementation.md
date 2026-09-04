@@ -4,27 +4,28 @@
 
 **Task ID:** `env_build`
 **Paper:** `arxiv-1902.10565` — "Accelerating Self-Play Learning in Go" (code-first: mirror `ref-code/lightvector-KataGo/` @ `v1.18.2` / `fd0723fdbc0e9d82cf269c9630af8c27c57c07c4`, `cpp/main.cpp:245`)
-**Logic-graph nodes covered:** `arxiv-1902.10565::env_build`
+**Logic-graph nodes covered:** `arxiv-1902.10565::env_build`, `arxiv-1902.10565::engine_ffn_swiglu_constraint`
 **Language:** C++ build (CMake/CUDA) + Python venv — bash driver
 **Method class:** simulation (executable toolchain smoke)
 
 ## 1. Claim
 
-> A KataGo v1.18.2 CUDA-backend binary with sm_100 SASS, plus a torch 2.11.0+cu128 venv, builds and passes `runtests` + a 9x9 transformer benchmark on one B200 node (claim `c01_env_build_runs`, `c02_sm100_sass_or_jit`).
+> A KataGo v1.18.2 CUDA-backend binary with sm_100 SASS, plus a torch 2.11.0+cu128 / cuDNN 9.19.0 venv, builds and passes `runtests` + a 9x9 `b7c96h3tfrs` benchmark on one B200 node, and the same binary refuses every non-SwiGLU transformer FFN (claims `c01_env_build_runs`, `c02_sm100_sass_or_jit`; nodes `env_build`, `engine_ffn_swiglu_constraint`).
 
 ## 2. Success Criterion
 
-- **Needed evidence type:** `numerical_simulation` (executed toolchain smoke)
-- **Done when:** `evidence/env/smoke.txt` ends in `SMOKE RESULT: PASS` and the built binary carries at least one sm_100 ELF image.
-- **Verification command:**
-  `bash -c 'grep -q "SMOKE RESULT: PASS" /scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/evidence/env/smoke.txt && cuobjdump --list-elf /scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/build/KataGo/cpp/build/katago | grep -c sm_100'`
-  (`cuobjdump` needs `module load cuda/12.8.1`, `docs/cluster-manual.md` §8.)
-- **Measured tolerance / metric:** `PASS` present **and** `grep -c sm_100` >= 1. If the count is 0, the fail row is recorded and the sub-step below runs, then the command is re-run.
-- **Open obligations before start:** `o05_cudnn_version_sdpa`, `o06_sm100_arch`, `o12_pydeps_pin`.
+- **Needed evidence type:** `numerical_simulation` (executed toolchain smoke), recorded as `empirical`
+- **Done when:** the binary exists, `evidence/env/smoke.txt` carries `SMOKE RESULT: PASS`, the sm_100 ELF count is 2, and the pip cuDNN header is major 9.
+- **Verification command (node `env_build`):**
+  `test -x /scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/build/KataGo/cpp/build/katago && grep -q 'SMOKE RESULT: PASS' results/ktg/paper_1902.10565/evidence/env/smoke.txt && grep -q 'grep -c sm_100 = 2' results/ktg/paper_1902.10565/evidence/env/smoke.txt && grep -q 'CUDNN_MAJOR 9' results/ktg/paper_1902.10565/evidence/env/toolchain-298018.txt`
+- **Verification command (node `engine_ffn_swiglu_constraint`):**
+  `test $(grep -l 'Non-SwiGLU transformer FFN is not yet supported' ref-code/lightvector-KataGo/cpp/neuralnet/cudaandrocmbackend.inc ref-code/lightvector-KataGo/cpp/neuralnet/eigenbackend.cpp ref-code/lightvector-KataGo/cpp/neuralnet/openclbackend.cpp ref-code/lightvector-KataGo/cpp/neuralnet/metalbackend.cpp ref-code/lightvector-KataGo/cpp/neuralnet/onnxmodelbuilder.cpp 2>/dev/null | wc -l) -ge 3 && grep -q 'Non-SwiGLU' results/ktg/paper_1902.10565/evidence/env/smoke-297952-fail.txt && sed -n 1886p ref-code/lightvector-KataGo/python/katago/train/modelconfigs.py | grep -q 'no swiglu' && sed -n 461p ref-code/lightvector-KataGo/python/export_model_pytorch.py | grep -q 'use_swiglu'`
+- **Measured tolerance / metric:** every conjunct exact — binary executable, `SMOKE RESULT: PASS` present, `sm_100` ELF count `== 2`, `CUDNN_MAJOR 9`; and for the constraint node, backends carrying the refusal `>= 3` (five checked, three required) with the diagnostic present in the recorded abort. No tolerance band.
+- **Open obligations before start:** none blocking — `o06_sm100_arch` is discharged. Remaining: `o05_cudnn_version_sdpa` (compile-side half), `o12_pydeps_pin`, `o20_tcmalloc_rss`.
 - **Reduction-to-baseline test:** NA
 
-**Executed 2026-09-03T22:0x (this task file):** output `2`, exit `0` -> metric within tolerance.
-Evidence: `/scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/evidence/env/smoke-298018.txt`.
+**Executed:** both commands exit `0`; `cuobjdump --list-elf | grep -c sm_100 = 2`, `CUDNN_MAJOR 9` / `CUDNN_MINOR 19` -> `91900`.
+Evidence: `results/ktg/paper_1902.10565/evidence/env/smoke.txt`, `.../toolchain-298018.txt`, `.../smoke-297952-fail.txt`.
 
 ### Sub-step (fail branch, already exercised)
 
@@ -37,18 +38,20 @@ which also deletes the `build` stamp to force a rebuild. The mirror is never tou
 
 ## 3. Motivation
 
-Every other node needs a running `katago` and a torch that can instantiate the model. Node `env_build`
-is the sole root of `tiny_model_export_smoke -> synchronous_loop_smoke -> ...` in `decomposition/logic.md`.
-Blackwell (compute cap 10.0) needs CUDA >= 12.8 SASS or every kernel launch JITs (`docs/cluster-manual.md` §8).
+Every other node needs a running `katago` and a torch that can instantiate the model. `env_build` is a
+root of `cfg_9x9_override`, `tiny_model_export_smoke` and `loop_resume_under_walltime`, and through them of
+the whole loop. Blackwell (compute cap 10.0) needs CUDA >= 12.8 SASS or every kernel launch JITs
+(`docs/cluster-manual.md` §8). The same build is what proves `engine_ffn_swiglu_constraint`: the refusal is
+a `throw` at net construction, so it is a property of the binary, not of a run.
 
 ## 4. Inputs From Decomposition
 
 | Artifact | Path | Required content |
 |---|---|---|
 | convention | `results/ktg/paper_1902.10565/decomposition/convention.md` | §4 trainer flags, §6 exporter flags |
-| derivation | `results/ktg/paper_1902.10565/decomposition/derivation.md` | §3 superseded-trunk row (transformer family) |
-| logic | `results/ktg/paper_1902.10565/decomposition/logic.md` | node `env_build` and its out-edges |
-| implementation_plan | not produced at stage 1 | — `[OPEN] no implementation_plan_{lang}.md exists` |
+| derivation | `results/ktg/paper_1902.10565/decomposition/derivation.md` | §3 transformer-family row (FFN variant, exportability) |
+| logic | `results/ktg/paper_1902.10565/decomposition/logic.md` | `env_build`: root, no predecessors; out-edges to `cfg_9x9_override`, `tiny_model_export_smoke`, `loop_resume_under_walltime`. `engine_ffn_swiglu_constraint`: root, no predecessors; out-edge to `select_transformer_ladder` |
+| implementation_plan | `results/ktg/paper_1902.10565/decomposition/implementation_plan_bash.md` | build stages and module set |
 | ref | `results/ktg/paper_1902.10565/decomposition/ref.md` | v1.18.2 provenance |
 | assumptions | `results/ktg/paper_1902.10565/decomposition/assumptions.md` | `a04_b200_fallback`, `a08_cuda_backend` |
 | claims | `results/ktg/paper_1902.10565/decomposition/claims.md` | `c01`, `c02` |
@@ -120,10 +123,10 @@ results/ktg/paper_1902.10565/codes/env/
 | modules | `gcc/12.3.0 cmake/3.30.2 cuda/12.8.1 python/3.11.9` | `env.sh:9`; CUDA >= 12.8 for Blackwell (`docs/cluster-manual.md` §8) |
 | `USE_BACKEND` | `CUDA` | `cpp/CMakeLists.txt:583-585`; `a08_cuda_backend` |
 | `CUDNN_LIBRARY` | `$CUDNN_DIR/lib/libcudnn.so` | `cpp/CMakeLists.txt:1128` searches `lib64`, the wheel ships `lib/` -> explicit `-D` + `libcudnn.so -> libcudnn.so.9` symlink (`env_build.sbatch:76-79`) |
-| cuDNN | `nvidia-cudnn-cu12>=9.8,<10` -> `91900` | SDPA gate `cpp/neuralnet/cudabackend.cpp:13` needs `CUDNN_VERSION >= 8903`; measured `cudnn 91900` (`smoke.txt:131`) |
+| cuDNN | `nvidia-cudnn-cu12>=9.8,<10` -> **9.19.0** (`91900`) | SDPA gate `cpp/neuralnet/cudabackend.cpp:13` needs `CUDNN_VERSION >= 8903`; measured `cudnn 91900` (`smoke.txt:147`), header `CUDNN_MAJOR 9` (`toolchain-298018.txt:20`) |
 | torch | `2.11.0+cu128` | floors: `torch.amp.GradScaler` `python/train.py:37`, flex_attention `trainloop_helpers.py:154-157` (audit §H) |
 | `CMAKE_CUDA_ARCHITECTURES` | `... 90 100 120` | patched from `cpp/CMakeLists.txt:761` by `cmake-sm100.diff` |
-| smoke `MODEL_KIND` | `b7c96h3tfrs` (`modelconfigs.py:1008-1029`) | `env_build.sbatch:26`; **not** `b5c48h3tfr` (unservable, see §12) |
+| smoke `MODEL_KIND` | `b7c96h3tfrs` (`modelconfigs.py:1008-1029`, registered `:1887`) | `env_build.sbatch:26`; must match `*tfrs|*tflrs` (node `engine_ffn_swiglu_constraint`) |
 | smoke `POS_LEN` | `9` | `env_build.sbatch:27`; `a05_9x9_only` |
 
 ## 11. Risk Mitigation
@@ -133,19 +136,23 @@ results/ktg/paper_1902.10565/codes/env/
 | No sm_100 SASS -> PTX JIT | `cuobjdump --list-elf \| grep -c sm_100` returns `0`; first kernel launch slow or `no kernel image` | apply `cmake-sm100.diff` to the scratch clone, delete `.stamps/build`, rebuild (stage 2b) |
 | cuDNN not found by CMake | `FATAL` at `cpp/CMakeLists.txt:1125-1127` or `CUDNN_LIBRARY-NOTFOUND` | pass all three `-DCUDNN_*`; create the `libcudnn.so` symlink first |
 | libzip missing -> no training data | CMake warning + `NO_LIBZIP` (`cpp/CMakeLists.txt:1891-1892`) "selfplay ... not be possible" | `env_build.sbatch:60` dies if `/usr/include/zip.h` is absent |
-| Non-SwiGLU FFN model aborts the engine | `ERROR: NN server thread failed: Non-SwiGLU transformer FFN is not yet supported in CUDA backend`, exit 134 | see §12; smoke model kept in the `ffnsg` family |
+| Non-SwiGLU FFN model aborts the engine | `ERROR: NN server thread failed: Non-SwiGLU transformer FFN is not yet supported in CUDA backend`, exit 134 | node `engine_ffn_swiglu_constraint`; the smoke model stays in the `ffnsg` family |
+| Selfplay RSS grows across cycles (no TCMalloc) | `sacct` `MaxRSS` climbing cycle over cycle on the selfplay stage, eventually OOM | `o20_tcmalloc_rss`: record `MaxRSS` per cycle; rebuild with `-DUSE_TCMALLOC=1` (`cpp/CMakeLists.txt:587,918-921,1903-1905`) only if it grows (`Compiling.md:39`) |
 | Log written to node-local `/tmp` and lost | job `COMPLETED`, `--output` file missing | `--output` points at `/scratch/.../logs/` (`env_build.sbatch:11`), per `docs/cluster-manual.md` §4 trap 2 |
 | Scratch full (94 % group usage) | `No space left on device` mid-build | `python3 /apps/helpers/quotas.py` before submit; see task `data_budget` |
 
 ## 12. Current State
 
-- `[SOLID]` Toolchain built and smoke-passed on `gb205`, job `298018`: `SMOKE RESULT: PASS`; `cuobjdump --list-elf | grep -c sm_100 = 2`; arch set observed `sm_100 sm_120 sm_50 ... sm_90`. Evidence `/scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/evidence/env/smoke-298018.txt` (lines 34-37, 143) and `.../smoke.txt`. Verification command re-run here: output `2`, exit `0`.
+- `[SOLID]` Node `env_build` has landed. Toolchain built and smoke-passed on `gb205`, job `298018`: `SMOKE RESULT: PASS` (`evidence/env/smoke.txt:159`); `cuobjdump --list-elf | grep -c sm_100 = 2` (`smoke.txt:40`, `toolchain-298018.txt:69`); arch set observed `sm_100 sm_120 sm_50 ... sm_90`. Result row `env-toolchain-b200`, status `empirical`, evidence `results/ktg/paper_1902.10565/evidence/env/smoke.txt` (sha256 `6573236406e6f452518db5feaaec26ac9770d96b4d195b25ccbfa52ea51badfe`). Closes claims `c01`, `c02`.
 - `[SOLID]` `katago version` = `KataGo v1.18.2`, git `fd0723fdbc0e9d82cf269c9630af8c27c57c07c4-dirty` (the `-dirty` is exactly `cmake-sm100.diff`), `Using CUDA backend`; `katago runtests` `[OK]`; GPU `NVIDIA B200, 10.0`.
-- `[SOLID]` `o05_cudnn_version_sdpa` discharged: `cudnn 91900` >= 8903 (`smoke.txt:131`), so `KATAGO_CUDA_HAS_SDPA` is compiled in (`cpp/neuralnet/cudabackend.cpp:13`).
-- `[SOLID]` `o06_sm100_arch` discharged by the patch + rebuild (stamp `.stamps/build` @ 22:03).
-- `[SOLID]` resolved history: `b5c48h3tfr` (ffng) is refused by every v1.18.2 backend (`cpp/neuralnet/cudaandrocmbackend.inc:3307-3308`, `eigenbackend.cpp:1634`, `openclbackend.cpp:2729`; job 297952 FAILED 1:0, `smoke-297952.txt`). The mission model is `b7c96h3tfrs` (job 298018 COMPLETED 0:0, `smoke-298018.txt` PASS); ledger: node `transformer_trunk_b7c96h3tfrs`, `a06`/`o07`/`c03`/`c16` amended, `o18` discharged (commit ee47dd9). Nothing in this task is blocked by it.
-- `[OPEN]` `o12_pydeps_pin`: `codes/env/requirements.txt` with pinned `torch==2.11.0+cu128`, `numpy`, `scipy`, `psutil`, `packaging`, `sgfmill`, `nvidia-cudnn-cu12>=9.8,<10` plus a captured `pip freeze` is not written yet. Closes when both files exist under `codes/env/` and `pip freeze` is stored under `evidence/env/`.
-- `[SOLID]` `decomposition/implementation_plan_{python,cpp,bash}.md` and `decomposition/result_seed.md` exist (commit 87bb402); the §4 rows resolve.
+- `[SOLID]` Venv contents: python 3.11.9, torch 2.11.0+cu128, `nvidia-cudnn-cu12` 9.19.0, numpy 2.4.6, scipy, psutil, packaging, sgfmill. Engine links the pip cuDNN via explicit `-DCUDNN_LIBRARY`.
+- `[SOLID]` `o06_sm100_arch` discharged by `cmake-sm100.diff` + rebuild (stamp `.stamps/build`); the arch list at `cpp/CMakeLists.txt:761` is a plain `set()` that shadows `-DCMAKE_CUDA_ARCHITECTURES`, so the patch is the only route.
+- `[SOLID]` Node `engine_ffn_swiglu_constraint` is `solid`: every C++ backend throws `Non-SwiGLU transformer FFN is not yet supported in <backend> backend` when `useSwiGLU` is false — `cpp/neuralnet/cudaandrocmbackend.inc:3307-3308`, `eigenbackend.cpp:1634`, `openclbackend.cpp:2729`, plus `metalbackend.cpp` and `onnxmodelbuilder.cpp`. The exporter writes `use_swiglu=0` for `ffng` configs (`export_model_pytorch.py:461`), so the abort lands at net construction before any kernel launch. Recorded abort: job `297952`, exit 134, evidence `evidence/env/smoke-297952-fail.txt:26-27`. Consequence: `MODELKIND` must be an `ffnsg` config (`*tfrs` / `*tflrs`).
+- `[SOLID]` `transformer_trunk_b5c48h3tfr` is superseded (row amended); it is no longer a live node. Its architecture content moved to `transformer_trunk_b7c96h3tfrs`, its refusal to `engine_ffn_swiglu_constraint`, and the b7 -> b8 -> b14 progression to `select_transformer_ladder`. `b5c48h3tfr` survives in the mission only as the negative fixture of `tiny_model_export_smoke`.
+- `[OPEN]` `o05_cudnn_version_sdpa` — the runtime version is recorded (`91900` >= the `8903` gate at `cpp/neuralnet/cudabackend.cpp:13`), but the compile-side check that `KATAGO_CUDA_HAS_SDPA` is actually defined in this build has not been run. Closes with a build-log or preprocessor check naming the macro.
+- `[OPEN]` `o12_pydeps_pin` — `codes/env/requirements.txt` with pinned `torch==2.11.0+cu128`, `numpy`, `scipy`, `psutil`, `packaging`, `sgfmill`, `nvidia-cudnn-cu12>=9.8,<10` plus a captured `pip freeze` is not written. Closes when both files exist under `codes/env/` and the freeze is stored under `evidence/env/`.
+- `[OPEN]` `o20_tcmalloc_rss` — the build carries no `USE_TCMALLOC` (`cpp/CMakeLists.txt:587` defaults to 0), and `Compiling.md:39` warns that glibc malloc fragments under many self-play threads and parallel games. Closes when selfplay `MaxRSS` is logged per cycle across at least three cycles and is flat; a growing series instead triggers a rebuild with `-DUSE_TCMALLOC=1`.
+- `[SOLID]` `decomposition/implementation_plan_{python,cpp,bash}.md` and `decomposition/result_seed.md` exist; the §4 rows resolve.
 
 ## 13. Forbidden Actions
 
@@ -156,11 +163,13 @@ results/ktg/paper_1902.10565/codes/env/
 - Never claim sm_100 coverage from the `cmake` log alone; only `cuobjdump --list-elf` output counts.
 - Never delete `$R/.stamps` wholesale to "force a clean run" without recording the rebuild in the error ledger.
 - Never install a system-wide cuDNN or a different torch channel; cuDNN comes from the pip wheel inside `$R/venv`.
+- Never set `MODEL_KIND` to a non-SwiGLU (`ffng`) config in the smoke — the only sanctioned `ffng` use in the mission is the negative fixture of `tiny_model_export_smoke`.
+- Never rebuild with `-DUSE_TCMALLOC=1` before `o20_tcmalloc_rss` has a recorded RSS series showing growth; an unmeasured rebuild invalidates the `env-toolchain-b200` evidence hash.
 
 ## 14. Promise Tag
 
-- **Promise format:** `<promise>env_build SM100_ELF_COUNT WITHIN >=1 AND SMOKE=PASS</promise>`
-- **Required in commit body:** the verification command's verbatim output (`2`), the measured metric, evidence path `evidence/env/smoke-298018.txt`, claim `c01`/`c02`, evidence type `numerical_simulation`.
+- **Promise format:** `<promise>env_build SM100_ELF_COUNT WITHIN ==2 AND SMOKE=PASS AND CUDNN_MAJOR ==9</promise>`
+- **Required in commit body:** the verification command's verbatim output, the measured metric, evidence paths `evidence/env/smoke.txt` and `evidence/env/toolchain-298018.txt`, claims `c01`/`c02`, evidence type `numerical_simulation`.
 
 ## 15. Progress Update Principles
 
@@ -168,7 +177,7 @@ Inherits `../../_common/contracts/progress_principles.md`. Additions:
 - Per-substage commit: venv, clone+patch, build, smoke each get their own commit when the user requests commits.
 - Joint progress file: `progress/paper_1902.10565/env_build/progress.md`.
 - Loop notes: `results/ktg/paper_1902.10565/loop_note/note_session_{id}_loop_{n}.md` before compaction.
-- State-note sync: the SwiGLU finding is already in `${RESEARCH_STATE}` (trunk row) and the ledger (`a06_tf_family` amended, commit ee47dd9).
+- State-note sync: the SwiGLU constraint lives in `${RESEARCH_STATE}` as node `engine_ffn_swiglu_constraint`; `o05`, `o12` and `o20` transitions are recorded there.
 
 ## 16. Termination Checklist
 
@@ -176,6 +185,6 @@ Inherits `../../_common/contracts/progress_principles.md`. Additions:
 - [ ] Result-log delta records claim, evidence type, evidence, dependencies, assumptions, status, open obligations.
 - [x] Metric is within the threshold in §2.
 - [ ] Reduction-to-baseline test passed when relevant (NA).
-- [ ] No `[BLOCKING]`, `[OPEN]`, or `[UNCHECKED]` markers remain — the SwiGLU blocker and `o12` are open, so `c01` admits as `checked` only for `b7c96h3tfrs`, not for `b5c48h3tfr`.
+- [ ] No `[BLOCKING]`, `[OPEN]`, or `[UNCHECKED]` markers remain — `o05` (compile-side half), `o12` and `o20` are open, so the row stands as `empirical` for `b7c96h3tfrs` on this build only.
 - [x] No silent scope expansion.
 - [ ] Contributing sub-agents had `alignment.md` plus `_common/contracts/research_admission_contract.md` injected.

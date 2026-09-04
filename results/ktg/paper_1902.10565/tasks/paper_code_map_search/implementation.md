@@ -6,16 +6,17 @@
 **Paper:** `arxiv-1902.10565` — "Accelerating Self-Play Learning in Go" (code-first: `ref-code/lightvector-KataGo/` @ `v1.18.2`)
 **Logic-graph nodes covered:** `arxiv-1902.10565::selfplay_search_params`, `::playout_cap_randomization`, `::root_explore_and_target_pruning`, `::score_utility_search`, `::game_randomization_9x9`, `::gating_rule`
 **Language:** C++ engine run (`katago selfplay` / `katago gatekeeper`) + Python log/npz analysis
-**Method class:** simulation (executed probe promoting six read-only nodes from `preliminary` to `solid`)
+**Method class:** simulation (executed probe promoting six read-only code-map nodes from `preliminary` to `solid`)
+**Node status:** this file is a task, not a DAG node. It carries no node of its own; it promotes the six listed above.
 
 ## 1. Claim
 
-> Running the mission 9x9 config for ~20 games reproduces, as measured behaviour, the search-side paper ideas the v1.18.2 code still implements: a full search on 0.25 of searched turns, ~22 training rows per game, and no board other than 9x9 (claim `c15_paper_ideas_in_code`, and the search half of `c04`/`c10`).
+> Running the mission 9x9 config for ~20 games plus one gatekeeper invocation reproduces, as measured behaviour, the search-side paper ideas the v1.18.2 code still implements: a full search on 0.25 of searched turns, ~22 training rows per game, no board other than 9x9, and a cycle-1 gate against a random baseline (claim `c15_paper_ideas_in_code`, and the search half of `c04`/`c10`).
 
 ## 2. Success Criterion
 
 - **Needed evidence type:** `numerical_simulation` (the nodes were read; this run is what promotes them)
-- **Done when:** the probe's three assertions hold on one recorded run.
+- **Done when:** the probe's four assertions hold on one recorded run.
 - **Verification command:**
   `bash /home/schmidt/ssci-haiyangw/az/results/ktg/paper_1902.10565/codes/eval/probe_search_9x9.sh 20`
   which runs
@@ -24,19 +25,23 @@
   - `full_frac  = (# "Root visits:" lines with N > 100) / (# "Root visits:" lines)`
   - `rows_per_game = (sum of npz["binaryInputNCHWPacked"].shape[0] over $W/selfplay/*/tdata/*.npz) / (# lines in $W/selfplay/*/sgfs/*.sgfs)`
   - `sz_other = (# .sgfs lines without "SZ[9]")`
+  and then `bash codes/eval/probe_gate_9x9.sh`, which runs the gatekeeper once against an **empty** `$W/models` and asserts:
+  - `gate_random = (# gatekeeper log lines matching "Loaded accepted neural net random")`
 - **Measured tolerance / metric:**
   (a) `full_frac` in `[0.20, 0.30]` (0.25 +- 0.05);
   (b) `rows_per_game` in `[12, 35]`;
-  (c) `sz_other == 0`.
-  Exit 0 only if all three hold.
+  (c) `sz_other == 0`;
+  (d) `gate_random >= 1` — with an empty `models/` the gatekeeper does **not** skip. Exit 0 only if all four hold.
 - **Open obligations before start:** `o01_bsizes9_override`, `o02_databoardlen_poslen_9` (the mission cfg must exist) — i.e. task `cfg_9x9_override` must have landed.
 - **Reduction-to-baseline test:** NA
+
+**Why (d) is the `gating_rule` promotion:** `LoadModel::findLatestModel` returns `true` unconditionally (`cpp/dataio/loadmodel.cpp:77-78,93`), setting `modelName = "random"` and `modelFile = "/dev/null"`; `cpp/program/setup.cpp:126` turns `/dev/null` into a random-play net (`debugSkipNeuralNet`), and the gatekeeper logs `"Loaded accepted neural net " + acceptedModelName + " from: " + acceptedModelFile` at `cpp/command/gatekeeper.cpp:427`. So cycle 1 gates the first candidate against a random baseline, and the first directory to appear in `models/` is the frozen baseline (node `bootstrap_accepted_model`). `USEGATING=1` for every cycle.
 
 **Why the overrides:** `reduceVisits=true` would taper a winning side down to `reducedVisitsMin = 100` (`selfplay1_maxsize9.cfg:64-68`, `cpp/program/play.cpp:1151-1187`), which is indistinguishable from a cheap search at the log level; the asymmetric-playout keys (`:70-73`) and `estimateLeadProb` (`:78`) likewise perturb root visits. With them off, cheap turns log exactly `Root visits: 100` (`min(maxVisits, cheapSearchVisits)`, `play.cpp:1141-1142`) and full turns log up to 600 (`:115`).
 
 ## 3. Motivation
 
-`derivation.md` §1 rows 2, 3, 4, 8, 9, 11 are the paper ideas the code still implements; `claims.md` `c15_paper_ideas_in_code` asserts exactly that. All six nodes are currently `preliminary` — read in code, never executed (`results/ledgers/knowledge/paper_arxiv-1902.10565/nodes.jsonl`). A `solid` node requires evidence in a verifiable form (admission contract, Admission Gates), so a single cheap 20-game run is the minimum that upgrades six nodes at once.
+`derivation.md` §1 rows 2, 3, 4, 8, 9, 11 are the paper ideas the code still implements; `claims.md` `c15_paper_ideas_in_code` asserts exactly that. All six nodes are currently `preliminary` — read in code, never executed. A `solid` node requires evidence in a verifiable form (admission contract, Admission Gates), so a single cheap 20-game run plus one gatekeeper invocation is the minimum that upgrades six nodes at once. This file is a probe task; it does not itself appear in the DAG.
 
 ## 4. Inputs From Decomposition
 
@@ -44,7 +49,7 @@
 |---|---|---|
 | convention | `results/ktg/paper_1902.10565/decomposition/convention.md` | §1 (every sp9 search key -> paper symbol), §2 (gk9), §9 (symbol collisions) |
 | derivation | `results/ktg/paper_1902.10565/decomposition/derivation.md` | §1 rows 2, 3, 4, 8, 9, 11; §4 rows/game arithmetic |
-| logic | `results/ktg/paper_1902.10565/decomposition/logic.md` | the six nodes and their edges into `selfplay_stage` / `gatekeeper_stage` |
+| logic | `results/ktg/paper_1902.10565/decomposition/logic.md` | the six nodes (all roots, no predecessors) and their edges into `cfg_9x9_override`, `selfplay_stage`, `gatekeeper_stage` |
 | implementation_plan | not produced at stage 1 | `[OPEN]` |
 | ref | `results/ktg/paper_1902.10565/decomposition/ref.md` | tex line anchors l.96, l.105-109, l.649-663, l.669-678, l.689-703 |
 | assumptions | `results/ktg/paper_1902.10565/decomposition/assumptions.md` | `a05_9x9_only`, `a07_moves_per_game_80`, `a09_code_first`, `a10_random_bootstrap_ok` |
@@ -82,7 +87,7 @@
 results/ktg/paper_1902.10565/codes/eval/
 ├── probe_search_9x9.sh    # nodes selfplay_search_params, game_randomization_9x9 - runs the 20-game selfplay with the overrides
 ├── probe_search_9x9.py    # nodes playout_cap_randomization, root_explore_and_target_pruning, score_utility_search - the 3 asserts
-└── probe_gate_9x9.sh      # node gating_rule - config-parse leg: gatekeeper on an empty accepted-models-dir must exit 0
+└── probe_gate_9x9.sh      # node gating_rule - gatekeeper on an EMPTY accepted-models-dir: asserts the random-baseline log line
 ```
 
 ## 8. Phase Plan
@@ -96,13 +101,13 @@ results/ktg/paper_1902.10565/codes/eval/
 ### Phase 2 - `search-internals + gate parse`
 - **Nodes:** `root_explore_and_target_pruning`, `score_utility_search`, `gating_rule`
 - **Files:** `probe_search_9x9.py` (extra reporting), `probe_gate_9x9.sh`
-- **Test:** the `Tree:` block printed by `logSearch` (`cpp/program/play.cpp:791`) shows root children whose visit counts follow the forced-playout floor, and no child is left with exactly 1 playout in the written policy target (`chosenMovePrune = 1`); `probe_gate_9x9.sh` exits 0 with the log naming `numGamesPerGating` 200.
+- **Test:** the `Tree:` block printed by `logSearch` (`cpp/program/play.cpp:791`) shows root children whose visit counts follow the forced-playout floor, and no child is left with exactly 1 playout in the written policy target (`chosenMovePrune = 1`); `probe_gate_9x9.sh` exits 0, its log names `numGamesPerGating` 200 and contains `Loaded accepted neural net random` (assertion (d)).
 - **Estimate:** `1.0` h
 
 ## 9. Quick-Win Path
 
-1. `Phase 1` — one 1-GPU b200 job, empty `$W/models` so the random-net bootstrap runs (`cpp/dataio/loadmodel.cpp:77-80`); 20 games at 600/100 visits on 9x9 is minutes.
-2. `Phase 2` — parse the same log; no second engine run needed except the gate parse leg.
+1. `Phase 1` — one 1-GPU b200 job, empty `$W/models` so the random-net bootstrap runs (`cpp/dataio/loadmodel.cpp:77-78,93`); 20 games at 600/100 visits on 9x9 is minutes.
+2. `Phase 2` — parse the same log; the only extra engine invocation is the gate leg.
 3. **Smoke check:** `full_frac` printed and inside `[0.20, 0.30]`.
 
 ## 10. First Test Parameters
@@ -125,6 +130,8 @@ results/ktg/paper_1902.10565/codes/eval/
 | `handicapAsymmetricPlayoutProb` | `0.5` -> **`0.0`** | `:70` (moot at 9x9: `playutils.cpp:10-22` gives 0 extra black) |
 | `estimateLeadProb` | `0.05` -> **`0.0`** | `:78`; spends extra visits |
 | `sidePositionProb` | `0.020` (unchanged) | `:58`; kept at production value because it contributes rows (`play.cpp:974-982`) |
+| `numGameThreads` (gate leg) | `18` | `codes/cfg/gatekeeper_9x9.cfg`; 18 game + 2 NN-server + 1 dataWrite (`cpp/command/gatekeeper.cpp:548`) + main = 22, inside the 24-CPU cap |
+| gate-leg `models/` | empty | forces the random baseline (`loadmodel.cpp:77-78,93`, `setup.cpp:126`); this is what assertion (d) measures |
 | expected `rows_per_game` | `~22` | `(1 - 0.75)*80 + 0.02*80` with `a07_moves_per_game_80`; `derivation.md` §4 |
 
 ## 11. Risk Mitigation
@@ -137,17 +144,18 @@ results/ktg/paper_1902.10565/codes/eval/
 | 20 games too few | `full_frac` outside band with a wide CI | print the searched-turn count; require >= 500 searched turns, else raise `-max-games-total` |
 | SGF count != game count | forks and side positions add `.sgfs` lines | define `games` = `.sgfs` line count (one SGF per line, `cpp/program/selfplaymanager.cpp:377-378`) and say so in the row |
 | `logSearchInfo=true` floods the log | multi-GB log on scratch at 94 % usage | 20 games only; delete `$W/logs` after extracting the counts |
-| gate leg cannot run 200 real games | no two servable nets exist yet (SwiGLU blocker) | the gate leg asserts only config parse + the empty-`accepted-models-dir` early return (`cpp/command/gatekeeper.cpp:399-402`); full gating stays `[OPEN]` for `gatekeeper_stage` |
+| gate leg cannot run 200 real games | no exported candidate exists yet | the gate leg asserts config parse plus the random-baseline log line at `cpp/command/gatekeeper.cpp:427`; the acceptance/rejection decision itself stays `[OPEN]` for `gatekeeper_stage` |
+| Assertion (d) read as "gating is skipped" | a report saying cycle 1 has no gatekeeper | `findLatestModel` returns `true` unconditionally (`loadmodel.cpp:93`); the gatekeeper runs and plays against a random net |
 
 ## 12. Current State
 
-- `[PRELIMINARY]` All six nodes are `preliminary` in `results/ledgers/knowledge/paper_arxiv-1902.10565/nodes.jsonl`: every constant is read at a `path:line` in `evidence/decomposition/audit_paper_code_map.md`, nothing is executed.
-- `[SOLID]` The engine that will run the probe exists and passes `runtests` (`tasks/env_build/implementation.md` §12, evidence `evidence/env/smoke-298018.txt`).
+- `[PRELIMINARY]` All six nodes are `preliminary`: every constant is read at a `path:line` in `evidence/decomposition/audit_paper_code_map.md`, nothing is executed.
+- `[SOLID]` The engine that will run the probe exists and passes `runtests`: node `env_build` is `solid`, result row `env-toolchain-b200`, evidence `results/ktg/paper_1902.10565/evidence/env/smoke.txt`.
 - `[OPEN]` `codes/cfg/selfplay_9x9.cfg` does not exist yet — the probe cannot start until `cfg_9x9_override` lands. Needed evidence: the cfg files plus a passing `check_cfg_9x9.sh`.
-- `[OPEN]` `gating_rule` cannot be promoted to `solid` by this task: acceptance behaviour needs 200 real games between two servable nets. Closes in `gatekeeper_stage` (claim `c13_gatekeeper_accepts`).
+- `[OPEN]` `gating_rule` is promoted here only for the cycle-1 baseline behaviour (assertion (d)). The acceptance/rejection decision needs 200 real games between two servable nets and closes in `gatekeeper_stage` (claim `c13_gatekeeper_accepts`).
 - `[OPEN]` `score_utility_search` promotion is partial: the probe confirms the parameters are live in a running search, not the arctan form. Closes with a targeted numeric check of `cpp/neuralnet/nninputs.cpp:56` (`u = c*(2/pi)*atan((x-x0)/(0.5*sqrt(area)))`) against logged root score utilities.
 - `[OPEN]` `visit-caps-9x9` (`convention.md` §10): 600/100 are 19x19-derived; this probe records their 9x9 behaviour but does not justify them. Closes in `selfplay_stage` with a games/hour derivation.
-- `[SOLID]` resolved history: `b5c48h3tfr` (ffng) is refused by every v1.18.2 backend (`cpp/neuralnet/cudaandrocmbackend.inc:3307-3308`, `eigenbackend.cpp:1634`, `openclbackend.cpp:2729`; job 297952 FAILED 1:0, `smoke-297952.txt`). The mission model is `b7c96h3tfrs` (job 298018 COMPLETED 0:0, `smoke-298018.txt` PASS); ledger: node `transformer_trunk_b7c96h3tfrs`, `a06`/`o07`/`c03`/`c16` amended, `o18` discharged (commit ee47dd9). Nothing in this task is blocked by it.
+- `[SOLID]` `MODELKIND` must match `*tfrs|*tflrs` (node `engine_ffn_swiglu_constraint`); the mission model is `b7c96h3tfrs` (node `transformer_trunk_b7c96h3tfrs`) and the ladder is node `select_transformer_ladder`. `transformer_trunk_b5c48h3tfr` is superseded and is not a live node. This probe runs on the random-net bootstrap and needs no exported model, so nothing here depends on the model choice.
 
 ## 13. Forbidden Actions
 
@@ -157,12 +165,14 @@ results/ktg/paper_1902.10565/codes/eval/
 - Never change `cheapSearchProb`, `cheapSearchVisits`, `maxVisits` or `rootDesiredPerChildVisitsCoeff` in the probe: they are the quantities being measured.
 - Never exceed 24 CPUs / 1 GPU for the probe job, and never drop `--gres=gpu:1` on `b200`.
 - Never count "some SGFs are 9x9": the metric is `sz_other == 0`.
+- Never write "gating is skipped in cycle 1" anywhere: `findLatestModel` returns `true` unconditionally (`loadmodel.cpp:93`) and the gatekeeper runs against a random baseline.
+- Never set `numGameThreads` above 18 in the gate leg — 20 leaves no margin under the 24-CPU cap.
 - Never keep the `logSearchInfo=true` log after extraction (scratch is at 94 % group usage).
 
 ## 14. Promise Tag
 
-- **Promise format:** `<promise>paper_code_map_search FULL_SEARCH_FRACTION WITHIN 0.25+-0.05 AND ROWS_PER_GAME WITHIN [12,35] AND SZ_OTHER ==0</promise>`
-- **Required in commit body:** verbatim probe output (all three metrics plus searched-turn and game counts), evidence path under `evidence/probe_search/`, claim `c15`/`c10`/`c04`, evidence type `numerical_simulation`, and the six node ids promoted.
+- **Promise format:** `<promise>paper_code_map_search FULL_SEARCH_FRACTION WITHIN 0.25+-0.05 AND ROWS_PER_GAME WITHIN [12,35] AND SZ_OTHER ==0 AND GATE_RANDOM >=1</promise>`
+- **Required in commit body:** verbatim probe output (all four metrics plus searched-turn and game counts), the gatekeeper log line, evidence path under `evidence/probe_search/`, claims `c15`/`c10`/`c04`, evidence type `numerical_simulation`, and the six node ids promoted.
 
 ## 15. Progress Update Principles
 
@@ -176,7 +186,7 @@ Inherits `../../_common/contracts/progress_principles.md`. Additions:
 
 - [ ] Verification command ran and output is pasted.
 - [ ] Result-log delta records claim, evidence type, evidence, dependencies, assumptions, status, open obligations.
-- [ ] All three metrics are within the thresholds in §2.
+- [ ] All four metrics are within the thresholds in §2.
 - [ ] Reduction-to-baseline test passed when relevant (NA).
 - [ ] No `[BLOCKING]`, `[OPEN]`, or `[UNCHECKED]` markers remain for the nodes actually promoted (`gating_rule` and `score_utility_search` stay partial by design and must not be marked `solid`).
 - [ ] No silent scope expansion: no training-side node touched here.
