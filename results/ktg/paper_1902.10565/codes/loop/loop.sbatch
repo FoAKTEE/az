@@ -5,7 +5,7 @@
 #SBATCH --nodes=1
 #SBATCH --ntasks-per-node=1
 #SBATCH --gres=gpu:1
-#SBATCH --cpus-per-task=24
+#SBATCH --cpus-per-task=32
 #SBATCH --mem=120G
 #SBATCH --time=2-23:30:00
 #SBATCH --output=/scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/logs/loop-%j.log
@@ -17,7 +17,7 @@
 # (assumption a03_walltime_resume). This wrapper encodes the run contract and the
 # guards that make an unattended chain safe:
 #
-#   contract   1 GPU, 24 CPUs, 120G, 2-23:30:00 (30 min inside MaxTime),
+#   contract   1 GPU, 32 CPUs, 120G, 2-23:30:00 (30 min inside MaxTime),
 #              b300 when it has free GPUs, b200 otherwise (a02, a04)
 #   chain      sbatch --dependency=afterany:$SLURM_JOB_ID issued at the TOP of the
 #              body, so the successor is queued before anything can kill us --
@@ -82,12 +82,20 @@ POLICY_CHECK="$AZ_ROOT/$POLICY_CHECK_REL"
 GPU_CAP_TOTAL=$(python3 -c 'import json,sys;print(json.load(open(sys.argv[1]))["compute"]["gpuCapTotal"])' "$AZ_ROOT/mission.json" 2>/dev/null)
 
 # ---------------------------------------------------------------- contract
-# 24 CPUs is an honest declaration for this job, not a policy cap: the loop runs
-# selfplay MCTS, an 8-process shuffle and the trainer inside one allocation, and
-# mission.json compute.cpuPolicy withdrew the 20 % clause on 2026-09-03. Raising
-# it is a scaling decision for measure_stage_throughput, not a free win.
+# The CPU count is NOT typed here. codes/loop/knobs_9x9.env is node
+# derive_cycle_knobs_9x9's single source of truth for the eleven loop knobs and
+# for the two allocation-side numbers, and this wrapper reads it in the "loop
+# knobs" section below; REQ_CPUS is its KTG_CPUS_PER_TASK and the #SBATCH line
+# at the top of this file carries the same number (obligation o39). 32 is what
+# the measured thread budget requires -- jobs 298712 and 299259 measured
+# nlwp_max 25 on every stage holding a CUDA context, against the 24 this file
+# used to declare, and the projected two-real-net gate is 28 -- and it is an
+# honest declaration, not a policy cap: mission.json compute.cpuPolicy withdrew
+# the 20 % clause on 2026-09-03, so declaring what the job uses costs nothing.
+# Raising the THREAD counts is still a scaling decision for
+# measure_stage_throughput, not a free win.
 REQ_GPUS=1
-REQ_CPUS=24
+REQ_CPUS=""
 # Operator knobs, deliberately environment-readable. resubmit() calls sbatch with
 # no --export, so Slurm's default --export=ALL carries whatever the submitting
 # shell had in it down the WHOLE chain, not just the first link: a stray
@@ -126,6 +134,50 @@ say() { echo "=== [$(date -Is)] $* ==="; }
 
 say "loop.sbatch job ${SLURM_JOB_ID:-none} on ${SLURMD_NODENAME:-$(hostname)}"
 say "BASEDIR=$BASEDIR  MODELKIND=$MODELKIND  TRAININGNAME=$TRAININGNAME"
+
+# ---------------------------------------------------------------- loop knobs
+# obligation o39. `set -a` exports the eleven loop knobs as well as the two
+# allocation-side ones. That is deliberate and changes no value: the eleven equal
+# the CHANGE 9 ${VAR:-default} block of synchronous_loop_9x9.sh, which
+# codes/eval/check_knobs_9x9.py asserts against this same file. What it buys is
+# that an operator retunes ONE file instead of two. The three classification
+# knobs of the contract section are deliberately NOT in it -- they are this
+# wrapper's own and must not travel with a knob set -- and the pre-flight below
+# asserts that they are absent.
+#
+# Read here WITHOUT exiting: this runs before the EXIT trap is installed, so an
+# exit at this point would leave the link unaccounted -- the o26 class. A missing
+# or unreadable file leaves REQ_CPUS empty, resubmit() then refuses to chain for
+# exactly the reason it refuses on an unresolvable policy check, and the
+# environment section turns it into a counted pre-flight failure with exit 2.
+KNOBS_ENV="${KTG_KNOBS_ENV:-$KTG_CODES/loop/knobs_9x9.env}"
+KNOBS_SHA=""
+# Checked BEFORE the source, not after: sourcing a file that sets KTG_MAX_FAILS would
+# already have retuned the breaker for this link's own resubmit(), and an assertion
+# downstream of that is too late. A file that carries one is not sourced at all, so
+# REQ_CPUS stays empty and every guard below treats it as an unresolved knob set.
+KNOBS_STRAY=0
+if [ -r "$KNOBS_ENV" ]; then
+    KNOBS_STRAY=$(grep -c -E '^[[:space:]]*(KTG_MAX_FAILS|KTG_MAX_CHAIN|KTG_MIN_RUNTIME_SECONDS)=' "$KNOBS_ENV" 2>/dev/null || true)
+    case "$KNOBS_STRAY" in ''|*[!0-9]*) KNOBS_STRAY=0 ;; esac
+fi
+if [ ! -r "$KNOBS_ENV" ]; then
+    say "loop knobs $KNOBS_ENV missing or unreadable -- REQ_CPUS unresolved"
+elif [ "$KNOBS_STRAY" -ne 0 ]; then
+    say "loop knobs $KNOBS_ENV sets $KNOBS_STRAY classification knob(s) (KTG_MAX_FAILS/KTG_MAX_CHAIN/KTG_MIN_RUNTIME_SECONDS) -- not sourced, REQ_CPUS unresolved"
+else
+    KNOBS_SHA=$(sha256sum "$KNOBS_ENV" 2>/dev/null | cut -c1-16)
+    set -a
+    # shellcheck disable=SC1090
+    . "$KNOBS_ENV"
+    set +a
+    REQ_CPUS="${KTG_CPUS_PER_TASK:-}"
+    say "loop knobs $KNOBS_ENV (sha256 ${KNOBS_SHA:-unreadable}) KTG_CPUS_PER_TASK=${KTG_CPUS_PER_TASK:-<unset>} KTG_NUM_GAME_THREADS=${KTG_NUM_GAME_THREADS:-<unset>}"
+fi
+case "$REQ_CPUS" in
+    ''|*[!0-9]*) REQ_CPUS_RESOLVED=0 ;;
+    *)           REQ_CPUS_RESOLVED=1 ;;
+esac
 
 # ---------------------------------------------------------------- chain state
 FAILCOUNT_FILE="$BASEDIR/.failcount"
@@ -421,6 +473,12 @@ resubmit() {
     if [ ! -f "$SELF" ]; then
         say "cannot resubmit: $SELF not found"; return 0
     fi
+    # Same rule as the unresolvable policy check below: the successor's request
+    # must be a number this wrapper actually derived from the knob file, never a
+    # default this file invented (obligation o39).
+    if [ "$REQ_CPUS_RESOLVED" -ne 1 ]; then
+        say "REQ_CPUS unresolved (KTG_CPUS_PER_TASK not read from $KNOBS_ENV) -- refusing to chain"; return 0
+    fi
     local part check_out check_rc out
     part=$(pick_partition)
     say "compute-budget pre-flight for the successor (gpus=$REQ_GPUS cpus=$REQ_CPUS part=$part)"
@@ -481,7 +539,47 @@ if [ -z "${KATAGO_SRC:-}" ]; then
 fi
 nvidia-smi --query-gpu=index,name,memory.total --format=csv,noheader || true
 
-# 24 CPUs for the whole job; keep BLAS/OMP from oversubscribing the trainer.
+# ---------------------------------------------------------------- knob asserts
+# obligation o39, second and third conjuncts. Everything here is a pre-flight
+# FAILURE (exit 2), never a warning: a link that runs with fewer CPUs than the
+# stages spawn threads repeats exactly the defect the smoke measured, and it
+# would do so for the whole chain.
+#
+#   (a) the allocation actually granted equals the number the knob file asks
+#       for. $SLURM_CPUS_PER_TASK is what slurmstepd granted; the #SBATCH line
+#       is only what was requested, and a --cpus-per-task on the sbatch command
+#       line or a partition default overrides it silently. Checked only when the
+#       variable is set: unset means this is not a scheduler step at all (an
+#       offline parse or a dry run), and there is nothing to compare.
+#   (b) both engine configs declare the game-thread count the budget was
+#       computed at. A cfg edited to a larger numGameThreads invalidates the
+#       32 without changing anything this wrapper can see.
+if [ "$KNOBS_STRAY" -ne 0 ]; then
+    say "$KNOBS_ENV sets $KNOBS_STRAY classification knob(s) (KTG_MAX_FAILS/KTG_MAX_CHAIN/KTG_MIN_RUNTIME_SECONDS) -- pre-flight failure"
+    exit 2
+fi
+if [ "$REQ_CPUS_RESOLVED" -ne 1 ]; then
+    say "loop knobs did not yield KTG_CPUS_PER_TASK ($KNOBS_ENV) -- pre-flight failure"
+    exit 2
+fi
+if [ -n "${SLURM_CPUS_PER_TASK:-}" ] && [ "$SLURM_CPUS_PER_TASK" != "$REQ_CPUS" ]; then
+    say "declared CPUs $SLURM_CPUS_PER_TASK != KTG_CPUS_PER_TASK $REQ_CPUS -- pre-flight failure"
+    exit 2
+fi
+say "cpus granted ${SLURM_CPUS_PER_TASK:-<no scheduler step>} == KTG_CPUS_PER_TASK $REQ_CPUS"
+for _cfg in "$KTG_CODES/cfg/selfplay_9x9.cfg" "$KTG_CODES/cfg/gatekeeper_9x9.cfg"; do
+    if [ ! -r "$_cfg" ]; then
+        say "missing or unreadable $_cfg -- pre-flight failure"
+        exit 2
+    fi
+    _gt=$(sed -n 's/^numGameThreads *= *\([0-9][0-9]*\).*/\1/p' "$_cfg" | head -1)
+    if [ -z "$_gt" ] || [ "$_gt" != "${KTG_NUM_GAME_THREADS:-}" ]; then
+        say "cfg numGameThreads '${_gt:-<none>}' != KTG_NUM_GAME_THREADS '${KTG_NUM_GAME_THREADS:-<unset>}' in $_cfg -- pre-flight failure"
+        exit 2
+    fi
+done
+say "cfg numGameThreads = ${KTG_NUM_GAME_THREADS} on both engine configs"
+# 32 CPUs for the whole job; keep BLAS/OMP from oversubscribing the trainer.
 export OMP_NUM_THREADS="${OMP_NUM_THREADS:-4}"
 export MKL_NUM_THREADS="${MKL_NUM_THREADS:-4}"
 export KTG_ONE_CYCLE="${KTG_ONE_CYCLE:-0}"
