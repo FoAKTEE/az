@@ -13,13 +13,17 @@ DAG: `logic.md` (26 nodes). Ledger views: `claims.md`, `obligations.md`, `assump
 The unmodified v1.18.2 five-stage loop — `katago gatekeeper` → `katago selfplay` → `shuffle.py` →
 `train.py` → `export_model_pytorch.py` — driven by a mission copy of `python/selfplay/synchronous_loop.sh`,
 on one node, with mission-owned configs that make it 9x9-only, and a Slurm wrapper that survives the 3-day
-ceiling. Model: `b5c48h3tfr` (5 × attnrope+ffng, 48 ch, 3 heads) for smoke and first production;
-`b7c96h3tfrs`/`b8c96h3tfrs` for scale-up. No engine patches; the one edit outside this repo is a `sed`
+ceiling. Model: **`b7c96h3tfrs`** (7 × attnrope+ffnsg, 96 ch, 3 heads) for smoke and first production;
+`b8c96h3tfrs`/`b14c192h6tfrs` for scale-up. `b5c48h3tfr` (ffng) is **excluded**: every C++ backend throws
+"Non-SwiGLU transformer FFN is not yet supported" (`cudaandrocmbackend.inc:3307-3308`, `eigenbackend.cpp:1634`,
+`openclbackend.cpp:2729`); job 297952 failed exactly there (exit 134), job 298018 passed with `b7c96h3tfrs`. No engine patches; the one edit outside this repo is a `sed`
 adding `100` to the CUDA-12.8 arch list in the *scratch* build clone.
 - [SOLID] Every stage's entry point, argument list and file contract is known.
   verify: `audit_loop_scripts_configs.md` §A–C (`synchronous_loop.sh:93-116`, `train.sh:83-93`, `export_model_pytorch.py:34-42`).
-- [SOLID] `b5c48h3tfr` is exportable to the C++ engine (`transformer_attention_block`/`transformer_ffn_block`).
-  verify: `export_model_pytorch.py:491-494`, `cpp/neuralnet/desc.cpp:1521,1542`; executed check = task `tiny_model_export_smoke`.
+- [SOLID] `b7c96h3tfrs` exports to the C++ engine and plays 9x9 on a B200 (benchmark + gtp genmove + torch fwd/bwd).
+  verify: `/scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/evidence/env/smoke-298018.txt:90,126,142-143` ("SMOKE RESULT: PASS"); `export_model_pytorch.py:491-494`.
+- [SOLID] `b5c48h3tfr` is trainable but unplayable (non-SwiGLU FFN refused by all backends) — do not use it anywhere.
+  verify: `cpp/neuralnet/cudaandrocmbackend.inc:3307-3308`; `smoke-297952.txt` (exit 134, "Non-SwiGLU transformer FFN is not yet supported in CUDA backend").
 
 ## 1. GPU / CPU split — why the 24-CPU cap, not the GPU, is the binding constraint
 
@@ -31,10 +35,10 @@ accounting — `train.py -max-train-bucket-per-new-data 8` lets each new row be 
 a cycle's training (`:64`). Training can never outrun self-play; it can only idle.
 - [SOLID] The selfplay:train balance is set by `MAX_TRAIN_PER_DATA`/`MAX_TRAIN_SAMPLES_PER_CYCLE`/`NUM_GAMES_PER_CYCLE`, not by GPU count.
   verify: `synchronous_loop.sh:57-66,109`; `train.py:1440-1451` (`-stop-when-train-bucket-limited` exits when the bucket drains).
-- [PRELIMINARY] With `b5c48h3tfr` (~1.5e5 parameters: 5 × (4·48² + 2·48·128) ≈ 1.1e5 trunk + heads) a B200 is
-  starved by NN inference of this size; self-play throughput is bounded by `numGameThreads` × 1 search thread,
+- [PRELIMINARY] With `b7c96h3tfrs` (~8e5 parameters: 7 × (4·96² + 3·96·256) ≈ 7.7e5 trunk + heads) a B200 is
+  still starved by NN inference of this size; self-play throughput is bounded by `numGameThreads` × 1 search thread,
   i.e. by the 18 CPU game threads, and training a batch of 128 at pos_len 9 (81 tokens) is ms-scale.
-  Consequence: a second GPU adds nothing until the model is ≥ `b7c96h3tfrs` or CPU is co-scaled.
+  Consequence: a second GPU adds nothing until the model is ≥ `b14c192h6tfrs` or CPU is co-scaled.
   verify: measured in task `selfplay_stage` (games/h, GPU util via `nvidia-smi dmon`) and `train_stage` (samples/s); claim `c09`.
 - [SOLID] Cluster state at design time: my footprint gpus=1 cpus=16; b200 `free_gpus=2/128`, b300 `0/8`
   (gb301 reserved until 2026-09-04 15:00); a 2-GPU request projected a multi-week wait on 2026-09-03.
@@ -61,11 +65,11 @@ Split of the 24 CPUs per stage (only one stage runs at a time, so each stage may
 
 | phase | model | GPUs | knobs (mission `synchronous_loop_9x9.sh`) | exit criterion |
 |---|---|---|---|---|
-| S0 env_build (running) | random-init b5c48h3tfr | 1 | `katago runtests`, `benchmark -boardsize 9`, torch fwd/bwd | `SMOKE RESULT: PASS` + `cuobjdump` shows sm_100 (or JIT accepted) |
-| S1 tiny export + cfg | b5c48h3tfr | 1 | export → block-kind scan → benchmark with mission cfg | claims c03, c04 |
-| S2 loop smoke | b5c48h3tfr | 1 | NUM_GAMES_PER_CYCLE 20, SHUFFLE_MINROWS 200, KEEPROWS 5000, samples-per-epoch 2000, batch 32, 1 cycle | c07; then kill/resume test c08 |
-| P1 production-1 | b5c48h3tfr | 1 | NUM_GAMES_PER_CYCLE 500, MINROWS 10000, KEEPROWS 300000, TAPER 5000, samples-per-epoch 20000, MAX_TRAIN_PER_DATA 8, batch 128, USEGATING 1 | c13 (≥2 acceptances), c14 (≥60 % vs first net) |
-| P2 scale_up | b7c96h3tfrs (or b8c96h3tfrs) | 1→2 | same loop; 2nd GPU only via `numNNServerThreadsPerModel=2` + `cudaDeviceToUseModel0Thread{0,1}` and `train.py -multi-gpus 0,1` | c16 |
+| S0 env_build (PASSED, job 298018) | random-init b7c96h3tfrs | 1 | `katago runtests`, `benchmark -boardsize 9`, torch fwd/bwd | `SMOKE RESULT: PASS` + `cuobjdump` shows sm_100 (or JIT accepted) |
+| S1 tiny export + cfg | b7c96h3tfrs | 1 | export → block-kind scan → benchmark with mission cfg | claims c03, c04 |
+| S2 loop smoke | b7c96h3tfrs | 1 | NUM_GAMES_PER_CYCLE 20, SHUFFLE_MINROWS 200, KEEPROWS 5000, samples-per-epoch 2000, batch 32, 1 cycle | c07; then kill/resume test c08 |
+| P1 production-1 | b7c96h3tfrs | 1 | NUM_GAMES_PER_CYCLE 500, MINROWS 10000, KEEPROWS 300000, TAPER 5000, samples-per-epoch 20000, MAX_TRAIN_PER_DATA 8, batch 128, USEGATING 1 | c13 (≥2 acceptances), c14 (≥60 % vs first net) |
+| P2 scale_up | b8c96h3tfrs or b14c192h6tfrs | 1→2 | same loop; 2nd GPU only via `numNNServerThreadsPerModel=2` + `cudaDeviceToUseModel0Thread{0,1}` and `train.py -multi-gpus 0,1` | c16 |
 - [PRELIMINARY] P1 knob scaling: upstream defaults assume mixed sizes up to 19x19 (~100+ rows/game); at 9x9
   ~22 rows/game (`play.cpp:1143`, `trainingwrite.cpp:1206-1251`), so 500 games ≈ 11k rows/cycle and
   `samples-per-epoch` is scaled down ×5 to keep ≥1 epoch per cycle within the ×8 bucket.
@@ -73,8 +77,8 @@ Split of the 24 CPUs per stage (only one stage runs at a time, so each stage may
 - [FUTURE] Asynchronous layout (selfplay and train as separate concurrent processes) is how upstream
   reaches 4–40×; it needs two jobs or a CPU/GPU split inside one job and is deferred to P2.
   verify: not applicable yet; revisit with measured GPU utilisation from P1.
-- [SOLID] Family choice: `tf` (interleaved) for all phases; `nbt` fused family is exportable too
-  (`export_model_pytorch.py:495-502`) but is a `[FUTURE]` comparison (obligation `o07`).
+- [SOLID] Family choice: `tf` (interleaved, SwiGLU `ffnsg` only) for all phases; `nbt` fused family is exportable too
+  (`export_model_pytorch.py:495-502`) but is a `[FUTURE]` comparison (obligation `o07`); `ffng` configs are excluded (o18 discharged).
   verify: `modelconfigs.py:1886-1942` registration list; `model_pytorch.py:1958-1977`.
 
 ## 3. 9x9 enforcement — five keys, changed together
@@ -124,7 +128,7 @@ Per-stage idempotency the wrapper relies on:
 |---|---|---|
 | selfplay rows | 2145 B/row × 0.12 compressed × ~22 rows/game ≈ 5.7 KB/game | 1e6 games ≈ 5.7 GB (+ SGFs ≈ 1–2 KB/game) |
 | shuffleddata | ≤ keep-target-rows × 2145 × 0.12 per cycle; newest 3 kept (`cleanup_old_dirs.py:22-24`) | 300k rows → 77 MB × 3 |
-| train checkpoints | ~1.5e5 params × (weights + momentum) ≈ 1.2 MB; 4 short-term + 1 long-term / 12 h | < 1 GB / month even at b7c96 (~6 MB each) |
+| train checkpoints | ~8e5 params × (weights + momentum) ≈ 6 MB; 4 short-term + 1 long-term / 12 h | < 1 GB / month even at b14c192 (~50 MB each) |
 | models / modelstobetested / rejectedmodels | model.bin.gz + model.ckpt + metadata per export, never pruned | ~2 MB × cycles |
 | `scripts/dated/<ts>` | copy of `python/` + `katago` binary per loop (re)start | ~0.1 GB × restarts |
 - [PRELIMINARY] Total well under 50 GB for P1; hard cap **200 GB** on `BASEDIR` enforced by the wrapper
@@ -137,7 +141,7 @@ Per-stage idempotency the wrapper relies on:
 
 ## 6. Smoke-first ordering (topological, one packet per row)
 
-1. `env_build` (running, job 297952) → 2. `tiny_model_export_smoke` + `cfg_9x9_override` (parallel) →
+1. `env_build` (PASSED, job 298018; ledger promotion owned by its worker) → 2. `tiny_model_export_smoke` + `cfg_9x9_override` (parallel) →
 3. `synchronous_loop_smoke` (+ `loop_resume_under_walltime` kill/resume test) → 4. `data_budget` (measure) →
 5. P1: `selfplay_stage`, `shuffle_stage`, `train_stage`, `export_stage`, `gatekeeper_stage` (one loop, five nodes) →
 6. `eval_improvement` → 7. `scale_up`. Code-reading nodes (`paper_code_map_*`) are promoted to solid by two probes
@@ -160,7 +164,7 @@ that can run as soon as env_build lands.
 
 | # | risk | signature | response |
 |---|---|---|---|
-| R1 | no sm_100 SASS (`CMakeLists.txt:761`) | `cuobjdump --list-elf katago \| grep -c sm_100` = 0; slow first `benchmark`; `CUDA_ERROR_NO_BINARY_FOR_GPU` | sed `100` into the scratch clone's arch list, rebuild (or cuda/13.0.2 + cudnn-cu13) |
+| R1 | no sm_100 SASS (`CMakeLists.txt:761`) — **closed**: `codes/env/cmake-sm100.diff` applied at env_build stage 2b, `smoke-298018.txt:35` count = 2 | `cuobjdump --list-elf katago \| grep -c sm_100` = 0 | re-apply the diff after any re-clone |
 | R2 | pos_len 19 left in place | npz row 7675 B not 2145; `train.py` log `pos_len 19`; attention memory ~20× | fix §3 keys before any data; discard data |
 | R3 | attention-logit export refusal | export stage exit ≠ 0 with bound > 2.5e4 (`export_model_pytorch.py:42`); loop dies each cycle | enable `-attn-logit-penalty-cap` in train wrapper; record fail row |
 | R4 | CPU cap breach | `ps -o nlwp -p <pid>` > 24; `seff` CPU > 24 cores | thread table §1 |
@@ -171,6 +175,7 @@ that can run as soon as env_build lands.
 | R9 | value-head gpool collinearity | probe: pool2/pool1 = −0.5 exactly | accepted; no code change |
 | R10 | `torch.compile` first-epoch stall | minutes of 100 % CPU at epoch start, no GPU util | expected; `-no-compile` only if it exceeds 15 min |
 | R11 | RoPE + `rootNumSymmetriesToSample=4` inconsistency | root value variance across symmetries in `logSearchInfo` | `[FUTURE]` measure; set to 1 if harmful |
+| R13 | non-SwiGLU config slips into MODELKIND | NN server thread fails at startup: "Non-SwiGLU transformer FFN is not yet supported" | only `*tfrs`/`*tflrs` names (ffnsg) allowed; wrapper asserts MODELKIND ends in `s` |
 | R12 | deterministic stage failure + resubmit chain | same error in 3 consecutive job logs | `.failcount` stop at 3, escalate (alignment §2) |
 
 ## 9. Decisions recorded (owner: brain design)
@@ -180,3 +185,4 @@ that can run as soon as env_build lands.
 - Keep gpool constants (14, 0.1) for C++ compatibility; accept 9x9 redundancy. [SOLID] verify: obligation `o14` discharged by node `head_gpool_degeneracy_9x9`.
 - CUDA backend, cuDNN 9.x wheel (SDPA path on since `CUDNN_VERSION >= 8903`, `cudabackend.cpp:13`); TensorRT deferred. [SOLID] verify: assumption `a08`, obligation `o05`.
 - Random-net bootstrap accepted. [PRELIMINARY] verify: obligation `o10`, assumption `a10`.
+- Smoke/first model = `b7c96h3tfrs`, not `b5c48h3tfr` (unservable). [SOLID] verify: `cudaandrocmbackend.inc:3307-3308`; jobs 297952 (FAILED 1:0) vs 298018 (COMPLETED 0:0), `sacct`; assumption `a06`, obligation `o18` discharged.

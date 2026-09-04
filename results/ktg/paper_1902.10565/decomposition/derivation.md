@@ -54,7 +54,7 @@ The paper's `c_value = 1.5`, `w_sbreg = 0.004`, `w_scale = 0.0005` (l.547,571,58
 
 | construct | paper anchor | what the code does instead |
 |---|---|---|
-| Residual-CNN trunk with gpool blocks, BN + ReLU, (b,c) ladder (6,96)→(20,256) | l.72, l.414-441, l.518-534 | transformer trunk `b5c48h3tfr`: 5 × (`attnrope`, `ffng`), 48 channels, 3 heads, ffn 128, RoPE θ=100 (`modelconfigs.py:986-1006`, `model_pytorch.py:2149-2171,3231-3285`); `nbt` fused family also exists and is exportable (`export_model_pytorch.py:495-502`) |
+| Residual-CNN trunk with gpool blocks, BN + ReLU, (b,c) ladder (6,96)→(20,256) | l.72, l.414-441, l.518-534 | transformer trunk `b7c96h3tfrs`: 7 × (`attnrope`, `ffnsg`), 96 channels, 3 heads, RoPE θ=100 (`modelconfigs.py:1008-1029`, `model_pytorch.py:2149-2171,3231-3285`). `b5c48h3tfr` (`ffng`, `:986-1006`) is trainable but no C++ backend serves non-SwiGLU FFNs (`cudaandrocmbackend.inc:3307-3308`); `nbt` fused family also exists and is exportable (`export_model_pytorch.py:495-502`) |
 | Score support S = 19·19 + 60 fixed | l.496, l.512 | support derived from `pos_len` (`metrics_pytorch.py:35`) |
 | Fixed per-sample lr 6e-5, ÷3 for 5M samples, ÷10 late | l.635-636 | 3e-5 base, 9-step warmup to 2M samples, `-lr-scale*` flags (`train.py:1059-1094`) |
 | Batch 256 | l.635 | loop default 128 (`synchronous_loop.sh:62`) |

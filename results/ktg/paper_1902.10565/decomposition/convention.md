@@ -82,6 +82,8 @@ Keys shared with `sp9` are omitted; only gate-specific or differing ones are lis
 
 ## 3. Model config `b5c48h3tfr` — `python/katago/train/modelconfigs.py:986-1006`
 
+> **Superseded for execution (2026-09-03).** `b5c48h3tfr` uses `ffng` (non-SwiGLU FFN) and every v1.18.2 C++ backend refuses it at NN-server construction — `cpp/neuralnet/cudaandrocmbackend.inc:3307-3308`, `eigenbackend.cpp:1634`, `openclbackend.cpp:2729` (job 297952 failed with exactly this message). The mission model is **`b7c96h3tfrs`** (`modelconfigs.py:1008-1029`, registered `:1887`): 7 × (`attnrope`, `ffnsg`), 96 trunk channels, 3 heads; env smoke PASS in job 298018. The rows below stay as the code-reading record of the `tf` family; all shape/pos_len facts apply to `b7c96h3tfrs` unchanged.
+
 | field (`path:line`) | meaning | value | paper symbol, l.NNN |
 |---|---|---|---|
 | `version` (`:987`) | model format; 17 introduced transformers (`modelconfigs.py:43`) | `17` | — |
