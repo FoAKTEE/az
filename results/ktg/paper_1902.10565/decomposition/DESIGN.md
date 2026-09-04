@@ -210,13 +210,6 @@ Per-stage idempotency the wrapper relies on:
   stale `shuffleddata/*.tmp`, and an over-budget rolling mode that never goes below one shuffle window plus one selfplay
   generation. Bytes/row is calibrated after 100 k rows by `measure_stage_throughput` (pass 2's 1 KiB/row planning number is a 19x19 upper bound).
   verify: node `data_budget` closing check (`codes/data_budget/tests/run_guard_tests.sh`, 11/11; `du -sb $KTG ≤ 536870912000`); claims c10, c11; obligation o04.
-- [OPEN] The 200 GiB / 180 GiB pair above predates the human's 2026-09-03 decision, which set the scratch budget
-  for selfplay data + checkpoints to **500 GiB** (`mission.json` `compute.scratchBudgetGiB`, `decisions[1]`). The
-  two numbers contradict each other and `data_budget` owns the reconciliation — including whether 500 GiB is the
-  whole mission root (venv + build included, as the 200 GiB figure was) or only data + checkpoints, and where the
-  pre-cycle guard then sits. Closes when `data_budget` lands `loop.sbatch` with the settled constants and this
-  table's estimates are restated against them. Not this node's to change.
-  verify: `mission.json` `compute.scratchBudgetGiB` = 500 and `decisions[1].affects` = ["node data_budget", "obligation o04"]; node `data_budget` closing check.
 - [SOLID] Nothing upstream prunes `selfplay/*/tdata`; growth is monotonic.
   verify: grep of `python/selfplay/*.sh` and `cleanup_old_dirs.py` (audit §F).
 

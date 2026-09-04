@@ -1,0 +1,132 @@
+slurm_job_id        = 298359
+slurm_node          = gb205
+slurm_partition     = b200
+SLURM_CPUS_PER_TASK = 24
+SLURM_MEM_PER_NODE  = 65536
+gres                = 0
+katago              = /scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/build/KataGo/cpp/build/katago
+KataGo v1.18.2
+Git revision: fd0723fdbc0e9d82cf269c9630af8c27c57c07c4-dirty
+Compile Time: Sep  3 2026 22:02:13
+Using CUDA backend
+Compiled with CUDA version 12.8.93
+
+check_cfg_9x9.sh
+repo_root  = /home/schmidt/ssci-haiyangw/az
+date_utc   = 2026-09-04T04:30:23Z
+host       = gb205
+cpu_budget = 24   (source: SLURM_CPUS_PER_TASK)
+affinity   = 24 usable cpus (nproc)
+
+=== check 1_selfplay: key-diff selfplay1_maxsize9.cfg -> selfplay_9x9.cfg
+--- allowed keys: dataBoardLen numGameThreads bSizes bSizeRelProbs allowRectangleProb numNNServerThreadsPerModel cudaDeviceToUse
+--- significant lines: upstream=101 mission=101
+--- diff:
+5c5
+< dataBoardLen = 19
+---
+> dataBoardLen = 9
+37c37
+< numGameThreads = 128
+---
+> numGameThreads = 18
+44,46c44,46
+< bSizes = 7,8,9
+< bSizeRelProbs = 1,1,8
+< allowRectangleProb = 0.50
+---
+> bSizes = 9
+> bSizeRelProbs = 1
+> allowRectangleProb = 0
+OUT_OF_SET_KEYS(1_selfplay) = 0
+
+=== check 2_gatekeeper: key-diff gatekeeper1_maxsize9.cfg -> gatekeeper_9x9.cfg
+--- allowed keys: numGameThreads bSizes bSizeRelProbs allowRectangleProb numNNServerThreadsPerModel cudaDeviceToUse
+--- significant lines: upstream=62 mission=62
+--- diff:
+5c5
+< numGameThreads = 128
+---
+> numGameThreads = 18
+16,18c16,18
+< bSizes = 7,8,9
+< bSizeRelProbs = 1,1,8
+< allowRectangleProb = 0.50
+---
+> bSizes = 9
+> bSizeRelProbs = 1
+> allowRectangleProb = 0
+OUT_OF_SET_KEYS(2_gatekeeper) = 0
+
+=== value asserts
+ok   selfplay_9x9.cfg: dataBoardLen = 9
+ok   selfplay_9x9.cfg: bSizes = 9
+ok   selfplay_9x9.cfg: bSizeRelProbs = 1
+ok   selfplay_9x9.cfg: allowRectangleProb = 0
+ok   selfplay_9x9.cfg: numGameThreads = 18
+ok   gatekeeper_9x9.cfg: bSizes = 9
+ok   gatekeeper_9x9.cfg: bSizeRelProbs = 1
+ok   gatekeeper_9x9.cfg: allowRectangleProb = 0
+ok   gatekeeper_9x9.cfg: numGameThreads = 18
+
+katago_bin = /scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/build/KataGo/cpp/build/katago
+workdir    = /scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/runtime/cfgcheck
+
+=== check 3: katago selfplay parse run, -max-games-total 1
+exit_code = 0   elapsed_s = 2
+--- last 12 log lines:
+2026-09-04 00:30:24-0400: Final games finished: 1
+2026-09-04 00:30:24-0400: Final moves played: 68
+2026-09-04 00:30:24-0400: Final data rows: 39
+2026-09-04 00:30:24-0400: Final NN rows: 0
+2026-09-04 00:30:24-0400: Final NN batches: 0
+2026-09-04 00:30:24-0400: Final NN avg batch size: -nan
+2026-09-04 00:30:24-0400: Final NN cache hits: 1105
+2026-09-04 00:30:24-0400: GPU -1 finishing, processed 0 rows 0 batches
+2026-09-04 00:30:24-0400: Data write loop cleaned up and terminating for random
+2026-09-04 00:30:24-0400: Total games: 19
+2026-09-04 00:30:24-0400: Total selfplay runtime (seconds): 0.687961
+2026-09-04 00:30:25-0400: All cleaned up, quitting
+
+=== check 5: ps -o nlwp= on the live selfplay pid, -max-games-total 36
+exit_code = 0   elapsed_s = 6
+NLWP_SAMPLES = 52
+NLWP_MAX     = 22
+CPU_BUDGET   = 24
+ok   NLWP_MAX 22 <= CPU_BUDGET 24
+
+=== check 4: SZ[9] fraction over every .sgfs line written by both runs
+sgfs_files = 2
+  /scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/runtime/cfgcheck/selfplay/random/sgfs/4F3C1AF8AF318941.sgfs
+  /scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/runtime/cfgcheck/selfplay/random/sgfs/64B2300291F2FB1C.sgfs
+--- first sgf line, truncated:
+(;FF[4]GM[1]SZ[9]PB[random]PW[random]HA[0]KM[-5]RU[koPOSITIONALscoreAREAtaxSEKIsui0]RE[B+6]C[startTurnIdx=0,initTurnNum=
+n_all = 37
+n9    = 37
+SZ9_FRACTION = 1.000
+n_rectangular = 0
+
+FAILURES = 0
+CHECK_CFG_9X9: PASS
+CHECKER_EXIT=0
+
+--- sacct / seff for job 298359 (appended after the run) ---
+JobID         Partition                                                    AllocTRES    Elapsed      State ExitCode 
+------------ ---------- ------------------------------------------------------------ ---------- ---------- -------- 
+298359             b200      billing=24,cpu=24,energy=3429,gres/gpu=1,mem=64G,node=1   00:00:09  COMPLETED      0:0 
+298359.batch                                        cpu=24,gres/gpu=1,mem=64G,node=1   00:00:09  COMPLETED      0:0 
+298359.exte+                             billing=24,cpu=24,gres/gpu=1,mem=64G,node=1   00:00:09  COMPLETED      0:0 
+
+Job ID: 298359
+Cluster: skipjack
+User/Group: ssci-haiyangw/users
+Partition: b200
+Account: ssci-anima
+State: COMPLETED (exit code 0:0)
+Nodes: 1
+Cores per node: 24
+CPU Utilized: 00:00:25
+CPU Efficiency: 11.57% of 00:03:36 core-walltime
+Job Wall-clock time: 00:00:09
+Memory Utilized: 2.81 MB
+Memory Efficiency: 0.00% of 64.00 GB

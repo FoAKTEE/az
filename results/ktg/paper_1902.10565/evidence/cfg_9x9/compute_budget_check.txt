@@ -1,0 +1,26 @@
+# Compute-policy pre-flight for node arxiv-1902.10565::cfg_9x9_override
+# Run from the az root immediately before `sbatch cfg_9x9_check.sbatch` (job 298359).
+# Command:
+#   bash .claude/skills/compute-budget/check.sh --gpus 1 --cpus 24 --partition b200
+# Exit code: 0
+
+== compute-budget self-check  2026-09-03T23:43:10-04:00 ==
+my jobs      : gpus=0 cpus=0  (0 jobs)
+partition b200 : free_gpus=0/128 (excludes reserved/drained nodes)
+partition b300 : free_gpus=0/8 (excludes reserved/drained nodes)
+reservations : 8 defined (6 active) — scontrol show reservation
+quota        : | /home/ssci-haiyangw/ | 3.39 GB  | 100.00 GB |  3.39%   |
+quota        : | /scratch/ssci-anima/ | 37.61 TB |  40.00 TB |   94%    |
+OK           : request gpus=1 cpus=24 part=b200 within policy (gpu<=4, no cpu cap)
+
+# Notes
+# - 1 GPU is the minimum a b200/b300 job may request (job_submit.lua rejects a GPU
+#   partition job with no GPU). The work itself needs no GPU: with an empty models dir
+#   LoadModel::findLatestModel hands back modelFile "/dev/null" (cpp/dataio/loadmodel.cpp:77-93),
+#   cpp/program/setup.cpp:126 turns that into debugSkipNeuralNet, and cpp/neuralnet/nneval.cpp:134
+#   then never creates a compute context. The GPU is requested only because the partition
+#   demands one; the allocation is what makes SLURM_CPUS_PER_TASK a real number to measure against.
+# - b300 was at free_gpus=0/8 (gb301 reserved), so b200 at the same GPU count, per the
+#   human decision recorded in mission.json decisions[2].
+# - "no cpu cap" in the OK line is the 2026-09-03 human decision (mission.json decisions[0],
+#   compute.cpuCapPerJob = null); the 24 CPUs are a derived honest declaration, not a ceiling.
