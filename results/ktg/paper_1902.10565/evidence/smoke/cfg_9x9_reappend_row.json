@@ -1,0 +1,52 @@
+{
+ "code_block_refs": [
+  "results/ktg/paper_1902.10565/codes/cfg/selfplay_9x9.cfg",
+  "results/ktg/paper_1902.10565/codes/cfg/gatekeeper_9x9.cfg",
+  "results/ktg/paper_1902.10565/codes/loop/train_9x9.sh",
+  "results/ktg/paper_1902.10565/codes/eval/check_cfg_9x9.sh"
+ ],
+ "concept_advance": false,
+ "domain": "numerical",
+ "evidence": "results/ktg/paper_1902.10565/evidence/cfg_9x9/check_cfg_9x9-298359.txt",
+ "metric_at_landing": {
+  "name": "sz9_fraction",
+  "pass": true,
+  "threshold": 1.0,
+  "value": 1.0
+ },
+ "node_id": "arxiv-1902.10565::cfg_9x9_override",
+ "notes": "Proposed promotion hypothesis -> preliminary. NOT solid: the admission gate requires solid predecessors and four of the five (selfplay_search_params, game_randomization_9x9, gating_rule, data_format_pos_len) are preliminary; only env_build is solid. Nothing about this node's own evidence is the limit. Thread budget re-derived without the withdrawn 20 % CPU cap: results/ktg/paper_1902.10565/evidence/cfg_9x9/thread_budget.md; DESIGN.md sections 1, 3, 8 and 9 revised in place to match. o03's id keeps the now-misleading _24cpu suffix; its content is unchanged, only its justification moves from 'fits the cap' to 'matches the declared CPUs'. a11_cpu_policy_summed and o22_cpu_policy_scope are moot after the human decision; those ledger transitions are the validator's to append. verification.command is the task file's closing check and runs two short selfplay processes - append it from inside an allocation (srun -p b200 --gres=gpu:1 --cpus-per-task=24 --mem=64G), not on a login node. Validator narrowing at admission: 'exactly one line' -> 'exactly one non-comment line plus a provenance comment header'; the thread peak is stated as measured on a random-net process with no CUDA context (c06 selfplay clause partial, not admitted). Gatekeeper_9x9.cfg is key-diffed and value-asserted but not parsed by a gatekeeper process here; that is gatekeeper_stage's first run. Predecessor statuses at admission: selfplay_search_params, game_randomization_9x9, gating_rule, data_format_pos_len preliminary; env_build solid -> preliminary is the ceiling.\n\nO30 RE-APPEND, VERIFICATION EXECUTED IN AN ALLOCATION: this row is the obligation-o30 re-append of the seq-3 row (row_hash 32f53697d4f3ba7fbf1a4c86ae6e94370b7ef3c7424354e44e964cf4444b1936), appended by the worker from leg A of Slurm job __SLURM_JOB_ID__ (node __NODE__, partition b200, 1 GPU, --cpus-per-task 24), the synchronous_loop_smoke allocation. It carries the SAME verification.command as the seq-3 row and is appended WITHOUT --skip-exec, so the admission gate ran codes/eval/check_cfg_9x9.sh inside the allocation with SLURM_CPUS_PER_TASK=24 rather than recording a skip_exec flag; the observed outcome is on this row as verification_run. The seq-3 row's cited executed evidence (worker job 298359, transcript results/ktg/paper_1902.10565/evidence/cfg_9x9/check_cfg_9x9-298359.txt) is unchanged and is still this row's content-hashed evidence file. Status stays preliminary: the ceiling is the predecessor statuses (selfplay_search_params, game_randomization_9x9, gating_rule, data_format_pos_len are preliminary; only env_build is solid), not this node's own evidence. The promotions of those four predecessors are what legs D1/D2 of the same job measure, and they are the validator's to append. Nothing else about the seq-3 row is amended here.",
+ "paper": "arxiv-1902.10565",
+ "paper_anchor": "cpp/configs/training/selfplay1_maxsize9.cfg:16,84,95-97; gatekeeper1_maxsize9.cfg:18,38-40; python/selfplay/train.sh:88; cpp/command/selfplay.cpp:97,220,291-293,359-364; cpp/dataio/sgf.cpp:2013-2015",
+ "predecessors": [
+  "arxiv-1902.10565::selfplay_search_params",
+  "arxiv-1902.10565::game_randomization_9x9",
+  "arxiv-1902.10565::gating_rule",
+  "arxiv-1902.10565::data_format_pos_len",
+  "arxiv-1902.10565::env_build"
+ ],
+ "risk_tier": "R1",
+ "runtime_metadata": {
+  "compiler_or_interpreter": "katago v1.18.2 CUDA build; bash 5.1",
+  "cpu_budget": 24,
+  "cpus_per_task": 24,
+  "device": "b200 node gb205, 1 GPU allocated and unused (debugSkipNeuralNet)",
+  "language": "KataGo cfg + bash",
+  "n9": 37,
+  "n_all": 37,
+  "n_rectangular": 0,
+  "nlwp_max": 22,
+  "nlwp_samples": 52,
+  "o30_reappend_of_row_hash": "32f53697d4f3ba7fbf1a4c86ae6e94370b7ef3c7424354e44e964cf4444b1936",
+  "out_of_set_keys_gatekeeper": 0,
+  "out_of_set_keys_selfplay": 0,
+  "slurm_job_id": "__SLURM_JOB_ID__"
+ },
+ "status": "preliminary",
+ "summary": "Mission-owned codes/cfg/selfplay_9x9.cfg, codes/cfg/gatekeeper_9x9.cfg and codes/loop/train_9x9.sh exist and are executed. Key-diff against cpp/configs/training/{selfplay1,gatekeeper1}_maxsize9.cfg (comment lines stripped) touches only dataBoardLen 19->9, numGameThreads 128->18, bSizes 7,8,9->9, bSizeRelProbs 1,1,8->1, allowRectangleProb 0.50->0 (OUT_OF_SET_KEYS = 0 on both, significant line counts unchanged 101/101 and 62/62); the train wrapper differs from python/selfplay/train.sh in exactly one non-comment line (-pos-len 19 -> 9; '-pos-len 9' count 1, '-pos-len 19' count 0) plus an inserted provenance comment header. katago selfplay with an empty models dir (random net, debugSkipNeuralNet, no CUDA context) exits 0 and writes 37 sgf lines, 37 of them SZ[9] (fraction 1.000) with 0 rectangular - structurally forced, since cpp/program/play.cpp:137-172 admits only (9,9) for bSizes = 9 with allowRectangleProb = 0; the live process peaks at 22 OS threads over 52 samples against the 24 CPUs the job declared. Executed evidence: Slurm job 298359 (worker, gb205, COMPLETED 0:0).",
+ "task_id": "cfg_9x9_override",
+ "verification": {
+  "command": "bash results/ktg/paper_1902.10565/codes/eval/check_cfg_9x9.sh && test $(grep -c -- '-pos-len 9' results/ktg/paper_1902.10565/codes/loop/train_9x9.sh) -eq 1 && grep -q '^numGameThreads = 18' results/ktg/paper_1902.10565/codes/cfg/gatekeeper_9x9.cfg",
+  "timeout_s": 3600
+ }
+}
