@@ -1,0 +1,20 @@
+# loop_resume_under_walltime — closing verification
+# node    : arxiv-1902.10565::loop_resume_under_walltime
+# host    : login03  (login node, no job submitted)
+# date    : 2026-09-03T23:51:53-04:00
+# repo    : bafd117 main
+
+## §2 verification command (verbatim)
+bash -n results/ktg/paper_1902.10565/codes/loop/loop.sbatch && grep -q afterany results/ktg/paper_1902.10565/codes/loop/loop.sbatch && grep -q failcount results/ktg/paper_1902.10565/codes/loop/loop.sbatch && grep -q 'cpp/build/katago' results/ktg/paper_1902.10565/codes/loop/synchronous_loop_9x9.sh && ! grep -q 'cpp/katago"' results/ktg/paper_1902.10565/codes/loop/synchronous_loop_9x9.sh && bash "$(python3 -c 'import json;print(json.load(open("mission.json"))["compute"]["policyCheck"])')" --gpus 1 --cpus 24 --partition b200
+
+## output
+== compute-budget self-check  2026-09-03T23:51:53-04:00 ==
+my jobs      : gpus=2 cpus=32  (2 jobs)
+partition b200 : free_gpus=0/128 (excludes reserved/drained nodes)
+partition b300 : free_gpus=0/8 (excludes reserved/drained nodes)
+reservations : 8 defined (6 active) — scontrol show reservation
+quota        : | /home/ssci-haiyangw/ | 3.39 GB  | 100.00 GB |  3.39%   |
+quota        : | /scratch/ssci-anima/ | 37.61 TB |  40.00 TB |   94%    |
+OK           : request gpus=1 cpus=24 part=b200 within policy (gpu<=4, no cpu cap)
+
+EXIT=0

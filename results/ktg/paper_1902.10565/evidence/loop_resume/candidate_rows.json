@@ -1,0 +1,149 @@
+{
+  "_note": "CANDIDATE rows only. Written by the worker for node arxiv-1902.10565::loop_resume_under_walltime; NOT appended. An independent validator admits or refutes them. The only row the worker appended itself is the error-ledger trial row_hash 86d02063585027e5e342ae071886f9657715c766415a56d27b2daea43c654a66.",
+  "node_id": "arxiv-1902.10565::loop_resume_under_walltime",
+  "task_id": "loop_resume_under_walltime",
+  "worker_role": "worker",
+  "evidence_files": [
+    "results/ktg/paper_1902.10565/evidence/loop_resume_under_walltime/verification.txt",
+    "results/ktg/paper_1902.10565/evidence/loop_resume_under_walltime/conjuncts.txt",
+    "results/ktg/paper_1902.10565/evidence/loop_resume_under_walltime/guard_probes.txt",
+    "results/ktg/paper_1902.10565/evidence/loop_resume_under_walltime/upstream_diff.txt",
+    "results/ktg/paper_1902.10565/evidence/loop_resume_under_walltime/stage_dryrun.txt"
+  ],
+  "artifacts": [
+    "results/ktg/paper_1902.10565/codes/loop/loop.sbatch",
+    "results/ktg/paper_1902.10565/codes/loop/synchronous_loop_9x9.sh",
+    "results/ktg/paper_1902.10565/codes/loop/export_model_for_selfplay_9x9.sh"
+  ],
+  "verification": {
+    "command": "bash -n results/ktg/paper_1902.10565/codes/loop/loop.sbatch && grep -q afterany results/ktg/paper_1902.10565/codes/loop/loop.sbatch && grep -q failcount results/ktg/paper_1902.10565/codes/loop/loop.sbatch && grep -q 'cpp/build/katago' results/ktg/paper_1902.10565/codes/loop/synchronous_loop_9x9.sh && ! grep -q 'cpp/katago\"' results/ktg/paper_1902.10565/codes/loop/synchronous_loop_9x9.sh && bash \"$(python3 -c 'import json;print(json.load(open(\"mission.json\"))[\"compute\"][\"policyCheck\"])')\" --gpus 1 --cpus 24 --partition b200",
+    "exit_code": 0,
+    "conjuncts": {
+      "bash_n_loop_sbatch": "clean",
+      "grep_c_afterany": 4,
+      "grep_c_failcount": 14,
+      "grep_c_cpp_build_katago": 5,
+      "grep_c_cpp_katago_quote": 0,
+      "check_sh_exit": 0
+    },
+    "measured_at": "2026-09-03T23:44:33-04:00",
+    "wall_clock_seconds": 1.88,
+    "supplementary_executed_check": {
+      "name": "archive-staging dry run (KTG_STAGE_ONLY=1)",
+      "why": "turns o17 and the config half of o13 from grep assertions into executed facts without a GPU or a Slurm job",
+      "result": "exit 0; staged bin/katago byte-identical to $KATAGO_BIN; staged selfplay.cfg byte-identical to codes/cfg/selfplay_9x9.cfg (dataBoardLen = 9); staged train_9x9.sh at -pos-len 9; staged export wrapper renames at :161 before removing at :162; one archive costs 28 MB",
+      "evidence": "results/ktg/paper_1902.10565/evidence/loop_resume_under_walltime/stage_dryrun.txt",
+      "cleanup": "the dry-run BASEDIR was deleted afterwards"
+    }
+  },
+  "candidate_result_row": {
+    "paper": "arxiv-1902.10565",
+    "result_id": "r_loop_resume_under_walltime_static",
+    "name": "Slurm chain wrapper + mission loop copy encode the 3-day-walltime resume contract and repair three upstream defects",
+    "working_context": {
+      "cluster": "skipjack, partition b200 (b300 preferred when free), account ssci-anima",
+      "contract": "1 GPU, 24 CPUs, 120G, --time 2-23:30:00, self-resubmit with --dependency=afterany",
+      "upstream": "lightvector/KataGo v1.18.2 @ fd0723fdbc0e9d82cf269c9630af8c27c57c07c4 (read-only mirror ref-code/lightvector-KataGo)",
+      "scope": "static verification only; no job submitted, no GPU used"
+    },
+    "claim": "results/ktg/paper_1902.10565/codes/loop/loop.sbatch plus the mission copies synchronous_loop_9x9.sh and export_model_for_selfplay_9x9.sh encode the run contract (1 GPU, 24 CPUs, 120G, --time 2-23:30:00 inside the 3-day MaxTime, b300-preferred/b200-fallback, self-resubmit with --dependency=afterany, .failcount breaker at 3 with a 600 s minimum-runtime penalty, STOP brake, chain-depth cap) and repair the three upstream defects that make the stock synchronous loop unrunnable or lossy here: the binary is copied from cpp/build/katago rather than the path the CMake build never produces (synchronous_loop.sh:81), SELFPLAY_CONFIG/GATING_CONFIG point at the mission 9x9 configs rather than the mixed-board-size presets (:70-71), and the export copy renames the temp into the target before removing the source, inverting the window in which upstream export_model_for_selfplay.sh:89 destroys the checkpoint ahead of its rename at :108.",
+    "evidence_type": "existence_only",
+    "evidence": "results/ktg/paper_1902.10565/evidence/loop_resume_under_walltime/verification.txt",
+    "verifier_result": {
+      "verdict": "pass",
+      "command": "see .verification.command above",
+      "exit_code": 0,
+      "detail": "six conjuncts: bash -n clean; afterany 4; failcount 14; cpp/build/katago 5; cpp/katago\" 0; check.sh exit 0"
+    },
+    "dependencies": [
+      "arxiv-1902.10565::env_build",
+      "arxiv-1902.10565::train_resume_semantics"
+    ],
+    "assumptions": [
+      "a01_single_node",
+      "a02_gpu_cap_start_at_1",
+      "a03_walltime_resume",
+      "a04_b200_fallback"
+    ],
+    "status": "existence_only",
+    "provenance": "worker loop_resume_under_walltime, static verification on login03 2026-09-03; error-ledger trial row_hash 86d02063585027e5e342ae071886f9657715c766415a56d27b2daea43c654a66",
+    "open_obligations": [
+      "o04_scratch_budget",
+      "o13_loop_config_paths",
+      "chain-runaway",
+      "production-knobs",
+      "scratch-budget-propagation"
+    ],
+    "_validator_decision_point": "evidence_type/status are proposed as existence_only because the ledger enum has no 'static_verification' member (the task file \u00a72 names that type) and because the executed behaviour is NOT demonstrated here: \u00a713 forbids submitting a job from this node. If the validator prefers to scope the row to the static claim alone, 'checked' + 'exact_proof' is defensible only if the four open obligations are excluded from this row's scope, which admission gate 7 does not allow. Refute rather than upgrade if unconvinced."
+  },
+  "candidate_knowledge_row": {
+    "paper": "arxiv-1902.10565",
+    "node_id": "arxiv-1902.10565::loop_resume_under_walltime",
+    "task_id": "loop_resume_under_walltime",
+    "domain": "numerical",
+    "status": "preliminary",
+    "summary": "Slurm wrapper codes/loop/loop.sbatch (1 GPU / 24 CPU / 120G / --time 2-23:30:00, afterany self-resubmit, .failcount breaker at 3 with a 600 s minimum-runtime penalty, STOP brake, chain-depth cap, startup .exported and shuffleddata/*.tmp sweep, du -sb + df -B1 + quotas.py scratch guard at 180 GiB) plus the mission loop copy synchronous_loop_9x9.sh and export copy export_model_for_selfplay_9x9.sh. Six static conjuncts pass; the executed kill/resume proof belongs to verify_preemption_resume and the executed breaker proof to loop_failure_circuit_breaker, so the node is preliminary, not solid.",
+    "evidence": "results/ktg/paper_1902.10565/evidence/loop_resume_under_walltime/verification.txt",
+    "_validator_decision_point": "'solid' is NOT proposed: the node's own claims c07_loop_cycle_completes and c08_resume_no_loss are numerical_simulation claims that no execution here supports, and two obligations under this node stay open."
+  },
+  "candidate_claim_transitions": [
+    {
+      "entry_id": "o09_export_kill_window",
+      "kind": "obligation",
+      "proposed_status": "discharged",
+      "discharged_by": "arxiv-1902.10565::loop_resume_under_walltime",
+      "rationale": "Both disjuncts of the obligation statement are satisfied: export_model_for_selfplay_9x9.sh:161-162 renames the temp into the target before removing the source (upstream does :89 then :108), and loop.sbatch:161-162 plus synchronous_loop_9x9.sh sweep stale torchmodels_toexport{,_extra}/*.exported before the first cycle. The export copy additionally completes an interrupted rename on the next pass instead of leaving the source in torchmodels_toexport forever.",
+      "evidence": "results/ktg/paper_1902.10565/evidence/loop_resume_under_walltime/conjuncts.txt",
+      "caveat": "The kill-window repair is verified by file ordering, not by an executed kill. verify_preemption_resume must still show zero orphan *.exported dirs after a real scancel."
+    },
+    {
+      "entry_id": "o17_loop_katago_bin_path",
+      "kind": "obligation",
+      "proposed_status": "discharged",
+      "discharged_by": "arxiv-1902.10565::loop_resume_under_walltime",
+      "rationale": "synchronous_loop_9x9.sh copies ${KATAGO_BIN:-$GITROOTDIR/cpp/build/katago} and refuses to start when it is not executable; grep count for cpp/build/katago is 5 and for the upstream path with its closing quote is 0. Executed, not only grepped: with KTG_STAGE_ONLY=1 the loop copy staged a dated archive from the real scratch clone and the staged bin/katago is byte-identical to $KATAGO_BIN (cmp exit 0), 27273864 B.",
+      "evidence": "results/ktg/paper_1902.10565/evidence/loop_resume_under_walltime/stage_dryrun.txt",
+      "caveat": "The obligation row lists its owner as worker synchronous_loop_smoke; the discharging artifact was authored and executed here."
+    },
+    {
+      "entry_id": "o13_loop_config_paths",
+      "kind": "obligation",
+      "proposed_status": "open",
+      "rationale": "Two of the three conjuncts are now EXECUTED, not merely grepped. (i) Config paths: the KTG_STAGE_ONLY=1 dry run staged selfplay.cfg byte-identical to codes/cfg/selfplay_9x9.cfg (dataBoardLen = 9 at :28) and gatekeeper.cfg from codes/cfg/gatekeeper_9x9.cfg, with the trainer wrapper at -pos-len 9 -- both cfg files and train_9x9.sh landed from cfg_9x9_override while this node was working, so no duplicate config was authored here. (ii) Scratch clone: the loop copy refuses to start when the git root is not $KATAGO_SRC (guard_probes.txt probe 3, exit 2) and the dry run succeeded from inside the clone. (iii) Knob scaling is NOT settled: the ten-variable block is sized from the EXPECTED ~22 rows/game, not a measurement. Closes when derive_cycle_knobs_9x9 re-derives the block.",
+      "evidence": "results/ktg/paper_1902.10565/evidence/loop_resume_under_walltime/stage_dryrun.txt"
+    },
+    {
+      "entry_id": "o04_scratch_budget",
+      "kind": "obligation",
+      "proposed_status": "open",
+      "rationale": "The guard triple (du -sb, df -B1, python3 /apps/helpers/quotas.py) and the 180 GiB / 200 GiB thresholds are authored in loop.sbatch and re-checked per cycle inside synchronous_loop_9x9.sh, but node data_budget owns the thresholds, the retention policy and its own closing check."
+    },
+    {
+      "entry_id": "c07_loop_cycle_completes",
+      "kind": "claim",
+      "proposed_status": "open",
+      "rationale": "Nothing was executed. The claim needs one completed cycle producing a loadable models/<name>/model.bin.gz \u2014 node synchronous_loop_smoke."
+    },
+    {
+      "entry_id": "c08_resume_no_loss",
+      "kind": "claim",
+      "proposed_status": "open",
+      "rationale": "Only the static half is supported: the chain mechanism, the kill-window inversion and the startup sweeps are in place. The executed half \u2014 scancel mid-train and mid-export, successor starts, checkpoint.ckpt resumes with non-decreasing global_step_samples, no completed npz lost, no orphan *.exported \u2014 belongs to verify_preemption_resume."
+    },
+    {
+      "entry_id": "scratch-budget-propagation",
+      "kind": "obligation",
+      "proposed_status": "open",
+      "rationale": "mission.json decisions[] (human, 2026-09-03) raised the scratch budget to 500 GiB (536870912000 B), but obligation o04, DESIGN.md \u00a75 and tasks/data_budget still state 200 GiB / 180 GiB. loop.sbatch keeps 214748364800 / 193273528320 as its DEFAULTS because this node's \u00a72 closing check greps for the literal 193273528320, and makes both environment-overridable so data_budget can rewrite one line. Closes when data_budget reconciles the constant with the human decision and re-renders the claim views.",
+      "raised_by": "arxiv-1902.10565::loop_resume_under_walltime",
+      "owner": "arxiv-1902.10565::data_budget"
+    },
+    {
+      "entry_id": "chain-runaway",
+      "kind": "obligation",
+      "proposed_status": "open",
+      "rationale": "loop.sbatch codes the three guards the marker asks for \u2014 a chain-depth cap (KTG_MAX_CHAIN, default 200), a .failcount breaker at 3 that cancels the queued successor when it trips, and a minimum-runtime penalty (a failure faster than KTG_MIN_RUNTIME_SECONDS=600 costs two of the three attempts, so a crash loop trips on the second link). None of it is executed here: \u00a713 forbids injecting a failure at this node. Closes when loop_failure_circuit_breaker injects three consecutive failures and counts the chain.",
+      "owner": "arxiv-1902.10565::loop_failure_circuit_breaker"
+    }
+  ]
+}

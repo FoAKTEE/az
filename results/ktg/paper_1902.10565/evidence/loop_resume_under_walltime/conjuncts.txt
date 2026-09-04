@@ -1,0 +1,47 @@
+# six conjuncts of the §2 closing check, measured individually
+# 2026-09-03T23:51:55-04:00
+
+1. bash -n loop.sbatch                       : clean (exit 0)
+2. grep -c afterany loop.sbatch              : 4
+3. grep -c failcount loop.sbatch             : 14
+4. grep -c cpp/build/katago sync_loop_9x9.sh : 5
+5. grep -c cpp/katago" sync_loop_9x9.sh      : 0
+6. check.sh --gpus 1 --cpus 24 -p b200 exit  : 0
+
+# thresholds: 1 clean, 2 >=1, 3 >=1, 4 >=1, 5 ==0, 6 ==0
+
+# supplementary parse checks (not in the §2 command)
+bash -n synchronous_loop_9x9.sh              : clean (exit 0)
+bash -n export_model_for_selfplay_9x9.sh     : clean (exit 0)
+
+# o09: mv precedes rm in the export copy
+161:                mv "$TMPDST" "$TARGET"
+162:                rm -r "$SRC"
+(upstream ref-code/lightvector-KataGo/python/selfplay/export_model_for_selfplay.sh has the opposite order:)
+89:                rm -r "$SRC"
+108:                mv "$TMPDST" "$TARGET"
+
+# o13: mission 9x9 configs, not the mixed-size presets (files landed by cfg_9x9_override)
+125:SELFPLAY_CONFIG="${SELFPLAY_CONFIG:-$KTG_CODES/cfg/selfplay_9x9.cfg}"
+126:GATING_CONFIG="${GATING_CONFIG:-$KTG_CODES/cfg/gatekeeper_9x9.cfg}"
+-rwxr-xr-x 1 ssci-haiyangw users 3965 Sep  3 23:42 results/ktg/paper_1902.10565/codes/loop/train_9x9.sh
+
+results/ktg/paper_1902.10565/codes/cfg/:
+total 20
+-rw-r--r-- 1 ssci-haiyangw users 4704 Sep  3 23:41 gatekeeper_9x9.cfg
+-rw-r--r-- 1 ssci-haiyangw users 9786 Sep  3 23:41 selfplay_9x9.cfg
+
+# o09 startup sweep lives in loop.sbatch
+29:#   sweep      stale torchmodels_toexport/*.exported and shuffleddata/*.tmp
+172:# obligation o09: a killed export leaves <NAME>.exported in torchmodels_toexport,
+178:rm -rf "$BASEDIR"/torchmodels_toexport/*.exported
+179:rm -rf "$BASEDIR"/torchmodels_toexport_extra/*.exported
+
+# o04 scratch guard triple in loop.sbatch
+30:#   scratch    du -sb + df -B1 + quotas.py, refuse a new chain link at 180 GiB
+72:# literal 193273528320, so the old default stays until data_budget rewrites it.
+75:KTG_SCRATCH_SOFT_BYTES="${KTG_SCRATCH_SOFT_BYTES:-193273528320}" # 180 GiB, no new cycle
+192:python3 /apps/helpers/quotas.py 2>/dev/null | sed 's/\x1b\[[0-9;]*m//g' || true
+193:df -B1 "$KTG_SCRATCH_ROOT" || true
+194:USED_BYTES=$(du -sb "$KTG_SCRATCH_ROOT" | cut -f1)
+195:echo "du -sb $KTG_SCRATCH_ROOT = $USED_BYTES B  (soft 193273528320, hard $KTG_SCRATCH_CAP_BYTES)"
