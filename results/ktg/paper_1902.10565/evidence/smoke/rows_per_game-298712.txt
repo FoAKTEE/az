@@ -1,0 +1,12 @@
+rows_per_game -- node arxiv-1902.10565::synchronous_loop_smoke, S8; claim c10
+basedir = /scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/runs/smoke
+games = one line of a .sgfs file (cpp/program/selfplaymanager.cpp:377-378)
+rows  = sum of npz binaryInputNCHWPacked.shape[0] over tdata
+
+rows_per_game_real   = 32.3   (646 rows / 20 games)
+rows_per_game_random = 31.675   (2534 rows / 80 games)
+band (c10)           = [12, 35]   real_in_band = True
+
+per selfplay net directory (name = the net that played, 'random' = bootstrap):
+  random                       real_net=False games=80     rows=2534     rows/game=31.675
+  probe_search_9x9 (leg D1)    real_net=True  games=20     rows=646      rows/game=32.3
