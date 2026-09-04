@@ -1,0 +1,34 @@
+# archive-staging dry run (KTG_STAGE_ONLY=1) — no GPU, no Slurm job, login node
+# 2026-09-03T23:51:05-04:00  host login03
+# This EXECUTES the o17 binary-copy fix and the o13 config resolution against
+# the real build, then stops before the first engine stage.
+
+$ cd $KATAGO_SRC && KTG_STAGE_ONLY=1 bash /home/schmidt/ssci-haiyangw/az/results/ktg/paper_1902.10565/codes/loop/synchronous_loop_9x9.sh ktg9dry /scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/loop_stagedryrun t9dry b7c96h3tfrs 1
+KTG_STAGE_ONLY=1 -- archive staged at /weka/scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/loop_stagedryrun/scripts/dated/20260903-235107, no cycle run.
+-rwxr-xr-x 1 ssci-haiyangw users 27273864 Sep  3 23:51 /weka/scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/loop_stagedryrun/scripts/dated/20260903-235107/bin/katago
+-rwxr-xr-x 1 ssci-haiyangw users     7283 Sep  3 23:51 /weka/scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/loop_stagedryrun/scripts/dated/20260903-235107/export_model_for_selfplay_9x9.sh
+-rw-r--r-- 1 ssci-haiyangw users     4704 Sep  3 23:51 /weka/scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/loop_stagedryrun/scripts/dated/20260903-235107/gatekeeper.cfg
+-rw-r--r-- 1 ssci-haiyangw users     9786 Sep  3 23:51 /weka/scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/loop_stagedryrun/scripts/dated/20260903-235107/selfplay.cfg
+-rwxr-xr-x 1 ssci-haiyangw users     3965 Sep  3 23:51 /weka/scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/loop_stagedryrun/scripts/dated/20260903-235107/train_9x9.sh
+exit=0
+
+## the staged archive
+
+## the staged binary is the built one, byte-identical
+cmp: identical to $KATAGO_BIN
+
+## the staged selfplay.cfg is the mission 9x9 config, not the mixed-size preset
+cmp: identical to codes/cfg/selfplay_9x9.cfg
+28:dataBoardLen = 9
+
+## the staged trainer wrapper is at -pos-len 9
+98:     -pos-len 9 \
+
+## the staged export wrapper renames before it removes
+161:                mv "$TMPDST" "$TARGET"
+162:                rm -r "$SRC"
+
+## footprint of one staged archive
+28M	/scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/loop_stagedryrun
+
+## cleanup: the dry-run BASEDIR was removed after the evidence above was captured (28 MB reclaimed).

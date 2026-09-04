@@ -1,0 +1,36 @@
+# guard probes — the loop copy's refusal paths, exercised on the login node.
+# No job submitted, no GPU touched, no BASEDIR created (every guard fires
+# before the first mkdir).
+# 2026-09-03T23:45:02-04:00  host login03
+
+## probe 1 — non-SwiGLU MODELKIND (engine_ffn_swiglu_constraint)
+$ bash results/ktg/paper_1902.10565/codes/loop/synchronous_loop_9x9.sh ktg9 /scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/guardprobe t9 b7c96h3 1
+MODELKIND 'b7c96h3' is not a SwiGLU transformer kind (*tfrs / *tflrs);
+the CUDA backend refuses it (cudaandrocmbackend.inc:3307-3308). Refusing to start.
+exit=2
+
+## probe 2 — USEGATING=0 (gating_rule)
+$ bash results/ktg/paper_1902.10565/codes/loop/synchronous_loop_9x9.sh ktg9 /scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/guardprobe t9 b7c96h3tfrs 0
+USEGATING must be 1 for this mission (node gating_rule); got '0'.
+exit=2
+
+## probe 3 — run from the wrong git tree (never the read-only mirror)
+$ KATAGO_SRC=/scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/build/KataGo bash results/ktg/paper_1902.10565/codes/loop/synchronous_loop_9x9.sh ktg9 /scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/guardprobe t9 b7c96h3tfrs 1   # cwd = az repo
+git root '/weka/home/schmidt/ssci-haiyangw/az' != $KATAGO_SRC '/weka/scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/build/KataGo';
+run the loop from the scratch clone, not from the read-only mirror.
+exit=2
+
+## probe 4 — no args prints upstream usage and exits 0
+$ bash results/ktg/paper_1902.10565/codes/loop/synchronous_loop_9x9.sh
+Usage: results/ktg/paper_1902.10565/codes/loop/synchronous_loop_9x9.sh NAMEPREFIX BASEDIR TRAININGNAME MODELKIND USEGATING
+Assumes katago is already built and the executable is present at $KATAGO_BIN (cpp/build/katago).
+NAMEPREFIX string prefix for this training run, try to pick something globally unique. Will be displayed to users when KataGo loads the model.
+BASEDIR containing selfplay data and models and related directories
+TRANINGNAME name to prefix models with, specific to this training daemon
+MODELKIND what size model to train, like 'b7c96h3tfrs', see ../modelconfigs.py
+USEGATING = 1 to use gatekeeper, 0 to not use gatekeeper
+exit=0
+
+## BASEDIR was never created by the probes:
+ls: cannot access '/scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/guardprobe': No such file or directory
+  (absent — correct)
