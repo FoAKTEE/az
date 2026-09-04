@@ -1,0 +1,191 @@
+{
+  "_note": "CANDIDATE rows only. Written by the worker for the FOURTH repair packet of node arxiv-1902.10565::loop_resume_under_walltime (o35_chain_state_files_unvalidated, non-blocking). NOT appended: an independent validator admits or refutes them. The only row this worker appended is the error-ledger trial for this attempt. No result, knowledge or claim row was appended.",
+  "node_id": "arxiv-1902.10565::loop_resume_under_walltime",
+  "task_id": "loop_resume_under_walltime",
+  "worker_role": "worker",
+  "supersedes": "results/ktg/paper_1902.10565/evidence/loop_resume/candidate_rows_repair3.json (the third repair packet; its o34 discharge, its o33 amendment and its amended result row were all admitted, and the validator opened o35 in the same pass)",
+  "evidence_files": [
+    "results/ktg/paper_1902.10565/evidence/loop_resume/repair_o35.txt"
+  ],
+  "evidence_sha256": {
+    "results/ktg/paper_1902.10565/evidence/loop_resume/repair_o35.txt": "b2f991b206007e48c5d4f9a072acbb04d90e016632f2ca45c9cbf124c7870c62"
+  },
+  "artifacts": [
+    "results/ktg/paper_1902.10565/codes/loop/loop.sbatch",
+    "results/ktg/paper_1902.10565/codes/loop/synchronous_loop_9x9.sh"
+  ],
+  "artifact_sha256": {
+    "loop.sbatch": {
+      "before_this_repair": "86248d31b34b35220224bcdbdc8e9993671edba5c801283366fbaa00ded264cc",
+      "after_this_repair": "8d997ef5fc928390e9dfff18f2b6a5704d141a49778584e3eb692ae9b412d7d5"
+    },
+    "synchronous_loop_9x9.sh": {
+      "before_this_repair": "7d53df27563d6839c3f059f073b3a93e646aa6b03e2b8e2295b0f3ad3bc64ac1",
+      "after_this_repair": "f344ec06e73b1a2e803e4b245cf0a672cbd7c4899eb4efc7aa5d76d186f10d7f"
+    }
+  },
+  "artifacts_not_touched": [
+    "results/ktg/paper_1902.10565/codes/loop/smoke_loop.sbatch (node synchronous_loop_smoke) -- NOT edited; job 298712 is PENDING on it and stayed PENDING throughout. sha256 ba30b8b96b1f7d93674e121ca7d1bd02117dc29b20b912c3251c3d954b3f85ae at cd6cbf2 and in the working tree.",
+    "results/ktg/paper_1902.10565/codes/loop/export_model_for_selfplay_9x9.sh (unchanged, sha256 a1277ecb84ecaa4f5691176bdf14c192d9bb9cae2f09b36cab7079f7fb6ce694)",
+    "results/ktg/paper_1902.10565/codes/loop/train_9x9.sh (node cfg_9x9_override)",
+    "results/ktg/paper_1902.10565/codes/data_budget/ (node data_budget; called by exit code only)",
+    "results/ktg/paper_1902.10565/tasks/loop_resume_under_walltime/implementation.md (the section 2 command is unchanged and still exits 0)"
+  ],
+  "diff_summary": {
+    "files": 2,
+    "insertions": 63,
+    "deletions": 8,
+    "loop.sbatch": "new read_counter() with the comment block explaining base, bare words, width and whitespace; .failcount and .chain_depth read through it with a WARNING line when the raw value is not what was read; .cycles_completed read through it at entry and in finalize; the two former case-guard lines removed as redundant",
+    "synchronous_loop_9x9.sh": "CHANGE 10 writer: whitespace trim, the existing plain-decimal guard, an 18-digit width test and a 10# parse, and the result reused for both the file write and the log line instead of recomputing $(( CYCLES_DONE + 1 )) twice"
+  },
+  "verification": {
+    "command": "bash -n results/ktg/paper_1902.10565/codes/loop/loop.sbatch && grep -q afterany results/ktg/paper_1902.10565/codes/loop/loop.sbatch && grep -q failcount results/ktg/paper_1902.10565/codes/loop/loop.sbatch && grep -q 'cpp/build/katago' results/ktg/paper_1902.10565/codes/loop/synchronous_loop_9x9.sh && ! grep -q 'cpp/katago\"' results/ktg/paper_1902.10565/codes/loop/synchronous_loop_9x9.sh && bash \"$(python3 -c 'import json;print(json.load(open(\"mission.json\"))[\"compute\"][\"policyCheck\"])')\" --gpus 1 --cpus 24 --partition b200",
+    "exit_code": 0,
+    "conjuncts": {
+      "bash_n_loop_sbatch": "clean",
+      "grep_c_afterany": 8,
+      "grep_c_failcount": 35,
+      "grep_c_cpp_build_katago": 5,
+      "grep_c_cpp_katago_quote": 0,
+      "check_sh_exit": 0
+    },
+    "measured_at": "2026-09-04T03:07:25-04:00 (verbatim in PART A section \"PART 4\" of the evidence file)"
+  },
+  "candidate_claim_transitions": [
+    {
+      "paper": "arxiv-1902.10565",
+      "entry_id": "o35_chain_state_files_unvalidated",
+      "kind": "obligation",
+      "status": "discharged",
+      "discharged_by": "r_loop_resume_under_walltime_static",
+      "amends_row_hash": "14fe758db56b80bbbf6f506895a3f5a86a5275fee4964b1b098d499417d575f0",
+      "evidence_path": "results/ktg/paper_1902.10565/evidence/loop_resume/repair_o35.txt",
+      "blocking": false,
+      "owner": "worker loop_resume_under_walltime",
+      "task_id": "loop_resume_under_walltime",
+      "node_ids": [
+        "arxiv-1902.10565::loop_resume_under_walltime",
+        "arxiv-1902.10565::loop_failure_circuit_breaker"
+      ],
+      "dependencies": [
+        "r_loop_resume_under_walltime_static",
+        "o26_wrapper_early_exit_bypasses_breaker",
+        "a12_single_chain_per_basedir"
+      ],
+      "statement_of_discharge": "codes/loop/loop.sbatch:160-167 adds read_counter(), the single reader for every chain-state integer: it trims leading and trailing whitespace, rejects anything that is not a plain decimal, rejects a value wider than 18 digits (the widest that cannot wrap 2^63) and parses what is left with 10#, so a leading-zero digit string is never handed to bash as an octal literal. It always returns 0 and always prints one plain decimal, so it can never be the thing that aborts a link. It is used at :172 (.failcount, formerly a bare `cat` with no check at all), :179 (.chain_depth, formerly `$(( $(cat ...) + 1 ))` with no check at all), :185 (.cycles_completed at entry) and :275 (.cycles_completed inside finalize, the read the obligation names as :233). An unparsable .failcount or .chain_depth prints a WARNING line naming the file, the raw value and the value that was read, and does NOT abort -- exactly the fix shape the obligation asks for. codes/loop/synchronous_loop_9x9.sh:308-324 gives the CHANGE 10 writer the same trim / plain-decimal guard / 18-digit width test / 10# parse inline. Closing conditions, all in evidence/loop_resume/repair_o35.txt with a BEFORE column from cd6cbf2 beside every AFTER column: (1) T1 re-runs S4 with the seeds 08, 09, 007, abc, '', missing, trailing newline, trailing space, -1, 1e3, 0x10 and 99999999999999999999 in .cycles_completed with .failcount=2 and a failing loop -- BEFORE, 08 and 09 print 'line 233: 08: value too great for base', leave .failcount at 2, write no .breaker_tripped and leave the successor queued; AFTER, every one of the twelve seeds gives 'failure rc=1 -- failcount now 4/3', 'circuit breaker tripped', 'cancelling queued successor 800001' and a SCANCEL in the shim log. (2) T2 re-runs S6 with the same twelve seeds in .failcount -- BEFORE, abc gives 'line 311: abc: unbound variable' with nothing written and the successor queued, 1e3 gives 'value too great for base', 0x10 is silently read as 16 and 99999999999999999999 wraps to 7766279631452241921; AFTER, every seed prints the WARNING line, finalize runs to the end and the count is written. (3) T3 does the same for .chain_depth, which the obligation's statement did not cover: BEFORE, 08 killed the wrapper at :141 and :142 before the resubmit -- the shim log shows NO sbatch at all, so the chain simply ended; AFTER, the WARNING line, 'chain depth 9/200' and a queued successor. (4) PART A W2 re-runs R7c on the REAL loop script: BEFORE, seed 08 gives 'line 311: 08: value too great for base', exit 1, the file left at 08, and 99999999999999999999 wraps to 7766279631452241920; AFTER, seed 08 records 9 and exits 0, and the over-wide seed records 1. (5) T4 is the o35 crash-loop seed end to end (08 plus a cycle-recording loop that then fails): BEFORE the wrapper dies at :233 with the cycle uncounted; AFTER 'this link completed 1 cycle(s) before failing -- the run of consecutive failures restarts'. T5 shows three links seeded 08 now trip the breaker on link 2 and cancel the successor. (6) The writer audit the obligation implies: no printf %0Nd and no `seq -w` anywhere under codes/ (grep exit 1), and all four writes are unpadded $(( )) results, so no writer in the mission can create the input in the first place. (7) Unchanged behaviour: A, B, B2a, C, D, E, F, G, H, J, K1-K6, L1a, L1b, L2, M, N, O, P3, P4 and P5 reproduce validation_repair3.md section 1 line for line (O still 1,1,1,2,2,3 with the breaker on link 6; P3 1,0,0,1,0,1; P4 'old count 2 dropped' 2 -> 1; P5 2,2,2); the KTG_STAGE_ONLY=1 dry run from the real scratch clone exits 0 before and after with 80 files / 28702024 B and a manifest diff of exit 0; bash -n is clean on all four files in codes/loop/; and the task's section 2 closing check exits 0. Residual, NOT part of this discharge and not a state file: loop.sbatch:375 computes $(( KTG_MAX_FAILS - failcount )) on an operator ENVIRONMENT knob that is still unvalidated, so KTG_MAX_FAILS=08 in the job environment would abort finalize at that line -- after the count has been written and only on the branch where the breaker has NOT tripped, so the successor is kept and the damage is one missing log line. Worth folding into whichever obligation covers the operator knobs (o33 d documents them as knobs).",
+      "notes": "CANDIDATE, not appended. Proposed by the worker on 2026-09-04 for the fourth repair packet of this node. Non-blocking obligation; the discharge is offline and static, matching the existence_only status of the result row it hangs off."
+    }
+  ],
+  "candidate_result_row": {
+    "paper": "arxiv-1902.10565",
+    "result_id": "r_loop_resume_under_walltime_static",
+    "name": "Slurm chain wrapper + mission loop copy: errexit in force however the loop is launched, every process-internal exit accounted, and the scheduler's own termination told apart from a cycle and from a failure (static + offline injection)",
+    "working_context": {
+      "cluster": "skipjack, partition b200 (b300 preferred when free), account ssci-anima; MaxTime 3-00:00:00, KillWait 30 s, OverTimeLimit 0 min",
+      "contract": "1 GPU, 24 CPUs, 120G, --time 2-23:30:00, self-resubmit with --dependency=afterany by absolute path",
+      "upstream": "lightvector/KataGo v1.18.2 @ fd0723fdbc0e9d82cf269c9630af8c27c57c07c4 (read-only mirror ref-code/lightvector-KataGo)",
+      "scope": "static verification plus offline failure and signal injection under PATH shims for the scheduler, and one KTG_STAGE_ONLY dry run from the real scratch clone; no Slurm job submitted, no GPU used; the storage guard is node data_budget's working-tree copy, wired by exit code only; the validator's harness additionally ran the REAL synchronous_loop_9x9.sh through one stand-in cycle (dummy engine, shuffle, train and export stages, real scratch guard) so that the CHANGE 10 counter writer and the set +e / set -e restore were executed, not read"
+    },
+    "claim": "codes/loop/synchronous_loop_9x9.sh and codes/loop/export_model_for_selfplay_9x9.sh carry 'set -eu -o pipefail' in the body, so errexit, nounset and pipefail hold whether the file is executed or handed to `bash` -- the form loop.sbatch uses -- and a failure anywhere in the archive-staging section stops the loop instead of being followed by cycle 1 out of an incomplete archive. In codes/loop/loop.sbatch the .failcount accounting, the minimum-runtime penalty, the breaker and the scancel of the queued afterany successor live in one function, finalize(), run from an EXIT trap installed immediately after resubmit(), and finalize sorts the ways a link can end into five classes. A deliberate storage stop -- the loop exiting 3 WITH $BASEDIR/STOP present, the file the loop writes before that exit -- cancels the successor and spends no attempt. A scheduler termination -- SIGTERM to this wrapper, recorded by a TERM trap installed before the resubmit, or a 128+15 loop status on a link that has run at least KTG_MIN_RUNTIME_SECONDS -- keeps the queued successor, which is the resume itself, and leaves .failcount alone unless the link completed cycles, in which case the run of consecutive failures is cleared. A SIGTERM seen during the pre-flight ends the link before the loop is launched. A loop failure already recorded when a later SIGTERM arrives is counted as the failure it is. A pre-flight failure counts, with the fast-failure penalty, and cancels the successor. A loop failure counts and cancels only when the breaker trips; an exit 3 without STOP is one of these. A cycle that ran and exited 0 resets the count, an exit 0 that never ran the loop leaves it, and a link that advanced $BASEDIR/.cycles_completed restarts the failure run, so KTG_MAX_FAILS means three failures with no completed cycle between them. Neither loop.sbatch nor synchronous_loop_9x9.sh contains a storage threshold or its own du/df/quotas.py measurement: both call codes/data_budget/scratch_guard.sh and honour its exit code, with no --root passed. The three upstream defect repairs (o09, o13 config half, o17) admitted in the earlier rows are unchanged, and a KTG_STAGE_ONLY dry run from the real scratch clone stages the same 80 files byte-for-byte before and after this repair. NOT covered: a SIGKILL end -- KillWait expiry, cgroup OOM, node failure -- runs no handler, writes nothing and simply lets the queued successor resume, shown by scenario M; a loop status 143 after the runtime floor is still read as a scheduler termination whatever caused it; a SIGTERM already seen outranks a deterministic pre-flight failure that follows it, self-correcting in one extra link; and a link that completes a cycle before failing never accumulates toward the breaker. Every chain-state integer under $BASEDIR -- .failcount, .chain_depth and .cycles_completed -- is now read through one function, read_counter() in loop.sbatch, which trims whitespace, requires a plain decimal of at most 18 digits and parses it with 10#, so a leading-zero value such as 08 or 09 is read as 8 or 9 rather than aborting the enclosing command list as an invalid octal literal, an unparsable value reads as 0 instead of aborting, and a value past 2^63 cannot wrap; an unparsable .failcount or .chain_depth additionally prints a WARNING line naming the file and the value that was read. finalize() therefore writes the count, writes .breaker_tripped and cancels the queued successor for every seed, and the wrapper reaches its resubmit for every seed. The loop's own CHANGE 10 writer carries the same trim / guard / width / 10# parse, so a seeded 08 self-heals to 9 on the next completed cycle instead of killing the loop after every cycle. No writer in codes/ can produce a padded value in the first place (no printf %0Nd, no seq -w; every write is an unpadded $(( )) result), so the exposure only ever needed a hand-edited or foreign-written file. Nothing here ran on a GPU or under a real scheduler.",
+    "evidence_type": "existence_only",
+    "evidence": "results/ktg/paper_1902.10565/evidence/loop_resume/repair_o35.txt",
+    "verifier_result": {
+      "verdict": "pass",
+      "command_exit": 0,
+      "detail": "section 2 closing check exit 0 (afterany 8, failcount 35, cpp/build/katago 5, cpp/katago\" 0, check.sh OK for gpus=1 cpus=24 part=b200), verbatim in PART A section 'PART 4' of the evidence file. This packet: 24 seeded wrapper invocations for .cycles_completed (12 seeds x BEFORE/AFTER), 24 for .failcount, 8 for .chain_depth, 2 end-to-end crash-loop runs (T4) and a 3-link chain (T5), all through finalize(); plus 20 direct invocations of the REAL loop script (9 seeds x BEFORE/AFTER for CHANGE 10 and two clean two-cycle runs) and 2 KTG_STAGE_ONLY dry runs from the real scratch clone; plus the unchanged-behaviour regression set A, B, B2a, C, D, E, F, G, H, J, K1-K6, L1a, L1b, L2, M, N, O, P3, P4, P5 re-run with every outcome matching validation_repair3.md section 1, and D/E replayed unfiltered in PART D. bash -n clean on all four files in codes/loop/. Nothing ran on a GPU or under a real scheduler; job 298712 stayed PENDING and smoke_loop.sbatch was not edited.",
+      "metric": {
+        "name": "loop_and_wrapper_failure_paths_that_stop_the_link_as_specified_offline",
+        "value": 22,
+        "threshold": 22,
+        "pass": true
+      },
+      "metric_breakdown": {
+        "_definition": "distinct failure / termination paths shown offline to end the link the way the claim says, 22 = 11 + 4 + 4 + 3",
+        "wrapper_classes_unchanged_from_the_admitted_row (11)": [
+          "deliberate storage stop (loop exit 3 with STOP): successor cancelled, no attempt spent",
+          "scheduler termination seen as SIGTERM to this wrapper: successor kept, count untouched",
+          "scheduler termination seen as loop status 143 past KTG_MIN_RUNTIME_SECONDS: successor kept",
+          "pre-flight failure: counted with the fast-failure penalty, successor cancelled",
+          "loop failure: counted, successor cancelled only when the breaker trips",
+          "loop exit 3 with no STOP: counted as an ordinary failure",
+          "clean cycle (loop exit 0): count reset",
+          "exit 0 before the loop started (STOP at entry): count left",
+          "breaker trip: .breaker_tripped written and the queued successor scancelled",
+          "post-trip guard: a link that starts with the breaker tripped exits without running the loop",
+          "SIGKILL: no handler, nothing written, successor kept -- shown, not claimed as handled (scenario M)"
+        ],
+        "wrapper_classes_added_by_the_third_repair (4)": [
+          "SIGTERM seen during the pre-flight: the loop is not launched, the link exits 143 as a scheduler termination",
+          "loop failure recorded before a later SIGTERM: counted as the failure, not waved through as the signal",
+          "scheduler termination on a link that completed cycles: the failure run is cleared",
+          "failure on a link that completed cycles: the failure run restarts before the new failure is counted"
+        ],
+        "loop_script_staging_paths_added_by_the_third_repair (4)": [
+          "failing cp in the staging section with KTG_STAGE_ONLY=1: exit 1, nothing staged (was exit 0 with a broken archive)",
+          "failing cp in the staging section with no KTG_STAGE_ONLY: exit 1 before cycle 1 (was cycle 1 out of the broken archive)",
+          "unreadable but present config: exit 1 at the cp (was a staged archive with no selfplay.cfg)",
+          "missing config: exit 2 from the explicit check, unchanged, proving the explicit guards were not disturbed"
+        ],
+        "state_file_paths_added_by_this_repair (3)": [
+          "corrupt or leading-zero .cycles_completed at entry or in finalize: the count is written, .breaker_tripped is written and the queued successor is cancelled for every seed (was: finalize abandoned at :233 on 08/09, count left, successor kept -- the o26 class)",
+          "corrupt .failcount: read as its base-10 value or as 0 with a WARNING line, finalize still classifies and still writes (was: abc aborted finalize with \"unbound variable\" and left the successor queued; 0x10 was read as 16 and 99999999999999999999 wrapped to 7766279631452241921, both tripping the breaker on a wrong number)",
+          "corrupt .chain_depth: read as its base-10 value or as 0 with a WARNING line, the link continues and the successor is queued (was: 08 killed the wrapper at :141 with \"value too great for base\" then \":142 chaindepth: unbound variable\" BEFORE the resubmit, so the chain ended silently with no successor at all -- a path o35's statement did not record)"
+        ]
+      },
+      "execution": {
+        "command": "bash -n results/ktg/paper_1902.10565/codes/loop/loop.sbatch && grep -q afterany results/ktg/paper_1902.10565/codes/loop/loop.sbatch && grep -q failcount results/ktg/paper_1902.10565/codes/loop/loop.sbatch && grep -q 'cpp/build/katago' results/ktg/paper_1902.10565/codes/loop/synchronous_loop_9x9.sh && ! grep -q 'cpp/katago\"' results/ktg/paper_1902.10565/codes/loop/synchronous_loop_9x9.sh && bash \"$(python3 -c 'import json;print(json.load(open(\"mission.json\"))[\"compute\"][\"policyCheck\"])')\" --gpus 1 --cpus 24 --partition b200",
+        "exit_code": 0,
+        "ran_at": "2026-09-04T03:07:25-04:00 (verbatim in PART A section \"PART 4\" of the evidence file)",
+        "output_tail": "== compute-budget self-check  2026-09-04T03:07:25-04:00 ==\nmy jobs      : gpus=1 cpus=24  (1 jobs)\npartition b200 : free_gpus=0/128 (excludes reserved/drained nodes)\npartition b300 : free_gpus=0/8 (excludes reserved/drained nodes)\nreservations : 8 defined (6 active) \u2014 scontrol show reservation\nquota        : | /home/ssci-haiyangw/ | 3.42 GB  | 100.00 GB |  3.42%   |\nquota        : | /scratch/ssci-anima/ | 37.45 TB |  40.00 TB |   93%    |\nOK           : request gpus=1 cpus=24 part=b200 within policy (gpu<=4, no cpu cap)\nSECTION2_EXIT=0\n"
+      }
+    },
+    "verification": {
+      "command": "bash -n results/ktg/paper_1902.10565/codes/loop/loop.sbatch && grep -q afterany results/ktg/paper_1902.10565/codes/loop/loop.sbatch && grep -q failcount results/ktg/paper_1902.10565/codes/loop/loop.sbatch && grep -q 'cpp/build/katago' results/ktg/paper_1902.10565/codes/loop/synchronous_loop_9x9.sh && ! grep -q 'cpp/katago\"' results/ktg/paper_1902.10565/codes/loop/synchronous_loop_9x9.sh && bash \"$(python3 -c 'import json;print(json.load(open(\"mission.json\"))[\"compute\"][\"policyCheck\"])')\" --gpus 1 --cpus 24 --partition b200",
+      "timeout_s": 120
+    },
+    "dependencies": [
+      "arxiv-1902.10565::env_build",
+      "arxiv-1902.10565::train_resume_semantics",
+      "arxiv-1902.10565::data_budget"
+    ],
+    "assumptions": [
+      "a01_single_node",
+      "a02_gpu_cap_start_at_1",
+      "a03_walltime_resume",
+      "a04_b200_fallback",
+      "a12_single_chain_per_basedir"
+    ],
+    "status": "existence_only",
+    "provenance": {
+      "worker": "node loop_resume_under_walltime FOURTH repair packet 2026-09-04; candidate rows results/ktg/paper_1902.10565/evidence/loop_resume/candidate_rows_repair4.json; evidence results/ktg/paper_1902.10565/evidence/loop_resume/repair_o35.txt",
+      "validator": "NOT YET VALIDATED -- this row is a candidate. The previous version was admitted by the validator on 2026-09-04 (validation_repair3.md).",
+      "amends_row_hash": "72ba1567d038435600eeb1d09165be2c2882928ae355270cae2a600ffc3a5e34"
+    },
+    "open_obligations": [
+      "o25_chain_breaker_executed_proof",
+      "o33_wrapper_classification_residuals",
+      "o13_loop_config_paths",
+      "o24_cycle_knobs_derived",
+      "c07_loop_cycle_completes",
+      "c08_resume_no_loss"
+    ],
+    "task_id": "loop_resume_under_walltime",
+    "node_ids": [
+      "arxiv-1902.10565::loop_resume_under_walltime"
+    ],
+    "iteration": 6,
+    "notes": "CANDIDATE. Amends the validator's row 72ba1567... The only change to the claim is that the validator's o35 qualification is replaced by the statement of the fix; every other sentence, the dependencies, the assumptions and the status are unchanged. Status stays existence_only for the same reason as before: nothing ran on a GPU or under a real scheduler, the stages of any executed cycle were dummies, and c07/c08 still need numerical_simulation. Knowledge status stays preliminary; no knowledge row is proposed. Metric raised 19 -> 22 for the three state-file paths listed in the breakdown; the .chain_depth path is new information relative to o35's statement, which named only .cycles_completed and .failcount.",
+    "timestamp": null,
+    "git_commit": null,
+    "actor_role": "worker (CANDIDATE -- not appended)",
+    "evidence_sha256": "b2f991b206007e48c5d4f9a072acbb04d90e016632f2ca45c9cbf124c7870c62"
+  },
+  "candidate_knowledge_rows": [],
+  "open_after_this_packet": [
+    "o25_chain_breaker_executed_proof (owner loop_failure_circuit_breaker) -- needs an executed run that reads Slurm job state back",
+    "o33_wrapper_classification_residuals (non-blocking; r1-r4 unchanged by this packet, all four reproduced again in T1/T2 and P5)",
+    "o13_loop_config_paths, o24_cycle_knobs_derived (knobs)",
+    "c07_loop_cycle_completes, c08_resume_no_loss (need numerical_simulation)",
+    "NEW, not yet an obligation: loop.sbatch:375 does arithmetic on the unvalidated operator knob KTG_MAX_FAILS (see the residual paragraph of the o35 statement_of_discharge)"
+  ]
+}

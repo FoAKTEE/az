@@ -135,13 +135,54 @@ CHAINDEPTH_FILE="$BASEDIR/.chain_depth"
 # difference is what this link achieved. Absent = 0, and a corrupt value is read
 # as 0 rather than aborting a three-day link on a stray byte.
 CYCLES_FILE="$BASEDIR/.cycles_completed"
+
+# Obligation o35. Every integer that comes back out of a chain state file goes
+# through this one function, because a digit-string guard alone is NOT enough to
+# make a value safe for $(( )):
+#
+#   * base. `$(( 08 ))` is an OCTAL literal to bash and 8 is not an octal digit,
+#     so a value the `*[!0-9]*` pattern happily admits still aborts the
+#     expansion with "value too great for base". An arithmetic error in a
+#     non-interactive shell discards the whole enclosing command list, and
+#     inside finalize that is the o26 class all over again: no count written, no
+#     .breaker_tripped, the queued successor left to repeat the crash, and the
+#     chain bounded only by KTG_MAX_CHAIN. `10#` pins the base and is the fix.
+#   * bare words. `$(( abc ))` is a variable reference, so under `set -u` a
+#     .failcount of "abc" aborted finalize the same way.
+#   * width. Past 2^63 bash wraps silently, and a negative failcount would mean
+#     a breaker that never trips; 18 digits is the widest that cannot wrap.
+#   * whitespace. An operator who edits a state file by hand leaves a space or a
+#     newline behind; `$(cat)` eats trailing newlines, this eats the rest.
+#
+# It never fails and never aborts a link: anything that is not a plain decimal
+# reads as 0 and the CALLER decides whether that is worth a line in the log. A
+# three-day link must not die because a state file holds a stray byte.
+read_counter() {
+    local raw="${1:-}"
+    raw="${raw#"${raw%%[![:space:]]*}"}"
+    raw="${raw%"${raw##*[![:space:]]}"}"
+    case "$raw" in ''|*[!0-9]*) echo 0; return 0 ;; esac
+    if [ "${#raw}" -gt 18 ]; then echo 0; return 0; fi
+    echo $(( 10#$raw ))
+}
+
 [ -f "$FAILCOUNT_FILE" ] || echo 0 > "$FAILCOUNT_FILE"
 [ -f "$CHAINDEPTH_FILE" ] || echo 0 > "$CHAINDEPTH_FILE"
-failcount=$(cat "$FAILCOUNT_FILE")
-chaindepth=$(( $(cat "$CHAINDEPTH_FILE") + 1 ))
+failcount_raw=$(cat "$FAILCOUNT_FILE" 2>/dev/null || echo 0)
+failcount=$(read_counter "$failcount_raw")
+if [ "$failcount_raw" != "$failcount" ]; then
+    # Not fatal by design: the breaker resumes counting from what could be read,
+    # and the line below is the only evidence that the file had been mangled.
+    say "WARNING: $FAILCOUNT_FILE held '$failcount_raw', which is not a plain decimal -- reading it as $failcount"
+fi
+chaindepth_raw=$(cat "$CHAINDEPTH_FILE" 2>/dev/null || echo 0)
+chaindepth=$(read_counter "$chaindepth_raw")
+if [ "$chaindepth_raw" != "$chaindepth" ]; then
+    say "WARNING: $CHAINDEPTH_FILE held '$chaindepth_raw', which is not a plain decimal -- reading it as $chaindepth"
+fi
+chaindepth=$(( chaindepth + 1 ))
 echo "$chaindepth" > "$CHAINDEPTH_FILE"
-CYCLES_AT_ENTRY=$(cat "$CYCLES_FILE" 2>/dev/null || echo 0)
-case "$CYCLES_AT_ENTRY" in ''|*[!0-9]*) CYCLES_AT_ENTRY=0 ;; esac
+CYCLES_AT_ENTRY=$(read_counter "$(cat "$CYCLES_FILE" 2>/dev/null || echo 0)")
 say "chain depth $chaindepth/$KTG_MAX_CHAIN, failcount $failcount/$KTG_MAX_FAILS, cycles completed so far $CYCLES_AT_ENTRY"
 
 # ---------------------------------------------------------------- partition pick
@@ -228,8 +269,10 @@ finalize() {
     # five stages all returned 0 bumps $BASEDIR/.cycles_completed, so the
     # difference against the entry value is this link's progress and it is the
     # only evidence available that the failure run should restart.
-    cycles_now=$(cat "$CYCLES_FILE" 2>/dev/null || echo 0)
-    case "$cycles_now" in ''|*[!0-9]*) cycles_now=0 ;; esac
+    # read_counter, not a bare $(( )): o35. This is the read that must never
+    # fail, because everything below it -- the count, .breaker_tripped and the
+    # successor cancellation -- is downstream of this line.
+    cycles_now=$(read_counter "$(cat "$CYCLES_FILE" 2>/dev/null || echo 0)")
     cycles_this_link=$(( cycles_now - CYCLES_AT_ENTRY ))
     [ "$cycles_this_link" -ge 0 ] || cycles_this_link=0
 

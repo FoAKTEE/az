@@ -306,10 +306,22 @@ do
     # healthy production link never exits 0 and so never reaches the reset. One
     # writer (this loop), one reader (the wrapper), same $BASEDIR.
     set +x
+    # Obligation o35: read the counter back in base 10. The `*[!0-9]*` guard
+    # below admits a leading-zero "08", and to $(( )) that is an octal literal
+    # with a digit octal does not have -- the expansion aborts, and under the
+    # `set -e` this script now really runs with (o34) the loop dies after every
+    # completed cycle without ever recording one. `10#` pins the base; the
+    # whitespace trim covers a hand-edited file and the width test keeps the
+    # value clear of the 2^63 wrap. Anything else still reads as 0, so a stray
+    # byte costs at most one cycle of accounting, never the cycle itself.
     CYCLES_DONE=$(cat "$BASEDIR"/.cycles_completed 2>/dev/null || echo 0)
+    CYCLES_DONE="${CYCLES_DONE#"${CYCLES_DONE%%[![:space:]]*}"}"
+    CYCLES_DONE="${CYCLES_DONE%"${CYCLES_DONE##*[![:space:]]}"}"
     case "$CYCLES_DONE" in ''|*[!0-9]*) CYCLES_DONE=0 ;; esac
-    echo $(( CYCLES_DONE + 1 )) > "$BASEDIR"/.cycles_completed
-    echo "cycle $CYCLE_INDEX complete -- $(( CYCLES_DONE + 1 )) cycle(s) recorded in $BASEDIR/.cycles_completed"
+    [ "${#CYCLES_DONE}" -le 18 ] || CYCLES_DONE=0
+    CYCLES_DONE=$(( 10#$CYCLES_DONE + 1 ))
+    echo "$CYCLES_DONE" > "$BASEDIR"/.cycles_completed
+    echo "cycle $CYCLE_INDEX complete -- $CYCLES_DONE cycle(s) recorded in $BASEDIR/.cycles_completed"
     set -x
 
     # CHANGE 8: smoke_loop.sbatch (node synchronous_loop_smoke) sets this to run
