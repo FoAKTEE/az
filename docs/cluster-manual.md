@@ -246,7 +246,11 @@ interactive shells but **not** in a plain `#!/bin/bash` sbatch script on a compu
 | RAM available to you | 5 GB cgroup | whatever `--mem` asked |
 
 Build C++ that needs `libzip` on a compute node. cuDNN for CUDA 12 is available as the pip
-wheel `nvidia-cudnn-cu12` (9.x); TensorRT as `tensorrt-cu12`. PyTorch for this CUDA:
+wheel `nvidia-cudnn-cu12` (9.x); TensorRT as `tensorrt-cu12`. The cuDNN wheel ships only the
+versioned soname — add `ln -s libcudnn.so.9 libcudnn.so` in `site-packages/nvidia/cudnn/lib`
+before pointing CMake at it, and put that `lib/` on `LD_LIBRARY_PATH` at runtime. Check any
+CMake project's hard-coded `CMAKE_CUDA_ARCHITECTURES` list includes `100` for B200/B300 —
+verify with `cuobjdump --list-elf <binary> | grep -c sm_100` (0 means PTX-JIT only). PyTorch for this CUDA:
 `torch==2.11.0+cu128` from `https://download.pytorch.org/whl/cu128` (cp311 wheel confirmed).
 
 No `apptainer`/`singularity`/`docker`/`podman` on the login node `PATH`. There is a
