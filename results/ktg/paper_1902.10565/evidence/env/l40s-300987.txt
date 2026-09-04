@@ -1,0 +1,166 @@
+# l40s engine probe -- node arxiv-1902.10565::env_build, task env_build
+# Question settled by measurement: does the mission katago binary -- which carries
+# CUDA ELF/PTX images for sm_50..sm_86, sm_87, sm_90, sm_100, sm_120 and NO sm_89 --
+# run on an L40S (Ada, sm_89), the partition the human admitted for the production
+# chain on 2026-09-04 (mission.json decisions[3])?
+# Answer: YES, natively and at full speed. No rebuild was triggered; the binary
+# shared with queued chain job 299461 is byte-identical before and after.
+#
+# job script : results/ktg/paper_1902.10565/codes/env/l40s_probe.sbatch
+# policy     : the script named by mission.json compute.policyCheck
+#              transcript in results/ktg/paper_1902.10565/evidence/env/compute_budget_check_l40s.txt (exit 0)
+# full log   : /scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/logs/l40s-probe-300987.log
+# B200 baseline for the same model/board/visits/threads: evidence/env/smoke.txt (job 298018)
+#
+# $ sacct -j 300987 -X -n -o JobID,Partition,State,Elapsed,ExitCode,NodeList,AllocTRES%60
+# 300987             l40s  COMPLETED   00:00:38      0:0           gl111                    billing=9,cpu=9,gres/gpu=1,mem=48G,node=1 
+#
+# $ seff 300987
+# Job ID: 300987
+# Cluster: skipjack
+# User/Group: ssci-haiyangw/users
+# Partition: l40s
+# Account: ssci-anima
+# State: COMPLETED (exit code 0:0)
+# Nodes: 1
+# Cores per node: 9
+# CPU Utilized: 00:00:37
+# CPU Efficiency: 10.82% of 00:05:42 core-walltime
+# Job Wall-clock time: 00:00:38
+# Memory Utilized: 6.64 GB
+# Memory Efficiency: 13.83% of 48.00 GB
+#
+# NOTE: --cpus-per-task=8 was requested; Slurm allocated 9 cores on gl111
+#       (seff 'Cores per node: 9'), so the transcript below reports cpus=9.
+#       This is the scheduler's core-granularity rounding, not a larger request.
+
+== ktg-train l40s engine probe -- node arxiv-1902.10565::env_build
+== slurm job 300987 on gl111, partition l40s, 2026-09-04T16:43:28-04:00
+== cpus=9 mem=48G walltime=00:40:00
+--- nvidia-smi (name, compute cap, memory, driver)
+0, NVIDIA L40S, 8.9, 46068 MiB, 580.178.04
+KATAGO_BIN = /scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/build/KataGo/cpp/build/katago
+--- module list
+
+Currently Loaded Modules:
+  1) lmod/8.7.37-AMD   4) standard/2024.10   7) cuda/12.8.1
+  2) lua/5.4.6         5) gcc/12.3.0         8) python/3.11.9
+  3) helpers/0.1.1     6) cmake/3.30.2
+katago sha256 BEFORE = 4d2bbed4de859598109d7fcec3665304312bed62d0c441fd1cbbfd0f43020550
+katago mtime  BEFORE = 2026-09-03T22:02:59-04:00
+cuobjdump --list-elf arch set BEFORE : sm_100 sm_120 sm_50 sm_52 sm_53 sm_60 sm_61 sm_62 sm_70 sm_72 sm_75 sm_80 sm_86 sm_87 sm_90 
+cuobjdump --list-elf | grep -c sm_89 BEFORE = 0
+cuobjdump --list-ptx | grep -c sm_89 BEFORE = 0
+model  = /scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/runtime/smoke/model-b7c96h3tfrs/model.bin.gz  (2992909 bytes, sha256 4e55191e93b319a813873f0180b6838cfe058ef15772f6596365cbbe91960bbd)
+config = /scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/build/KataGo/cpp/configs/gtp_example.cfg
+########## PHASE A ##########
+--- [A] katago version
+KataGo v1.18.2
+Git revision: fd0723fdbc0e9d82cf269c9630af8c27c57c07c4-dirty
+Compile Time: Sep  3 2026 22:02:13
+Using CUDA backend
+Compiled with CUDA version 12.8.93
+[OK] [A] katago version (exit 0)
+--- [A] katago runtests
+Running rng and hash tests
+Running fancy math tests
+Running base64 tests
+Running thread tests
+Running board IO tests
+Running board basic tests
+Running board area tests
+Running rules tests
+Ran pass-alive suicide mode tests
+Ran exclude-territory-adjacent-to-atari mode tests
+Running board undo test
+Running board handicap test
+Running board stress test
+Running sgf tests
+Sgf tolerateIllegalMoves tests passed
+Running basic symmetries tests
+Running board symmetry tests
+Running symmetry difference tests
+Running board replay test
+Not being run out of git repo, skipping config parsing tests
+All tests passed
+[OK] [A] katago runtests (exit 0)
+--- [A] katago benchmark (b7c96h3tfrs, 9x9, 80 visits, 1 thread)
+2026-09-04 16:43:35-0400: Running with following config:
+allowResignation = true
+lagBuffer = 1.0
+logAllGTPCommunication = true
+logDir = gtp_logs
+logSearchInfo = true
+logSearchInfoForChosenMove = false
+logToStderr = false
+maxTimePondering = 60.0
+maxVisits = 500
+numSearchThreads = 6
+ponderingEnabled = false
+resignConsecTurns = 3
+resignThreshold = -0.90
+rules = tromp-taylor
+searchFactorAfterOnePass = 0.50
+searchFactorAfterTwoPass = 0.25
+searchFactorWhenWinning = 0.40
+searchFactorWhenWinningThreshold = 0.95
+
+2026-09-04 16:43:35-0400: Loading model and initializing benchmark...
+2026-09-04 16:43:35-0400: Testing with default positions for board size: 9
+2026-09-04 16:43:35-0400: nnRandSeed0 = 1738016487298031266
+2026-09-04 16:43:35-0400: After dedups: nnModelFile0 = /scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/runtime/smoke/model-b7c96h3tfrs/model.bin.gz useFP16 auto
+2026-09-04 16:43:35-0400: Initializing neural net buffer to be size 9 * 9 exactly
+2026-09-04 16:43:35-0400: Cuda backend thread 0: Found GPU NVIDIA L40S memory 47665709056 compute capability major 8 minor 9
+2026-09-04 16:43:35-0400: Cuda backend thread 0: Model version 17 useFP16 = true useNHWC = true
+2026-09-04 16:43:35-0400: Cuda backend thread 0: Model name: ktg-smoke-b7c96h3tfrs (transformer, 818857 params)
+2026-09-04 16:43:35-0400: Cuda backend: using combined QKV projection for attention
+2026-09-04 16:43:35-0400: Cuda backend: using CUTLASS fused FFN kernel
+2026-09-04 16:43:35-0400: CUDA backend: running 1x1 NHWC convolutions as a GEMM
+2026-09-04 16:43:35-0400: Cuda backend thread 0: warming up transformer graphs for batch sizes 1..8
+2026-09-04 16:43:35-0400: Cuda backend: using tensor-core mma flash attention kernel
+
+2026-09-04 16:43:35-0400: Loaded config /scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/build/KataGo/cpp/configs/gtp_example.cfg
+2026-09-04 16:43:35-0400: Loaded model /scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/runtime/smoke/model-b7c96h3tfrs/model.bin.gz
+
+Testing using 80 visits.
+
+Your GTP config is currently set to cudaUseFP16 = auto
+
+Your GTP config is currently set to use numSearchThreads = 6
+Testing (board size 9x9): 
+numSearchThreads =  1: 0 / 10 positions, visits/s = -nan (0.0 secs)      numSearchThreads =  1: 1 / 10 positions, visits/s = 2306.57 (0.0 secs)      numSearchThreads =  1: 2 / 10 positions, visits/s = 2366.32 (0.1 secs)      numSearchThreads =  1: 3 / 10 positions, visits/s = 2377.31 (0.1 secs)      numSearchThreads =  1: 4 / 10 positions, visits/s = 2386.79 (0.1 secs)      numSearchThreads =  1: 5 / 10 positions, visits/s = 2387.88 (0.2 secs)      numSearchThreads =  1: 6 / 10 positions, visits/s = 2414.10 (0.2 secs)      numSearchThreads =  1: 7 / 10 positions, visits/s = 2408.94 (0.2 secs)      numSearchThreads =  1: 8 / 10 positions, visits/s = 2404.80 (0.3 secs)      numSearchThreads =  1: 9 / 10 positions, visits/s = 2401.91 (0.3 secs)      numSearchThreads =  1: 10 / 10 positions, visits/s = 2401.88 nnEvals/s = 2386.86 nnBatches/s = 2386.86 avgBatchSize = 1.00 (0.3 secs) (EloDiff baseline)
+
+2026-09-04 16:43:36-0400: GPU -1 finishing, processed 800 rows 800 batches
+[OK] [A] katago benchmark (exit 0)
+[A] benchmark visits/s (1 thread, 9x9, 80 visits) = 2401.88   (B200 reference 2322.17)
+[A] 'no kernel image is available' occurrences in benchmark log = 0
+--- [A] torch cuda capability + forward/backward (b7c96h3tfrs, pos_len 9)
+/scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/runtime/smoke/torch_smoke.py:40: UserWarning: Converting a tensor with requires_grad=True to a scalar may lead to unexpected behavior.
+Consider using tensor.detach() first. (Triggered internally at /pytorch/torch/csrc/autograd/generated/python_variable_methods.cpp:836.)
+  print("loss        = %.6f" % float(loss))
+torch 2.11.0+cu128 cuda 12.8 cudnn 91900
+torch.cuda.is_available() = True
+device name = NVIDIA L40S
+capability  = (8, 9)
+model=b7c96h3tfrs pos_len=9 bin_feats=22 global_feats=19
+parameters  = 825837
+forward ok: 9 output tensors, shapes[:4]=[(4, 6, 82), (4, 3), (4, 10), (4, 8)]
+loss        = 32.084293
+grad l2norm = 3.463626
+mem alloc MB=131.5
+TORCH_SMOKE_OK
+[OK] [A] torch cuda capability + forward/backward (b7c96h3tfrs, pos_len 9) (exit 0)
+PHASE A: legs_failed=0 visits_per_s=2401.88 no_kernel_image=0
+PHASE A VERDICT: the stock binary runs on this device; no rebuild triggered
+
+########## SUMMARY ##########
+device                     : NVIDIA L40S, 8.9
+katago sha256 before       : 4d2bbed4de859598109d7fcec3665304312bed62d0c441fd1cbbfd0f43020550
+katago sha256 after        : 4d2bbed4de859598109d7fcec3665304312bed62d0c441fd1cbbfd0f43020550
+sm_89 ELF images  before/after : 0 / 0
+sm_89 PTX images  before/after : 0 / 0
+phase A legs_failed        : 0
+phase A visits/s (1 thread): 2401.88   (B200 reference 2322.17)
+phase A no-kernel-image    : 0
+rebuild triggered          : 0 
+L40S PROBE RESULT: PASS

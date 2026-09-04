@@ -1,0 +1,157 @@
+{
+  "_note": "CANDIDATE rows only. Written by the worker for node arxiv-1902.10565::env_build; NOT appended to the result, claim, or knowledge ledgers. An independent validator admits or refutes them. The only row this worker appended is the error-ledger trial row_hash c70fe67283f7fb12a7fb877df64360756c8048de5f7057c46a1ca41d9bc222cd (pass, actor_role=worker, node_seq 1 under arxiv-1902.10565::env_build).",
+  "node_id": "arxiv-1902.10565::env_build",
+  "task_id": "env_build",
+  "worker_role": "worker",
+  "obligation_under_test": "engine binary must carry an image for every allowed partition's GPU architecture",
+  "evidence_files": [
+    "results/ktg/paper_1902.10565/evidence/env/l40s-300987.txt",
+    "results/ktg/paper_1902.10565/evidence/env/compute_budget_check_l40s.txt"
+  ],
+  "evidence_sha256": {
+    "results/ktg/paper_1902.10565/evidence/env/l40s-300987.txt": "55184b87cb001bea6030c169a2e713ddfa5084bd7ba340f301359be727bf842b"
+  },
+  "artifacts": [
+    "results/ktg/paper_1902.10565/codes/env/l40s_probe.sbatch",
+    "results/ktg/paper_1902.10565/codes/env/cmake-sm89.diff"
+  ],
+  "run": {
+    "slurm_job": 300987,
+    "partition": "l40s",
+    "node": "gl111",
+    "alloc": "billing=9,cpu=9,gres/gpu=1,mem=48G,node=1 (--cpus-per-task=8 requested; Slurm rounded to 9 cores)",
+    "state": "COMPLETED",
+    "exit_code": "0:0",
+    "elapsed": "00:00:38",
+    "seff": "CPU 10.82% of core-walltime, memory 6.64 GB of 48 GB - a probe, sized as a probe",
+    "slurm_log": "/scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/logs/l40s-probe-300987.log",
+    "queue_wait": "PENDING (Resources) 2026-09-04T16:37:25 -> RUNNING 16:43:28, 6 min. l40s GPUs were free (6/48) but only 38 of 768 CPUs were idle and no node had 8 free cores until gl111 released some.",
+    "compute_budget_check": "bash \"$(python3 -c 'import json;print(json.load(open(\"mission.json\"))[\"compute\"][\"policyCheck\"])')\" --gpus 1 --cpus 8 --partition l40s -> exit 0, 'OK: request gpus=1 cpus=8 part=l40s within policy (gpu<=4, no cpu cap)'",
+    "gpu_footprint_during_the_run": "1 GPU here + 1 GPU held by queued chain job 299461 = 2 of the cap of 4"
+  },
+  "measured": {
+    "device": "0, NVIDIA L40S, 8.9, 46068 MiB, 580.178.04",
+    "engine_device_line": "Cuda backend thread 0: Found GPU NVIDIA L40S memory 47665709056 compute capability major 8 minor 9",
+    "katago_version": "KataGo v1.18.2 / Git revision fd0723fdbc0e9d82cf269c9630af8c27c57c07c4-dirty / Compile Time Sep  3 2026 22:02:13 / Using CUDA backend / Compiled with CUDA version 12.8.93",
+    "katago_runtests": "All tests passed",
+    "benchmark_invocation": "katago benchmark -model runtime/smoke/model-b7c96h3tfrs/model.bin.gz -config cpp/configs/gtp_example.cfg -v 80 -t 1 -boardsize 9",
+    "benchmark_final_line": "numSearchThreads =  1: 10 / 10 positions, visits/s = 2401.88 nnEvals/s = 2386.86 nnBatches/s = 2386.86 avgBatchSize = 1.00 (0.3 secs) (EloDiff baseline)",
+    "benchmark_visits_per_s_l40s": 2401.88,
+    "benchmark_visits_per_s_b200_same_invocation": 2322.17,
+    "l40s_over_b200_ratio": 1.0343,
+    "no_kernel_image_occurrences": 0,
+    "engine_backend_paths_taken": [
+      "Model version 17 useFP16 = true useNHWC = true",
+      "using combined QKV projection for attention",
+      "using CUTLASS fused FFN kernel",
+      "running 1x1 NHWC convolutions as a GEMM",
+      "using tensor-core mma flash attention kernel"
+    ],
+    "torch": {
+      "version": "2.11.0+cu128, cuda 12.8, cudnn 91900",
+      "get_device_name": "NVIDIA L40S",
+      "get_device_capability": [
+        8,
+        9
+      ],
+      "model": "b7c96h3tfrs at pos_len 9, 825837 parameters",
+      "forward": "9 output tensors, shapes[:4]=[(4, 6, 82), (4, 3), (4, 10), (4, 8)]",
+      "loss": 32.084293,
+      "grad_l2norm": 3.463626,
+      "max_memory_allocated_MiB": 131.5,
+      "marker": "TORCH_SMOKE_OK"
+    },
+    "binary_sha256_before": "4d2bbed4de859598109d7fcec3665304312bed62d0c441fd1cbbfd0f43020550",
+    "binary_sha256_after": "4d2bbed4de859598109d7fcec3665304312bed62d0c441fd1cbbfd0f43020550",
+    "arch_set_elf": "sm_100 sm_120 sm_50 sm_52 sm_53 sm_60 sm_61 sm_62 sm_70 sm_72 sm_75 sm_80 sm_86 sm_87 sm_90",
+    "sm_89_elf_before_after": "0 / 0",
+    "sm_89_ptx_before_after": "0 / 0",
+    "rebuild_triggered": 0,
+    "rebuild_trigger_definition": "fires if the benchmark log carries 'no kernel image is available', or any leg exits non-zero, or visits/s < 232.2 (one tenth of the B200 figure). None fired."
+  },
+  "candidate_result_row": {
+    "paper": "arxiv-1902.10565",
+    "result_id": "r_env_l40s",
+    "task_id": "env_build",
+    "iteration": 3,
+    "name": "The mission engine and training stack run natively on an L40S (sm_89) although the binary carries no sm_89 image",
+    "working_context": {
+      "cluster": "skipjack, partition l40s, 1x NVIDIA L40S (sm_89, 46068 MiB, driver 580.178.04), 9 cpus, 48G, slurm job 300987 on gl111",
+      "root": "/scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train",
+      "binary_under_test": "the SAME katago built by env_build job 298018, sha256 4d2bbed4de859598109d7fcec3665304312bed62d0c441fd1cbbfd0f43020550, unmodified by this job",
+      "arch_images_in_that_binary": "ELF and PTX both: sm_50 52 53 60 61 62 70 72 75 80 86 87 90 100 120 -- sm_89 absent from both lists",
+      "model_under_test": "the b7c96h3tfrs random-init smoke export from job 298018 (model.bin.gz sha256 4e55191e93b319a813873f0180b6838cfe058ef15772f6596365cbbe91960bbd), board 9x9, pos_len 9 on the torch side",
+      "baseline": "the identical invocation on a B200 in evidence/env/smoke.txt (job 298018): 2322.17 visits/s at numSearchThreads=1",
+      "policy": "mission.json compute.policyCheck exited 0 for gpus=1 cpus=8 partition=l40s before submission"
+    },
+    "claim": "On an L40S (compute capability 8.9), the mission KataGo v1.18.2 CUDA-backend binary -- which carries no sm_89 ELF and no sm_89 PTX -- loads, passes `runtests`, and evaluates the b7c96h3tfrs transformer net through `benchmark` at 9x9 with no 'no kernel image is available' diagnostic and at 2401.88 visits/s at one search thread, i.e. 1.034x the 2322.17 visits/s the same invocation reaches on a B200, so there is no PTX-JIT or fallback penalty; and torch 2.11.0+cu128 reports capability (8, 9) and runs a forward+backward of the same architecture at pos_len 9 with a finite non-zero gradient. The l40s partition is therefore usable by the production chain with the binary exactly as it stands.",
+    "evidence_type": "empirical_measurement",
+    "evidence": "results/ktg/paper_1902.10565/evidence/env/l40s-300987.txt",
+    "verifier_result": {
+      "verdict": "pass",
+      "command": "sbatch results/ktg/paper_1902.10565/codes/env/l40s_probe.sbatch  (job 300987)",
+      "metric": {
+        "name": "l40s_benchmark_visits_per_s_1_thread_9x9_80visits",
+        "value": 2401.88,
+        "threshold": 232.2,
+        "pass": true
+      },
+      "output": "L40S PROBE RESULT: PASS; sacct 300987 COMPLETED ExitCode 0:0 in 00:00:38 on gl111; nvidia-smi '0, NVIDIA L40S, 8.9, 46068 MiB, 580.178.04'; engine 'Found GPU NVIDIA L40S ... compute capability major 8 minor 9'; runtests 'All tests passed'; benchmark 'visits/s = 2401.88 nnEvals/s = 2386.86 nnBatches/s = 2386.86 avgBatchSize = 1.00'; 'no kernel image is available' occurrences = 0; torch capability = (8, 9), grad l2norm 3.463626, TORCH_SMOKE_OK; katago sha256 unchanged 4d2bbed4... before and after; sm_89 ELF/PTX 0/0 before and after; rebuild triggered = 0"
+    },
+    "verification": {
+      "command": "T=results/ktg/paper_1902.10565/evidence/env/l40s-300987.txt; B=/scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/build/KataGo/cpp/build/katago; grep -q '^0, NVIDIA L40S, 8.9, 46068 MiB' \"$T\" && grep -q 'Found GPU NVIDIA L40S memory 47665709056 compute capability major 8 minor 9' \"$T\" && grep -q '^All tests passed$' \"$T\" && grep -q 'visits/s = 2401.88 nnEvals/s = 2386.86' \"$T\" && grep -qF \"[A] 'no kernel image is available' occurrences in benchmark log = 0\" \"$T\" && grep -q '^capability  = (8, 9)$' \"$T\" && grep -q '^TORCH_SMOKE_OK$' \"$T\" && grep -q '^sm_89 ELF images  before/after : 0 / 0$' \"$T\" && grep -q '^sm_89 PTX images  before/after : 0 / 0$' \"$T\" && grep -q '^rebuild triggered          : 0' \"$T\" && grep -q '^L40S PROBE RESULT: PASS$' \"$T\" && [ \"$(sha256sum \"$B\" | awk '{print $1}')\" = 4d2bbed4de859598109d7fcec3665304312bed62d0c441fd1cbbfd0f43020550 ]",
+      "timeout_s": 60,
+      "exit_code_as_run_by_the_worker": 0
+    },
+    "dependencies": [
+      "env-toolchain-b200",
+      "results/ktg/paper_1902.10565/codes/env/l40s_probe.sbatch",
+      "results/ktg/paper_1902.10565/codes/env/env.sh",
+      "arxiv-1902.10565::env_build"
+    ],
+    "assumptions": [
+      "The measurement certifies that SOME image in the binary serves an sm_89 device at full speed. It does not identify WHICH image the driver selected: by CUDA's documented minor-version rule the sm_86 cubin (major 8, minor 6 <= 9) is loadable on sm_89 and is the expected choice, and the absence of any JIT stall at load supports it, but this job did not measure the selection directly (a CUDA_FORCE_PTX_JIT=1 control run would).",
+      "The net under test is randomly initialised, so the figure certifies the engine and the device, not playing strength.",
+      "2401.88 vs 2322.17 visits/s is a single-thread, batch-size-1, 819k-parameter workload: it is latency-bound, so it does NOT mean an L40S out-throughputs a B200 in the production self-play regime (many threads, batched evaluation). It bounds the JIT/fallback question only.",
+      "The b7c96h3tfrs export used here is the exact artifact of job 298018; a re-export would change the sha256 without invalidating the claim.",
+      "cuDNN comes from the nvidia-cudnn-cu12 pip wheel inside R/venv; anything running the binary must keep that lib dir on LD_LIBRARY_PATH, which R/env.sh does."
+    ],
+    "status": "empirical",
+    "provenance": "worker, task env_build, node arxiv-1902.10565::env_build, slurm job 300987; opened by the escalation recorded in evidence/production_chain/preflight.txt section R6 and its error-ledger row on node arxiv-1902.10565::selfplay_stage; this trial's error-ledger row_hash c70fe67283f7fb12a7fb877df64360756c8048de5f7057c46a1ca41d9bc222cd",
+    "open_obligations": [
+      "[OPEN] Which arch image the driver selected on sm_89 is inferred, not measured. A CUDA_FORCE_PTX_JIT=1 control run (or cuda-gdb / CUDA_MODULE_LOADING diagnostics) would settle whether the sm_86 cubin or a JIT of the sm_86 PTX served the run.",
+      "[OPEN] The figure is single-thread and batch-size-1. The production self-play regime (25-28 threads, batched nnEvals) is NOT characterised on l40s; the chain's own throughput reader must re-measure games/h and samples/s if a link lands on l40s, because knobs_9x9.env was derived from B200 numbers (2031.7 games/h, 14.243 samples/s).",
+      "[OPEN] L40S has 46 GB of VRAM against the B200's 180 GB. The smoke peaked at 4094 MiB, so the headroom is ~11x, but no production-scale VRAM measurement exists on l40s.",
+      "[OPEN] This settles only the FIRST of the two l40s blockers in evidence/production_chain/preflight.txt. The second stands: loop.sbatch pick_partition() (:255-267) hard-codes 'for p in b300 b200' and resubmit() (:507,:518-519) passes --partition on the command line, so SBATCH_PARTITION cannot reach links 2-9."
+    ],
+    "notes": "The obligation this node was opened under -- 'engine binary must carry an image for every allowed partition's GPU architecture' -- is answered in the negative as stated: an exact-architecture image is NOT necessary, a compatible one within the same major version suffices, and the engine pays no measurable penalty for it. The remedy that would have been applied had the probe failed is authored and dry-run verified but deliberately NOT applied: codes/env/cmake-sm89.diff (adds 89 to the CUDA-12.8 CMAKE_CUDA_ARCHITECTURES list already carrying 100 from cmake-sm100.diff), 'git apply --check --verbose' exit 0 against the scratch clone. Applying it would have rebuilt the binary under queued chain job 299461, which stages $KATAGO_BIN at its start; leaving it unapplied keeps that binary byte-identical."
+  },
+  "candidate_amendment_to_env_toolchain_b200": {
+    "_intent": "OPTIONAL and secondary to r_env_l40s. If the validator prefers one row per toolchain rather than a second row, amend env-toolchain-b200 instead by extending working_context and open_obligations; the claim text itself needs no change because it is explicitly scoped to a B200.",
+    "result_id": "env-toolchain-b200",
+    "add_to_working_context": {
+      "second_device_verified": "NVIDIA L40S (sm_89) on gl111, slurm job 300987, 2026-09-04: the same binary (sha256 4d2bbed4de859598109d7fcec3665304312bed62d0c441fd1cbbfd0f43020550) passes runtests and benchmarks the same b7c96h3tfrs export at 9x9 at 2401.88 visits/s at one thread, with zero 'no kernel image is available' diagnostics, although it carries no sm_89 ELF or PTX; torch reports capability (8, 9) and trains the architecture at pos_len 9. Evidence: evidence/env/l40s-300987.txt."
+    },
+    "add_to_open_obligations": [
+      "[OPEN] The binary's arch list still has no sm_89 entry. It is not needed on L40S (the sm_86 image covers it under CUDA's minor-version rule, measured in job 300987), but any FUTURE partition whose GPU major version is absent from the list -- not merely its minor -- would fail outright; codes/env/cmake-sm89.diff is the ready one-line remedy for the Ada case."
+    ]
+  },
+  "candidate_obligation_row": {
+    "_intent": "New obligation entry for results/ktg/paper_1902.10565/decomposition/obligations.md, to be appended via _common/claims_database.py by a validator, not by this worker. Next free id after o43.",
+    "entry_id": "o44_arch_image_per_allowed_partition",
+    "kind": "obligation",
+    "text": "Every partition in mission.json compute.partitions must have a GPU architecture the engine binary can execute. The check is NOT 'an exact sm_XY image is present' -- job 300987 measured an L40S (sm_89) running the mission binary at 2401.88 visits/s from an arch list that contains no sm_89, because CUDA loads a cubin built for X.y on a device X.z with z >= y. The check IS: for each allowed partition, the device's compute-capability MAJOR must appear in `cuobjdump --list-elf $KATAGO_BIN` with a MINOR no greater than the device's, or the binary must be rebuilt with that architecture added to cpp/CMakeLists.txt (codes/env/cmake-sm100.diff is the precedent for sm_100; codes/env/cmake-sm89.diff is authored and dry-run verified for sm_89 but was not needed). Re-run codes/env/l40s_probe.sbatch, re-pointed at the new partition, whenever a partition is added to mission.json compute.partitions.",
+    "status": "discharged",
+    "discharged_for": "the three partitions allowed as of 2026-09-04 -- b300 and b200 (sm_100, exact image, job 298018) and l40s (sm_89, served by the sm_86 image, job 300987)",
+    "blocking": false,
+    "evidence": "results/ktg/paper_1902.10565/evidence/env/l40s-300987.txt; results/ktg/paper_1902.10565/evidence/env/smoke.txt",
+    "owner": "worker env_build",
+    "nodes": "arxiv-1902.10565::env_build; arxiv-1902.10565::selfplay_stage; arxiv-1902.10565::production_chain_9x9",
+    "supersedes_context": "o06_sm100_arch (discharged) generalised from the single sm_100 case to every allowed partition"
+  },
+  "not_appended_by_this_worker": [
+    "result ledger (results/ledgers/result/)",
+    "claim ledger (results/ledgers/claim/)",
+    "knowledge ledger (results/ledgers/knowledge/) -- node arxiv-1902.10565::env_build is already 'solid'; nothing here demotes it"
+  ]
+}

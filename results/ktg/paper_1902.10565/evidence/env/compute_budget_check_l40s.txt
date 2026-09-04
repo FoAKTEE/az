@@ -1,0 +1,12 @@
+$ POLICY_CHECK=$(python3 -c 'import json;print(json.load(open("mission.json"))["compute"]["policyCheck"])')
+$ bash "$POLICY_CHECK" --gpus 1 --cpus 8 --partition l40s
+== compute-budget self-check  2026-09-04T16:37:19-04:00 ==
+my jobs      : gpus=1 cpus=32  (1 jobs)
+partition b200 : free_gpus=13/128 (excludes reserved/drained nodes)
+partition b300 : free_gpus=0/8 (excludes reserved/drained nodes)
+partition l40s : free_gpus=6/48 (excludes reserved/drained nodes)
+reservations : 9 defined (6 active) — scontrol show reservation
+quota        : | /home/ssci-haiyangw/ | 3.46 GB  | 100.00 GB |  3.46%   |
+quota        : | /scratch/ssci-anima/ | 33.91 TB |  40.00 TB |   84%    |
+OK           : request gpus=1 cpus=8 part=l40s within policy (gpu<=4, no cpu cap)
+exit 0
