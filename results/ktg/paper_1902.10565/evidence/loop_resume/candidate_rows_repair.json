@@ -1,5 +1,5 @@
 {
-  "_note": "CANDIDATE rows only. Written by the worker for the repair packet of node arxiv-1902.10565::loop_resume_under_walltime (obligations o26, o27); NOT appended. An independent validator admits or refutes them. The only row this worker appended is the error-ledger trial row_hash d49f3d1fbd14fd9375a216e1497f7dc1ce400092271ca002e5677646ae90e092. A third transition, o08_exporter_name, was added after the coordinator relayed the export-smoke worker's finding; its evidence is section 4 of the same file.",
+  "_note": "CANDIDATE rows only. Written by the worker for the repair packet of node arxiv-1902.10565::loop_resume_under_walltime (obligations o26, o27); NOT appended. An independent validator admits or refutes them. The only row this worker appended is the error-ledger trial row_hash d49f3d1fbd14fd9375a216e1497f7dc1ce400092271ca002e5677646ae90e092. A third transition, o08_exporter_name, was added after the coordinator relayed the export-smoke worker's finding; its evidence is section 4 of the same file. Metric correction: the offline run is 19 wrapper invocations across 10 scenario groups, not the 15 first recorded; see error-ledger row 1e058596dc62821758a791ad440a8884649dcda4cfee0e4b6b8579417c847629, which also records that commit 4fd3302's body carries the superseded figure.",
   "node_id": "arxiv-1902.10565::loop_resume_under_walltime",
   "task_id": "loop_resume_under_walltime",
   "worker_role": "worker",
@@ -30,7 +30,7 @@
     "additional_gates_run": {
       "o27_no_storage_literal_in_codes_loop": "grep -rn '214748364800|193273528320|536870912000|1099511627776|du -sb \"|/apps/helpers/quotas.py' codes/loop/ -> no match (exit 1)",
       "data_budget_guard_exit_contract": "bash codes/data_budget/tests/run_guard_tests.sh -> 23 passed, 0 failed (guard unmodified by this node)",
-      "offline_failure_injection": "15 scenarios under PATH shims for sbatch/scancel/sinfo/sacct/scontrol/squeue; no Slurm job, no GPU; verbatim in results/ktg/paper_1902.10565/evidence/loop_resume/repair_o26_o27.txt",
+      "offline_failure_injection": "10 scenario groups, 19 wrapper invocations, under PATH shims for sbatch/scancel/sinfo/sacct/scontrol/squeue; no Slurm job, no GPU; verbatim in results/ktg/paper_1902.10565/evidence/loop_resume/repair_o26_o27.txt section 3. (Amends the count first written as '15': error-ledger row 1e058596dc62821758a791ad440a8884649dcda4cfee0e4b6b8579417c847629.)",
       "o08_exporter_name_repo_grep": "grep -rn 'export_model\\.py' results/ktg/paper_1902.10565/codes/ -> no hit (exit 1); the script's four remaining mentions are all export_model_pytorch.py. Verbatim in section 4 of results/ktg/paper_1902.10565/evidence/loop_resume/repair_o26_o27.txt"
     }
   },
@@ -171,6 +171,12 @@
       "id": "o13_loop_config_paths",
       "reason": "unchanged from the validator's finding: the ten-variable knob block is sized from an expected ~22 rows/game, not a measurement; closes under derive_cycle_knobs_9x9 (o24_cycle_knobs_derived).",
       "closing_evidence": "measured rows/game from the smoke cycle"
+    },
+    {
+      "marker": "[OPEN]",
+      "id": "evidence_embeds_a_config_directory_path",
+      "reason": "The harness source embedded in section 2 of the evidence file names the compute-policy stub by the literal relative path that mission.json compute.policyCheck defines, twice. Three attempts to re-run with the path derived instead were stopped under the no-repeat rule (the second introduced a directory-ordering bug that invalidated its scenario I; the third still echoed the resolved path), so the committed evidence is the first, complete, correct run. The same path already appears in mission.json, three ledgers, decomposition/DESIGN.md and another node's evidence; it is a filesystem path, not an attribution.",
+      "closing_evidence": "a re-run whose transcript names the stub only through mission.json compute.policyCheck, if the validator wants the evidence file regenerated"
     }
   ]
 }
