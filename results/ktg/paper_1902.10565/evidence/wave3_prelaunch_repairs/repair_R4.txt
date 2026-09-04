@@ -1,0 +1,532 @@
+================================================================================
+repair R4 -- obligation o38_full_frac_discriminator_reused_tree
+  probe_search_9x9.py counts a full search as Root visits == maxVisits, keeps the
+  histogram and the source hash, and can read the sgf v= annotation as a second (or, for
+  a run whose engine capture did not survive, the primary) instrument; audit_smoke.py's
+  S7 refuses to give a band verdict on a json written by the old rule.
+  Worker, CHANDRA_ROLE=worker, login node, CPU only, no Slurm job, no GPU.
+  Host login03, 2026-09-04T09:51:02-04:00.  Tree state: HEAD e4bf9bf (R2) + the o38 edits.
+  Nothing is deleted: the engine log and the sgfs this repair reads are the same files
+  the validator hashed, and the script that reads them removes nothing.
+================================================================================
+
+################################################################################
+PART 1 -- the section 2 R4 command, the second instrument, and the second run
+################################################################################
+########## R4 section 2 command, VERBATIM (with $KTG_ROOT = /scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train)
+$ python3 results/ktg/paper_1902.10565/codes/eval/probe_search_9x9.py $KTG_ROOT/runs/smoke_probe/search/selfplay $KTG_ROOT/runs/smoke_probe/search/selfplay/log20260904-055425-11022754EF29BF2B.log --json results/ktg/paper_1902.10565/evidence/smoke/probe_search_rebin-299259.json
+probe_search_9x9
+  selfplay_dir      = /scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/runs/smoke_probe/search/selfplay
+  log_files         = 1   visits read from: log
+  searched_turns    = 7401  (full 1862 / cheap 4872)
+  root_visits_range = [100, 600]  (cfg cheap=100 max=600)
+  root_visits_hist  = 100:4872, 600:1862, 110:13, 114:10, 102:9, 112:9, 107:7, 191:7   (289 distinct values)
+  between_count     = 667   (strictly between 100 and 600: cheap searches on a reused subtree, play.cpp:1147 / search.cpp:509,579-580)
+  outside_band      = 0
+  FULL_FRAC_RULE    = root_visits == maxVisits
+  FULL_FRAC         = 0.2516   expected 0.25, band [0.20, 0.30]
+  legacy '> cheap'  = 0.3417   (the defective rule, reported for comparison only)
+  games (.sgfs lines) = 60   sz9 = 60   SZ_OTHER = 0   rectangular = 0
+  rows              = 2064 over 1 npz
+  ROWS_PER_GAME     = 34.400   band [12, 35]
+  ok     searched_turns_sufficient    searched_turns=7401 >= 500
+  ok     a_full_frac_in_band          full_frac=0.25158762329414947 rule='root_visits == maxVisits' band=[0.2, 0.3]; between=667 (reused-subtree cheap searches, o38), legacy '> cheapSearchVisits' rule would give 0.34171057965139845
+  ok     b_rows_per_game_in_band      rows_per_game=34.4 band=[12, 35]
+  ok     c_sz_other_zero              games=60 sz_other=0 rectangular=0
+PROBE_SEARCH_9X9: PASS
+  json -> results/ktg/paper_1902.10565/evidence/smoke/probe_search_rebin-299259.json
+EXIT=0
+
+########## the same run with the sgf v= second instrument
+probe_search_9x9
+  selfplay_dir      = /scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/runs/smoke_probe/search/selfplay
+  log_files         = 1   visits read from: log
+  searched_turns    = 7401  (full 1862 / cheap 4872)
+  root_visits_range = [100, 600]  (cfg cheap=100 max=600)
+  root_visits_hist  = 100:4872, 600:1862, 110:13, 114:10, 102:9, 112:9, 107:7, 191:7   (289 distinct values)
+  between_count     = 667   (strictly between 100 and 600: cheap searches on a reused subtree, play.cpp:1147 / search.cpp:509,579-580)
+  outside_band      = 0
+  FULL_FRAC_RULE    = root_visits == maxVisits
+  FULL_FRAC         = 0.2516   expected 0.25, band [0.20, 0.30]
+  legacy '> cheap'  = 0.3417   (the defective rule, reported for comparison only)
+  sgf v= instrument = 7401 annotations, full 1862, cheap 4872, between 667, full_frac 0.2516; histograms identical: True
+  games (.sgfs lines) = 60   sz9 = 60   SZ_OTHER = 0   rectangular = 0
+  rows              = 2064 over 1 npz
+  ROWS_PER_GAME     = 34.400   band [12, 35]
+  ok     searched_turns_sufficient    searched_turns=7401 >= 500
+  ok     a_full_frac_in_band          full_frac=0.25158762329414947 rule='root_visits == maxVisits' band=[0.2, 0.3]; between=667 (reused-subtree cheap searches, o38), legacy '> cheapSearchVisits' rule would give 0.34171057965139845
+  ok     a2_sgf_v_instrument_agrees   sgf v= histogram identical to the engine log's: True (7401 sgf annotations vs 7401 log lines)
+  ok     b_rows_per_game_in_band      rows_per_game=34.4 band=[12, 35]
+  ok     c_sz_other_zero              games=60 sz_other=0 rectangular=0
+PROBE_SEARCH_9X9: PASS
+  json -> results/ktg/paper_1902.10565/evidence/smoke/probe_search_rebin-299259.json
+EXIT=0
+
+########## the loop's own 80 random-net games (engine capture did not survive; sgf v= instrument)
+probe_search_9x9
+  selfplay_dir      = /scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/runs/smoke/selfplay
+  log_files         = 3   visits read from: sgf
+  searched_turns    = 9211  (full 2311 / cheap 6309)
+  root_visits_range = [64, 818]  (cfg cheap=100 max=600)
+  root_visits_hist  = 100:6309, 600:2311, 136:49, 64:40, 104:15, 106:14, 382:14, 101:13   (150 distinct values)
+  between_count     = 543   (strictly between 100 and 600: cheap searches on a reused subtree, play.cpp:1147 / search.cpp:509,579-580)
+  outside_band      = 48
+  FULL_FRAC_RULE    = root_visits == maxVisits
+  FULL_FRAC         = 0.2509   expected 0.25, band [0.20, 0.30]
+  legacy '> cheap'  = 0.3107   (the defective rule, reported for comparison only)
+  games (.sgfs lines) = 80   sz9 = 80   SZ_OTHER = 0   rectangular = 0
+  rows              = 2534 over 2 npz
+  ROWS_PER_GAME     = 31.675   band [12, 35]
+  ok     searched_turns_sufficient    searched_turns=9211 >= 500
+  ok     a_full_frac_in_band          full_frac=0.2508956682227771 rule='root_visits == maxVisits' band=[0.2, 0.3]; between=543 (reused-subtree cheap searches, o38), legacy '> cheapSearchVisits' rule would give 0.3107154489197698
+  ok     b_rows_per_game_in_band      rows_per_game=31.675 band=[12, 35]
+  ok     c_sz_other_zero              games=80 sz_other=0 rectangular=0
+PROBE_SEARCH_9X9: PASS
+  json -> results/ktg/paper_1902.10565/evidence/smoke/probe_search_rebin_loop-298712.json
+EXIT=0
+
+########## the json carries the rule, the histogram and the source sha256
+  full_frac_rule          = root_visits == maxVisits
+  searched_turns          = 7401
+  full / cheap / between  = 1862 4872 667
+  outside_band_count      = 0
+  histogram 100 / 600     = 4872 / 1862
+  distinct values         = 289
+  legacy '> cheap' rule   = 0.34171057965139845
+  log_files_sha256        = {'/scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/runs/smoke_probe/search/selfplay/log20260904-055425-11022754EF29BF2B.log': '59e2574eeeb2c1d5ddd97ead6baba4b34787c5763394d3c8f4dc14b9f35ad7b3'}
+  instruments_agree       = True
+
+########## the validator's own recorded counts, for comparison
+  validator engine log : {'searched_turns': 7401, 'eq_cheap_100': 4872, 'eq_max_600': 1862, 'strictly_between': 667, 'outside_100_600': 0, 'distinct_values': 289}
+  validator sgf v=     : {'searched_turns': 7401, 'eq_cheap_100': 4872, 'eq_max_600': 1862, 'strictly_between': 667, 'outside_100_600': 0, 'distinct_values': 289}
+  validator loop sgfs  : {'searched_turns': 9211, 'eq_cheap_100': 6309, 'eq_max_600': 2311, 'strictly_between': 543, 'outside_100_600': 48, 'frac_gt_cheap_as_used_by_probe_search_9x9': 0.315058082727174, 'frac_eq_max_visits': 0.2508956682227771}
+
+########## audit_smoke.py S7: the recorded 20-game json (old rule) vs the re-bin
+$ python3 results/ktg/paper_1902.10565/codes/eval/audit_smoke.py /scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/runs/smoke --evidence <tmp> --tag 299259
+  EXIT=1
+    S7  FULL_FRAC          = 0.34413965087281795   band [0.20, 0.30]   rule = MISSING (o38: unchecked)   between = None
+    FAIL   recorded S7_full_frac_in_band                 full_frac=0.34413965087281795 rule=MISSING (required 'root_visits == maxVisits') band=[0.20, 0.30] searched_turns=2406 between=None -- UNCHECKED: this json was written by the old '> cheapSearchVisits' rule, which bins reused-subtree cheap searches as full searches (o38)
+  AUDIT_SMOKE: FAIL
+  RECORDED FINDINGS (not fatal): S7_full_frac_in_band, S8_bytes_per_game_within_10KiB
+$ ... --probe-search-json results/ktg/paper_1902.10565/evidence/smoke/probe_search_rebin-299259.json
+  EXIT=1
+    S7  FULL_FRAC          = 0.25158762329414947   band [0.20, 0.30]   rule = root_visits == maxVisits   between = 667
+    ok     recorded S7_full_frac_in_band                 full_frac=0.25158762329414947 rule='root_visits == maxVisits' (required 'root_visits == maxVisits') band=[0.20, 0.30] searched_turns=7401 between=667
+  AUDIT_SMOKE: FAIL
+  RECORDED FINDINGS (not fatal): S8_bytes_per_game_within_10KiB
+  (both audits exit 1 on the pre-existing hard failure S9_nlwp_max_within_cpus 25 > 24, exactly as evidence/smoke/audit_rerun-299259.txt records; R4 changed only S7)
+    FAIL   hard     S9_nlwp_max_within_cpus              nlwp_max per stage = {'selfplay': 25, 'train': 14}, cpus_per_task = 24, over budget = {'selfplay': 25} (scope: descendants of the job script (ppid-filtered sampler); foreign pids excluded: none)
+  files the audit wrote into the temporary directory: audit-299259.json nlwp_max-299259.txt rows_per_game-299259.txt throughput_smoke-299259.json 
+  git status over evidence/smoke/ (only the two new re-bin jsons may appear):
+      ?? results/ktg/paper_1902.10565/evidence/smoke/probe_search_rebin-299259.json
+      ?? results/ktg/paper_1902.10565/evidence/smoke/probe_search_rebin_loop-298712.json
+
+################################################################################
+PART 2 -- the mechanism, read out of the reference code
+################################################################################
+  cpp/program/play.cpp:1567   for selfplay, clearBotBeforeSearch is asserted for a FULL search
+  cpp/program/play.cpp:1234   ... and the tree is cleared there
+  cpp/program/play.cpp:1147   for a CHEAP search with cheapSearchTargetWeight <= 0 the tree is NOT cleared
+  cpp/search/search.cpp:509   numNonPlayoutVisits -- the inherited root visits --
+  cpp/search/search.cpp:579-580  ... count toward maxVisits, so a cheap search that inherits
+                              >= cheapSearchVisits visits does zero new playouts and logs the
+                              inherited count: a value strictly between cheapSearchVisits and maxVisits.
+  Consequence: `Root visits > cheapSearchVisits` is not a test for "this was a full search";
+  `Root visits == maxVisits` is, because a full search always runs to the cap.
+  Reference-code lines, quoted from the mirror at v1.18.2:
+    cpp/program/play.cpp:1147          clearBotBeforeSearchThisMove = false;
+    cpp/program/play.cpp:1234          if(limits.clearBotBeforeSearchThisMove)
+    cpp/program/play.cpp:1567          testAssert(!(playSettings.forSelfPlay && !clearBotBeforeSearch));
+    cpp/search/search.cpp:509          const int64_t numNonPlayoutVisits = getRootVisits();
+    cpp/search/search.cpp:579          (numPlayouts >= maxPlayouts) ||
+    cpp/search/search.cpp:580          (numPlayouts + numNonPlayoutVisits >= maxVisits);
+
+################################################################################
+PART 3 -- the two 20-game rows that cannot be re-binned
+################################################################################
+  runs/smoke_probe/search/logs/ (the probe's own stdout capture directory):
+    total 20
+    drwxr-xr-x 1 ssci-haiyangw users     0 Sep  4 05:56 .
+    drwxr-xr-x 1 ssci-haiyangw users     0 Sep  4 05:56 ..
+    -rw-r--r-- 1 ssci-haiyangw users 19009 Sep  4 05:56 probe_search_head.txt
+  the two recorded 20-game jsons, and what they were binned with:
+    probe_search.json          games=20 searched_turns=2406 full_frac=0.34413965087281795 full_frac_rule=<absent: the old rule>
+    probe_search_nofork.json   games=60 searched_turns=7401 full_frac=0.34171057965139845 full_frac_rule=<absent: the old rule>
+    probe_search.json is a 20-game row whose log, sgfs and npz were removed by the probe
+    script's own rm -rf; probe_search_nofork.json is the 60-game run whose log DID survive,
+    and it is the one re-binned above. The attempt-1 and attempt-2 20-game rows stay [UNCHECKED]
+    and were NOT re-binned from memory.
+
+################################################################################
+PART 4 -- diffs of the files under test (e4bf9bf -> working tree)
+################################################################################
+diff --git a/results/ktg/paper_1902.10565/codes/eval/audit_smoke.py b/results/ktg/paper_1902.10565/codes/eval/audit_smoke.py
+index a7083e7..986f8f2 100755
+--- a/results/ktg/paper_1902.10565/codes/eval/audit_smoke.py
++++ b/results/ktg/paper_1902.10565/codes/eval/audit_smoke.py
+@@ -32,7 +32,10 @@ WHAT IS HARD AND WHAT IS RECORDED
+   RECORDED (measured, banded, never fatal here) -- these settle OTHER packets' rows and
+   carry their own verification scripts, so a probe failure must not block a node whose
+   own claim is proved:
+-      S7  full_frac        (probe_search_9x9.py; band [0.20, 0.30])
++      S7  full_frac        (probe_search_9x9.py; band [0.20, 0.30]) -- the probe json must
++                           carry full_frac_rule == "root_visits == maxVisits" (obligation
++                           o38); a json written by the old "> cheapSearchVisits" rule is
++                           reported as UNCHECKED, never as a band verdict
+       S8  rows_per_game    (band [12, 35]; section 2 says out-of-band is a finding)
+       S11 trunk gpool / gpool residuals (probe_train_9x9.py)
+       S12 kill-and-resume  (probe_resume_9x9.sh)
+@@ -61,6 +64,11 @@ EXPECTED_CYCLES = 2
+ ROWS_PER_GAME_LO, ROWS_PER_GAME_HI = 12, 35
+ BYTES_PER_GAME_MAX = 10 * 1024   # c10's second conjunct: <= 10 KiB on disk per 9x9 game
+ FULL_FRAC_LO, FULL_FRAC_HI = 0.20, 0.30
++# obligation o38: the only discriminator this audit accepts for S7. A cheap search on a
++# reused subtree logs an inherited count that the old rule binned as a full search
++# (play.cpp:1147; search.cpp:509,579-580), so a json without this key was produced by an
++# instrument that cannot answer the question.
++FULL_FRAC_RULE = "root_visits == maxVisits"
+ DEFAULT_CPUS = 24
+ 
+ ONE_CYCLE_DONE = "one cycle done"
+@@ -360,7 +368,7 @@ def parse_monitor(basedir, ps_file=None):
+ 
+ 
+ # ----------------------------------------------------------------- full audit
+-def audit(basedir, evidence, trainingname, strict, tag=None):
++def audit(basedir, evidence, trainingname, strict, tag=None, probe_search_json=None):
+     """With --tag, every output is written as <name>-<tag>.<ext> and NOTHING unstamped
+     is touched. Obligation o37: attempt 2's leg E overwrote audit.json, nlwp_max.txt,
+     rows_per_game.txt and throughput_smoke.json, the very files the validator had
+@@ -522,7 +530,13 @@ def audit(basedir, evidence, trainingname, strict, tag=None):
+ 
+     # ---- S7 / S11 / S12 probe results ---------------------------------------
+     ktg_root = os.environ.get("KTG_ROOT", "/scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train")
+-    probe_search = read_json(os.path.join(ktg_root, "runs", "smoke_probe", "search",
++    # --probe-search-json points the audit at a re-binned run (o38). The recorded
++    # 20-game probe jsons of jobs 298712 and 299259 were written by the old rule and their
++    # logs, sgfs and npz were removed by the probe script's own rm -rf, so they can never
++    # be re-binned; the surviving fork-free 60-game run can, and its re-bin is the file to
++    # pass here.
++    probe_search = read_json(probe_search_json or
++                             os.path.join(ktg_root, "runs", "smoke_probe", "search",
+                                           "probe_search.json"), {}) or {}
+     probe_train = read_json(os.path.join(ktg_root, "runs", "smoke_probe", "train",
+                                          "probe_train.json"), {}) or {}
+@@ -532,10 +546,16 @@ def audit(basedir, evidence, trainingname, strict, tag=None):
+     r["S11_probe_train"] = probe_train
+     r["S12_probe_resume"] = probe_resume
+     ff = probe_search.get("full_frac")
++    ff_rule = probe_search.get("full_frac_rule")
+     add("S7_full_frac_in_band", strict,
+-        ff is not None and FULL_FRAC_LO <= ff <= FULL_FRAC_HI,
+-        "full_frac=%s band=[%.2f, %.2f] searched_turns=%s"
+-        % (ff, FULL_FRAC_LO, FULL_FRAC_HI, probe_search.get("searched_turns")))
++        ff_rule == FULL_FRAC_RULE and ff is not None and FULL_FRAC_LO <= ff <= FULL_FRAC_HI,
++        "full_frac=%s rule=%s (required '%s') band=[%.2f, %.2f] searched_turns=%s between=%s%s"
++        % (ff, ("'%s'" % ff_rule) if ff_rule else "MISSING",
++           FULL_FRAC_RULE, FULL_FRAC_LO, FULL_FRAC_HI,
++           probe_search.get("searched_turns"), probe_search.get("between_count"),
++           "" if ff_rule == FULL_FRAC_RULE else
++           " -- UNCHECKED: this json was written by the old '> cheapSearchVisits' rule, "
++           "which bins reused-subtree cheap searches as full searches (o38)"))
+     add("S11_probe_train_pass", strict, bool(probe_train.get("pass")),
+         "trunk_gpool_count=%s res2=%s res3=%s row_bytes=%s"
+         % (probe_train.get("trunk_gpool_count"),
+@@ -627,7 +647,9 @@ def audit(basedir, evidence, trainingname, strict, tag=None):
+         "selfplay_rows_per_hour": round(total_rows / sp_elapsed * 3600, 1) if sp_elapsed else None,
+         "per_net": per_net,
+         "probe_search": {"games": probe_games, "rows": probe_rows,
+-                         "full_frac": ff, "searched_turns": probe_search.get("searched_turns")},
++                         "full_frac": ff, "full_frac_rule": ff_rule,
++                         "between_count": probe_search.get("between_count"),
++                         "searched_turns": probe_search.get("searched_turns")},
+         "train_samples_total": samples_trained,
+         "train_samples_per_second": round(samples_trained / tr_elapsed, 3) if tr_elapsed else None,
+         "peak_vram_mib": mon["gpu"].get("mem_used_mib_max"),
+@@ -730,7 +752,10 @@ def audit(basedir, evidence, trainingname, strict, tag=None):
+              shuf["row_bytes_seen"], shuf["files"], shuf["rows"]))
+     print("  S6  GLOBAL_STEP_SAMPLES cycle1 = %s -> cycle2 = %s;  metrics lines = %d, nonfinite = %s;  reinit in cycle-2 log = %s"
+           % (g1, g2, nlines, nonfinite or "none", reinit_cycle2))
+-    print("  S7  FULL_FRAC          = %s   band [%.2f, %.2f]" % (ff, FULL_FRAC_LO, FULL_FRAC_HI))
++    print("  S7  FULL_FRAC          = %s   band [%.2f, %.2f]   rule = %s   between = %s"
++          % (ff, FULL_FRAC_LO, FULL_FRAC_HI,
++             ff_rule if ff_rule else "MISSING (o38: unchecked)",
++             probe_search.get("between_count")))
+     print("  S8  ROWS_PER_GAME real = %s over %d games;  random = %s over %d games;  band [%d, %d]"
+           % (rpg_real, real_games, rpg_rand, rand_games, ROWS_PER_GAME_LO, ROWS_PER_GAME_HI))
+     print("  S8  BYTES_PER_GAME     = %s B = %.3f KiB over %d loop games;  c10 bound 10 KiB"
+@@ -763,6 +788,7 @@ def audit(basedir, evidence, trainingname, strict, tag=None):
+ 
+ def main(argv):
+     args, evidence, snap_label, strict, tag = [], None, None, False, None
++    probe_search_json = None
+     trainingname = os.environ.get("KTG_SMOKE_TRAININGNAME", "t9")
+     it = iter(argv[1:])
+     for a in it:
+@@ -774,6 +800,8 @@ def main(argv):
+             trainingname = next(it, None)
+         elif a == "--tag":
+             tag = next(it, None)
++        elif a == "--probe-search-json":
++            probe_search_json = next(it, None)
+         elif a == "--strict":
+             strict = True
+         else:
+@@ -787,7 +815,7 @@ def main(argv):
+     if evidence is None:
+         print("--evidence <dir> is required for the audit mode")
+         return 2
+-    return audit(basedir, evidence, trainingname, strict, tag)
++    return audit(basedir, evidence, trainingname, strict, tag, probe_search_json)
+ 
+ 
+ if __name__ == "__main__":
+diff --git a/results/ktg/paper_1902.10565/codes/eval/probe_search_9x9.py b/results/ktg/paper_1902.10565/codes/eval/probe_search_9x9.py
+index 9370b33..8ce5239 100755
+--- a/results/ktg/paper_1902.10565/codes/eval/probe_search_9x9.py
++++ b/results/ktg/paper_1902.10565/codes/eval/probe_search_9x9.py
+@@ -6,10 +6,23 @@ the three selfplay-side metrics that promote nodes selfplay_search_params,
+ playout_cap_randomization, root_explore_and_target_pruning, score_utility_search and
+ game_randomization_9x9 from `preliminary` to executed evidence:
+ 
+-  (a) full_frac    = #("Root visits: N" with N > cheapSearchVisits) / #("Root visits:")
++  (a) full_frac    = #("Root visits: N" with N == maxVisits) / #("Root visits:")
+                      expected 1 - cheapSearchProb = 1 - 0.75 = 0.25, the paper's p
+                      (cpp/program/play.cpp:779 emits the line, :1141-1142 caps a cheap
+                      turn at min(maxVisits, cheapSearchVisits) = 100)
++
++      THE RULE IS `== maxVisits`, NOT `> cheapSearchVisits` (obligation o38). Selfplay
++      clears the search tree before a FULL search (play.cpp:1567 asserts
++      clearBotBeforeSearch for forSelfPlay, :1234 clears) but NOT before a cheap one when
++      cheapSearchTargetWeight <= 0 (play.cpp:1147), and search.cpp:509,579-580 count the
++      INHERITED root visits toward maxVisits. A cheap search that inherits a subtree
++      already holding >= cheapSearchVisits visits therefore does no new playout and logs
++      the inherited count -- a value strictly between 100 and 600. On the fork-free 60-game
++      run of job 299259 there are 667 such values out of 7401, and binning them as full
++      turned a 0.2516 measurement into a 0.3417 false refutation of the [0.20, 0.30] band.
++      A full search always logs exactly maxVisits, so equality is the discriminator; the
++      between-count is reported separately and the old rule is kept only as
++      `legacy_full_frac_gt_cheap`, never as the verdict.
+   (b) rows_per_game = sum(npz rows over tdata) / #(.sgfs lines)
+                      one SGF per line, cpp/program/selfplaymanager.cpp:377-378
+   (c) sz_other     = #(.sgfs lines without "SZ[9]")
+@@ -20,6 +33,7 @@ Tolerances (task paper_code_map_search section 2): (a) in [0.20, 0.30] with at l
+ Standard library only (no numpy): npz shapes come from check_pos_len_npz.npz_array_meta.
+ 
+ usage: probe_search_9x9.py <selfplay-dir> <log-dir-or-file> [--json OUT] [--no-assert]
++                           [--sgf-v] [--visits-from log|sgf]
+ """
+ 
+ import glob
+@@ -39,6 +53,45 @@ ROWS_PER_GAME_LO, ROWS_PER_GAME_HI = 12, 35
+ MIN_SEARCHED_TURNS = 500
+ 
+ ROOT_VISITS_RE = re.compile(r"^Root visits:\s*(\d+)\s*$")
++# the per-move annotation KataGo writes into each sgf comment: "... v=600 weight=..."
++SGF_V_RE = re.compile(r"\bv=(\d+)")
++FULL_FRAC_RULE = "root_visits == maxVisits"
++
++
++def sha256(path):
++    import hashlib
++    h = hashlib.sha256()
++    with open(path, "rb") as fh:
++        for chunk in iter(lambda: fh.read(1 << 20), b""):
++            h.update(chunk)
++    return h.hexdigest()
++
++
++def sgf_visit_values(selfplay_dir):
++    """Second, independent instrument: the v= field of every sgf move comment."""
++    vals = []
++    files = sorted(glob.glob(os.path.join(selfplay_dir, "*", "sgfs", "*.sgfs")))
++    for f in files:
++        with open(f, "r", errors="replace") as fh:
++            for line in fh:
++                if line.strip():
++                    vals.extend(int(m) for m in SGF_V_RE.findall(line))
++    return files, vals
++
++
++def bin_visits(visits):
++    """The o38 binning: full == maxVisits, cheap == cheapSearchVisits, rest is between."""
++    full = sum(1 for v in visits if v == MAX_VISITS)
++    cheap = sum(1 for v in visits if v == CHEAP_SEARCH_VISITS)
++    between = sum(1 for v in visits if CHEAP_SEARCH_VISITS < v < MAX_VISITS)
++    outside = len(visits) - full - cheap - between
++    legacy = sum(1 for v in visits if v > CHEAP_SEARCH_VISITS)
++    hist = {}
++    for v in visits:
++        hist[v] = hist.get(v, 0) + 1
++    return dict(searched_turns=len(visits), full=full, cheap=cheap, between=between,
++                outside=outside, legacy_full=legacy,
++                histogram=dict(sorted(hist.items())), distinct_values=len(hist))
+ 
+ 
+ def log_files(target):
+@@ -87,38 +140,43 @@ def tdata_rows(selfplay_dir):
+     return files, rows
+ 
+ 
+-def analyse(selfplay_dir, log_target):
++def analyse(selfplay_dir, log_target, with_sgf_v=False, visits_from="log"):
+     logs = log_files(log_target)
+-    visits = root_visits(logs)
+-    searched = len(visits)
+-    full = sum(1 for v in visits if v > CHEAP_SEARCH_VISITS)
+-    cheap = sum(1 for v in visits if v <= CHEAP_SEARCH_VISITS)
+-    full_frac = (full / searched) if searched else None
++    if visits_from == "sgf":
++        # For a run whose engine log did not survive (the loop's own random-net games:
++        # the probe script's rm -rf took the capture, the sgfs stayed). The v= field is
++        # the same number the log line carries -- proved by the two instruments agreeing
++        # move for move on the run whose log DID survive.
++        _f, visits = sgf_visit_values(selfplay_dir)
++        with_sgf_v = False
++    else:
++        visits = root_visits(logs)
++    b = bin_visits(visits)
++    searched = b["searched_turns"]
++    full_frac = (b["full"] / searched) if searched else None
+ 
+     sgf_files, n_all, n9, n_rect = sgfs_lines(selfplay_dir)
+     npz_files, rows = tdata_rows(selfplay_dir)
+     rows_per_game = (rows / n_all) if n_all else None
+     sz_other = n_all - n9
+ 
+-    # Job 298712 and 299259 measured full_frac ~ 0.34 against the 0.25 that
+-    # 1 - cheapSearchProb predicts, with and without forks. The counts alone cannot
+-    # say why, and the logSearchInfo log is deleted after extraction, so record the
+-    # full distribution of root-visit values here: a full search should log exactly
+-    # maxVisits and a cheap one exactly cheapSearchVisits, and any third value means
+-    # something else is altering the visit budget.
+-    hist = {}
+-    for v in visits:
+-        hist[v] = hist.get(v, 0) + 1
+-
+-    return {
++    out = {
+         "selfplay_dir": selfplay_dir,
++        "visits_from": visits_from,
+         "log_files": logs,
+-        "root_visits_histogram": dict(sorted(hist.items())),
+-        "root_visits_distinct_values": len(hist),
++        # o38: the source is named AND content-hashed, so a re-bin of this exact run is
++        # checkable later. The script never removes the log or the sgfs it reads.
++        "log_files_sha256": {f: sha256(f) for f in logs},
++        "root_visits_histogram": b["histogram"],
++        "root_visits_distinct_values": b["distinct_values"],
+         "searched_turns": searched,
+-        "full_search_turns": full,
+-        "cheap_search_turns": cheap,
++        "full_search_turns": b["full"],
++        "cheap_search_turns": b["cheap"],
++        "between_count": b["between"],
++        "outside_band_count": b["outside"],
++        "legacy_full_frac_gt_cheap": (b["legacy_full"] / searched) if searched else None,
+         "full_frac": full_frac,
++        "full_frac_rule": FULL_FRAC_RULE,
+         "full_frac_expected": 1.0 - CHEAP_SEARCH_PROB,
+         "full_frac_band": [FULL_FRAC_LO, FULL_FRAC_HI],
+         "max_root_visits_seen": max(visits) if visits else None,
+@@ -135,6 +193,22 @@ def analyse(selfplay_dir, log_target):
+         "rows_per_game": rows_per_game,
+         "rows_per_game_band": [ROWS_PER_GAME_LO, ROWS_PER_GAME_HI],
+     }
++    if with_sgf_v:
++        # The engine log and the sgfs are written by different code paths, so agreeing
++        # histograms are an instrument check, not a tautology.
++        sgf_v_files, sgf_vals = sgf_visit_values(selfplay_dir)
++        sb = bin_visits(sgf_vals)
++        out["sgf_v"] = {
++            "files": sgf_v_files,
++            "searched_turns": sb["searched_turns"],
++            "full_search_turns": sb["full"],
++            "cheap_search_turns": sb["cheap"],
++            "between_count": sb["between"],
++            "histogram": sb["histogram"],
++            "full_frac": (sb["full"] / sb["searched_turns"]) if sb["searched_turns"] else None,
++        }
++        out["instruments_agree"] = (sb["histogram"] == b["histogram"])
++    return out
+ 
+ 
+ def verdict(r):
+@@ -147,7 +221,14 @@ def verdict(r):
+         "searched_turns=%s >= %d" % (r["searched_turns"], MIN_SEARCHED_TURNS))
+     ff = r["full_frac"]
+     add("a_full_frac_in_band", ff is not None and FULL_FRAC_LO <= ff <= FULL_FRAC_HI,
+-        "full_frac=%s band=[%s, %s]" % (ff, FULL_FRAC_LO, FULL_FRAC_HI))
++        "full_frac=%s rule='%s' band=[%s, %s]; between=%s (reused-subtree cheap searches, "
++        "o38), legacy '> cheapSearchVisits' rule would give %s"
++        % (ff, r["full_frac_rule"], FULL_FRAC_LO, FULL_FRAC_HI, r["between_count"],
++           r["legacy_full_frac_gt_cheap"]))
++    if "sgf_v" in r:
++        add("a2_sgf_v_instrument_agrees", bool(r.get("instruments_agree")),
++            "sgf v= histogram identical to the engine log's: %s (%s sgf annotations vs %s log lines)"
++            % (r.get("instruments_agree"), r["sgf_v"]["searched_turns"], r["searched_turns"]))
+     rpg = r["rows_per_game"]
+     add("b_rows_per_game_in_band",
+         rpg is not None and ROWS_PER_GAME_LO <= rpg <= ROWS_PER_GAME_HI,
+@@ -161,6 +242,8 @@ def main(argv):
+     args = [a for a in argv[1:] if not a.startswith("--")]
+     json_out = None
+     do_assert = True
++    with_sgf_v = False
++    visits_from = "log"
+     it = iter(argv[1:])
+     for a in it:
+         if a == "--json":
+@@ -169,18 +252,25 @@ def main(argv):
+                 args.remove(json_out)
+         elif a == "--no-assert":
+             do_assert = False
++        elif a == "--sgf-v":
++            with_sgf_v = True
++        elif a == "--visits-from":
++            visits_from = next(it, "log")
++            if visits_from in args:
++                args.remove(visits_from)
+     if len(args) < 2:
+         print(__doc__)
+         return 2
+ 
+-    r = analyse(args[0], args[1])
++    r = analyse(args[0], args[1], with_sgf_v=with_sgf_v, visits_from=visits_from)
+     checks = verdict(r)
+     r["checks"] = checks
+     r["pass"] = all(c["pass"] for c in checks)
+ 
+     print("probe_search_9x9")
+     print("  selfplay_dir      = %s" % r["selfplay_dir"])
+-    print("  log_files         = %d" % len(r["log_files"]))
++    print("  log_files         = %d   visits read from: %s"
++          % (len(r["log_files"]), r["visits_from"]))
+     print("  searched_turns    = %d  (full %d / cheap %d)"
+           % (r["searched_turns"], r["full_search_turns"], r["cheap_search_turns"]))
+     print("  root_visits_range = [%s, %s]  (cfg cheap=%d max=%d)"
+@@ -189,9 +279,24 @@ def main(argv):
+     top = sorted(r["root_visits_histogram"].items(), key=lambda kv: -kv[1])[:8]
+     print("  root_visits_hist  = %s   (%d distinct values)"
+           % (", ".join("%s:%d" % kv for kv in top), r["root_visits_distinct_values"]))
++    print("  between_count     = %d   (strictly between %d and %d: cheap searches on a "
++          "reused subtree, play.cpp:1147 / search.cpp:509,579-580)"
++          % (r["between_count"], CHEAP_SEARCH_VISITS, MAX_VISITS))
++    print("  outside_band      = %d" % r["outside_band_count"])
++    print("  FULL_FRAC_RULE    = %s" % r["full_frac_rule"])
+     print("  FULL_FRAC         = %s   expected %.2f, band [%.2f, %.2f]"
+           % (("%.4f" % r["full_frac"]) if r["full_frac"] is not None else "NA",
+              r["full_frac_expected"], FULL_FRAC_LO, FULL_FRAC_HI))
++    print("  legacy '> cheap'  = %s   (the defective rule, reported for comparison only)"
++          % (("%.4f" % r["legacy_full_frac_gt_cheap"])
++             if r["legacy_full_frac_gt_cheap"] is not None else "NA"))
++    if "sgf_v" in r:
++        print("  sgf v= instrument = %d annotations, full %d, cheap %d, between %d, "
++              "full_frac %s; histograms identical: %s"
++              % (r["sgf_v"]["searched_turns"], r["sgf_v"]["full_search_turns"],
++                 r["sgf_v"]["cheap_search_turns"], r["sgf_v"]["between_count"],
++                 ("%.4f" % r["sgf_v"]["full_frac"]) if r["sgf_v"]["full_frac"] is not None else "NA",
++                 r.get("instruments_agree")))
+     print("  games (.sgfs lines) = %d   sz9 = %d   SZ_OTHER = %d   rectangular = %d"
+           % (r["games"], r["games_sz9"], r["sz_other"], r["rectangular_games"]))
+     print("  rows              = %d over %d npz" % (r["rows"], r["npz_files"]))

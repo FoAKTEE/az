@@ -32,7 +32,10 @@ WHAT IS HARD AND WHAT IS RECORDED
   RECORDED (measured, banded, never fatal here) -- these settle OTHER packets' rows and
   carry their own verification scripts, so a probe failure must not block a node whose
   own claim is proved:
-      S7  full_frac        (probe_search_9x9.py; band [0.20, 0.30])
+      S7  full_frac        (probe_search_9x9.py; band [0.20, 0.30]) -- the probe json must
+                           carry full_frac_rule == "root_visits == maxVisits" (obligation
+                           o38); a json written by the old "> cheapSearchVisits" rule is
+                           reported as UNCHECKED, never as a band verdict
       S8  rows_per_game    (band [12, 35]; section 2 says out-of-band is a finding)
       S11 trunk gpool / gpool residuals (probe_train_9x9.py)
       S12 kill-and-resume  (probe_resume_9x9.sh)
@@ -61,6 +64,11 @@ EXPECTED_CYCLES = 2
 ROWS_PER_GAME_LO, ROWS_PER_GAME_HI = 12, 35
 BYTES_PER_GAME_MAX = 10 * 1024   # c10's second conjunct: <= 10 KiB on disk per 9x9 game
 FULL_FRAC_LO, FULL_FRAC_HI = 0.20, 0.30
+# obligation o38: the only discriminator this audit accepts for S7. A cheap search on a
+# reused subtree logs an inherited count that the old rule binned as a full search
+# (play.cpp:1147; search.cpp:509,579-580), so a json without this key was produced by an
+# instrument that cannot answer the question.
+FULL_FRAC_RULE = "root_visits == maxVisits"
 DEFAULT_CPUS = 24
 
 ONE_CYCLE_DONE = "one cycle done"
@@ -360,7 +368,7 @@ def parse_monitor(basedir, ps_file=None):
 
 
 # ----------------------------------------------------------------- full audit
-def audit(basedir, evidence, trainingname, strict, tag=None):
+def audit(basedir, evidence, trainingname, strict, tag=None, probe_search_json=None):
     """With --tag, every output is written as <name>-<tag>.<ext> and NOTHING unstamped
     is touched. Obligation o37: attempt 2's leg E overwrote audit.json, nlwp_max.txt,
     rows_per_game.txt and throughput_smoke.json, the very files the validator had
@@ -522,7 +530,13 @@ def audit(basedir, evidence, trainingname, strict, tag=None):
 
     # ---- S7 / S11 / S12 probe results ---------------------------------------
     ktg_root = os.environ.get("KTG_ROOT", "/scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train")
-    probe_search = read_json(os.path.join(ktg_root, "runs", "smoke_probe", "search",
+    # --probe-search-json points the audit at a re-binned run (o38). The recorded
+    # 20-game probe jsons of jobs 298712 and 299259 were written by the old rule and their
+    # logs, sgfs and npz were removed by the probe script's own rm -rf, so they can never
+    # be re-binned; the surviving fork-free 60-game run can, and its re-bin is the file to
+    # pass here.
+    probe_search = read_json(probe_search_json or
+                             os.path.join(ktg_root, "runs", "smoke_probe", "search",
                                           "probe_search.json"), {}) or {}
     probe_train = read_json(os.path.join(ktg_root, "runs", "smoke_probe", "train",
                                          "probe_train.json"), {}) or {}
@@ -532,10 +546,16 @@ def audit(basedir, evidence, trainingname, strict, tag=None):
     r["S11_probe_train"] = probe_train
     r["S12_probe_resume"] = probe_resume
     ff = probe_search.get("full_frac")
+    ff_rule = probe_search.get("full_frac_rule")
     add("S7_full_frac_in_band", strict,
-        ff is not None and FULL_FRAC_LO <= ff <= FULL_FRAC_HI,
-        "full_frac=%s band=[%.2f, %.2f] searched_turns=%s"
-        % (ff, FULL_FRAC_LO, FULL_FRAC_HI, probe_search.get("searched_turns")))
+        ff_rule == FULL_FRAC_RULE and ff is not None and FULL_FRAC_LO <= ff <= FULL_FRAC_HI,
+        "full_frac=%s rule=%s (required '%s') band=[%.2f, %.2f] searched_turns=%s between=%s%s"
+        % (ff, ("'%s'" % ff_rule) if ff_rule else "MISSING",
+           FULL_FRAC_RULE, FULL_FRAC_LO, FULL_FRAC_HI,
+           probe_search.get("searched_turns"), probe_search.get("between_count"),
+           "" if ff_rule == FULL_FRAC_RULE else
+           " -- UNCHECKED: this json was written by the old '> cheapSearchVisits' rule, "
+           "which bins reused-subtree cheap searches as full searches (o38)"))
     add("S11_probe_train_pass", strict, bool(probe_train.get("pass")),
         "trunk_gpool_count=%s res2=%s res3=%s row_bytes=%s"
         % (probe_train.get("trunk_gpool_count"),
@@ -627,7 +647,9 @@ def audit(basedir, evidence, trainingname, strict, tag=None):
         "selfplay_rows_per_hour": round(total_rows / sp_elapsed * 3600, 1) if sp_elapsed else None,
         "per_net": per_net,
         "probe_search": {"games": probe_games, "rows": probe_rows,
-                         "full_frac": ff, "searched_turns": probe_search.get("searched_turns")},
+                         "full_frac": ff, "full_frac_rule": ff_rule,
+                         "between_count": probe_search.get("between_count"),
+                         "searched_turns": probe_search.get("searched_turns")},
         "train_samples_total": samples_trained,
         "train_samples_per_second": round(samples_trained / tr_elapsed, 3) if tr_elapsed else None,
         "peak_vram_mib": mon["gpu"].get("mem_used_mib_max"),
@@ -730,7 +752,10 @@ def audit(basedir, evidence, trainingname, strict, tag=None):
              shuf["row_bytes_seen"], shuf["files"], shuf["rows"]))
     print("  S6  GLOBAL_STEP_SAMPLES cycle1 = %s -> cycle2 = %s;  metrics lines = %d, nonfinite = %s;  reinit in cycle-2 log = %s"
           % (g1, g2, nlines, nonfinite or "none", reinit_cycle2))
-    print("  S7  FULL_FRAC          = %s   band [%.2f, %.2f]" % (ff, FULL_FRAC_LO, FULL_FRAC_HI))
+    print("  S7  FULL_FRAC          = %s   band [%.2f, %.2f]   rule = %s   between = %s"
+          % (ff, FULL_FRAC_LO, FULL_FRAC_HI,
+             ff_rule if ff_rule else "MISSING (o38: unchecked)",
+             probe_search.get("between_count")))
     print("  S8  ROWS_PER_GAME real = %s over %d games;  random = %s over %d games;  band [%d, %d]"
           % (rpg_real, real_games, rpg_rand, rand_games, ROWS_PER_GAME_LO, ROWS_PER_GAME_HI))
     print("  S8  BYTES_PER_GAME     = %s B = %.3f KiB over %d loop games;  c10 bound 10 KiB"
@@ -763,6 +788,7 @@ def audit(basedir, evidence, trainingname, strict, tag=None):
 
 def main(argv):
     args, evidence, snap_label, strict, tag = [], None, None, False, None
+    probe_search_json = None
     trainingname = os.environ.get("KTG_SMOKE_TRAININGNAME", "t9")
     it = iter(argv[1:])
     for a in it:
@@ -774,6 +800,8 @@ def main(argv):
             trainingname = next(it, None)
         elif a == "--tag":
             tag = next(it, None)
+        elif a == "--probe-search-json":
+            probe_search_json = next(it, None)
         elif a == "--strict":
             strict = True
         else:
@@ -787,7 +815,7 @@ def main(argv):
     if evidence is None:
         print("--evidence <dir> is required for the audit mode")
         return 2
-    return audit(basedir, evidence, trainingname, strict, tag)
+    return audit(basedir, evidence, trainingname, strict, tag, probe_search_json)
 
 
 if __name__ == "__main__":
