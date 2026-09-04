@@ -1,0 +1,59 @@
+{
+ "_README": "CANDIDATE result rows for node arxiv-1902.10565::converged_test_7x7, job 301096. NOT APPENDED to any ledger by this worker -- the brief for this node authorises error- and knowledge-ledger rows only, and forbids result/claim appends. These are drafts for whoever closes the node: fill in the fields marked TERMINAL_* from evidence/converged_7x7/summary-301096.json once job 301096 is terminal, then hand them to the refuter/judge. Row 1 is settled by cycle-1 measurement and is safe to append as it stands; row 2 is the convergence claim and must not be appended before the match result exists.",
+ "job": "301096",
+ "generated_utc": "2026-09-04T21:19:18Z",
+ "candidate_rows": [
+  {
+   "_status_at_draft": "settled by cycle 1; independent of how the rest of the run goes",
+   "paper": "arxiv-1902.10565",
+   "result_id": "ktg_7x7_rows_per_game",
+   "name": "Training rows per self-play game at 7x7",
+   "working_context": "KataGo v1.18.2 selfplay, model kind b7c96h3tfrs, codes/cfg/selfplay_7x7.cfg (dataBoardLen 7, bSizes 7, maxVisits 100, cheapSearchVisits 25, 12 game threads), bootstrap random net, 1 B200 GPU on gb207, job 301096 cycle 1.",
+   "claim": "A 7x7 self-play game under this mission's fast-search config writes 19.73 training rows on average (11838 rows over 600 games), which is the 9x9 measurement of 31.7-32.0 rows/game scaled by board area (32 * 49/81 = 19.4) to within 2 %.",
+   "evidence_type": "empirical measurement",
+   "evidence": "results/ktg/paper_1902.10565/evidence/converged_7x7/rows_per_game-301096.json",
+   "dependencies": [
+    "arxiv-1902.10565::synchronous_loop_smoke",
+    "arxiv-1902.10565::converged_test_7x7"
+   ],
+   "assumptions": [
+    "rows are counted as the sum of binaryInputNCHWPacked.shape[0] over the cycle's npz, games as non-empty lines of the .sgfs (cpp/program/selfplaymanager.cpp:377-378) -- the same two instruments the 9x9 measurement used",
+    "the bootstrap random net plays; the 9x9 smoke measured essentially the same rate for a real net (31.95) as for the random one (31.675), so the number is not expected to move much"
+   ],
+   "status": "empirical",
+   "provenance": "job 301096 on gb207, 2026-09-04; measured by the job itself, not by hand",
+   "open_obligations": [
+    "[OPEN] not re-measured with a TRAINED net at 7x7; cycle 2+ data in the same BASEDIR would settle it"
+   ]
+  },
+  {
+   "_status_at_draft": "NOT SETTLED -- do not append before job 301096 is terminal",
+   "paper": "arxiv-1902.10565",
+   "result_id": "ktg_7x7_converged_test",
+   "name": "A 7x7 self-play loop converges inside one short single-GPU allocation",
+   "working_context": "KataGo v1.18.2, b7c96h3tfrs, 7x7, one 1-GPU 5 h 15 min allocation on gb207 (B200). Knobs: tasks/converged_test_7x7/implementation.md section 10. Loss-print interval 8 batches via KTG_PRINT_EVERY (codes/env/train-print-every.diff); LR at upstream's own from-scratch multiplier via -lr-scale-auto.",
+   "claim": "TERMINAL_CLAIM -- state it from summary-301096.json: policy loss fell from FIRST to MIN against the uniform baseline ln(50) = 3.9120 with target < 2.5; value loss fell from FIRST to MIN; the gatekeeper accepted TERMINAL_ACCEPTANCES successive candidates; and the latest accepted net scored TERMINAL_SCORE (TERMINAL_W-TERMINAL_L-TERMINAL_D, Elo TERMINAL_ELO) against the run's first exported net t7-s11808-d11838 over 200 balanced-colour games at 100 fixed visits.",
+   "evidence_type": "numerical simulation",
+   "evidence": "results/ktg/paper_1902.10565/evidence/converged_7x7/summary-301096.json",
+   "dependencies": [
+    "arxiv-1902.10565::converged_test_7x7",
+    "arxiv-1902.10565::env_build",
+    "arxiv-1902.10565::cfg_9x9_override",
+    "arxiv-1902.10565::synchronous_loop_smoke",
+    "arxiv-1902.10565::gating_rule"
+   ],
+   "assumptions": [
+    "assumption a05_9x9_only is deliberately stepped outside: this is a 7x7 test run and advances NO 9x9 claim. It is evidence that the LOOP learns, not that the 9x9 configuration does",
+    "the logged p0loss/vloss are exponential moving averages with decay 0.999 per batch (python/katago/train/metrics_logging.py:10-25), i.e. about a 1000-batch memory, so the reported values LAG the instantaneous loss and every threshold is conservative",
+    "the match is a paired comparison at a single fixed visit count (100); it says nothing about relative strength at other visit counts",
+    "one run, one seed -- no repetition, so the score's uncertainty is the Wilson interval on a single 200-game sample and nothing more"
+   ],
+   "status": "TERMINAL_STATUS -- empirical if every criterion of section 2 is met, otherwise conditional or refuted, stated from the summary and never rounded up",
+   "provenance": "job 301096 on gb207, 2026-09-04/05",
+   "open_obligations": [
+    "[OPEN] fill TERMINAL_* from summary-301096.json once sacct shows the job terminal",
+    "[OPEN] a refuter has not seen this; the brief for this node forbids the worker from appending result or claim rows, so admission is somebody else's step"
+   ]
+  }
+ ]
+}
