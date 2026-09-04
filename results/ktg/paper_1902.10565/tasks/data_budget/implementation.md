@@ -142,7 +142,7 @@ Projected footprint at the smoke scale (`NUM_GAMES_PER_CYCLE = 500`, `synchronou
 - `[OPEN]` `o04_scratch_budget` — closes when (a) `quotas.py` output is stored under `evidence/data_budget/`, (b) the loop wrapper calls `scratch_cap.sh` before each cycle and refuses above 2.0e11 B, (c) `longterm_checkpoints` pruning to <= 6 and `rejectedmodels` pruning are implemented, (d) a `tdata` retention policy is written down.
 - `[OPEN]` `codes/eval/rows_per_game.py` and `codes/eval/scratch_cap.sh` are not written yet (`codes/` contains only `env/`).
 - `[OPEN]` `a07_moves_per_game_80` is an unmeasured assumption; every derived number above is conditional on it until Phase 2 runs.
-- `[BLOCKING]` inherited: the first real `tdata` at `dataBoardLen = 9` requires a self-play run, and production self-play requires a servable net — currently blocked by the SwiGLU refusal recorded in `tasks/tiny_model_export_smoke/implementation.md` §12. The random-net bootstrap (`cpp/dataio/loadmodel.cpp:77-80`) still produces usable `tdata` for Phase 2, so this blocks the *production* budget, not the measurement.
+- `[SOLID]` resolved history: `b5c48h3tfr` (ffng) is refused by every v1.18.2 backend (`cpp/neuralnet/cudaandrocmbackend.inc:3307-3308`, `eigenbackend.cpp:1634`, `openclbackend.cpp:2729`; job 297952 FAILED 1:0, `smoke-297952.txt`). The mission model is `b7c96h3tfrs` (job 298018 COMPLETED 0:0, `smoke-298018.txt` PASS); ledger: node `transformer_trunk_b7c96h3tfrs`, `a06`/`o07`/`c03`/`c16` amended, `o18` discharged (commit ee47dd9). Nothing in this task is blocked by it. The first real `tdata` at `dataBoardLen = 9` still needs one self-play run (task `cfg_9x9_override` check 4 or `synchronous_loop_smoke`) — `[OPEN]` until then.
 
 ## 13. Forbidden Actions
 

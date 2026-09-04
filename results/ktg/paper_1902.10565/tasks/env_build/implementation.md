@@ -123,7 +123,7 @@ results/ktg/paper_1902.10565/codes/env/
 | cuDNN | `nvidia-cudnn-cu12>=9.8,<10` -> `91900` | SDPA gate `cpp/neuralnet/cudabackend.cpp:13` needs `CUDNN_VERSION >= 8903`; measured `cudnn 91900` (`smoke.txt:131`) |
 | torch | `2.11.0+cu128` | floors: `torch.amp.GradScaler` `python/train.py:37`, flex_attention `trainloop_helpers.py:154-157` (audit §H) |
 | `CMAKE_CUDA_ARCHITECTURES` | `... 90 100 120` | patched from `cpp/CMakeLists.txt:761` by `cmake-sm100.diff` |
-| smoke `MODEL_KIND` | `b7c96h3tfrs` (`modelconfigs.py:1008-1029`) | `env_build.sbatch:26`; **not** `b5c48h3tfr` — see §12 `[BLOCKING]` |
+| smoke `MODEL_KIND` | `b7c96h3tfrs` (`modelconfigs.py:1008-1029`) | `env_build.sbatch:26`; **not** `b5c48h3tfr` (unservable, see §12) |
 | smoke `POS_LEN` | `9` | `env_build.sbatch:27`; `a05_9x9_only` |
 
 ## 11. Risk Mitigation
@@ -133,7 +133,7 @@ results/ktg/paper_1902.10565/codes/env/
 | No sm_100 SASS -> PTX JIT | `cuobjdump --list-elf \| grep -c sm_100` returns `0`; first kernel launch slow or `no kernel image` | apply `cmake-sm100.diff` to the scratch clone, delete `.stamps/build`, rebuild (stage 2b) |
 | cuDNN not found by CMake | `FATAL` at `cpp/CMakeLists.txt:1125-1127` or `CUDNN_LIBRARY-NOTFOUND` | pass all three `-DCUDNN_*`; create the `libcudnn.so` symlink first |
 | libzip missing -> no training data | CMake warning + `NO_LIBZIP` (`cpp/CMakeLists.txt:1891-1892`) "selfplay ... not be possible" | `env_build.sbatch:60` dies if `/usr/include/zip.h` is absent |
-| Non-SwiGLU FFN model aborts the engine | `ERROR: NN server thread failed: Non-SwiGLU transformer FFN is not yet supported in CUDA backend`, exit 134 | see §12 `[BLOCKING]`; smoke model kept in the `ffnsg` family |
+| Non-SwiGLU FFN model aborts the engine | `ERROR: NN server thread failed: Non-SwiGLU transformer FFN is not yet supported in CUDA backend`, exit 134 | see §12; smoke model kept in the `ffnsg` family |
 | Log written to node-local `/tmp` and lost | job `COMPLETED`, `--output` file missing | `--output` points at `/scratch/.../logs/` (`env_build.sbatch:11`), per `docs/cluster-manual.md` §4 trap 2 |
 | Scratch full (94 % group usage) | `No space left on device` mid-build | `python3 /apps/helpers/quotas.py` before submit; see task `data_budget` |
 
@@ -143,7 +143,7 @@ results/ktg/paper_1902.10565/codes/env/
 - `[SOLID]` `katago version` = `KataGo v1.18.2`, git `fd0723fdbc0e9d82cf269c9630af8c27c57c07c4-dirty` (the `-dirty` is exactly `cmake-sm100.diff`), `Using CUDA backend`; `katago runtests` `[OK]`; GPU `NVIDIA B200, 10.0`.
 - `[SOLID]` `o05_cudnn_version_sdpa` discharged: `cudnn 91900` >= 8903 (`smoke.txt:131`), so `KATAGO_CUDA_HAS_SDPA` is compiled in (`cpp/neuralnet/cudabackend.cpp:13`).
 - `[SOLID]` `o06_sm100_arch` discharged by the patch + rebuild (stamp `.stamps/build` @ 22:03).
-- `[BLOCKING]` **`b5c48h3tfr` cannot be served by any KataGo v1.18.2 backend.** Job `297952` (same script, `MODEL_KIND=b5c48h3tfr`) failed both engine smokes with exit 134: `Non-SwiGLU transformer FFN is not yet supported in CUDA backend` — evidence `/scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/evidence/env/smoke-297952.txt:68-80`. Root cause in code: `cpp/neuralnet/cudaandrocmbackend.inc:3306-3309` throws when `!useSwiGLU`; the same refusal exists at `cpp/neuralnet/eigenbackend.cpp:1634` and `cpp/neuralnet/openclbackend.cpp:2729`. `b5c48h3tfr` uses `ffng` (`python/katago/train/modelconfigs.py:999`), not `ffnsg`. **Unblocks when** the mission smoke model is changed to the smallest upstream `attnrope`+`ffnsg` config, `b7c96h3tfrs` (`modelconfigs.py:1008-1029`, already PASS in job 298018), or another `*tfrs` config. **Owner:** brain design decision (amends `a06_tf_family`, `o07_family_choice_tf_vs_nbt`); it is load-bearing for `tiny_model_export_smoke`, `selfplay_stage`, `gatekeeper_stage`.
+- `[SOLID]` resolved history: `b5c48h3tfr` (ffng) is refused by every v1.18.2 backend (`cpp/neuralnet/cudaandrocmbackend.inc:3307-3308`, `eigenbackend.cpp:1634`, `openclbackend.cpp:2729`; job 297952 FAILED 1:0, `smoke-297952.txt`). The mission model is `b7c96h3tfrs` (job 298018 COMPLETED 0:0, `smoke-298018.txt` PASS); ledger: node `transformer_trunk_b7c96h3tfrs`, `a06`/`o07`/`c03`/`c16` amended, `o18` discharged (commit ee47dd9). Nothing in this task is blocked by it.
 - `[OPEN]` `o12_pydeps_pin`: `codes/env/requirements.txt` with pinned `torch==2.11.0+cu128`, `numpy`, `scipy`, `psutil`, `packaging`, `sgfmill`, `nvidia-cudnn-cu12>=9.8,<10` plus a captured `pip freeze` is not written yet. Closes when both files exist under `codes/env/` and `pip freeze` is stored under `evidence/env/`.
 - `[SOLID]` `decomposition/implementation_plan_{python,cpp,bash}.md` and `decomposition/result_seed.md` exist (commit 87bb402); the §4 rows resolve.
 
@@ -168,7 +168,7 @@ Inherits `../../_common/contracts/progress_principles.md`. Additions:
 - Per-substage commit: venv, clone+patch, build, smoke each get their own commit when the user requests commits.
 - Joint progress file: `progress/paper_1902.10565/env_build/progress.md`.
 - Loop notes: `results/ktg/paper_1902.10565/loop_note/note_session_{id}_loop_{n}.md` before compaction.
-- State-note sync: push the `[BLOCKING]` SwiGLU finding into `${RESEARCH_STATE}` — it changes `a06_tf_family`.
+- State-note sync: the SwiGLU finding is already in `${RESEARCH_STATE}` (trunk row) and the ledger (`a06_tf_family` amended, commit ee47dd9).
 
 ## 16. Termination Checklist
 

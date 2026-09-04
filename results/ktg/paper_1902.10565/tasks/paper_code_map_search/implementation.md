@@ -147,7 +147,7 @@ results/ktg/paper_1902.10565/codes/eval/
 - `[OPEN]` `gating_rule` cannot be promoted to `solid` by this task: acceptance behaviour needs 200 real games between two servable nets. Closes in `gatekeeper_stage` (claim `c13_gatekeeper_accepts`).
 - `[OPEN]` `score_utility_search` promotion is partial: the probe confirms the parameters are live in a running search, not the arctan form. Closes with a targeted numeric check of `cpp/neuralnet/nninputs.cpp:56` (`u = c*(2/pi)*atan((x-x0)/(0.5*sqrt(area)))`) against logged root score utilities.
 - `[OPEN]` `visit-caps-9x9` (`convention.md` §10): 600/100 are 19x19-derived; this probe records their 9x9 behaviour but does not justify them. Closes in `selfplay_stage` with a games/hour derivation.
-- `[BLOCKING]` inherited: `b5c48h3tfr` is refused by every backend (`cpp/neuralnet/cudaandrocmbackend.inc:3306-3309`; evidence `evidence/env/smoke-297952.txt:68-80`). The random-net bootstrap keeps this probe runnable, but any leg that needs a real net waits on the model-family decision.
+- `[SOLID]` resolved history: `b5c48h3tfr` (ffng) is refused by every v1.18.2 backend (`cpp/neuralnet/cudaandrocmbackend.inc:3307-3308`, `eigenbackend.cpp:1634`, `openclbackend.cpp:2729`; job 297952 FAILED 1:0, `smoke-297952.txt`). The mission model is `b7c96h3tfrs` (job 298018 COMPLETED 0:0, `smoke-298018.txt` PASS); ledger: node `transformer_trunk_b7c96h3tfrs`, `a06`/`o07`/`c03`/`c16` amended, `o18` discharged (commit ee47dd9). Nothing in this task is blocked by it.
 
 ## 13. Forbidden Actions
 

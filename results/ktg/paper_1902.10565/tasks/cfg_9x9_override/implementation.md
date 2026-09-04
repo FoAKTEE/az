@@ -141,7 +141,7 @@ results/ktg/paper_1902.10565/codes/
 - `[OPEN]` `o02_databoardlen_poslen_9` — half of it lands here (`dataBoardLen = 9`); the `-pos-len 9` half belongs to the mission train wrapper (upstream `python/selfplay/train.sh:88` hard-codes 19). Closes only when both are set in the same commit and pos_len-19 data is discarded before the first shuffle.
 - `[OPEN]` `o03_thread_budget_24cpu` — closes with a recorded `ps -o nlwp` measurement, not with the arithmetic above.
 - `[OPEN]` `visit-caps-9x9` and `gate-visits-9x9` (`convention.md` §10): 600/100/150 are 19x19-derived. Closes when the mission records chosen values with a 9x9 games-per-hour derivation (task `selfplay_stage`).
-- `[BLOCKING]` The SwiGLU engine refusal recorded in `tasks/env_build/implementation.md` §12 does not affect checks 1-4 (random-net bootstrap), but it blocks any cfg check that loads a real `b5c48h3tfr` net. Unblocks with the model-family decision owned by the brain.
+- `[SOLID]` resolved history: `b5c48h3tfr` (ffng) is refused by every v1.18.2 backend (`cpp/neuralnet/cudaandrocmbackend.inc:3307-3308`, `eigenbackend.cpp:1634`, `openclbackend.cpp:2729`; job 297952 FAILED 1:0, `smoke-297952.txt`). The mission model is `b7c96h3tfrs` (job 298018 COMPLETED 0:0, `smoke-298018.txt` PASS); ledger: node `transformer_trunk_b7c96h3tfrs`, `a06`/`o07`/`c03`/`c16` amended, `o18` discharged (commit ee47dd9). Nothing in this task is blocked by it.
 
 ## 13. Forbidden Actions
 
