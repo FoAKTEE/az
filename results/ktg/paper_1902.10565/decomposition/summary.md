@@ -166,13 +166,16 @@ For the mission, not for the paper.
 
 - **Paper regime ≠ 9×9 transformer regime.** `[OPEN] boardsize-gap` — every paper Elo is
   19×19 (l.240, l.293) and its training distribution is mixed 9…19 (l.650). No paper number
-  is a target. `[OPEN] success-criterion` — **closes when** a 9×9 criterion is defined citing
-  no paper Elo figure.
+  is a target. Success criterion (replaces the paper Elo): claims `c13` (>= 2 gatekeeper
+  acceptances) and `c14` (latest vs first net >= 60 % over 400 games at 150 visits, 9×9, komi 7)
+  in `claims.md`; `DESIGN.md` §7.
 - **No transformer in the paper.** `[OPEN] arch-gap` — `[HYPOTHESIS] gpool-attn` the 1.60×
   global-pooling ablation factor (Table l.335) does not transfer, because the trunk gpool
   blocks it ablates are absent and attention is already globally receptive.
-  `[HYPOTHESIS] bavg-dead` — with one board width, the `(b−14)/10` pool channel is the
-  constant `-1.1` and the value-head channel `1.11`, i.e. biases rather than size signals.
+  `[PRELIMINARY] bavg-collinear` — with one board width the offset is `-5`, so the `(b−14)/10`
+  pool channel is `-0.5 x mean` (`model_pytorch.py:514,539`) and the value-head third channel is
+  `0.15 x mean` (`:540`): collinear with the mean, i.e. redundant head columns, not size signals
+  (node `head_gpool_degeneracy_9x9`; obligation `o14` discharged).
 - **Two board-size settings must agree.** `dataBoardLen` (`selfplay1_maxsize9.cfg:16`, `19`)
   and `-pos-len` (`train.sh:88`, `19`) both default to 19. `[HYPOTHESIS] shape-mismatch` —
   changing one without the other gives 19×19-shaped rows to a 9×9 trainer or the reverse;
@@ -180,10 +183,12 @@ For the mission, not for the paper.
 - **Self-play:train compute ratio.** The paper spends 16-24 GPUs on self-play against 1-2 on
   training (l.603) — 4-40× — inside a 26-27 GPU pool. `[HYPOTHESIS] ratio-4gpu` — on ≤4 GPUs
   that ratio cannot hold without starving the trainer or letting self-play own the wall
-  clock. `[OPEN] hparam-scale` — **closes when** scaled `maxVisits` / `cheapSearchVisits` /
-  `NUM_GAMES_PER_CYCLE` / batch size are recorded with their derivation or measured.
-  `[OPEN] cfg-audit` — `numGameThreads = 128` (`selfplay1_maxsize9.cfg:84`,
-  `gatekeeper1_maxsize9.cfg:18`), `-num-processes` (`shuffle.py:791`): ≤24-CPU cap.
+  clock. Resolution in `DESIGN.md` §1-2: on the synchronous single-node loop the ratio is
+  enforced by `-max-train-bucket-per-new-data 8` (`train.py:121,1256`), not by GPU count; visit
+  caps stay at upstream values (600/100/0.75) for S2/P1 and are revisited after claim `c09`
+  measures games/h; `NUM_GAMES_PER_CYCLE`/`samples-per-epoch` knobs per phase are tabulated there.
+  Thread cap: `numGameThreads` 18 (selfplay) / 20 (gatekeeper), `-num-processes 8`,
+  `OMP_NUM_THREADS=4` — obligation `o03`, claim `c06`.
 - **Export can refuse.** `[OPEN] attn-logit` — `-attn-logit-bound-limit` default `2.5e4`
   (`export_model_pytorch.py:42`) rejects transformer models whose attention logits grow;
   the training-side counter-measure `-attn-logit-penalty-cap` (`train.py:140`) is off by
@@ -194,7 +199,7 @@ For the mission, not for the paper.
   same late stage.
 - **Scratch storage.** The paper's run produced 241M samples over 4.2M games (l.603) with a
   window growing to ~22M samples (l.77). `[ASSUMPTION] scratch-only` — self-play data goes to
-  `/scratch/…/ktg-train/`, never committed. `[OPEN] scratch-budget` — the 9×9 per-row byte
-  size and the 3-day accumulation rate are unmeasured, so `-min-rows` / `-taper-window-scale`
-  / `-keep-target-rows` are unset. **Closes when** one cycle's on-disk row count and byte
-  size are measured on the cluster.
+  `/scratch/…/ktg-train/`, never committed. Budget (`DESIGN.md` §5, obligation `o04`): 2145 B/row
+  at pos_len 9 (`cpp/dataio/trainingwrite.cpp:292-299`), x0.12 compressed (`shuffle.py:47`),
+  ~22 rows/game => ~5.7 KB/game; hard cap 200 GB on `BASEDIR`. `[PRELIMINARY]` until claims
+  `c10`/`c11` measure one cycle on the cluster.
