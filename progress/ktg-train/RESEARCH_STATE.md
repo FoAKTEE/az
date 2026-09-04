@@ -25,7 +25,7 @@ b200 fallback, 3-day walltime). **Phase.** 1-decompose closed (two-seat DAG revi
 | trunk | **`b7c96h3tfrs`** (7 × attnrope+ffnsg, 96 ch, 825 837 params) start; ladder b8c96h3tfrs → b14c192h6tfrs as fresh runs (`train.py:850`). `b5c48h3tfr` (ffng) unservable — every backend throws "Non-SwiGLU transformer FFN is not yet supported" (node `engine_ffn_swiglu_constraint`, **solid**) | `[SOLID]`; node `select_transformer_ladder`; nbt family `[FUTURE]` |
 | loop | mission copy of `synchronous_loop.sh` (copies `cpp/build/katago`, 9x9 cfgs); exporter `export_model_pytorch.py`; USEGATING=1 throughout; cycle 1 gates the first candidate **against the random baseline** (`loadmodel.cpp:77-93`, `setup.cpp:126`) — not skipped; first dir in `models/` = frozen baseline | threads: selfplay 18 / gatekeeper **18** game threads (data-write thread counted → 22 each), shuffle 8, OMP 4; ≤24 OS threads per stage; 1 GPU |
 | knobs | derived after the smoke from measured rows/game (`derive_cycle_knobs_9x9`): games × rows/game × reuse ≥ 0.99 × samples/epoch (`train.py:1256-1259,1433-1445`), KEEPROWS > train cap, `-epochs-per-export N` → one candidate/cycle. Pilot hypothesis: 500 games, reuse 8, 20 k samples/epoch, MINROWS 10 k, KEEPROWS 300 k, cap 200 k | `[PRELIMINARY]`; obligation `o24` blocking before P1 |
-| scratch | 200 GiB cap on the whole mission root, no new cycle at ≥ 180 GiB, group quota check, bounded logged retention | `[PRELIMINARY]` `o04`, `c11` |
+| scratch | budget raised 200→**500 GiB** by human decision (see below); group quota check, bounded logged retention unchanged | `[PRELIMINARY]` `o04`, `c11`; `[OPEN]` propagation, see Human decisions |
 | build | CUDA backend, cuDNN 9.19 wheel; `cmake-sm100.diff` applied (sm_100 SASS count 2); result row `env-toolchain-b200` (empirical); node `env_build` **solid**; no TCMalloc (`o20`) | `c01`, `c02` admitted; `o05`, `o12` open |
 | loss / optimizer | code weights (policy 0.93, value 0.72, ownership 1.5/b², …), SGD m=0.9 + Lookahead, lr 3e-5 base; warm-up reaches 1.0 only past 2 M samples | `[SOLID]` `derivation.md` §2 |
 
@@ -42,7 +42,10 @@ b200 fallback, 3-day walltime). **Phase.** 1-decompose closed (two-seat DAG revi
 
 ## Accepted Results Log
 
-<!-- GENERATED block — regenerate with: python3 phys-agentic-loop/_common/result_database.py render-state --paper arxiv-1902.10565 -->
+<!-- Pointer to the GENERATED block: python3 phys-agentic-loop/_common/result_database.py render-state --paper arxiv-1902.10565 -->
+<!-- Re-run this wave (2026-09-03): output unchanged, still the single admitted row below; full BEGIN/END-marker table (2315 B)
+     would push this file over the 10240 B cap, so only the pointer form is kept here — the full row lives in
+     progress/ktg-train/nodal_note.md `## Accepted-results snapshot` and is reproducible verbatim by re-running the command. -->
 - `env-toolchain-b200` (empirical, verifier pass, job 298018): KataGo v1.18.2 CUDA + torch 2.11.0+cu128 on B200; sm_100 SASS; b7c96h3tfrs benchmark/gtp/torch fwd-bwd at 9x9.
 
 ## Next Work Steps
@@ -53,17 +56,16 @@ b200 fallback, 3-day walltime). **Phase.** 1-decompose closed (two-seat DAG revi
   1. `[OPEN] cfg_9x9_override` — `codes/cfg/{selfplay,gatekeeper}_9x9.cfg` + `codes/loop/train_9x9.sh`; check `codes/eval/check_cfg_9x9.sh` (key-diff whitelist, 1-game run all `SZ[9]`, gatekeeper `numGameThreads = 18`).
   2. `[OPEN] tiny_model_export_smoke` — b7 export → block histogram {7,7} → `benchmarknn -require-exact-nnlen -json` + gtp on CUDA; b5 negative fixture (o23). Independent of 1.
   3. `[OPEN] loop_resume_under_walltime` — `codes/loop/loop.sbatch` + `synchronous_loop_9x9.sh` + reordered exporter (static checks: `bash -n`, afterany, failcount, `cpp/build/katago`, `check.sh --gpus 1 --cpus 24`).
-  4. `[OPEN] data_budget` — 180/200 GiB guard + quota in the wrapper (`grep 193273528320 loop.sbatch`; `du -sb $KTG ≤ 214748364800`).
+  4. `[OPEN] data_budget` — **rewrite to the 500 GiB decision** (`ace9d0c`) before writing the guard: new hard cap replaces `214748364800`, soft-guard replaces `193273528320`; then land the wrapper (`grep <new soft-guard int> loop.sbatch`; `du -sb $KTG ≤ <new hard-cap int>`); worker/brain append also waives/amends `o04`, `o22`, `a11` to match the human decisions.
   Probe tasks (promote code-map nodes): `paper_code_map_search`, `paper_code_map_training` (need 1 + the binary).
 - `[OPEN] next after the frontier` — `synchronous_loop_smoke` (20 games, 1 cycle, audit, rows/game) → `derive_cycle_knobs_9x9` (o24), `verify_preemption_resume` (c08), `loop_failure_circuit_breaker` → P1 five stages + `bootstrap_accepted_model` → `measure_stage_throughput`, `count_gatekeeper_acceptances`, `match_latest_against_first` → `eval_improvement` → `scale_data_window` → `scale_search_budget` → `scale_up`.
 - `[BLOCKING]` before P1: `o01`, `o02`, `o03` (cfg), `o04` (scratch), `o13`, `o17` (loop copy), `o24` (knobs) — all owned by the frontier / smoke workers.
 - `[OPEN]` non-blocking: `o05` cuDNN SDPA compile flag, `o12` requirements.txt, `o19` random-baseline gate observed in the smoke log, `o20` TCMalloc RSS, `o21` `-exclude-qvalues`, `o22` CPU-policy scope (human), `o23` b5 negative fixture; `[FUTURE]` `async_multi_gpu_layout`, nbt family, external 9x9 reference net.
 
-## Open Questions (human)
+## Human decisions (resolved 2026-09-03, `mission.json.decisions[]`, landed `ace9d0c`)
 
-- Is the 20 % CPU policy per job or summed over my concurrent jobs? Design assumes summed (assumption `a11`, one job at a time) — `DESIGN.md` §1 `[HOLE]`, obligation `o22`.
-- b300 reserved until 2026-09-04 15:00 → running on b200 at 1 GPU (default yes).
-- Scratch at 94 %: mission cap 200 GiB on the whole mission root; group-level cleanup is outside this mission.
+- CPU policy: **no limit**, 20 % clause withdrawn (was per-job-vs-summed `[HOLE]`, `a11`). Scratch: **500 GiB** for selfplay+checkpoints (was 200 GiB, 94 % group scratch). Compute: **b200** while b300 reserved, same GPU count.
+- `[OPEN]` propagation gap: `DESIGN.md` §5 and `tasks/data_budget/implementation.md` still hard-code the superseded 200 GiB cap / 180 GiB guard (`214748364800`/`193273528320` B); ledger rows `o22_cpu_policy_scope` (open), `a11_cpu_policy_summed` (active), `o04_scratch_budget` (open, states 200/180) not yet waived/relaxed/amended. Fix is a worker/brain ledger append (`data_budget` wave-1 task), not an observer append — see Next Work Steps item 4.
 
 ## Audit references
 
