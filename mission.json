@@ -101,6 +101,15 @@
         "policyCheck",
         "production_chain_9x9 links"
       ]
+    },
+    {
+      "date": "2026-09-04",
+      "by": "human",
+      "decision": "run a converged 7x7 test run on a short (interactive-class) 1-GPU allocation while the 9x9 production chain waits in the queue; produce a loss curve",
+      "affects": [
+        "new node converged_test_7x7",
+        "loss logging interval (mission-owned override in the scratch clone)"
+      ]
     }
   ]
 }
