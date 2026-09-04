@@ -1,6 +1,6 @@
-== compute-budget self-check  2026-09-04T17:10:54-04:00 ==
+== compute-budget self-check  2026-09-04T17:14:30-04:00 ==
 my jobs      : gpus=1 cpus=32  (1 jobs)
-partition b200 : free_gpus=9/128 (excludes reserved/drained nodes)
+partition b200 : free_gpus=13/128 (excludes reserved/drained nodes)
 partition b300 : free_gpus=0/8 (excludes reserved/drained nodes)
 partition l40s : free_gpus=4/48 (excludes reserved/drained nodes)
 reservations : 9 defined (6 active) — scontrol show reservation

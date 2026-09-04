@@ -3,7 +3,17 @@
 #
 # converged_7x7.sbatch -- mission ktg-train, node arxiv-1902.10565::converged_test_7x7.
 # THE job for tasks/converged_test_7x7. ONE short interactive-class allocation:
-# 1 GPU, 16 CPUs, 96 G, 6 h, b200 OR l40s -- whichever frees first.
+# 1 GPU, 16 CPUs, 96 G, 5 h 15 min, b200 OR l40s -- whichever frees first.
+#
+# WHY 05:15:00 AND NOT THE 06:00:00 THE BRIEF ALLOWS. At submission the only B200 node
+# with free GPUs was gb207 (idle, 8 free GPUs) and reservation `ssci-sep5` takes it at
+# 23:00 local. Slurm will not place a job that would overrun a reservation, so a 6 h
+# request was deferred to a backfill window 4 h 41 min away (Reason=Resources,
+# StartTime 21:54) while the GPUs sat free. 05:15:00 fits before 23:00 with margin and
+# is still inside the brief's "<= 6 h"; docs/cluster-manual.md is explicit that an
+# accurate short --time starts sooner than a padded one. NOTHING ELSE CHANGES: the
+# script reads its own walltime back from `squeue -h -o %l` and derives the cycle
+# deadline from it, so the 35 min match reserve and the cycle budget adapt by themselves.
 #
 # WHAT IT DOES, in one allocation:
 #   1  preflight   assert the KTG_PRINT_EVERY patch is in the scratch clone, assert the
@@ -48,7 +58,7 @@
 #SBATCH --gres=gpu:1
 #SBATCH --cpus-per-task=16
 #SBATCH --mem=96G
-#SBATCH --time=06:00:00
+#SBATCH --time=05:15:00
 #SBATCH --output=/scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/logs/ktg-t7-%j.out
 #SBATCH --error=/scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/logs/ktg-t7-%j.err
 
