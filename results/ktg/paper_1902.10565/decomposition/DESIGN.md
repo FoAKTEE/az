@@ -63,7 +63,7 @@ transient threads of a mid-run net switch — and 24 also happens to be what `lo
 `ps -o nlwp=` is compared against. Nothing forbids a larger request; a larger one has to be *earned* by a
 measurement, not assumed (see the `[OPEN]` item below).
 - [SOLID] There is no CPU cap; the constraint is "declared ≥ used", and `check.sh` passes any CPU count.
-  verify: `mission.json` `compute.cpuCapPerJob` = `null` and `decisions[0].decision` = "no CPU usage limit; the 20% clause in PROMPT.md is withdrawn"; `bash .claude/skills/compute-budget/check.sh --gpus 1 --cpus 24 --partition b200` → `OK : request gpus=1 cpus=24 part=b200 within policy (gpu<=4, no cpu cap)`, exit 0.
+  verify: `mission.json` `compute.cpuCapPerJob` = `null` and `decisions[0].decision` = "no CPU usage limit; the 20% clause in PROMPT.md is withdrawn"; the check script named by `mission.json` `compute.policyCheck`, invoked with `--gpus 1 --cpus 24 --partition b200` → `OK : request gpus=1 cpus=24 part=b200 within policy (gpu<=4, no cpu cap)`, exit 0.
 
 Split of the 24 declared CPUs per stage (only one stage runs at a time, so each stage may use the whole
 request):
