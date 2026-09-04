@@ -1,0 +1,2203 @@
+================================================================================
+Validator harness transcript -- fourth repair packet (o35), node arxiv-1902.10565::loop_resume_under_walltime
+HEAD 0c6d38d; pre-repair copies from cd6cbf2. Host login03, CPU only, no Slurm job, no GPU. Paths: $AZ = az root, $RT = validator runtime dir, $SIM = per-part scratch.
+Parts: A (static, read_counter in isolation and differential against the loop writer, the REAL loop script with seeded counters, the REAL scratch-clone dry run, closing checks);
+       B1 (the wrapper under the validator's shims: seed matrix T1-T5 for .cycles_completed / .failcount / .chain_depth, new attacks X1-X12);
+       B2 (regression set A-J, K1-K6, L1/L2, M, N, O, P3-P5). Sources of every harness file follow the outputs, verbatim.
+Note: the shim log is per scenario, not per link, so the harness's cancel_iff_trip check reads VIOLATED on the LAST link of a multi-link chain whose earlier link cancelled (T5-3, X7-3, X8-3): a harness artifact, the wrapper lines above it are the evidence.
+================================================================================
+
+########## PART A
+########## PART 0: environment
+host    : login03   bash: GNU bash, version 5.1.8(1)-release (x86_64-redhat-linux-gnu)
+date    : 2026-09-04T03:36:47-04:00   az HEAD: 0c6d38d   codes/ last commit: 0c6d38d
+codes/ working tree == HEAD
+--- sha256 under test (HEAD)
+f344ec06e73b1a2e803e4b245cf0a672cbd7c4899eb4efc7aa5d76d186f10d7f  results/ktg/paper_1902.10565/codes/loop/synchronous_loop_9x9.sh
+8d997ef5fc928390e9dfff18f2b6a5704d141a49778584e3eb692ae9b412d7d5  results/ktg/paper_1902.10565/codes/loop/loop.sbatch
+a1277ecb84ecaa4f5691176bdf14c192d9bb9cae2f09b36cab7079f7fb6ce694  results/ktg/paper_1902.10565/codes/loop/export_model_for_selfplay_9x9.sh
+ba30b8b96b1f7d93674e121ca7d1bd02117dc29b20b912c3251c3d954b3f85ae  results/ktg/paper_1902.10565/codes/loop/smoke_loop.sbatch
+b2f991b206007e48c5d4f9a072acbb04d90e016632f2ca45c9cbf124c7870c62  results/ktg/paper_1902.10565/evidence/loop_resume/repair_o35.txt
+ee334e8fb78fc74054dab3054624540bfd69f6d524498585ee157d286fb728a8  results/ktg/paper_1902.10565/evidence/loop_resume/candidate_rows_repair4.json
+--- sha256 pre-repair (cd6cbf2)
+7d53df27563d6839c3f059f073b3a93e646aa6b03e2b8e2295b0f3ad3bc64ac1  $RT/pre/synchronous_loop_9x9_pre.sh
+86248d31b34b35220224bcdbdc8e9993671edba5c801283366fbaa00ded264cc  $RT/pre/loop_pre.sbatch
+--- files changed by the repair commit 0c6d38d (must not include smoke_loop.sbatch)
+0c6d38d fix(resume,ktg): read every chain state file in base 10
+
+ .../ktg/paper_1902.10565/codes/loop/loop.sbatch    |   55 +-
+ .../codes/loop/synchronous_loop_9x9.sh             |   16 +-
+ .../loop_resume/candidate_rows_repair4.json        |  191 ++
+ .../evidence/loop_resume/repair_o35.txt            | 1877 ++++++++++++++++++++
+ .../error/paper_arxiv-1902.10565/summary.csv       |   63 +-
+ .../error/paper_arxiv-1902.10565/trials.jsonl      |    1 +
+ 6 files changed, 2164 insertions(+), 39 deletions(-)
+--- smoke_loop.sbatch identical at cd6cbf2 and HEAD?
+yes
+--- queue at start
+298712 ktg-smoke PENDING
+
+########## PART 1: static
+bash -n synchronous_loop_9x9.sh exit=0
+bash -n loop.sbatch exit=0
+bash -n export_model_for_selfplay_9x9.sh exit=0
+bash -n smoke_loop.sbatch exit=0
+--- 1.1 read_counter() at :160-167 and its call sites (every read of a state file must go through it)
+  :160 read_counter() {
+  :161     local raw="${1:-}"
+  :162     raw="${raw#"${raw%%[![:space:]]*}"}"
+  :163     raw="${raw%"${raw##*[![:space:]]}"}"
+  :164     case "$raw" in ''|*[!0-9]*) echo 0; return 0 ;; esac
+  :165     if [ "${#raw}" -gt 18 ]; then echo 0; return 0; fi
+  :166     echo $(( 10#$raw ))
+  :167 }
+  160:read_counter() {
+  172:failcount=$(read_counter "$failcount_raw")
+  179:chaindepth=$(read_counter "$chaindepth_raw")
+  185:CYCLES_AT_ENTRY=$(read_counter "$(cat "$CYCLES_FILE" 2>/dev/null || echo 0)")
+  275:    cycles_now=$(read_counter "$(cat "$CYCLES_FILE" 2>/dev/null || echo 0)")
+--- 1.2 every cat of a state file in loop.sbatch (each must be inside read_counter or feed the WARNING comparison)
+  171:failcount_raw=$(cat "$FAILCOUNT_FILE" 2>/dev/null || echo 0)
+  178:chaindepth_raw=$(cat "$CHAINDEPTH_FILE" 2>/dev/null || echo 0)
+  185:CYCLES_AT_ENTRY=$(read_counter "$(cat "$CYCLES_FILE" 2>/dev/null || echo 0)")
+  275:    cycles_now=$(read_counter "$(cat "$CYCLES_FILE" 2>/dev/null || echo 0)")
+--- 1.3 every $(( )) in loop.sbatch and what it consumes
+  166:    echo $(( 10#$raw ))
+  183:chaindepth=$(( chaindepth + 1 ))
+  196:            case "$st" in *RESERVED*|*DRAIN*|*DOWN*|*MAINT*) echo 0 ;; *) echo $((8-a)) ;; esac
+  266:    elapsed=$(( $(date +%s) - START_EPOCH ))
+  276:    cycles_this_link=$(( cycles_now - CYCLES_AT_ENTRY ))
+  354:    failcount=$(( failcount + 1 ))
+  361:        failcount=$(( failcount + 1 ))
+  375:        say "chain continues, $(( KTG_MAX_FAILS - failcount )) attempt(s) left before the breaker"
+  403:    recomputed=$(( my_gpus - own + REQ_GPUS ))
+  588:ELAPSED=$(( $(date +%s) - START_EPOCH ))
+--- 1.4 every [ ... -ge/-lt/-ne/-eq ... ] whose operand is an environment knob (not a state file: recorded, o33 d)
+  297:       ! { [ "$LOOP_RC" -eq "$KTG_RC_SIGTERM" ] && [ "$elapsed" -ge "$KTG_MIN_RUNTIME_SECONDS" ]; }; then
+  316:       { [ "$rc" -eq "$KTG_RC_SIGTERM" ] && [ "$elapsed" -ge "$KTG_MIN_RUNTIME_SECONDS" ]; }; then
+  359:    if [ "$elapsed" -lt "$KTG_MIN_RUNTIME_SECONDS" ]; then
+  366:    if [ "$failcount" -ge "$KTG_MAX_FAILS" ]; then
+  414:    if [ "$failcount" -ge "$KTG_MAX_FAILS" ]; then
+  418:    if [ "$chaindepth" -ge "$KTG_MAX_CHAIN" ]; then
+  457:if [ "$failcount" -ge "$KTG_MAX_FAILS" ] || [ -e "$BASEDIR/.breaker_tripped" ]; then
+--- 1.5 CHANGE 10 writer :308-324
+  :308     set +x
+  :309     # Obligation o35: read the counter back in base 10. The `*[!0-9]*` guard
+  :310     # below admits a leading-zero "08", and to $(( )) that is an octal literal
+  :311     # with a digit octal does not have -- the expansion aborts, and under the
+  :312     # `set -e` this script now really runs with (o34) the loop dies after every
+  :313     # completed cycle without ever recording one. `10#` pins the base; the
+  :314     # whitespace trim covers a hand-edited file and the width test keeps the
+  :315     # value clear of the 2^63 wrap. Anything else still reads as 0, so a stray
+  :316     # byte costs at most one cycle of accounting, never the cycle itself.
+  :317     CYCLES_DONE=$(cat "$BASEDIR"/.cycles_completed 2>/dev/null || echo 0)
+  :318     CYCLES_DONE="${CYCLES_DONE#"${CYCLES_DONE%%[![:space:]]*}"}"
+  :319     CYCLES_DONE="${CYCLES_DONE%"${CYCLES_DONE##*[![:space:]]}"}"
+  :320     case "$CYCLES_DONE" in ''|*[!0-9]*) CYCLES_DONE=0 ;; esac
+  :321     [ "${#CYCLES_DONE}" -le 18 ] || CYCLES_DONE=0
+  :322     CYCLES_DONE=$(( 10#$CYCLES_DONE + 1 ))
+  :323     echo "$CYCLES_DONE" > "$BASEDIR"/.cycles_completed
+  :324     echo "cycle $CYCLE_INDEX complete -- $CYCLES_DONE cycle(s) recorded in $BASEDIR/.cycles_completed"
+--- 1.6 read_counter in isolation (function extracted verbatim from HEAD with sed, not retyped)
+  extracted 8 lines, md5 b0eb669bbe6d
+  '08'                         -> '8'                    rc=0
+  '09'                         -> '9'                    rc=0
+  '007'                        -> '7'                    rc=0
+  'abc'                        -> '0'                    rc=0
+  ''                           -> '0'                    rc=0
+  ' 5'                         -> '5'                    rc=0
+  '5 '                         -> '5'                    rc=0
+  '-1'                         -> '0'                    rc=0
+  '1e3'                        -> '0'                    rc=0
+  '0x10'                       -> '0'                    rc=0
+  '+7'                         -> '0'                    rc=0
+  '99999999999999999999'       -> '0'                    rc=0
+  18 nines                     -> '999999999999999999'   rc=0
+  19 digits 1e18               -> '0'                    rc=0
+  '0000000000000000001' (19)   -> '0'                    rc=0
+  '000000000000000001' (18)    -> '1'                    rc=0
+  '5\r' (CR)                   -> '5'                    rc=0
+  '5\r\n'                      -> '5'                    rc=0
+  '\t5\t'                      -> '5'                    rc=0
+  '5\n6' (two lines)           -> '0'                    rc=0
+  '  ' (spaces only)           -> '0'                    rc=0
+  '*'                          -> '0'                    rc=0
+  '[0-9]'                      -> '0'                    rc=0
+  '9223372036854775807'(19)    -> '0'                    rc=0
+  '٥' (arabic-indic)          -> '0'                    rc=0
+  '5 5'                        -> '0'                    rc=0
+$RT/probe/rc_probe.sh: line 10: warning: command substitution: ignored null byte in input
+  NUL via $(cat): 5
+$RT/probe/rc_probe.sh: line 11: warning: command substitution: ignored null byte in input
+  NUL in middle via $(cat): 57
+  LANG=C.UTF-8 LC_ALL=
+--- 1.7 DIFFERENTIAL: the loop's inline writer parse (:317-322, extracted verbatim) versus read_counter over the same seeds (must agree on every seed)
+    | CYCLES_DONE=$(cat "$BASEDIR"/.cycles_completed 2>/dev/null || echo 0)
+    | CYCLES_DONE="${CYCLES_DONE#"${CYCLES_DONE%%[![:space:]]*}"}"
+    | CYCLES_DONE="${CYCLES_DONE%"${CYCLES_DONE##*[![:space:]]}"}"
+    | case "$CYCLES_DONE" in ''|*[!0-9]*) CYCLES_DONE=0 ;; esac
+    | [ "${#CYCLES_DONE}" -le 18 ] || CYCLES_DONE=0
+    | CYCLES_DONE=$(( 10#$CYCLES_DONE + 1 ))
+  seeds=27 disagreements=0
+--- 1.8 writer audit: any padded integer writer under codes/ ? (printf %0Nd, seq -w)
+  grep exit=0 (1 = none)
+--- 1.9 every write of a state file (must be an unpadded $(( )) result or a literal 0)
+  $AZ/results/ktg/paper_1902.10565/codes/loop/loop.sbatch:169:[ -f "$FAILCOUNT_FILE" ] || echo 0 > "$FAILCOUNT_FILE"
+  $AZ/results/ktg/paper_1902.10565/codes/loop/loop.sbatch:170:[ -f "$CHAINDEPTH_FILE" ] || echo 0 > "$CHAINDEPTH_FILE"
+  $AZ/results/ktg/paper_1902.10565/codes/loop/loop.sbatch:184:echo "$chaindepth" > "$CHAINDEPTH_FILE"
+  $AZ/results/ktg/paper_1902.10565/codes/loop/loop.sbatch:327:            echo 0 > "$FAILCOUNT_FILE"
+  $AZ/results/ktg/paper_1902.10565/codes/loop/loop.sbatch:342:        echo 0 > "$FAILCOUNT_FILE"
+  $AZ/results/ktg/paper_1902.10565/codes/loop/loop.sbatch:363:    echo "$failcount" > "$FAILCOUNT_FILE"
+  $AZ/results/ktg/paper_1902.10565/codes/loop/synchronous_loop_9x9.sh:323:    echo "$CYCLES_DONE" > "$BASEDIR"/.cycles_completed
+--- 1.10 is any state-file write checked for failure? (a write that fails leaves the count where it was)
+  grep exit=1 (1 = no write is checked)
+--- literal grep (o27) over loop.sbatch + synchronous_loop_9x9.sh
+grep exit=1
+--- literal grep (o27) over all of codes/loop/
+$AZ/results/ktg/paper_1902.10565/codes/loop/smoke_loop.sbatch:63:python3 /apps/helpers/quotas.py 2>/dev/null || true
+grep exit=0
+--- o08
+grep exit=1
+--- anything in codes/loop/ removing STOP or .cycles_completed?
+grep exit=1
+
+########## PART 2: the REAL loop script, KTG_ONE_CYCLE=1, stand-in git tree with dummy stages, seeded .cycles_completed (BEFORE = cd6cbf2 copy, AFTER = HEAD)
+--- W1: two clean cycles through the REAL script on a fresh BASEDIR (real scratch guard on the first, fast guard on the second)
+    scratch_guard: OK  used=7568046488 B  projected_total=29042882968 B  group_free=2550000000000 B
+    + echo Gatekeeper
+    Gatekeeper
+    cycle 1 complete -- 1 cycle(s) recorded in $SIM/stage/W1/.cycles_completed
+    -> W1 cycle 1 exit=0  .cycles_completed=1
+    cycle 1 complete -- 2 cycle(s) recorded in $SIM/stage/W1/.cycles_completed
+    -> W1 cycle 2 exit=0  .cycles_completed=2
+--- W2: seeded .cycles_completed, KTG_ONE_CYCLE=1, fast guard; BEFORE then AFTER for every seed
+  [before] warm-up cycle exit=0 file=1$|
+  [before] seed='08'                     -> exit=1  file after='08'                      msg: $RT/pre/synchronous_loop_9x9_pre.sh: line 311: 08: value too great for base (error token is "08") 
+  [before] seed='09'                     -> exit=1  file after='09'                      msg: $RT/pre/synchronous_loop_9x9_pre.sh: line 311: 09: value too great for base (error token is "09") 
+  [before] seed='007'                    -> exit=0  file after='8$|'                     msg: cycle 1 complete -- 8 cycle(s) recorded in $SIM/stage/W2_before/.cycles_completed 
+  [before] seed='abc'                    -> exit=0  file after='1$|'                     msg: cycle 1 complete -- 1 cycle(s) recorded in $SIM/stage/W2_before/.cycles_completed 
+  [before] seed=''                       -> exit=0  file after='1$|'                     msg: cycle 1 complete -- 1 cycle(s) recorded in $SIM/stage/W2_before/.cycles_completed 
+  [before] seed='<missing>'              -> exit=0  file after='1$|'                     msg: cycle 1 complete -- 1 cycle(s) recorded in $SIM/stage/W2_before/.cycles_completed 
+  [before] seed='<newline>'              -> exit=0  file after='6$|'                     msg: cycle 1 complete -- 6 cycle(s) recorded in $SIM/stage/W2_before/.cycles_completed 
+  [before] seed='<space>'                -> exit=0  file after='1$|'                     msg: cycle 1 complete -- 1 cycle(s) recorded in $SIM/stage/W2_before/.cycles_completed 
+  [before] seed='-1'                     -> exit=0  file after='1$|'                     msg: cycle 1 complete -- 1 cycle(s) recorded in $SIM/stage/W2_before/.cycles_completed 
+  [before] seed='1e3'                    -> exit=0  file after='1$|'                     msg: cycle 1 complete -- 1 cycle(s) recorded in $SIM/stage/W2_before/.cycles_completed 
+  [before] seed='0x10'                   -> exit=0  file after='1$|'                     msg: cycle 1 complete -- 1 cycle(s) recorded in $SIM/stage/W2_before/.cycles_completed 
+  [before] seed='+7'                     -> exit=0  file after='1$|'                     msg: cycle 1 complete -- 1 cycle(s) recorded in $SIM/stage/W2_before/.cycles_completed 
+  [before] seed='99999999999999999999'   -> exit=0  file after='7766279631452241920$|'   msg: cycle 1 complete -- 7766279631452241920 cycle(s) recorded in $SIM/stage/W2_before/.cycles_completed 
+  [before] seed=' 5'                     -> exit=0  file after='1$|'                     msg: cycle 1 complete -- 1 cycle(s) recorded in $SIM/stage/W2_before/.cycles_completed 
+  [before] seed='5 '                     -> exit=0  file after='1$|'                     msg: cycle 1 complete -- 1 cycle(s) recorded in $SIM/stage/W2_before/.cycles_completed 
+  [before] seed='999999999999999999'     -> exit=0  file after='1000000000000000000$|'   msg: cycle 1 complete -- 1000000000000000000 cycle(s) recorded in $SIM/stage/W2_before/.cycles_completed 
+  [before] seed='1000000000000000000'    -> exit=0  file after='1000000000000000001$|'   msg: cycle 1 complete -- 1000000000000000001 cycle(s) recorded in $SIM/stage/W2_before/.cycles_completed 
+  [before] seed='0000000000000000001'    -> exit=0  file after='2$|'                     msg: cycle 1 complete -- 2 cycle(s) recorded in $SIM/stage/W2_before/.cycles_completed 
+  [before] seed='<crlf>'                 -> exit=0  file after='1$|'                     msg: cycle 1 complete -- 1 cycle(s) recorded in $SIM/stage/W2_before/.cycles_completed 
+  [before] seed='<nul>'                  -> exit=0  file after='6$|'                     msg: $RT/pre/synchronous_loop_9x9_pre.sh: line 309: warning: command substitution: ignored null byte in input cycle 1 complete -- 6 cycle(s) recorded in $SIM/stage/W2_before/.cycles_completed 
+  [before] seed='<nulmid>'               -> exit=0  file after='58$|'                    msg: $RT/pre/synchronous_loop_9x9_pre.sh: line 309: warning: command substitution: ignored null byte in input cycle 1 complete -- 58 cycle(s) recorded in $SIM/stage/W2_before/.cycles_completed 
+  [before] seed='<dir>'                  -> exit=1  file after='<dir>'                   msg: $RT/pre/synchronous_loop_9x9_pre.sh: line 311: $SIM/stage/W2_before/.cycles_completed: Is a directory 
+  [after] warm-up cycle exit=0 file=1$|
+  [after] seed='08'                     -> exit=0  file after='9$|'                     msg: cycle 1 complete -- 9 cycle(s) recorded in $SIM/stage/W2_after/.cycles_completed 
+  [after] seed='09'                     -> exit=0  file after='10$|'                    msg: cycle 1 complete -- 10 cycle(s) recorded in $SIM/stage/W2_after/.cycles_completed 
+  [after] seed='007'                    -> exit=0  file after='8$|'                     msg: cycle 1 complete -- 8 cycle(s) recorded in $SIM/stage/W2_after/.cycles_completed 
+  [after] seed='abc'                    -> exit=0  file after='1$|'                     msg: cycle 1 complete -- 1 cycle(s) recorded in $SIM/stage/W2_after/.cycles_completed 
+  [after] seed=''                       -> exit=0  file after='1$|'                     msg: cycle 1 complete -- 1 cycle(s) recorded in $SIM/stage/W2_after/.cycles_completed 
+  [after] seed='<missing>'              -> exit=0  file after='1$|'                     msg: cycle 1 complete -- 1 cycle(s) recorded in $SIM/stage/W2_after/.cycles_completed 
+  [after] seed='<newline>'              -> exit=0  file after='6$|'                     msg: cycle 1 complete -- 6 cycle(s) recorded in $SIM/stage/W2_after/.cycles_completed 
+  [after] seed='<space>'                -> exit=0  file after='6$|'                     msg: cycle 1 complete -- 6 cycle(s) recorded in $SIM/stage/W2_after/.cycles_completed 
+  [after] seed='-1'                     -> exit=0  file after='1$|'                     msg: cycle 1 complete -- 1 cycle(s) recorded in $SIM/stage/W2_after/.cycles_completed 
+  [after] seed='1e3'                    -> exit=0  file after='1$|'                     msg: cycle 1 complete -- 1 cycle(s) recorded in $SIM/stage/W2_after/.cycles_completed 
+  [after] seed='0x10'                   -> exit=0  file after='1$|'                     msg: cycle 1 complete -- 1 cycle(s) recorded in $SIM/stage/W2_after/.cycles_completed 
+  [after] seed='+7'                     -> exit=0  file after='1$|'                     msg: cycle 1 complete -- 1 cycle(s) recorded in $SIM/stage/W2_after/.cycles_completed 
+  [after] seed='99999999999999999999'   -> exit=0  file after='1$|'                     msg: cycle 1 complete -- 1 cycle(s) recorded in $SIM/stage/W2_after/.cycles_completed 
+  [after] seed=' 5'                     -> exit=0  file after='6$|'                     msg: cycle 1 complete -- 6 cycle(s) recorded in $SIM/stage/W2_after/.cycles_completed 
+  [after] seed='5 '                     -> exit=0  file after='6$|'                     msg: cycle 1 complete -- 6 cycle(s) recorded in $SIM/stage/W2_after/.cycles_completed 
+  [after] seed='999999999999999999'     -> exit=0  file after='1000000000000000000$|'   msg: cycle 1 complete -- 1000000000000000000 cycle(s) recorded in $SIM/stage/W2_after/.cycles_completed 
+  [after] seed='1000000000000000000'    -> exit=0  file after='1$|'                     msg: cycle 1 complete -- 1 cycle(s) recorded in $SIM/stage/W2_after/.cycles_completed 
+  [after] seed='0000000000000000001'    -> exit=0  file after='1$|'                     msg: cycle 1 complete -- 1 cycle(s) recorded in $SIM/stage/W2_after/.cycles_completed 
+  [after] seed='<crlf>'                 -> exit=0  file after='6$|'                     msg: cycle 1 complete -- 6 cycle(s) recorded in $SIM/stage/W2_after/.cycles_completed 
+  [after] seed='<nul>'                  -> exit=0  file after='6$|'                     msg: $AZ/results/ktg/paper_1902.10565/codes/loop/synchronous_loop_9x9.sh: line 317: warning: command substitution: ignored null byte in input cycle 1 complete -- 6 cycle(s) recorded in $SIM/stage/W2_after/.cycles_completed 
+  [after] seed='<nulmid>'               -> exit=0  file after='58$|'                    msg: $AZ/results/ktg/paper_1902.10565/codes/loop/synchronous_loop_9x9.sh: line 317: warning: command substitution: ignored null byte in input cycle 1 complete -- 58 cycle(s) recorded in $SIM/stage/W2_after/.cycles_completed 
+  [after] seed='<dir>'                  -> exit=1  file after='<dir>'                   msg: $AZ/results/ktg/paper_1902.10565/codes/loop/synchronous_loop_9x9.sh: line 323: $SIM/stage/W2_after/.cycles_completed: Is a directory 
+
+########## PART 3: KTG_STAGE_ONLY=1 from the REAL scratch clone, 'bash <script>' form, BEFORE (cd6cbf2) and AFTER (HEAD)
+KATAGO_SRC=/scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/build/KataGo  git HEAD fd0723fd  KATAGO_BIN size 27273864
+    KTG_STAGE_ONLY=1 -- archive staged at $RT/stage_before/scripts/dated/<ts>, no cycle run.
+    -rwxr-xr-x 1 ssci-haiyangw users 27273864 Sep  4 03:37 $RT/stage_before/scripts/dated/<ts>/bin/katago
+    -rwxr-xr-x 1 ssci-haiyangw users     9264 Sep  4 03:37 $RT/stage_before/scripts/dated/<ts>/export_model_for_selfplay_9x9.sh
+    -rw-r--r-- 1 ssci-haiyangw users     4704 Sep  4 03:37 $RT/stage_before/scripts/dated/<ts>/gatekeeper.cfg
+    -rw-r--r-- 1 ssci-haiyangw users     9786 Sep  4 03:37 $RT/stage_before/scripts/dated/<ts>/selfplay.cfg
+    -rwxr-xr-x 1 ssci-haiyangw users     3965 Sep  4 03:37 $RT/stage_before/scripts/dated/<ts>/train_9x9.sh
+  [before] STAGE_EXIT=0
+  [before] files: 80  bytes: 28702024
+  [before] cmp bin/katago $KATAGO_BIN exit=0
+  [before] cmp selfplay.cfg exit=0  dataBoardLen: dataBoardLen = 9
+    KTG_STAGE_ONLY=1 -- archive staged at $RT/stage_after/scripts/dated/<ts>, no cycle run.
+    -rwxr-xr-x 1 ssci-haiyangw users 27273864 Sep  4 03:37 $RT/stage_after/scripts/dated/<ts>/bin/katago
+    -rwxr-xr-x 1 ssci-haiyangw users     9264 Sep  4 03:37 $RT/stage_after/scripts/dated/<ts>/export_model_for_selfplay_9x9.sh
+    -rw-r--r-- 1 ssci-haiyangw users     4704 Sep  4 03:37 $RT/stage_after/scripts/dated/<ts>/gatekeeper.cfg
+    -rw-r--r-- 1 ssci-haiyangw users     9786 Sep  4 03:37 $RT/stage_after/scripts/dated/<ts>/selfplay.cfg
+    -rwxr-xr-x 1 ssci-haiyangw users     3965 Sep  4 03:37 $RT/stage_after/scripts/dated/<ts>/train_9x9.sh
+  [after] STAGE_EXIT=0
+  [after] files: 80  bytes: 28702024
+  [after] cmp bin/katago $KATAGO_BIN exit=0
+  [after] cmp selfplay.cfg exit=0  dataBoardLen: dataBoardLen = 9
+  manifest diff exit=0 (byte-identical staging before/after)
+  staged archives removed
+
+########## PART 5: closing checks in a clean environment (real PATH, no shims)
+sbatch resolves to: /opt/mprov/cloack/slurm/current/bin/sbatch
+== compute-budget self-check  2026-09-04T03:38:00-04:00 ==
+my jobs      : gpus=1 cpus=24  (1 jobs)
+partition b200 : free_gpus=0/128 (excludes reserved/drained nodes)
+partition b300 : free_gpus=0/8 (excludes reserved/drained nodes)
+reservations : 8 defined (6 active) — scontrol show reservation
+quota        : | /home/ssci-haiyangw/ | 3.42 GB  | 100.00 GB |  3.42%   |
+quota        : | /scratch/ssci-anima/ | 37.45 TB |  40.00 TB |   93%    |
+OK           : request gpus=1 cpus=24 part=b200 within policy (gpu<=4, no cpu cap)
+SECTION2_EXIT=0
+grep -c afterany=8 failcount=35 cpp/build/katago=5 cpp/katago"=0
+--- vendor / model name sweep over the artifacts, evidence and candidate (case-insensitive; empty = clean)
+sweep grep exit=1 (1 = clean)
+--- queue (must not have been touched)
+298712 ktg-smoke PENDING
+
+########## cleanup
+ls: cannot access '$SIM': No such file or directory
+done 2026-09-04T03:38:08-04:00
+
+########## PART B1
+########## environment
+host: login03  date: 2026-09-04T03:36:54-04:00  az HEAD: 0c6d38d  loop.sbatch sha256: 8d997ef5fc928390...  pre-repair copy: 86248d31b34b3522...  shims: nvidia-smi sacct sbatch scancel scontrol sinfo squeue 
+writer block used by cycle_loop (verbatim from synchronous_loop_9x9.sh :317-323, BASEDIR substituted):
+    | CYCLES_DONE=$(cat $SIM/ktg/loop/.cycles_completed 2>/dev/null || echo 0)
+    | CYCLES_DONE="${CYCLES_DONE#"${CYCLES_DONE%%[![:space:]]*}"}"
+    | CYCLES_DONE="${CYCLES_DONE%"${CYCLES_DONE##*[![:space:]]}"}"
+    | case "$CYCLES_DONE" in ''|*[!0-9]*) CYCLES_DONE=0 ;; esac
+    | [ "${#CYCLES_DONE}" -le 18 ] || CYCLES_DONE=0
+    | CYCLES_DONE=$(( 10#$CYCLES_DONE + 1 ))
+    | echo "$CYCLES_DONE" > $SIM/ktg/loop/.cycles_completed
+
+########## T1: .cycles_completed seeded at entry, .failcount=2, failing loop (records nothing), default floor
+########## expected AFTER: every seed -> 'failcount now 4/3', breaker, SCANCEL; finalize_end=yes; BEFORE shown for 08, abc, +7, ' 5'
+  [after seed='08']
+      === chain depth 1/200, failcount 2/3, cycles completed so far 8 ===
+      === failure rc=1 -- failcount now 4/3 ===
+      === circuit breaker tripped after 4 consecutive failures (last ran 6s) ===
+      === cancelling queued successor 800001 (circuit breaker tripped) ===
+      wrapper exit=1  .failcount=4$|  .chain_depth=1$|  .cycles_completed=08  breaker_tripped=yes  STOP=no
+      finalize_end=yes  cancel_iff_trip=ok  accounting lines: 1
+      shim: SBATCH[800001] SCANCEL 800001 
+  [before seed='08']
+      === chain depth 1/200, failcount 2/3, cycles completed so far 08 ===
+      $RT/pre/loop_pre.sbatch: line 233: 08: value too great for base (error token is "08")
+      wrapper exit=1  .failcount=2$|  .chain_depth=1$|  .cycles_completed=08  breaker_tripped=no  STOP=no
+      finalize_end=NO  cancel_iff_trip=ok  accounting lines: 0
+      shim: SBATCH[800001] --parsable --partition=b200 --dependency=afterany:9910 $RT/pre/loop_pre.sbatch 
+  [after seed='09']
+      === chain depth 1/200, failcount 2/3, cycles completed so far 9 ===
+      === failure rc=1 -- failcount now 4/3 ===
+      === circuit breaker tripped after 4 consecutive failures (last ran 6s) ===
+      === cancelling queued successor 800001 (circuit breaker tripped) ===
+      wrapper exit=1  .failcount=4$|  .chain_depth=1$|  .cycles_completed=09  breaker_tripped=yes  STOP=no
+      finalize_end=yes  cancel_iff_trip=ok  accounting lines: 1
+      shim: SBATCH[800001] SCANCEL 800001 
+  [after seed='007']
+      === chain depth 1/200, failcount 2/3, cycles completed so far 7 ===
+      === failure rc=1 -- failcount now 4/3 ===
+      === circuit breaker tripped after 4 consecutive failures (last ran 5s) ===
+      === cancelling queued successor 800001 (circuit breaker tripped) ===
+      wrapper exit=1  .failcount=4$|  .chain_depth=1$|  .cycles_completed=007  breaker_tripped=yes  STOP=no
+      finalize_end=yes  cancel_iff_trip=ok  accounting lines: 1
+      shim: SBATCH[800001] SCANCEL 800001 
+  [after seed='abc']
+      === chain depth 1/200, failcount 2/3, cycles completed so far 0 ===
+      === failure rc=1 -- failcount now 4/3 ===
+      === circuit breaker tripped after 4 consecutive failures (last ran 6s) ===
+      === cancelling queued successor 800001 (circuit breaker tripped) ===
+      wrapper exit=1  .failcount=4$|  .chain_depth=1$|  .cycles_completed=abc  breaker_tripped=yes  STOP=no
+      finalize_end=yes  cancel_iff_trip=ok  accounting lines: 1
+      shim: SBATCH[800001] SCANCEL 800001 
+  [before seed='abc']
+      === chain depth 1/200, failcount 2/3, cycles completed so far 0 ===
+      === failure rc=1 -- failcount now 4/3 ===
+      === circuit breaker tripped after 4 consecutive failures (last ran 5s) ===
+      === cancelling queued successor 800001 (circuit breaker tripped) ===
+      wrapper exit=1  .failcount=4$|  .chain_depth=1$|  .cycles_completed=abc  breaker_tripped=yes  STOP=no
+      finalize_end=yes  cancel_iff_trip=ok  accounting lines: 1
+      shim: SBATCH[800001] --parsable --partition=b200 --dependency=afterany:9910 $RT/pre/loop_pre.sbatch SCANCEL 800001 
+  [after seed='']
+      === chain depth 1/200, failcount 2/3, cycles completed so far 0 ===
+      === failure rc=1 -- failcount now 4/3 ===
+      === circuit breaker tripped after 4 consecutive failures (last ran 5s) ===
+      === cancelling queued successor 800001 (circuit breaker tripped) ===
+      wrapper exit=1  .failcount=4$|  .chain_depth=1$|  .cycles_completed=  breaker_tripped=yes  STOP=no
+      finalize_end=yes  cancel_iff_trip=ok  accounting lines: 1
+      shim: SBATCH[800001] SCANCEL 800001 
+  [after seed='<missing>']
+      === chain depth 1/200, failcount 2/3, cycles completed so far 0 ===
+      === failure rc=1 -- failcount now 4/3 ===
+      === circuit breaker tripped after 4 consecutive failures (last ran 5s) ===
+      === cancelling queued successor 800001 (circuit breaker tripped) ===
+      wrapper exit=1  .failcount=4$|  .chain_depth=1$|  .cycles_completed=<absent>  breaker_tripped=yes  STOP=no
+      finalize_end=yes  cancel_iff_trip=ok  accounting lines: 1
+      shim: SBATCH[800001] SCANCEL 800001 
+  [after seed='<newline>']
+      === chain depth 1/200, failcount 2/3, cycles completed so far 5 ===
+      === failure rc=1 -- failcount now 4/3 ===
+      === circuit breaker tripped after 4 consecutive failures (last ran 5s) ===
+      === cancelling queued successor 800001 (circuit breaker tripped) ===
+      wrapper exit=1  .failcount=4$|  .chain_depth=1$|  .cycles_completed=5$|  breaker_tripped=yes  STOP=no
+      finalize_end=yes  cancel_iff_trip=ok  accounting lines: 1
+      shim: SBATCH[800001] SCANCEL 800001 
+  [after seed='<space>']
+      === chain depth 1/200, failcount 2/3, cycles completed so far 5 ===
+      === failure rc=1 -- failcount now 4/3 ===
+      === circuit breaker tripped after 4 consecutive failures (last ran 5s) ===
+      === cancelling queued successor 800001 (circuit breaker tripped) ===
+      wrapper exit=1  .failcount=4$|  .chain_depth=1$|  .cycles_completed=5   breaker_tripped=yes  STOP=no
+      finalize_end=yes  cancel_iff_trip=ok  accounting lines: 1
+      shim: SBATCH[800001] SCANCEL 800001 
+  [after seed='-1']
+      === chain depth 1/200, failcount 2/3, cycles completed so far 0 ===
+      === failure rc=1 -- failcount now 4/3 ===
+      === circuit breaker tripped after 4 consecutive failures (last ran 6s) ===
+      === cancelling queued successor 800001 (circuit breaker tripped) ===
+      wrapper exit=1  .failcount=4$|  .chain_depth=1$|  .cycles_completed=-1  breaker_tripped=yes  STOP=no
+      finalize_end=yes  cancel_iff_trip=ok  accounting lines: 1
+      shim: SBATCH[800001] SCANCEL 800001 
+  [after seed='1e3']
+      === chain depth 1/200, failcount 2/3, cycles completed so far 0 ===
+      === failure rc=1 -- failcount now 4/3 ===
+      === circuit breaker tripped after 4 consecutive failures (last ran 5s) ===
+      === cancelling queued successor 800001 (circuit breaker tripped) ===
+      wrapper exit=1  .failcount=4$|  .chain_depth=1$|  .cycles_completed=1e3  breaker_tripped=yes  STOP=no
+      finalize_end=yes  cancel_iff_trip=ok  accounting lines: 1
+      shim: SBATCH[800001] SCANCEL 800001 
+  [after seed='0x10']
+      === chain depth 1/200, failcount 2/3, cycles completed so far 0 ===
+      === failure rc=1 -- failcount now 4/3 ===
+      === circuit breaker tripped after 4 consecutive failures (last ran 5s) ===
+      === cancelling queued successor 800001 (circuit breaker tripped) ===
+      wrapper exit=1  .failcount=4$|  .chain_depth=1$|  .cycles_completed=0x10  breaker_tripped=yes  STOP=no
+      finalize_end=yes  cancel_iff_trip=ok  accounting lines: 1
+      shim: SBATCH[800001] SCANCEL 800001 
+  [after seed='+7']
+      === chain depth 1/200, failcount 2/3, cycles completed so far 0 ===
+      === failure rc=1 -- failcount now 4/3 ===
+      === circuit breaker tripped after 4 consecutive failures (last ran 5s) ===
+      === cancelling queued successor 800001 (circuit breaker tripped) ===
+      wrapper exit=1  .failcount=4$|  .chain_depth=1$|  .cycles_completed=+7  breaker_tripped=yes  STOP=no
+      finalize_end=yes  cancel_iff_trip=ok  accounting lines: 1
+      shim: SBATCH[800001] SCANCEL 800001 
+  [before seed='+7']
+      === chain depth 1/200, failcount 2/3, cycles completed so far 0 ===
+      === failure rc=1 -- failcount now 4/3 ===
+      === circuit breaker tripped after 4 consecutive failures (last ran 5s) ===
+      === cancelling queued successor 800001 (circuit breaker tripped) ===
+      wrapper exit=1  .failcount=4$|  .chain_depth=1$|  .cycles_completed=+7  breaker_tripped=yes  STOP=no
+      finalize_end=yes  cancel_iff_trip=ok  accounting lines: 1
+      shim: SBATCH[800001] --parsable --partition=b200 --dependency=afterany:9910 $RT/pre/loop_pre.sbatch SCANCEL 800001 
+  [after seed='99999999999999999999']
+      === chain depth 1/200, failcount 2/3, cycles completed so far 0 ===
+      === failure rc=1 -- failcount now 4/3 ===
+      === circuit breaker tripped after 4 consecutive failures (last ran 5s) ===
+      === cancelling queued successor 800001 (circuit breaker tripped) ===
+      wrapper exit=1  .failcount=4$|  .chain_depth=1$|  .cycles_completed=99999999999999999999  breaker_tripped=yes  STOP=no
+      finalize_end=yes  cancel_iff_trip=ok  accounting lines: 1
+      shim: SBATCH[800001] SCANCEL 800001 
+  [after seed=' 5']
+      === chain depth 1/200, failcount 2/3, cycles completed so far 5 ===
+      === failure rc=1 -- failcount now 4/3 ===
+      === circuit breaker tripped after 4 consecutive failures (last ran 5s) ===
+      === cancelling queued successor 800001 (circuit breaker tripped) ===
+      wrapper exit=1  .failcount=4$|  .chain_depth=1$|  .cycles_completed= 5  breaker_tripped=yes  STOP=no
+      finalize_end=yes  cancel_iff_trip=ok  accounting lines: 1
+      shim: SBATCH[800001] SCANCEL 800001 
+  [before seed=' 5']
+      === chain depth 1/200, failcount 2/3, cycles completed so far 0 ===
+      === failure rc=1 -- failcount now 4/3 ===
+      === circuit breaker tripped after 4 consecutive failures (last ran 4s) ===
+      === cancelling queued successor 800001 (circuit breaker tripped) ===
+      wrapper exit=1  .failcount=4$|  .chain_depth=1$|  .cycles_completed= 5  breaker_tripped=yes  STOP=no
+      finalize_end=yes  cancel_iff_trip=ok  accounting lines: 1
+      shim: SBATCH[800001] --parsable --partition=b200 --dependency=afterany:9910 $RT/pre/loop_pre.sbatch SCANCEL 800001 
+  [after seed='5 ']
+      === chain depth 1/200, failcount 2/3, cycles completed so far 5 ===
+      === failure rc=1 -- failcount now 4/3 ===
+      === circuit breaker tripped after 4 consecutive failures (last ran 5s) ===
+      === cancelling queued successor 800001 (circuit breaker tripped) ===
+      wrapper exit=1  .failcount=4$|  .chain_depth=1$|  .cycles_completed=5   breaker_tripped=yes  STOP=no
+      finalize_end=yes  cancel_iff_trip=ok  accounting lines: 1
+      shim: SBATCH[800001] SCANCEL 800001 
+
+########## T2: .failcount seeded at entry, no .cycles_completed, failing loop, default floor
+########## expected AFTER: WARNING when raw != read; value >=3 -> post-trip guard at entry (exit 0, no sbatch); otherwise read+2, written; finalize_end=yes
+  [after seed='08']
+      === WARNING: $SIM/ktg/loop/.failcount held '08', which is not a plain decimal -- reading it as 8 ===
+      === chain depth 1/200, failcount 8/3, cycles completed so far 0 ===
+      === circuit breaker: failcount 8 >= 3 -- not resubmitting ===
+      === breaker already tripped (failcount 8/3) -- this link exits without running the loop ===
+      === exit 0 before the loop started -- failcount left at 8 ===
+      wrapper exit=0  .failcount=08  .chain_depth=1$|  .cycles_completed=<absent>  breaker_tripped=yes  STOP=no
+      finalize_end=yes  cancel_iff_trip=ok  accounting lines: 1
+      shim: (no sbatch, no scancel)
+  [before seed='08']
+      === chain depth 1/200, failcount 08/3, cycles completed so far 0 ===
+      === circuit breaker: failcount 08 >= 3 -- not resubmitting ===
+      === breaker already tripped (failcount 08/3) -- this link exits without running the loop ===
+      === exit 0 before the loop started -- failcount left at 08 ===
+      wrapper exit=0  .failcount=08  .chain_depth=1$|  .cycles_completed=<absent>  breaker_tripped=yes  STOP=no
+      finalize_end=yes  cancel_iff_trip=ok  accounting lines: 1
+      shim: (no sbatch, no scancel)
+  [after seed='09']
+      === WARNING: $SIM/ktg/loop/.failcount held '09', which is not a plain decimal -- reading it as 9 ===
+      === chain depth 1/200, failcount 9/3, cycles completed so far 0 ===
+      === circuit breaker: failcount 9 >= 3 -- not resubmitting ===
+      === breaker already tripped (failcount 9/3) -- this link exits without running the loop ===
+      === exit 0 before the loop started -- failcount left at 9 ===
+      wrapper exit=0  .failcount=09  .chain_depth=1$|  .cycles_completed=<absent>  breaker_tripped=yes  STOP=no
+      finalize_end=yes  cancel_iff_trip=ok  accounting lines: 1
+      shim: (no sbatch, no scancel)
+  [after seed='007']
+      === WARNING: $SIM/ktg/loop/.failcount held '007', which is not a plain decimal -- reading it as 7 ===
+      === chain depth 1/200, failcount 7/3, cycles completed so far 0 ===
+      === circuit breaker: failcount 7 >= 3 -- not resubmitting ===
+      === breaker already tripped (failcount 7/3) -- this link exits without running the loop ===
+      === exit 0 before the loop started -- failcount left at 7 ===
+      wrapper exit=0  .failcount=007  .chain_depth=1$|  .cycles_completed=<absent>  breaker_tripped=yes  STOP=no
+      finalize_end=yes  cancel_iff_trip=ok  accounting lines: 1
+      shim: (no sbatch, no scancel)
+  [after seed='abc']
+      === WARNING: $SIM/ktg/loop/.failcount held 'abc', which is not a plain decimal -- reading it as 0 ===
+      === chain depth 1/200, failcount 0/3, cycles completed so far 0 ===
+      === failure rc=1 -- failcount now 2/3 ===
+      === chain continues, 1 attempt(s) left before the breaker ===
+      wrapper exit=1  .failcount=2$|  .chain_depth=1$|  .cycles_completed=<absent>  breaker_tripped=no  STOP=no
+      finalize_end=yes  cancel_iff_trip=ok  accounting lines: 1
+      shim: SBATCH[800001] 
+  [before seed='abc']
+      === chain depth 1/200, failcount abc/3, cycles completed so far 0 ===
+      $RT/pre/loop_pre.sbatch: line 371: [: abc: integer expression expected
+      $RT/pre/loop_pre.sbatch: line 414: [: abc: integer expression expected
+      $RT/pre/loop_pre.sbatch: line 311: abc: unbound variable
+      wrapper exit=1  .failcount=abc  .chain_depth=1$|  .cycles_completed=<absent>  breaker_tripped=no  STOP=no
+      finalize_end=NO  cancel_iff_trip=ok  accounting lines: 0
+      shim: SBATCH[800001] --parsable --partition=b200 --dependency=afterany:9920 $RT/pre/loop_pre.sbatch 
+  [after seed='']
+      === WARNING: $SIM/ktg/loop/.failcount held '', which is not a plain decimal -- reading it as 0 ===
+      === chain depth 1/200, failcount 0/3, cycles completed so far 0 ===
+      === failure rc=1 -- failcount now 2/3 ===
+      === chain continues, 1 attempt(s) left before the breaker ===
+      wrapper exit=1  .failcount=2$|  .chain_depth=1$|  .cycles_completed=<absent>  breaker_tripped=no  STOP=no
+      finalize_end=yes  cancel_iff_trip=ok  accounting lines: 1
+      shim: SBATCH[800001] 
+  [after seed='<missing>']
+      === chain depth 1/200, failcount 0/3, cycles completed so far 0 ===
+      === failure rc=1 -- failcount now 2/3 ===
+      === chain continues, 1 attempt(s) left before the breaker ===
+      wrapper exit=1  .failcount=2$|  .chain_depth=1$|  .cycles_completed=<absent>  breaker_tripped=no  STOP=no
+      finalize_end=yes  cancel_iff_trip=ok  accounting lines: 1
+      shim: SBATCH[800001] 
+  [after seed='<newline>']
+      === chain depth 1/200, failcount 2/3, cycles completed so far 0 ===
+      === failure rc=1 -- failcount now 4/3 ===
+      === circuit breaker tripped after 4 consecutive failures (last ran 5s) ===
+      === cancelling queued successor 800001 (circuit breaker tripped) ===
+      wrapper exit=1  .failcount=4$|  .chain_depth=1$|  .cycles_completed=<absent>  breaker_tripped=yes  STOP=no
+      finalize_end=yes  cancel_iff_trip=ok  accounting lines: 1
+      shim: SBATCH[800001] SCANCEL 800001 
+  [after seed='<space>']
+      === WARNING: $SIM/ktg/loop/.failcount held '2 ', which is not a plain decimal -- reading it as 2 ===
+      === chain depth 1/200, failcount 2/3, cycles completed so far 0 ===
+      === failure rc=1 -- failcount now 4/3 ===
+      === circuit breaker tripped after 4 consecutive failures (last ran 5s) ===
+      === cancelling queued successor 800001 (circuit breaker tripped) ===
+      wrapper exit=1  .failcount=4$|  .chain_depth=1$|  .cycles_completed=<absent>  breaker_tripped=yes  STOP=no
+      finalize_end=yes  cancel_iff_trip=ok  accounting lines: 1
+      shim: SBATCH[800001] SCANCEL 800001 
+  [after seed='-1']
+      === WARNING: $SIM/ktg/loop/.failcount held '-1', which is not a plain decimal -- reading it as 0 ===
+      === chain depth 1/200, failcount 0/3, cycles completed so far 0 ===
+      === failure rc=1 -- failcount now 2/3 ===
+      === chain continues, 1 attempt(s) left before the breaker ===
+      wrapper exit=1  .failcount=2$|  .chain_depth=1$|  .cycles_completed=<absent>  breaker_tripped=no  STOP=no
+      finalize_end=yes  cancel_iff_trip=ok  accounting lines: 1
+      shim: SBATCH[800001] 
+  [after seed='1e3']
+      === WARNING: $SIM/ktg/loop/.failcount held '1e3', which is not a plain decimal -- reading it as 0 ===
+      === chain depth 1/200, failcount 0/3, cycles completed so far 0 ===
+      === failure rc=1 -- failcount now 2/3 ===
+      === chain continues, 1 attempt(s) left before the breaker ===
+      wrapper exit=1  .failcount=2$|  .chain_depth=1$|  .cycles_completed=<absent>  breaker_tripped=no  STOP=no
+      finalize_end=yes  cancel_iff_trip=ok  accounting lines: 1
+      shim: SBATCH[800001] 
+  [after seed='0x10']
+      === WARNING: $SIM/ktg/loop/.failcount held '0x10', which is not a plain decimal -- reading it as 0 ===
+      === chain depth 1/200, failcount 0/3, cycles completed so far 0 ===
+      === failure rc=1 -- failcount now 2/3 ===
+      === chain continues, 1 attempt(s) left before the breaker ===
+      wrapper exit=1  .failcount=2$|  .chain_depth=1$|  .cycles_completed=<absent>  breaker_tripped=no  STOP=no
+      finalize_end=yes  cancel_iff_trip=ok  accounting lines: 1
+      shim: SBATCH[800001] 
+  [after seed='+7']
+      === WARNING: $SIM/ktg/loop/.failcount held '+7', which is not a plain decimal -- reading it as 0 ===
+      === chain depth 1/200, failcount 0/3, cycles completed so far 0 ===
+      === failure rc=1 -- failcount now 2/3 ===
+      === chain continues, 1 attempt(s) left before the breaker ===
+      wrapper exit=1  .failcount=2$|  .chain_depth=1$|  .cycles_completed=<absent>  breaker_tripped=no  STOP=no
+      finalize_end=yes  cancel_iff_trip=ok  accounting lines: 1
+      shim: SBATCH[800001] 
+  [before seed='+7']
+      === chain depth 1/200, failcount +7/3, cycles completed so far 0 ===
+      === circuit breaker: failcount +7 >= 3 -- not resubmitting ===
+      === breaker already tripped (failcount +7/3) -- this link exits without running the loop ===
+      === exit 0 before the loop started -- failcount left at +7 ===
+      wrapper exit=0  .failcount=+7  .chain_depth=1$|  .cycles_completed=<absent>  breaker_tripped=yes  STOP=no
+      finalize_end=yes  cancel_iff_trip=ok  accounting lines: 1
+      shim: (no sbatch, no scancel)
+  [after seed='99999999999999999999']
+      === WARNING: $SIM/ktg/loop/.failcount held '99999999999999999999', which is not a plain decimal -- reading it as 0 ===
+      === chain depth 1/200, failcount 0/3, cycles completed so far 0 ===
+      === failure rc=1 -- failcount now 2/3 ===
+      === chain continues, 1 attempt(s) left before the breaker ===
+      wrapper exit=1  .failcount=2$|  .chain_depth=1$|  .cycles_completed=<absent>  breaker_tripped=no  STOP=no
+      finalize_end=yes  cancel_iff_trip=ok  accounting lines: 1
+      shim: SBATCH[800001] 
+  [after seed=' 5']
+      === WARNING: $SIM/ktg/loop/.failcount held ' 5', which is not a plain decimal -- reading it as 5 ===
+      === chain depth 1/200, failcount 5/3, cycles completed so far 0 ===
+      === circuit breaker: failcount 5 >= 3 -- not resubmitting ===
+      === breaker already tripped (failcount 5/3) -- this link exits without running the loop ===
+      === exit 0 before the loop started -- failcount left at 5 ===
+      wrapper exit=0  .failcount= 5  .chain_depth=1$|  .cycles_completed=<absent>  breaker_tripped=yes  STOP=no
+      finalize_end=yes  cancel_iff_trip=ok  accounting lines: 1
+      shim: (no sbatch, no scancel)
+  [before seed=' 5']
+      === chain depth 1/200, failcount  5/3, cycles completed so far 0 ===
+      === circuit breaker: failcount  5 >= 3 -- not resubmitting ===
+      === breaker already tripped (failcount  5/3) -- this link exits without running the loop ===
+      === exit 0 before the loop started -- failcount left at  5 ===
+      wrapper exit=0  .failcount= 5  .chain_depth=1$|  .cycles_completed=<absent>  breaker_tripped=yes  STOP=no
+      finalize_end=yes  cancel_iff_trip=ok  accounting lines: 1
+      shim: (no sbatch, no scancel)
+  [after seed='5 ']
+      === WARNING: $SIM/ktg/loop/.failcount held '5 ', which is not a plain decimal -- reading it as 5 ===
+      === chain depth 1/200, failcount 5/3, cycles completed so far 0 ===
+      === circuit breaker: failcount 5 >= 3 -- not resubmitting ===
+      === breaker already tripped (failcount 5/3) -- this link exits without running the loop ===
+      === exit 0 before the loop started -- failcount left at 5 ===
+      wrapper exit=0  .failcount=5   .chain_depth=1$|  .cycles_completed=<absent>  breaker_tripped=yes  STOP=no
+      finalize_end=yes  cancel_iff_trip=ok  accounting lines: 1
+      shim: (no sbatch, no scancel)
+
+########## T3: .chain_depth seeded at entry, failing loop, default floor
+########## expected AFTER: WARNING when raw != read; depth = read+1 written; successor queued unless depth >= 200; finalize_end=yes
+  [after seed='08']
+      === WARNING: $SIM/ktg/loop/.chain_depth held '08', which is not a plain decimal -- reading it as 8 ===
+      === chain depth 9/200, failcount 0/3, cycles completed so far 0 ===
+      === failure rc=1 -- failcount now 2/3 ===
+      === chain continues, 1 attempt(s) left before the breaker ===
+      wrapper exit=1  .failcount=2$|  .chain_depth=9$|  .cycles_completed=<absent>  breaker_tripped=no  STOP=no
+      finalize_end=yes  cancel_iff_trip=ok  accounting lines: 1
+      shim: SBATCH[800001] 
+  [before seed='08']
+      $RT/pre/loop_pre.sbatch: line 141: 08: value too great for base (error token is "08")
+      $RT/pre/loop_pre.sbatch: line 142: chaindepth: unbound variable
+      wrapper exit=1  .failcount=0$|  .chain_depth=08  .cycles_completed=<absent>  breaker_tripped=no  STOP=no
+      finalize_end=NO  cancel_iff_trip=ok  accounting lines: 0
+      shim: (no sbatch, no scancel)
+  [after seed='09']
+      === WARNING: $SIM/ktg/loop/.chain_depth held '09', which is not a plain decimal -- reading it as 9 ===
+      === chain depth 10/200, failcount 0/3, cycles completed so far 0 ===
+      === failure rc=1 -- failcount now 2/3 ===
+      === chain continues, 1 attempt(s) left before the breaker ===
+      wrapper exit=1  .failcount=2$|  .chain_depth=10$|  .cycles_completed=<absent>  breaker_tripped=no  STOP=no
+      finalize_end=yes  cancel_iff_trip=ok  accounting lines: 1
+      shim: SBATCH[800001] 
+  [after seed='007']
+      === WARNING: $SIM/ktg/loop/.chain_depth held '007', which is not a plain decimal -- reading it as 7 ===
+      === chain depth 8/200, failcount 0/3, cycles completed so far 0 ===
+      === failure rc=1 -- failcount now 2/3 ===
+      === chain continues, 1 attempt(s) left before the breaker ===
+      wrapper exit=1  .failcount=2$|  .chain_depth=8$|  .cycles_completed=<absent>  breaker_tripped=no  STOP=no
+      finalize_end=yes  cancel_iff_trip=ok  accounting lines: 1
+      shim: SBATCH[800001] 
+  [after seed='abc']
+      === WARNING: $SIM/ktg/loop/.chain_depth held 'abc', which is not a plain decimal -- reading it as 0 ===
+      === chain depth 1/200, failcount 0/3, cycles completed so far 0 ===
+      === failure rc=1 -- failcount now 2/3 ===
+      === chain continues, 1 attempt(s) left before the breaker ===
+      wrapper exit=1  .failcount=2$|  .chain_depth=1$|  .cycles_completed=<absent>  breaker_tripped=no  STOP=no
+      finalize_end=yes  cancel_iff_trip=ok  accounting lines: 1
+      shim: SBATCH[800001] 
+  [before seed='abc']
+      $RT/pre/loop_pre.sbatch: line 141: abc: unbound variable
+      wrapper exit=1  .failcount=0$|  .chain_depth=abc  .cycles_completed=<absent>  breaker_tripped=no  STOP=no
+      finalize_end=NO  cancel_iff_trip=ok  accounting lines: 0
+      shim: (no sbatch, no scancel)
+  [after seed='']
+      === WARNING: $SIM/ktg/loop/.chain_depth held '', which is not a plain decimal -- reading it as 0 ===
+      === chain depth 1/200, failcount 0/3, cycles completed so far 0 ===
+      === failure rc=1 -- failcount now 2/3 ===
+      === chain continues, 1 attempt(s) left before the breaker ===
+      wrapper exit=1  .failcount=2$|  .chain_depth=1$|  .cycles_completed=<absent>  breaker_tripped=no  STOP=no
+      finalize_end=yes  cancel_iff_trip=ok  accounting lines: 1
+      shim: SBATCH[800001] 
+  [after seed='<missing>']
+      === chain depth 1/200, failcount 0/3, cycles completed so far 0 ===
+      === failure rc=1 -- failcount now 2/3 ===
+      === chain continues, 1 attempt(s) left before the breaker ===
+      wrapper exit=1  .failcount=2$|  .chain_depth=1$|  .cycles_completed=<absent>  breaker_tripped=no  STOP=no
+      finalize_end=yes  cancel_iff_trip=ok  accounting lines: 1
+      shim: SBATCH[800001] 
+  [after seed='<newline>']
+      === chain depth 6/200, failcount 0/3, cycles completed so far 0 ===
+      === failure rc=1 -- failcount now 2/3 ===
+      === chain continues, 1 attempt(s) left before the breaker ===
+      wrapper exit=1  .failcount=2$|  .chain_depth=6$|  .cycles_completed=<absent>  breaker_tripped=no  STOP=no
+      finalize_end=yes  cancel_iff_trip=ok  accounting lines: 1
+      shim: SBATCH[800001] 
+  [after seed='<space>']
+      === WARNING: $SIM/ktg/loop/.chain_depth held '5 ', which is not a plain decimal -- reading it as 5 ===
+      === chain depth 6/200, failcount 0/3, cycles completed so far 0 ===
+      === failure rc=1 -- failcount now 2/3 ===
+      === chain continues, 1 attempt(s) left before the breaker ===
+      wrapper exit=1  .failcount=2$|  .chain_depth=6$|  .cycles_completed=<absent>  breaker_tripped=no  STOP=no
+      finalize_end=yes  cancel_iff_trip=ok  accounting lines: 1
+      shim: SBATCH[800001] 
+  [after seed='-1']
+      === WARNING: $SIM/ktg/loop/.chain_depth held '-1', which is not a plain decimal -- reading it as 0 ===
+      === chain depth 1/200, failcount 0/3, cycles completed so far 0 ===
+      === failure rc=1 -- failcount now 2/3 ===
+      === chain continues, 1 attempt(s) left before the breaker ===
+      wrapper exit=1  .failcount=2$|  .chain_depth=1$|  .cycles_completed=<absent>  breaker_tripped=no  STOP=no
+      finalize_end=yes  cancel_iff_trip=ok  accounting lines: 1
+      shim: SBATCH[800001] 
+  [after seed='1e3']
+      === WARNING: $SIM/ktg/loop/.chain_depth held '1e3', which is not a plain decimal -- reading it as 0 ===
+      === chain depth 1/200, failcount 0/3, cycles completed so far 0 ===
+      === failure rc=1 -- failcount now 2/3 ===
+      === chain continues, 1 attempt(s) left before the breaker ===
+      wrapper exit=1  .failcount=2$|  .chain_depth=1$|  .cycles_completed=<absent>  breaker_tripped=no  STOP=no
+      finalize_end=yes  cancel_iff_trip=ok  accounting lines: 1
+      shim: SBATCH[800001] 
+  [after seed='0x10']
+      === WARNING: $SIM/ktg/loop/.chain_depth held '0x10', which is not a plain decimal -- reading it as 0 ===
+      === chain depth 1/200, failcount 0/3, cycles completed so far 0 ===
+      === failure rc=1 -- failcount now 2/3 ===
+      === chain continues, 1 attempt(s) left before the breaker ===
+      wrapper exit=1  .failcount=2$|  .chain_depth=1$|  .cycles_completed=<absent>  breaker_tripped=no  STOP=no
+      finalize_end=yes  cancel_iff_trip=ok  accounting lines: 1
+      shim: SBATCH[800001] 
+  [after seed='+7']
+      === WARNING: $SIM/ktg/loop/.chain_depth held '+7', which is not a plain decimal -- reading it as 0 ===
+      === chain depth 1/200, failcount 0/3, cycles completed so far 0 ===
+      === failure rc=1 -- failcount now 2/3 ===
+      === chain continues, 1 attempt(s) left before the breaker ===
+      wrapper exit=1  .failcount=2$|  .chain_depth=1$|  .cycles_completed=<absent>  breaker_tripped=no  STOP=no
+      finalize_end=yes  cancel_iff_trip=ok  accounting lines: 1
+      shim: SBATCH[800001] 
+  [before seed='+7']
+      === chain depth 8/200, failcount 0/3, cycles completed so far 0 ===
+      === failure rc=1 -- failcount now 2/3 ===
+      === chain continues, 1 attempt(s) left before the breaker ===
+      wrapper exit=1  .failcount=2$|  .chain_depth=8$|  .cycles_completed=<absent>  breaker_tripped=no  STOP=no
+      finalize_end=yes  cancel_iff_trip=ok  accounting lines: 1
+      shim: SBATCH[800001] --parsable --partition=b200 --dependency=afterany:9930 $RT/pre/loop_pre.sbatch 
+  [after seed='99999999999999999999']
+      === WARNING: $SIM/ktg/loop/.chain_depth held '99999999999999999999', which is not a plain decimal -- reading it as 0 ===
+      === chain depth 1/200, failcount 0/3, cycles completed so far 0 ===
+      === failure rc=1 -- failcount now 2/3 ===
+      === chain continues, 1 attempt(s) left before the breaker ===
+      wrapper exit=1  .failcount=2$|  .chain_depth=1$|  .cycles_completed=<absent>  breaker_tripped=no  STOP=no
+      finalize_end=yes  cancel_iff_trip=ok  accounting lines: 1
+      shim: SBATCH[800001] 
+  [after seed=' 5']
+      === WARNING: $SIM/ktg/loop/.chain_depth held ' 5', which is not a plain decimal -- reading it as 5 ===
+      === chain depth 6/200, failcount 0/3, cycles completed so far 0 ===
+      === failure rc=1 -- failcount now 2/3 ===
+      === chain continues, 1 attempt(s) left before the breaker ===
+      wrapper exit=1  .failcount=2$|  .chain_depth=6$|  .cycles_completed=<absent>  breaker_tripped=no  STOP=no
+      finalize_end=yes  cancel_iff_trip=ok  accounting lines: 1
+      shim: SBATCH[800001] 
+  [before seed=' 5']
+      === chain depth 6/200, failcount 0/3, cycles completed so far 0 ===
+      === failure rc=1 -- failcount now 2/3 ===
+      === chain continues, 1 attempt(s) left before the breaker ===
+      wrapper exit=1  .failcount=2$|  .chain_depth=6$|  .cycles_completed=<absent>  breaker_tripped=no  STOP=no
+      finalize_end=yes  cancel_iff_trip=ok  accounting lines: 1
+      shim: SBATCH[800001] --parsable --partition=b200 --dependency=afterany:9930 $RT/pre/loop_pre.sbatch 
+  [after seed='5 ']
+      === WARNING: $SIM/ktg/loop/.chain_depth held '5 ', which is not a plain decimal -- reading it as 5 ===
+      === chain depth 6/200, failcount 0/3, cycles completed so far 0 ===
+      === failure rc=1 -- failcount now 2/3 ===
+      === chain continues, 1 attempt(s) left before the breaker ===
+      wrapper exit=1  .failcount=2$|  .chain_depth=6$|  .cycles_completed=<absent>  breaker_tripped=no  STOP=no
+      finalize_end=yes  cancel_iff_trip=ok  accounting lines: 1
+      shim: SBATCH[800001] 
+  [after seed='199']
+      === chain depth 200/200, failcount 0/3, cycles completed so far 0 ===
+      === chain depth 200 >= 200 -- not resubmitting ===
+      === failure rc=1 -- failcount now 2/3 ===
+      === chain continues, 1 attempt(s) left before the breaker ===
+      wrapper exit=1  .failcount=2$|  .chain_depth=200$|  .cycles_completed=<absent>  breaker_tripped=no  STOP=no
+      finalize_end=yes  cancel_iff_trip=ok  accounting lines: 1
+      shim: (no sbatch, no scancel)
+  [after seed='999999999999999999']
+      === chain depth 1000000000000000000/200, failcount 0/3, cycles completed so far 0 ===
+      === chain depth 1000000000000000000 >= 200 -- not resubmitting ===
+      === failure rc=1 -- failcount now 2/3 ===
+      === chain continues, 1 attempt(s) left before the breaker ===
+      wrapper exit=1  .failcount=2$|  .chain_depth=1000000000000000000$|  .cycles_completed=<absent>  breaker_tripped=no  STOP=no
+      finalize_end=yes  cancel_iff_trip=ok  accounting lines: 1
+      shim: (no sbatch, no scancel)
+
+########## T4: the o35 crash-loop seed end to end: .cycles_completed=08, .failcount=2, a loop that records a cycle with the REAL writer block then fails
+  [before]
+      === chain depth 1/200, failcount 2/3, cycles completed so far 08 ===
+      FAKE LOOP recorded a cycle: 9
+      $RT/pre/loop_pre.sbatch: line 233: 08: value too great for base (error token is "08")
+      wrapper exit=1  .failcount=2$|  .chain_depth=1$|  .cycles_completed=9$|  breaker_tripped=no  STOP=no
+      finalize_end=NO  cancel_iff_trip=ok  accounting lines: 0
+      shim: SBATCH[800001] --parsable --partition=b200 --dependency=afterany:9911 $RT/pre/loop_pre.sbatch 
+  [after]
+      === chain depth 1/200, failcount 2/3, cycles completed so far 8 ===
+      FAKE LOOP recorded a cycle: 9
+      === this link completed 1 cycle(s) before failing -- the run of consecutive failures restarts, old count 2 dropped ===
+      === failure rc=1 -- failcount now 2/3 ===
+      === chain continues, 1 attempt(s) left before the breaker ===
+      wrapper exit=1  .failcount=2$|  .chain_depth=1$|  .cycles_completed=9$|  breaker_tripped=no  STOP=no
+      finalize_end=yes  cancel_iff_trip=ok  accounting lines: 1
+      shim: SBATCH[800001] 
+########## T5: three consecutive links seeded 08 in .cycles_completed (failing loop, records nothing), AFTER
+  [T5-1]
+      === chain depth 1/200, failcount 0/3, cycles completed so far 8 ===
+      === failure rc=1 -- failcount now 2/3 ===
+      === chain continues, 1 attempt(s) left before the breaker ===
+      wrapper exit=1  .failcount=2$|  .chain_depth=1$|  .cycles_completed=08  breaker_tripped=no  STOP=no
+      finalize_end=yes  cancel_iff_trip=ok  accounting lines: 1
+      shim: SBATCH[800001] 
+  [T5-2]
+      === chain depth 2/200, failcount 2/3, cycles completed so far 8 ===
+      === failure rc=1 -- failcount now 4/3 ===
+      === circuit breaker tripped after 4 consecutive failures (last ran 5s) ===
+      === cancelling queued successor 800002 (circuit breaker tripped) ===
+      wrapper exit=1  .failcount=4$|  .chain_depth=2$|  .cycles_completed=08  breaker_tripped=yes  STOP=no
+      finalize_end=yes  cancel_iff_trip=ok  accounting lines: 1
+      shim: SBATCH[800001] SBATCH[800002] SCANCEL 800002 
+  [T5-3]
+      === chain depth 3/200, failcount 4/3, cycles completed so far 8 ===
+      === circuit breaker: failcount 4 >= 3 -- not resubmitting ===
+      === breaker already tripped (failcount 4/3) -- this link exits without running the loop ===
+      === exit 0 before the loop started -- failcount left at 4 ===
+      wrapper exit=0  .failcount=4$|  .chain_depth=3$|  .cycles_completed=08  breaker_tripped=yes  STOP=no
+      finalize_end=yes  cancel_iff_trip=VIOLATED (scancel=1 trip=0)  accounting lines: 1
+      shim: SBATCH[800001] SBATCH[800002] SCANCEL 800002 
+
+########## X: new attacks (AFTER unless stated)
+----- X1: width boundary. .failcount = 18 nines (accepted) / 19 digits 1000000000000000000 (rejected -> 0) / 0000000000000000001 (19 chars, valid decimal 1, rejected -> 0) / 000000000000000001 (18 chars -> 1)
+  [X1 .failcount='999999999999999999']
+      === chain depth 1/200, failcount 999999999999999999/3, cycles completed so far 0 ===
+      === circuit breaker: failcount 999999999999999999 >= 3 -- not resubmitting ===
+      === breaker already tripped (failcount 999999999999999999/3) -- this link exits without running the loop ===
+      === exit 0 before the loop started -- failcount left at 999999999999999999 ===
+      wrapper exit=0  .failcount=999999999999999999  .chain_depth=1$|  .cycles_completed=<absent>  breaker_tripped=yes  STOP=no
+      finalize_end=yes  cancel_iff_trip=ok  accounting lines: 1
+      shim: (no sbatch, no scancel)
+  [X1 .failcount='1000000000000000000']
+      === WARNING: $SIM/ktg/loop/.failcount held '1000000000000000000', which is not a plain decimal -- reading it as 0 ===
+      === chain depth 1/200, failcount 0/3, cycles completed so far 0 ===
+      === failure rc=1 -- failcount now 2/3 ===
+      === chain continues, 1 attempt(s) left before the breaker ===
+      wrapper exit=1  .failcount=2$|  .chain_depth=1$|  .cycles_completed=<absent>  breaker_tripped=no  STOP=no
+      finalize_end=yes  cancel_iff_trip=ok  accounting lines: 1
+      shim: SBATCH[800001] 
+  [X1 .failcount='0000000000000000001']
+      === WARNING: $SIM/ktg/loop/.failcount held '0000000000000000001', which is not a plain decimal -- reading it as 0 ===
+      === chain depth 1/200, failcount 0/3, cycles completed so far 0 ===
+      === failure rc=1 -- failcount now 2/3 ===
+      === chain continues, 1 attempt(s) left before the breaker ===
+      wrapper exit=1  .failcount=2$|  .chain_depth=1$|  .cycles_completed=<absent>  breaker_tripped=no  STOP=no
+      finalize_end=yes  cancel_iff_trip=ok  accounting lines: 1
+      shim: SBATCH[800001] 
+  [X1 .failcount='000000000000000001']
+      === WARNING: $SIM/ktg/loop/.failcount held '000000000000000001', which is not a plain decimal -- reading it as 1 ===
+      === chain depth 1/200, failcount 1/3, cycles completed so far 0 ===
+      === failure rc=1 -- failcount now 3/3 ===
+      === circuit breaker tripped after 3 consecutive failures (last ran 4s) ===
+      === cancelling queued successor 800001 (circuit breaker tripped) ===
+      wrapper exit=1  .failcount=3$|  .chain_depth=1$|  .cycles_completed=<absent>  breaker_tripped=yes  STOP=no
+      finalize_end=yes  cancel_iff_trip=ok  accounting lines: 1
+      shim: SBATCH[800001] SCANCEL 800001 
+----- X1b: .cycles_completed = 18 nines at entry, loop records with the REAL writer (-> 19 digits), then fails; .failcount=2 (is the cycle credited?)
+  [X1b]
+      === chain depth 1/200, failcount 2/3, cycles completed so far 999999999999999999 ===
+      FAKE LOOP recorded a cycle: 1000000000000000000
+      === failure rc=1 -- failcount now 4/3 ===
+      === circuit breaker tripped after 4 consecutive failures (last ran 5s) ===
+      === cancelling queued successor 800001 (circuit breaker tripped) ===
+      wrapper exit=1  .failcount=4$|  .chain_depth=1$|  .cycles_completed=1000000000000000000$|  breaker_tripped=yes  STOP=no
+      finalize_end=yes  cancel_iff_trip=ok  accounting lines: 1
+      shim: SBATCH[800001] SCANCEL 800001 
+----- X1c: .cycles_completed = 0000000000000000001 at entry, cycle-recording loop then fails, .failcount=2
+  [X1c]
+      === chain depth 1/200, failcount 2/3, cycles completed so far 0 ===
+      FAKE LOOP recorded a cycle: 1
+      === this link completed 1 cycle(s) before failing -- the run of consecutive failures restarts, old count 2 dropped ===
+      === failure rc=1 -- failcount now 2/3 ===
+      === chain continues, 1 attempt(s) left before the breaker ===
+      wrapper exit=1  .failcount=2$|  .chain_depth=1$|  .cycles_completed=1$|  breaker_tripped=no  STOP=no
+      finalize_end=yes  cancel_iff_trip=ok  accounting lines: 1
+      shim: SBATCH[800001] 
+----- X2: CRLF / NUL in the files (.failcount='2\r\n' -> 4/3 trip expected; .cycles_completed='5\0' with a cycle-recording loop)
+  [X2a .failcount=2<crlf>]
+      === WARNING: $SIM/ktg/loop/.failcount held '2', which is not a plain decimal -- reading it as 2 ===
+      === chain depth 1/200, failcount 2/3, cycles completed so far 0 ===
+      === failure rc=1 -- failcount now 4/3 ===
+      === circuit breaker tripped after 4 consecutive failures (last ran 4s) ===
+      === cancelling queued successor 800001 (circuit breaker tripped) ===
+      wrapper exit=1  .failcount=4$|  .chain_depth=1$|  .cycles_completed=<absent>  breaker_tripped=yes  STOP=no
+      finalize_end=yes  cancel_iff_trip=ok  accounting lines: 1
+      shim: SBATCH[800001] SCANCEL 800001 
+  [X2b .failcount=2<nul>]
+      $AZ/results/ktg/paper_1902.10565/codes/loop/loop.sbatch: line 171: warning: command substitution: ignored null byte in input
+      === chain depth 1/200, failcount 2/3, cycles completed so far 0 ===
+      === failure rc=1 -- failcount now 4/3 ===
+      === circuit breaker tripped after 4 consecutive failures (last ran 5s) ===
+      === cancelling queued successor 800001 (circuit breaker tripped) ===
+      wrapper exit=1  .failcount=4$|  .chain_depth=1$|  .cycles_completed=<absent>  breaker_tripped=yes  STOP=no
+      finalize_end=yes  cancel_iff_trip=ok  accounting lines: 1
+      shim: SBATCH[800001] SCANCEL 800001 
+  [X2c .cycles_completed=5<crlf>, cycle then fail]
+      === chain depth 1/200, failcount 2/3, cycles completed so far 5 ===
+      FAKE LOOP recorded a cycle: 6
+      === this link completed 1 cycle(s) before failing -- the run of consecutive failures restarts, old count 2 dropped ===
+      === failure rc=1 -- failcount now 2/3 ===
+      === chain continues, 1 attempt(s) left before the breaker ===
+      wrapper exit=1  .failcount=2$|  .chain_depth=1$|  .cycles_completed=6$|  breaker_tripped=no  STOP=no
+      finalize_end=yes  cancel_iff_trip=ok  accounting lines: 1
+      shim: SBATCH[800001] 
+  [X2d .cycles_completed=5<nul>, cycle then fail]
+      $AZ/results/ktg/paper_1902.10565/codes/loop/loop.sbatch: line 185: warning: command substitution: ignored null byte in input
+      === chain depth 1/200, failcount 2/3, cycles completed so far 5 ===
+      $SIM/codes/loop/synchronous_loop_9x9.sh: line 5: warning: command substitution: ignored null byte in input
+      FAKE LOOP recorded a cycle: 6
+      === this link completed 1 cycle(s) before failing -- the run of consecutive failures restarts, old count 2 dropped ===
+      === failure rc=1 -- failcount now 2/3 ===
+      === chain continues, 1 attempt(s) left before the breaker ===
+      wrapper exit=1  .failcount=2$|  .chain_depth=1$|  .cycles_completed=6$|  breaker_tripped=no  STOP=no
+      finalize_end=yes  cancel_iff_trip=ok  accounting lines: 1
+      shim: SBATCH[800001] 
+  [X2e .failcount=5<nul>7 (NUL dropped by $(cat) -> reads 57?)]
+      $AZ/results/ktg/paper_1902.10565/codes/loop/loop.sbatch: line 171: warning: command substitution: ignored null byte in input
+      === chain depth 1/200, failcount 57/3, cycles completed so far 0 ===
+      === circuit breaker: failcount 57 >= 3 -- not resubmitting ===
+      === breaker already tripped (failcount 57/3) -- this link exits without running the loop ===
+      === exit 0 before the loop started -- failcount left at 57 ===
+      wrapper exit=0  .failcount=5^@7  .chain_depth=1$|  .cycles_completed=<absent>  breaker_tripped=yes  STOP=no
+      finalize_end=yes  cancel_iff_trip=ok  accounting lines: 1
+      shim: (no sbatch, no scancel)
+----- X3: .failcount is a DIRECTORY (cat fails -> 0, no WARNING; the write in finalize fails); three failing links -- does the count ever advance?
+  [X3-1]
+      $AZ/results/ktg/paper_1902.10565/codes/loop/loop.sbatch: line 169: $SIM/ktg/loop/.failcount: Is a directory
+      === chain depth 1/200, failcount 0/3, cycles completed so far 0 ===
+      $AZ/results/ktg/paper_1902.10565/codes/loop/loop.sbatch: line 363: $SIM/ktg/loop/.failcount: Is a directory
+      === failure rc=1 -- failcount now 2/3 ===
+      === chain continues, 1 attempt(s) left before the breaker ===
+      wrapper exit=1  .failcount=<dir>  .chain_depth=1$|  .cycles_completed=<absent>  breaker_tripped=no  STOP=no
+      finalize_end=yes  cancel_iff_trip=ok  accounting lines: 1
+      shim: SBATCH[800001] 
+  [X3-2]
+      $AZ/results/ktg/paper_1902.10565/codes/loop/loop.sbatch: line 169: $SIM/ktg/loop/.failcount: Is a directory
+      === chain depth 2/200, failcount 0/3, cycles completed so far 0 ===
+      $AZ/results/ktg/paper_1902.10565/codes/loop/loop.sbatch: line 363: $SIM/ktg/loop/.failcount: Is a directory
+      === failure rc=1 -- failcount now 2/3 ===
+      === chain continues, 1 attempt(s) left before the breaker ===
+      wrapper exit=1  .failcount=<dir>  .chain_depth=2$|  .cycles_completed=<absent>  breaker_tripped=no  STOP=no
+      finalize_end=yes  cancel_iff_trip=ok  accounting lines: 1
+      shim: SBATCH[800001] SBATCH[800002] 
+  [X3-3]
+      $AZ/results/ktg/paper_1902.10565/codes/loop/loop.sbatch: line 169: $SIM/ktg/loop/.failcount: Is a directory
+      === chain depth 3/200, failcount 0/3, cycles completed so far 0 ===
+      $AZ/results/ktg/paper_1902.10565/codes/loop/loop.sbatch: line 363: $SIM/ktg/loop/.failcount: Is a directory
+      === failure rc=1 -- failcount now 2/3 ===
+      === chain continues, 1 attempt(s) left before the breaker ===
+      wrapper exit=1  .failcount=<dir>  .chain_depth=3$|  .cycles_completed=<absent>  breaker_tripped=no  STOP=no
+      finalize_end=yes  cancel_iff_trip=ok  accounting lines: 1
+      shim: SBATCH[800001] SBATCH[800002] SBATCH[800003] 
+----- X4: .failcount UNREADABLE (chmod 000, content 2): read -> ?, write -> ?; two failing links
+  [X4-1]
+      === chain depth 1/200, failcount 0/3, cycles completed so far 0 ===
+      $AZ/results/ktg/paper_1902.10565/codes/loop/loop.sbatch: line 363: $SIM/ktg/loop/.failcount: Permission denied
+      === failure rc=1 -- failcount now 2/3 ===
+      === chain continues, 1 attempt(s) left before the breaker ===
+      wrapper exit=1  .failcount=  .chain_depth=1$|  .cycles_completed=<absent>  breaker_tripped=no  STOP=no
+      finalize_end=yes  cancel_iff_trip=ok  accounting lines: 1
+      shim: SBATCH[800001] 
+  [X4-2]
+      === chain depth 2/200, failcount 0/3, cycles completed so far 0 ===
+      $AZ/results/ktg/paper_1902.10565/codes/loop/loop.sbatch: line 363: $SIM/ktg/loop/.failcount: Permission denied
+      === failure rc=1 -- failcount now 2/3 ===
+      === chain continues, 1 attempt(s) left before the breaker ===
+      wrapper exit=1  .failcount=  .chain_depth=2$|  .cycles_completed=<absent>  breaker_tripped=no  STOP=no
+      finalize_end=yes  cancel_iff_trip=ok  accounting lines: 1
+      shim: SBATCH[800001] SBATCH[800002] 
+----- X5: .failcount READ-ONLY (chmod 444) content 0; three failing links (fast failures: 0 -> 2 each link, never written?)
+  [X5-1]
+      === chain depth 1/200, failcount 0/3, cycles completed so far 0 ===
+      $AZ/results/ktg/paper_1902.10565/codes/loop/loop.sbatch: line 363: $SIM/ktg/loop/.failcount: Permission denied
+      === failure rc=1 -- failcount now 2/3 ===
+      === chain continues, 1 attempt(s) left before the breaker ===
+      wrapper exit=1  .failcount=0  .chain_depth=1$|  .cycles_completed=<absent>  breaker_tripped=no  STOP=no
+      finalize_end=yes  cancel_iff_trip=ok  accounting lines: 1
+      shim: SBATCH[800001] 
+  [X5-2]
+      === chain depth 2/200, failcount 0/3, cycles completed so far 0 ===
+      $AZ/results/ktg/paper_1902.10565/codes/loop/loop.sbatch: line 363: $SIM/ktg/loop/.failcount: Permission denied
+      === failure rc=1 -- failcount now 2/3 ===
+      === chain continues, 1 attempt(s) left before the breaker ===
+      wrapper exit=1  .failcount=0  .chain_depth=2$|  .cycles_completed=<absent>  breaker_tripped=no  STOP=no
+      finalize_end=yes  cancel_iff_trip=ok  accounting lines: 1
+      shim: SBATCH[800001] SBATCH[800002] 
+  [X5-3]
+      === chain depth 3/200, failcount 0/3, cycles completed so far 0 ===
+      $AZ/results/ktg/paper_1902.10565/codes/loop/loop.sbatch: line 363: $SIM/ktg/loop/.failcount: Permission denied
+      === failure rc=1 -- failcount now 2/3 ===
+      === chain continues, 1 attempt(s) left before the breaker ===
+      wrapper exit=1  .failcount=0  .chain_depth=3$|  .cycles_completed=<absent>  breaker_tripped=no  STOP=no
+      finalize_end=yes  cancel_iff_trip=ok  accounting lines: 1
+      shim: SBATCH[800001] SBATCH[800002] SBATCH[800003] 
+----- X5b: .failcount READ-ONLY content 2; one failing link (in-memory 4 -> does the breaker still trip and cancel?)
+  [X5b]
+      === chain depth 1/200, failcount 2/3, cycles completed so far 0 ===
+      $AZ/results/ktg/paper_1902.10565/codes/loop/loop.sbatch: line 363: $SIM/ktg/loop/.failcount: Permission denied
+      === failure rc=1 -- failcount now 4/3 ===
+      === circuit breaker tripped after 4 consecutive failures (last ran 5s) ===
+      === cancelling queued successor 800001 (circuit breaker tripped) ===
+      wrapper exit=1  .failcount=2  .chain_depth=1$|  .cycles_completed=<absent>  breaker_tripped=yes  STOP=no
+      finalize_end=yes  cancel_iff_trip=ok  accounting lines: 1
+      shim: SBATCH[800001] SCANCEL 800001 
+----- X6: .chain_depth READ-ONLY content 1; two failing links (does the depth advance?)
+  [X6-1]
+      $AZ/results/ktg/paper_1902.10565/codes/loop/loop.sbatch: line 184: $SIM/ktg/loop/.chain_depth: Permission denied
+      === chain depth 2/200, failcount 0/3, cycles completed so far 0 ===
+      === failure rc=1 -- failcount now 2/3 ===
+      === chain continues, 1 attempt(s) left before the breaker ===
+      wrapper exit=1  .failcount=2$|  .chain_depth=1  .cycles_completed=<absent>  breaker_tripped=no  STOP=no
+      finalize_end=yes  cancel_iff_trip=ok  accounting lines: 1
+      shim: SBATCH[800001] 
+  [X6-2]
+      $AZ/results/ktg/paper_1902.10565/codes/loop/loop.sbatch: line 184: $SIM/ktg/loop/.chain_depth: Permission denied
+      === chain depth 2/200, failcount 2/3, cycles completed so far 0 ===
+      === failure rc=1 -- failcount now 4/3 ===
+      === circuit breaker tripped after 4 consecutive failures (last ran 5s) ===
+      === cancelling queued successor 800002 (circuit breaker tripped) ===
+      wrapper exit=1  .failcount=4$|  .chain_depth=1  .cycles_completed=<absent>  breaker_tripped=yes  STOP=no
+      finalize_end=yes  cancel_iff_trip=ok  accounting lines: 1
+      shim: SBATCH[800001] SBATCH[800002] SCANCEL 800002 
+----- X7: BASEDIR itself read-only (chmod 555) with fresh state files 0/0; three failing links (no bound at all?)
+  [X7-1]
+      === chain depth 1/200, failcount 0/3, cycles completed so far 0 ===
+      === failure rc=1 -- failcount now 2/3 ===
+      === chain continues, 1 attempt(s) left before the breaker ===
+      wrapper exit=1  .failcount=2$|  .chain_depth=1$|  .cycles_completed=<absent>  breaker_tripped=no  STOP=no
+      finalize_end=yes  cancel_iff_trip=ok  accounting lines: 1
+      shim: SBATCH[800001] 
+  [X7-2]
+      === chain depth 2/200, failcount 2/3, cycles completed so far 0 ===
+      === failure rc=1 -- failcount now 4/3 ===
+      === circuit breaker tripped after 4 consecutive failures (last ran 5s) ===
+      touch: cannot touch '$SIM/ktg/loop/.breaker_tripped': Permission denied
+      === cancelling queued successor 800002 (circuit breaker tripped) ===
+      wrapper exit=1  .failcount=4$|  .chain_depth=2$|  .cycles_completed=<absent>  breaker_tripped=no  STOP=no
+      finalize_end=yes  cancel_iff_trip=ok  accounting lines: 1
+      shim: SBATCH[800001] SBATCH[800002] SCANCEL 800002 
+  [X7-3]
+      === chain depth 3/200, failcount 4/3, cycles completed so far 0 ===
+      === circuit breaker: failcount 4 >= 3 -- not resubmitting ===
+      touch: cannot touch '$SIM/ktg/loop/.breaker_tripped': Permission denied
+      === breaker already tripped (failcount 4/3) -- this link exits without running the loop ===
+      === exit 0 before the loop started -- failcount left at 4 ===
+      wrapper exit=0  .failcount=4$|  .chain_depth=3$|  .cycles_completed=<absent>  breaker_tripped=no  STOP=no
+      finalize_end=yes  cancel_iff_trip=VIOLATED (scancel=1 trip=0)  accounting lines: 1
+      shim: SBATCH[800001] SBATCH[800002] SCANCEL 800002 
+----- X8: the forgiving direction, cost bounded? .failcount='abc' seeded, crash loop of 3 links (link 1 reads 0 with WARNING; does link 2 trip?)
+  [X8-1]
+      === WARNING: $SIM/ktg/loop/.failcount held 'abc', which is not a plain decimal -- reading it as 0 ===
+      === chain depth 1/200, failcount 0/3, cycles completed so far 0 ===
+      === failure rc=1 -- failcount now 2/3 ===
+      === chain continues, 1 attempt(s) left before the breaker ===
+      wrapper exit=1  .failcount=2$|  .chain_depth=1$|  .cycles_completed=<absent>  breaker_tripped=no  STOP=no
+      finalize_end=yes  cancel_iff_trip=ok  accounting lines: 1
+      shim: SBATCH[800001] 
+  [X8-2]
+      === chain depth 2/200, failcount 2/3, cycles completed so far 0 ===
+      === failure rc=1 -- failcount now 4/3 ===
+      === circuit breaker tripped after 4 consecutive failures (last ran 5s) ===
+      === cancelling queued successor 800002 (circuit breaker tripped) ===
+      wrapper exit=1  .failcount=4$|  .chain_depth=2$|  .cycles_completed=<absent>  breaker_tripped=yes  STOP=no
+      finalize_end=yes  cancel_iff_trip=ok  accounting lines: 1
+      shim: SBATCH[800001] SBATCH[800002] SCANCEL 800002 
+  [X8-3]
+      === chain depth 3/200, failcount 4/3, cycles completed so far 0 ===
+      === circuit breaker: failcount 4 >= 3 -- not resubmitting ===
+      === breaker already tripped (failcount 4/3) -- this link exits without running the loop ===
+      === exit 0 before the loop started -- failcount left at 4 ===
+      wrapper exit=0  .failcount=4$|  .chain_depth=3$|  .cycles_completed=<absent>  breaker_tripped=yes  STOP=no
+      finalize_end=yes  cancel_iff_trip=VIOLATED (scancel=1 trip=0)  accounting lines: 1
+      shim: SBATCH[800001] SBATCH[800002] SCANCEL 800002 
+----- X8b: same with slow failures (KTG_MIN_RUNTIME_SECONDS=1, no penalty): 0 -> 1 -> 2 -> 3, trips on link 3?
+  [X8b-1]
+      === WARNING: $SIM/ktg/loop/.failcount held 'abc', which is not a plain decimal -- reading it as 0 ===
+      === chain depth 1/200, failcount 0/3, cycles completed so far 0 ===
+      === failure rc=1 -- failcount now 1/3 ===
+      === chain continues, 2 attempt(s) left before the breaker ===
+      wrapper exit=1  .failcount=1$|  .chain_depth=1$|  .cycles_completed=<absent>  breaker_tripped=no  STOP=no
+      finalize_end=yes  cancel_iff_trip=ok  accounting lines: 1
+      shim: SBATCH[800001] 
+  [X8b-2]
+      === chain depth 2/200, failcount 1/3, cycles completed so far 0 ===
+      === failure rc=1 -- failcount now 2/3 ===
+      === chain continues, 1 attempt(s) left before the breaker ===
+      wrapper exit=1  .failcount=2$|  .chain_depth=2$|  .cycles_completed=<absent>  breaker_tripped=no  STOP=no
+      finalize_end=yes  cancel_iff_trip=ok  accounting lines: 1
+      shim: SBATCH[800001] SBATCH[800002] 
+  [X8b-3]
+      === chain depth 3/200, failcount 2/3, cycles completed so far 0 ===
+      === failure rc=1 -- failcount now 3/3 ===
+      === circuit breaker tripped after 3 consecutive failures (last ran 7s) ===
+      === cancelling queued successor 800003 (circuit breaker tripped) ===
+      wrapper exit=1  .failcount=3$|  .chain_depth=3$|  .cycles_completed=<absent>  breaker_tripped=yes  STOP=no
+      finalize_end=yes  cancel_iff_trip=ok  accounting lines: 1
+      shim: SBATCH[800001] SBATCH[800002] SBATCH[800003] SCANCEL 800003 
+----- X9: corrupt .failcount='abc' persists across a scheduler-terminated healthy link (count left alone), then a failure heals it
+----- link: X9-1   (signal mode=pgrp, after 'starting the loop'; KTG_MIN_RUNTIME_SECONDS=1)
+=== WARNING: $SIM/ktg/loop/.failcount held 'abc', which is not a plain decimal -- reading it as 0 ===
+=== chain depth 1/200, failcount 0/3, cycles completed so far 0 ===
+=== successor queued: 800001 (partition b200, dependency afterany:9981) ===
+=== starting the loop: $SIM/codes/loop/synchronous_loop_9x9.sh ktg9 $SIM/ktg/loop t9 b7c96h3tfrs 1 ===
+FAKE LOOP ran: ktg9 $SIM/ktg/loop t9 b7c96h3tfrs 1
+Terminated
+=== SIGTERM received -- scheduler termination (walltime or scancel); the queued successor is the resume path ===
+=== loop exited rc=143 after 6s ===
+=== scheduler termination at walltime after 6s (SIGTERM to this wrapper) -- successor continues, failcount left at 0 ===
+wrapper exit=143  .failcount=abc  .chain_depth=1$|  .cycles_completed=<absent>  breaker_tripped=no  STOP=no
+accounting lines: 1
+  [X9-2]
+      === WARNING: $SIM/ktg/loop/.failcount held 'abc', which is not a plain decimal -- reading it as 0 ===
+      === chain depth 2/200, failcount 0/3, cycles completed so far 0 ===
+      === failure rc=1 -- failcount now 1/3 ===
+      === chain continues, 2 attempt(s) left before the breaker ===
+      wrapper exit=1  .failcount=1$|  .chain_depth=2$|  .cycles_completed=<absent>  breaker_tripped=no  STOP=no
+      finalize_end=yes  cancel_iff_trip=ok  accounting lines: 1
+      shim: SBATCH[800001] SBATCH[800002] 
+----- X10: the operator knob the worker flagged. KTG_MAX_FAILS=08 (finalize :375 arithmetic) and KTG_MAX_FAILS=abc ([ -ge abc ] is false: breaker dead?), failing loop, 3 links each
+  [X10a KTG_MAX_FAILS=08 link1]
+      === chain depth 1/200, failcount 0/08, cycles completed so far 0 ===
+      === failure rc=1 -- failcount now 2/08 ===
+      $AZ/results/ktg/paper_1902.10565/codes/loop/loop.sbatch: line 375: 08: value too great for base (error token is "08")
+      wrapper exit=1  .failcount=2$|  .chain_depth=1$|  .cycles_completed=<absent>  breaker_tripped=no  STOP=no
+      finalize_end=NO  cancel_iff_trip=ok  accounting lines: 1
+      shim: SBATCH[800001] 
+  [X10a link2]
+      === chain depth 2/200, failcount 2/08, cycles completed so far 0 ===
+      === failure rc=1 -- failcount now 4/08 ===
+      $AZ/results/ktg/paper_1902.10565/codes/loop/loop.sbatch: line 375: 08: value too great for base (error token is "08")
+      wrapper exit=1  .failcount=4$|  .chain_depth=2$|  .cycles_completed=<absent>  breaker_tripped=no  STOP=no
+      finalize_end=NO  cancel_iff_trip=ok  accounting lines: 1
+      shim: SBATCH[800001] SBATCH[800002] 
+  [X10b KTG_MAX_FAILS=abc link1]
+      === chain depth 1/200, failcount 0/abc, cycles completed so far 0 ===
+      $AZ/results/ktg/paper_1902.10565/codes/loop/loop.sbatch: line 414: [: abc: integer expression expected
+      $AZ/results/ktg/paper_1902.10565/codes/loop/loop.sbatch: line 457: [: abc: integer expression expected
+      === failure rc=1 -- failcount now 2/abc ===
+      $AZ/results/ktg/paper_1902.10565/codes/loop/loop.sbatch: line 366: [: abc: integer expression expected
+      $AZ/results/ktg/paper_1902.10565/codes/loop/loop.sbatch: line 375: abc: unbound variable
+      wrapper exit=1  .failcount=2$|  .chain_depth=1$|  .cycles_completed=<absent>  breaker_tripped=no  STOP=no
+      finalize_end=NO  cancel_iff_trip=ok  accounting lines: 1
+      shim: SBATCH[800001] 
+  [X10b link2]
+      === chain depth 2/200, failcount 2/abc, cycles completed so far 0 ===
+      $AZ/results/ktg/paper_1902.10565/codes/loop/loop.sbatch: line 414: [: abc: integer expression expected
+      $AZ/results/ktg/paper_1902.10565/codes/loop/loop.sbatch: line 457: [: abc: integer expression expected
+      === failure rc=1 -- failcount now 4/abc ===
+      $AZ/results/ktg/paper_1902.10565/codes/loop/loop.sbatch: line 366: [: abc: integer expression expected
+      $AZ/results/ktg/paper_1902.10565/codes/loop/loop.sbatch: line 375: abc: unbound variable
+      wrapper exit=1  .failcount=4$|  .chain_depth=2$|  .cycles_completed=<absent>  breaker_tripped=no  STOP=no
+      finalize_end=NO  cancel_iff_trip=ok  accounting lines: 1
+      shim: SBATCH[800001] SBATCH[800002] 
+  [X10b link3]
+      === chain depth 3/200, failcount 4/abc, cycles completed so far 0 ===
+      $AZ/results/ktg/paper_1902.10565/codes/loop/loop.sbatch: line 414: [: abc: integer expression expected
+      $AZ/results/ktg/paper_1902.10565/codes/loop/loop.sbatch: line 457: [: abc: integer expression expected
+      === failure rc=1 -- failcount now 6/abc ===
+      $AZ/results/ktg/paper_1902.10565/codes/loop/loop.sbatch: line 366: [: abc: integer expression expected
+      $AZ/results/ktg/paper_1902.10565/codes/loop/loop.sbatch: line 375: abc: unbound variable
+      wrapper exit=1  .failcount=6$|  .chain_depth=3$|  .cycles_completed=<absent>  breaker_tripped=no  STOP=no
+      finalize_end=NO  cancel_iff_trip=ok  accounting lines: 1
+      shim: SBATCH[800001] SBATCH[800002] SBATCH[800003] 
+  [X10c KTG_MAX_CHAIN=abc]
+      === chain depth 1/abc, failcount 0/3, cycles completed so far 0 ===
+      $AZ/results/ktg/paper_1902.10565/codes/loop/loop.sbatch: line 418: [: abc: integer expression expected
+      === failure rc=1 -- failcount now 2/3 ===
+      === chain continues, 1 attempt(s) left before the breaker ===
+      wrapper exit=1  .failcount=2$|  .chain_depth=1$|  .cycles_completed=<absent>  breaker_tripped=no  STOP=no
+      finalize_end=yes  cancel_iff_trip=ok  accounting lines: 1
+      shim: SBATCH[800001] 
+----- X11: .cycles_completed is a DIRECTORY, cycle-recording loop (REAL writer under set -e): the loop itself?
+  [X11]
+      === chain depth 1/200, failcount 2/3, cycles completed so far 0 ===
+      $SIM/codes/loop/synchronous_loop_9x9.sh: line 11: $SIM/ktg/loop/.cycles_completed: Is a directory
+      === failure rc=1 -- failcount now 4/3 ===
+      === circuit breaker tripped after 4 consecutive failures (last ran 5s) ===
+      === cancelling queued successor 800001 (circuit breaker tripped) ===
+      wrapper exit=1  .failcount=4$|  .chain_depth=1$|  .cycles_completed=<dir>  breaker_tripped=yes  STOP=no
+      finalize_end=yes  cancel_iff_trip=ok  accounting lines: 1
+      shim: SBATCH[800001] SCANCEL 800001 
+----- X12: whitespace-only .failcount and a two-line .failcount ('2\n3')
+  [X12a .failcount='   ']
+      === WARNING: $SIM/ktg/loop/.failcount held '   ', which is not a plain decimal -- reading it as 0 ===
+      === chain depth 1/200, failcount 0/3, cycles completed so far 0 ===
+      === failure rc=1 -- failcount now 2/3 ===
+      === chain continues, 1 attempt(s) left before the breaker ===
+      wrapper exit=1  .failcount=2$|  .chain_depth=1$|  .cycles_completed=<absent>  breaker_tripped=no  STOP=no
+      finalize_end=yes  cancel_iff_trip=ok  accounting lines: 1
+      shim: SBATCH[800001] 
+  [X12b .failcount='2\n3']
+      === WARNING: $SIM/ktg/loop/.failcount held '2
+      === chain depth 1/200, failcount 0/3, cycles completed so far 0 ===
+      === failure rc=1 -- failcount now 2/3 ===
+      === chain continues, 1 attempt(s) left before the breaker ===
+      wrapper exit=1  .failcount=2$|  .chain_depth=1$|  .cycles_completed=<absent>  breaker_tripped=no  STOP=no
+      finalize_end=yes  cancel_iff_trip=ok  accounting lines: 1
+      shim: SBATCH[800001] 
+
+########## cleanup
+ls: cannot access '$SIM': No such file or directory
+done 2026-09-04T03:45:35-04:00
+
+########## PART B2
+########## environment
+host: login03  date: 2026-09-04T03:36:58-04:00  az HEAD: 0c6d38d  loop.sbatch sha256: 8d997ef5fc928390...  pre-repair copy: 86248d31b34b3522...  shims: nvidia-smi sacct sbatch scancel scontrol sinfo squeue 
+writer block used by cycle_loop (verbatim from synchronous_loop_9x9.sh :317-323, BASEDIR substituted):
+    | CYCLES_DONE=$(cat $SIM/ktg/loop/.cycles_completed 2>/dev/null || echo 0)
+    | CYCLES_DONE="${CYCLES_DONE#"${CYCLES_DONE%%[![:space:]]*}"}"
+    | CYCLES_DONE="${CYCLES_DONE%"${CYCLES_DONE##*[![:space:]]}"}"
+    | case "$CYCLES_DONE" in ''|*[!0-9]*) CYCLES_DONE=0 ;; esac
+    | [ "${#CYCLES_DONE}" -le 18 ] || CYCLES_DONE=0
+    | CYCLES_DONE=$(( 10#$CYCLES_DONE + 1 ))
+    | echo "$CYCLES_DONE" > $SIM/ktg/loop/.cycles_completed
+
+########## regression A: crash loop, 3 links
+----- link: A1   (KTG_MIN_RUNTIME_SECONDS=<default 600>)
+=== chain depth 1/200, failcount 0/3, cycles completed so far 0 ===
+=== successor queued: 800001 (partition b200, dependency afterany:1001) ===
+=== starting the loop: $SIM/codes/loop/synchronous_loop_9x9.sh ktg9 $SIM/ktg/loop t9 b7c96h3tfrs 1 ===
+FAKE LOOP ran: ktg9 $SIM/ktg/loop t9 b7c96h3tfrs 1
+=== loop exited rc=1 after 5s ===
+=== fast failure: 5s < 600s -- counting it twice ===
+=== failure rc=1 -- failcount now 2/3 ===
+=== chain continues, 1 attempt(s) left before the breaker ===
+wrapper exit=1  .failcount=2$|  .chain_depth=1$|  .cycles_completed=<absent>  breaker_tripped=no  STOP=no
+accounting lines: 1
+----- link: A2   (KTG_MIN_RUNTIME_SECONDS=<default 600>)
+=== chain depth 2/200, failcount 2/3, cycles completed so far 0 ===
+=== successor queued: 800002 (partition b200, dependency afterany:1002) ===
+=== starting the loop: $SIM/codes/loop/synchronous_loop_9x9.sh ktg9 $SIM/ktg/loop t9 b7c96h3tfrs 1 ===
+FAKE LOOP ran: ktg9 $SIM/ktg/loop t9 b7c96h3tfrs 1
+=== loop exited rc=1 after 6s ===
+=== fast failure: 6s < 600s -- counting it twice ===
+=== failure rc=1 -- failcount now 4/3 ===
+=== circuit breaker tripped after 4 consecutive failures (last ran 6s) ===
+=== cancelling queued successor 800002 (circuit breaker tripped) ===
+wrapper exit=1  .failcount=4$|  .chain_depth=2$|  .cycles_completed=<absent>  breaker_tripped=yes  STOP=no
+accounting lines: 1
+----- link: A3   (KTG_MIN_RUNTIME_SECONDS=<default 600>)
+=== chain depth 3/200, failcount 4/3, cycles completed so far 0 ===
+=== circuit breaker: failcount 4 >= 3 -- not resubmitting ===
+=== breaker already tripped (failcount 4/3) -- this link exits without running the loop ===
+=== to restart the chain: fix the cause, then rm $SIM/ktg/loop/.failcount $SIM/ktg/loop/.breaker_tripped ===
+=== exit 0 before the loop started -- failcount left at 4 ===
+wrapper exit=0  .failcount=4$|  .chain_depth=3$|  .cycles_completed=<absent>  breaker_tripped=yes  STOP=no
+accounting lines: 1
+--- scheduler shim log
+SBATCH[800001] --parsable --partition=b200 --dependency=afterany:1001 $AZ/results/ktg/paper_1902.10565/codes/loop/loop.sbatch
+SBATCH[800002] --parsable --partition=b200 --dependency=afterany:1002 $AZ/results/ktg/paper_1902.10565/codes/loop/loop.sbatch
+SCANCEL 800002
+
+########## regression B: env.sh missing, 2 links
+----- link: B1   (KTG_MIN_RUNTIME_SECONDS=<default 600>)
+=== chain depth 1/200, failcount 0/3, cycles completed so far 0 ===
+=== successor queued: 800001 (partition b200, dependency afterany:2001) ===
+=== missing or unreadable $SIM/ktg/env.sh -- pre-flight failure ===
+=== PRE-FLIGHT FAILURE rc=2 after 1s -- the loop never started ===
+=== fast failure: 1s < 600s -- counting it twice ===
+=== failure rc=2 -- failcount now 2/3 ===
+=== cancelling queued successor 800001 (pre-flight failure -- the successor would repeat it) ===
+wrapper exit=2  .failcount=2$|  .chain_depth=1$|  .cycles_completed=<absent>  breaker_tripped=no  STOP=no
+accounting lines: 2
+----- link: B2   (KTG_MIN_RUNTIME_SECONDS=<default 600>)
+=== chain depth 2/200, failcount 2/3, cycles completed so far 0 ===
+=== successor queued: 800002 (partition b200, dependency afterany:2002) ===
+=== missing or unreadable $SIM/ktg/env.sh -- pre-flight failure ===
+=== PRE-FLIGHT FAILURE rc=2 after 1s -- the loop never started ===
+=== fast failure: 1s < 600s -- counting it twice ===
+=== failure rc=2 -- failcount now 4/3 ===
+=== circuit breaker tripped after 4 consecutive failures (last ran 1s) ===
+=== cancelling queued successor 800002 (circuit breaker tripped) ===
+wrapper exit=2  .failcount=4$|  .chain_depth=2$|  .cycles_completed=<absent>  breaker_tripped=yes  STOP=no
+accounting lines: 2
+--- scheduler shim log
+SBATCH[800001] --parsable --partition=b200 --dependency=afterany:2001 $AZ/results/ktg/paper_1902.10565/codes/loop/loop.sbatch
+SCANCEL 800001
+SBATCH[800002] --parsable --partition=b200 --dependency=afterany:2002 $AZ/results/ktg/paper_1902.10565/codes/loop/loop.sbatch
+SCANCEL 800002
+
+########## regression B2a: explicit env.sh checks deleted -> raw set -u abort
+----- link: B2a   (KTG_MIN_RUNTIME_SECONDS=<default 600>)
+=== chain depth 1/200, failcount 0/3, cycles completed so far 0 ===
+=== successor queued: 800001 (partition b200, dependency afterany:2101) ===
+$SIM/loop_nochecks.sbatch: line 473: $SIM/ktg/env.sh: No such file or directory
+$SIM/loop_nochecks.sbatch: line 557: KATAGO_SRC: unbound variable
+=== PRE-FLIGHT FAILURE rc=1 after 5s -- the loop never started ===
+=== fast failure: 5s < 600s -- counting it twice ===
+=== failure rc=1 -- failcount now 2/3 ===
+=== cancelling queued successor 800001 (pre-flight failure -- the successor would repeat it) ===
+wrapper exit=1  .failcount=2$|  .chain_depth=1$|  .cycles_completed=<absent>  breaker_tripped=no  STOP=no
+accounting lines: 2
+--- scheduler shim log
+SBATCH[800001] --parsable --partition=b200 --dependency=afterany:2101 $SIM/loop_nochecks.sbatch
+SCANCEL 800001
+
+########## regression C: LOOP_SH missing, 2 links
+----- link: C1   (KTG_MIN_RUNTIME_SECONDS=<default 600>)
+=== chain depth 1/200, failcount 0/3, cycles completed so far 0 ===
+=== successor queued: 800001 (partition b200, dependency afterany:3001) ===
+=== missing $SIM/codes/loop/synchronous_loop_9x9.sh ===
+=== PRE-FLIGHT FAILURE rc=2 after 6s -- the loop never started ===
+=== fast failure: 6s < 600s -- counting it twice ===
+=== failure rc=2 -- failcount now 2/3 ===
+=== cancelling queued successor 800001 (pre-flight failure -- the successor would repeat it) ===
+wrapper exit=2  .failcount=2$|  .chain_depth=1$|  .cycles_completed=<absent>  breaker_tripped=no  STOP=no
+accounting lines: 2
+----- link: C2   (KTG_MIN_RUNTIME_SECONDS=<default 600>)
+=== chain depth 2/200, failcount 2/3, cycles completed so far 0 ===
+=== successor queued: 800002 (partition b200, dependency afterany:3002) ===
+=== missing $SIM/codes/loop/synchronous_loop_9x9.sh ===
+=== PRE-FLIGHT FAILURE rc=2 after 5s -- the loop never started ===
+=== fast failure: 5s < 600s -- counting it twice ===
+=== failure rc=2 -- failcount now 4/3 ===
+=== circuit breaker tripped after 4 consecutive failures (last ran 5s) ===
+=== cancelling queued successor 800002 (circuit breaker tripped) ===
+wrapper exit=2  .failcount=4$|  .chain_depth=2$|  .cycles_completed=<absent>  breaker_tripped=yes  STOP=no
+accounting lines: 2
+--- scheduler shim log
+SBATCH[800001] --parsable --partition=b200 --dependency=afterany:3001 $AZ/results/ktg/paper_1902.10565/codes/loop/loop.sbatch
+SCANCEL 800001
+SBATCH[800002] --parsable --partition=b200 --dependency=afterany:3002 $AZ/results/ktg/paper_1902.10565/codes/loop/loop.sbatch
+SCANCEL 800002
+
+########## regression D: guard exit 1 (in-tree fixture)
+----- link: D1   (KTG_MIN_RUNTIME_SECONDS=<default 600>)
+=== chain depth 1/200, failcount 0/3, cycles completed so far 0 ===
+=== successor queued: 800001 (partition b200, dependency afterany:4001) ===
+wrapper exit=3  .failcount=0$|  .chain_depth=1$|  .cycles_completed=<absent>  breaker_tripped=no  STOP=yes
+accounting lines: 1
+--- scheduler shim log
+SBATCH[800001] --parsable --partition=b200 --dependency=afterany:4001 $AZ/results/ktg/paper_1902.10565/codes/loop/loop.sbatch
+SCANCEL 800001
+
+########## regression E: guard exit 2 (in-tree fixture)
+----- link: E1   (KTG_MIN_RUNTIME_SECONDS=<default 600>)
+=== chain depth 1/200, failcount 0/3, cycles completed so far 0 ===
+=== successor queued: 800001 (partition b200, dependency afterany:5001) ===
+wrapper exit=3  .failcount=0$|  .chain_depth=1$|  .cycles_completed=<absent>  breaker_tripped=no  STOP=yes
+accounting lines: 1
+--- scheduler shim log
+SBATCH[800001] --parsable --partition=b200 --dependency=afterany:5001 $AZ/results/ktg/paper_1902.10565/codes/loop/loop.sbatch
+SCANCEL 800001
+
+########## regression F: guard exit 3 (out-of-tree constants file)
+----- link: F1   (KTG_MIN_RUNTIME_SECONDS=<default 600>)
+=== chain depth 1/200, failcount 0/3, cycles completed so far 0 ===
+=== successor queued: 800001 (partition b200, dependency afterany:6001) ===
+prune_retention: refusing an out-of-tree constants file: $SIM/loose.env
+                 only files under /weka$AZ/results/ktg/paper_1902.10565/codes/data_budget/ may set the retention bounds and the mission root.
+=== prune_retention.py exited non-zero -- the scratch guard below decides whether a cycle may start ===
+scratch_guard: refusing an out-of-tree constants file: $SIM/loose.env
+               only files under /weka$AZ/results/ktg/paper_1902.10565/codes/data_budget/ may set the byte thresholds.
+=== scratch_guard exit 3: the guard could not measure -- treating as a failure ===
+=== PRE-FLIGHT FAILURE rc=2 after 1s -- the loop never started ===
+=== fast failure: 1s < 600s -- counting it twice ===
+=== failure rc=2 -- failcount now 2/3 ===
+=== cancelling queued successor 800001 (pre-flight failure -- the successor would repeat it) ===
+wrapper exit=2  .failcount=2$|  .chain_depth=1$|  .cycles_completed=<absent>  breaker_tripped=no  STOP=no
+accounting lines: 2
+--- scheduler shim log
+SBATCH[800001] --parsable --partition=b200 --dependency=afterany:6001 $AZ/results/ktg/paper_1902.10565/codes/loop/loop.sbatch
+SCANCEL 800001
+
+########## regression G: clean cycle resets
+----- link: G1   (KTG_MIN_RUNTIME_SECONDS=<default 600>)
+=== chain depth 1/200, failcount 0/3, cycles completed so far 0 ===
+=== successor queued: 800001 (partition b200, dependency afterany:7001) ===
+=== starting the loop: $SIM/codes/loop/synchronous_loop_9x9.sh ktg9 $SIM/ktg/loop t9 b7c96h3tfrs 1 ===
+FAKE LOOP ran: ktg9 $SIM/ktg/loop t9 b7c96h3tfrs 1
+=== loop exited rc=1 after 5s ===
+=== fast failure: 5s < 600s -- counting it twice ===
+=== failure rc=1 -- failcount now 2/3 ===
+=== chain continues, 1 attempt(s) left before the breaker ===
+wrapper exit=1  .failcount=2$|  .chain_depth=1$|  .cycles_completed=<absent>  breaker_tripped=no  STOP=no
+accounting lines: 1
+----- link: G2   (KTG_MIN_RUNTIME_SECONDS=<default 600>)
+=== chain depth 2/200, failcount 2/3, cycles completed so far 0 ===
+=== successor queued: 800002 (partition b200, dependency afterany:7002) ===
+=== starting the loop: $SIM/codes/loop/synchronous_loop_9x9.sh ktg9 $SIM/ktg/loop t9 b7c96h3tfrs 1 ===
+FAKE LOOP ran: ktg9 $SIM/ktg/loop t9 b7c96h3tfrs 1
+=== loop exited rc=0 after 5s ===
+=== clean exit -- failcount reset to 0 ===
+wrapper exit=0  .failcount=0$|  .chain_depth=2$|  .cycles_completed=<absent>  breaker_tripped=no  STOP=no
+accounting lines: 1
+--- scheduler shim log
+SBATCH[800001] --parsable --partition=b200 --dependency=afterany:7001 $AZ/results/ktg/paper_1902.10565/codes/loop/loop.sbatch
+SBATCH[800002] --parsable --partition=b200 --dependency=afterany:7002 $AZ/results/ktg/paper_1902.10565/codes/loop/loop.sbatch
+
+########## regression H: STOP at entry leaves the count
+----- link: H1   (KTG_MIN_RUNTIME_SECONDS=<default 600>)
+=== chain depth 1/200, failcount 0/3, cycles completed so far 0 ===
+=== successor queued: 800001 (partition b200, dependency afterany:8001) ===
+scratch_guard: NOTE du -sb succeeded on attempt 2/3 (entries were changing under the walk)
+du -sb               : 7568693074	/scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train
+df -B1               : wekafs1/scratchssci 40000000000000 37393932206080 2606067793920 94% /weka/scratch/schmidt
+projected write      : 21474836480 B
+projected root total : 29043529554 B   (hard cap 536870912000 B = 500 GiB)
+group scratch free   : 2550000000000 B   (source: quotas.py; fail floor 1099511627776 B, warn floor 1649267441664 B)
+scratch_guard: OK  used=7568693074 B  projected_total=29043529554 B  group_free=2550000000000 B
+=== starting the loop: $SIM/codes/loop/synchronous_loop_9x9.sh ktg9 $SIM/ktg/loop t9 b7c96h3tfrs 1 ===
+FAKE LOOP ran: ktg9 $SIM/ktg/loop t9 b7c96h3tfrs 1
+=== loop exited rc=1 after 11s ===
+=== fast failure: 11s < 600s -- counting it twice ===
+=== failure rc=1 -- failcount now 2/3 ===
+=== chain continues, 1 attempt(s) left before the breaker ===
+wrapper exit=1  .failcount=2$|  .chain_depth=1$|  .cycles_completed=<absent>  breaker_tripped=no  STOP=no
+accounting lines: 1
+----- link: H2   (KTG_MIN_RUNTIME_SECONDS=<default 600>)
+=== chain depth 2/200, failcount 2/3, cycles completed so far 0 ===
+=== STOP present -- not resubmitting ===
+=== STOP present at entry -- nothing to do ===
+=== exit 0 before the loop started -- failcount left at 2 ===
+wrapper exit=0  .failcount=2$|  .chain_depth=2$|  .cycles_completed=<absent>  breaker_tripped=no  STOP=yes
+accounting lines: 1
+--- scheduler shim log
+SBATCH[800001] --parsable --partition=b200 --dependency=afterany:8001 $AZ/results/ktg/paper_1902.10565/codes/loop/loop.sbatch
+
+########## regression J: trap probes (probe copy)
+----- link: J1   (KTG_MIN_RUNTIME_SECONDS=<default 600>)
+=== chain depth 1/200, failcount 0/3, cycles completed so far 0 ===
+=== successor queued: 800001 (partition b200, dependency afterany:8101) ===
+=== TRAPPROBE subshells done ===
+=== starting the loop: $SIM/codes/loop/synchronous_loop_9x9.sh ktg9 $SIM/ktg/loop t9 b7c96h3tfrs 1 ===
+FAKE LOOP ran: ktg9 $SIM/ktg/loop t9 b7c96h3tfrs 1
+=== loop exited rc=1 after 5s ===
+=== fast failure: 5s < 600s -- counting it twice ===
+=== failure rc=1 -- failcount now 2/3 ===
+=== chain continues, 1 attempt(s) left before the breaker ===
+=== TRAPPROBE explicit double finalize done ===
+wrapper exit=1  .failcount=2$|  .chain_depth=1$|  .cycles_completed=<absent>  breaker_tripped=no  STOP=no
+accounting lines: 1
+--- scheduler shim log
+SBATCH[800001] --parsable --partition=b200 --dependency=afterany:8101 $SIM/loop_trapprobe.sbatch
+
+########## K1-K3: SIGTERM to the process group with the loop running, three consecutive links (KTG_MIN_RUNTIME_SECONDS=1)
+----- link: K1   (signal mode=pgrp, after 'starting the loop'; KTG_MIN_RUNTIME_SECONDS=1)
+=== chain depth 1/200, failcount 0/3, cycles completed so far 0 ===
+=== successor queued: 800001 (partition b200, dependency afterany:9001) ===
+=== starting the loop: $SIM/codes/loop/synchronous_loop_9x9.sh ktg9 $SIM/ktg/loop t9 b7c96h3tfrs 1 ===
+FAKE LOOP ran: ktg9 $SIM/ktg/loop t9 b7c96h3tfrs 1
+Terminated
+=== SIGTERM received -- scheduler termination (walltime or scancel); the queued successor is the resume path ===
+=== loop exited rc=143 after 6s ===
+=== scheduler termination at walltime after 6s (SIGTERM to this wrapper) -- successor continues, failcount left at 0 ===
+wrapper exit=143  .failcount=0$|  .chain_depth=1$|  .cycles_completed=<absent>  breaker_tripped=no  STOP=no
+accounting lines: 1
+----- link: K2   (signal mode=pgrp, after 'starting the loop'; KTG_MIN_RUNTIME_SECONDS=1)
+=== chain depth 2/200, failcount 0/3, cycles completed so far 0 ===
+=== successor queued: 800002 (partition b200, dependency afterany:9002) ===
+=== starting the loop: $SIM/codes/loop/synchronous_loop_9x9.sh ktg9 $SIM/ktg/loop t9 b7c96h3tfrs 1 ===
+FAKE LOOP ran: ktg9 $SIM/ktg/loop t9 b7c96h3tfrs 1
+Terminated
+=== SIGTERM received -- scheduler termination (walltime or scancel); the queued successor is the resume path ===
+=== loop exited rc=143 after 6s ===
+=== scheduler termination at walltime after 6s (SIGTERM to this wrapper) -- successor continues, failcount left at 0 ===
+wrapper exit=143  .failcount=0$|  .chain_depth=2$|  .cycles_completed=<absent>  breaker_tripped=no  STOP=no
+accounting lines: 1
+----- link: K3   (signal mode=pgrp, after 'starting the loop'; KTG_MIN_RUNTIME_SECONDS=1)
+=== chain depth 3/200, failcount 0/3, cycles completed so far 0 ===
+=== successor queued: 800003 (partition b200, dependency afterany:9003) ===
+=== starting the loop: $SIM/codes/loop/synchronous_loop_9x9.sh ktg9 $SIM/ktg/loop t9 b7c96h3tfrs 1 ===
+FAKE LOOP ran: ktg9 $SIM/ktg/loop t9 b7c96h3tfrs 1
+Terminated
+=== SIGTERM received -- scheduler termination (walltime or scancel); the queued successor is the resume path ===
+=== loop exited rc=143 after 6s ===
+=== scheduler termination at walltime after 6s (SIGTERM to this wrapper) -- successor continues, failcount left at 0 ===
+wrapper exit=143  .failcount=0$|  .chain_depth=3$|  .cycles_completed=<absent>  breaker_tripped=no  STOP=no
+accounting lines: 1
+--- scheduler shim log
+SBATCH[800001] --parsable --partition=b200 --dependency=afterany:9001 $AZ/results/ktg/paper_1902.10565/codes/loop/loop.sbatch
+SBATCH[800002] --parsable --partition=b200 --dependency=afterany:9002 $AZ/results/ktg/paper_1902.10565/codes/loop/loop.sbatch
+SBATCH[800003] --parsable --partition=b200 --dependency=afterany:9003 $AZ/results/ktg/paper_1902.10565/codes/loop/loop.sbatch
+
+########## K4: loop signalled, wrapper NOT signalled (stand-in with set -eu -o pipefail in the body, 'sleep 30 | cat'), three orderings
+----- link: K4a   (signal mode=child+loop, after 'starting the loop'; KTG_MIN_RUNTIME_SECONDS=1)
+=== chain depth 1/200, failcount 0/3, cycles completed so far 0 ===
+=== successor queued: 800001 (partition b200, dependency afterany:9004) ===
+=== starting the loop: $SIM/codes/loop/synchronous_loop_9x9.sh ktg9 $SIM/ktg/loop t9 b7c96h3tfrs 1 ===
+FAKE LOOP (set -eu -o pipefail in the body) ran: ktg9 $SIM/ktg/loop t9 b7c96h3tfrs 1
+Terminated
+Terminated
+=== loop exited rc=143 after 6s ===
+=== scheduler termination at walltime after 6s (loop status 143, this wrapper not signalled) -- successor continues, failcount left at 0 ===
+wrapper exit=143  .failcount=0$|  .chain_depth=1$|  .cycles_completed=<absent>  breaker_tripped=no  STOP=no
+accounting lines: 1
+--- scheduler shim log
+SBATCH[800001] --parsable --partition=b200 --dependency=afterany:9004 $AZ/results/ktg/paper_1902.10565/codes/loop/loop.sbatch
+----- link: K4b   (signal mode=loop-only, after 'starting the loop'; KTG_MIN_RUNTIME_SECONDS=1)
+=== chain depth 1/200, failcount 0/3, cycles completed so far 0 ===
+=== successor queued: 800001 (partition b200, dependency afterany:9014) ===
+=== starting the loop: $SIM/codes/loop/synchronous_loop_9x9.sh ktg9 $SIM/ktg/loop t9 b7c96h3tfrs 1 ===
+FAKE LOOP (set -eu -o pipefail in the body) ran: ktg9 $SIM/ktg/loop t9 b7c96h3tfrs 1
+Terminated
+=== loop exited rc=143 after 6s ===
+=== scheduler termination at walltime after 6s (loop status 143, this wrapper not signalled) -- successor continues, failcount left at 0 ===
+wrapper exit=143  .failcount=0$|  .chain_depth=1$|  .cycles_completed=<absent>  breaker_tripped=no  STOP=no
+accounting lines: 1
+--- scheduler shim log
+SBATCH[800001] --parsable --partition=b200 --dependency=afterany:9014 $AZ/results/ktg/paper_1902.10565/codes/loop/loop.sbatch
+----- link: K4c   (signal mode=child-only, after 'starting the loop'; KTG_MIN_RUNTIME_SECONDS=1)
+=== chain depth 1/200, failcount 0/3, cycles completed so far 0 ===
+=== successor queued: 800001 (partition b200, dependency afterany:9024) ===
+=== starting the loop: $SIM/codes/loop/synchronous_loop_9x9.sh ktg9 $SIM/ktg/loop t9 b7c96h3tfrs 1 ===
+FAKE LOOP (set -eu -o pipefail in the body) ran: ktg9 $SIM/ktg/loop t9 b7c96h3tfrs 1
+Terminated
+=== loop exited rc=143 after 6s ===
+=== scheduler termination at walltime after 6s (loop status 143, this wrapper not signalled) -- successor continues, failcount left at 0 ===
+wrapper exit=143  .failcount=0$|  .chain_depth=1$|  .cycles_completed=<absent>  breaker_tripped=no  STOP=no
+accounting lines: 1
+--- scheduler shim log
+SBATCH[800001] --parsable --partition=b200 --dependency=afterany:9024 $AZ/results/ktg/paper_1902.10565/codes/loop/loop.sbatch
+
+########## K5: wrapper only signalled, loop left alone (fake loop sleeps 6 s then exits 0)
+----- link: K5   (signal mode=wrapper-only, after 'starting the loop'; KTG_MIN_RUNTIME_SECONDS=1)
+=== chain depth 1/200, failcount 0/3, cycles completed so far 0 ===
+=== successor queued: 800001 (partition b200, dependency afterany:9005) ===
+=== starting the loop: $SIM/codes/loop/synchronous_loop_9x9.sh ktg9 $SIM/ktg/loop t9 b7c96h3tfrs 1 ===
+FAKE LOOP ran: ktg9 $SIM/ktg/loop t9 b7c96h3tfrs 1
+=== SIGTERM received -- scheduler termination (walltime or scancel); the queued successor is the resume path ===
+=== loop exited rc=0 after 12s ===
+=== scheduler termination at walltime after 12s (SIGTERM to this wrapper) -- successor continues, failcount left at 0 ===
+wrapper exit=0  .failcount=0$|  .chain_depth=1$|  .cycles_completed=<absent>  breaker_tripped=no  STOP=no
+accounting lines: 1
+--- scheduler shim log
+SBATCH[800001] --parsable --partition=b200 --dependency=afterany:9005 $AZ/results/ktg/paper_1902.10565/codes/loop/loop.sbatch
+
+########## K6: process-group SIGTERM on a link that starts with .failcount=2
+----- link: K6   (signal mode=pgrp, after 'starting the loop'; KTG_MIN_RUNTIME_SECONDS=1)
+=== chain depth 1/200, failcount 2/3, cycles completed so far 0 ===
+=== successor queued: 800001 (partition b200, dependency afterany:9006) ===
+=== starting the loop: $SIM/codes/loop/synchronous_loop_9x9.sh ktg9 $SIM/ktg/loop t9 b7c96h3tfrs 1 ===
+FAKE LOOP ran: ktg9 $SIM/ktg/loop t9 b7c96h3tfrs 1
+Terminated
+=== SIGTERM received -- scheduler termination (walltime or scancel); the queued successor is the resume path ===
+=== loop exited rc=143 after 6s ===
+=== scheduler termination at walltime after 6s (SIGTERM to this wrapper) -- successor continues, failcount left at 2 ===
+wrapper exit=143  .failcount=2$|  .chain_depth=1$|  .cycles_completed=<absent>  breaker_tripped=no  STOP=no
+accounting lines: 1
+--- scheduler shim log
+SBATCH[800001] --parsable --partition=b200 --dependency=afterany:9006 $AZ/results/ktg/paper_1902.10565/codes/loop/loop.sbatch
+
+########## M (control): SIGKILL to the process group
+----- link: M1   (signal mode=kill9, after 'starting the loop'; KTG_MIN_RUNTIME_SECONDS=1)
+./val4b_common.sh: line 76: 1827506 Killed                  SLURM_JOB_ID="$jid" setsid bash "$script" > "$SIM/out.txt" 2>&1
+=== chain depth 1/200, failcount 0/3, cycles completed so far 0 ===
+=== successor queued: 800001 (partition b200, dependency afterany:9201) ===
+=== starting the loop: $SIM/codes/loop/synchronous_loop_9x9.sh ktg9 $SIM/ktg/loop t9 b7c96h3tfrs 1 ===
+FAKE LOOP ran: ktg9 $SIM/ktg/loop t9 b7c96h3tfrs 1
+wrapper exit=137  .failcount=0$|  .chain_depth=1$|  .cycles_completed=<absent>  breaker_tripped=no  STOP=no
+accounting lines: 0
+--- scheduler shim log
+SBATCH[800001] --parsable --partition=b200 --dependency=afterany:9201 $AZ/results/ktg/paper_1902.10565/codes/loop/loop.sbatch
+
+########## L1: loop exit 3, no STOP (once at MIN_RUNTIME=1, once at the default 600)
+----- link: L1a   (KTG_MIN_RUNTIME_SECONDS=1)
+=== chain depth 1/200, failcount 0/3, cycles completed so far 0 ===
+=== successor queued: 800001 (partition b200, dependency afterany:9101) ===
+=== starting the loop: $SIM/codes/loop/synchronous_loop_9x9.sh ktg9 $SIM/ktg/loop t9 b7c96h3tfrs 1 ===
+FAKE LOOP ran: ktg9 $SIM/ktg/loop t9 b7c96h3tfrs 1
+=== loop exited rc=3 after 5s ===
+=== loop exit 3 with no $SIM/ktg/loop/STOP -- not a storage refusal, counting it as a failure ===
+=== failure rc=3 -- failcount now 1/3 ===
+=== chain continues, 2 attempt(s) left before the breaker ===
+wrapper exit=3  .failcount=1$|  .chain_depth=1$|  .cycles_completed=<absent>  breaker_tripped=no  STOP=no
+accounting lines: 1
+--- scheduler shim log
+SBATCH[800001] --parsable --partition=b200 --dependency=afterany:9101 $AZ/results/ktg/paper_1902.10565/codes/loop/loop.sbatch
+----- link: L1b   (KTG_MIN_RUNTIME_SECONDS=<default 600>)
+=== chain depth 1/200, failcount 0/3, cycles completed so far 0 ===
+=== successor queued: 800001 (partition b200, dependency afterany:9111) ===
+=== starting the loop: $SIM/codes/loop/synchronous_loop_9x9.sh ktg9 $SIM/ktg/loop t9 b7c96h3tfrs 1 ===
+FAKE LOOP ran: ktg9 $SIM/ktg/loop t9 b7c96h3tfrs 1
+=== loop exited rc=3 after 6s ===
+=== loop exit 3 with no $SIM/ktg/loop/STOP -- not a storage refusal, counting it as a failure ===
+=== fast failure: 6s < 600s -- counting it twice ===
+=== failure rc=3 -- failcount now 2/3 ===
+=== chain continues, 1 attempt(s) left before the breaker ===
+wrapper exit=3  .failcount=2$|  .chain_depth=1$|  .cycles_completed=<absent>  breaker_tripped=no  STOP=no
+accounting lines: 1
+--- scheduler shim log
+SBATCH[800001] --parsable --partition=b200 --dependency=afterany:9111 $AZ/results/ktg/paper_1902.10565/codes/loop/loop.sbatch
+
+########## L2: loop writes STOP then exits 3
+----- link: L2   (KTG_MIN_RUNTIME_SECONDS=<default 600>)
+=== chain depth 1/200, failcount 0/3, cycles completed so far 0 ===
+=== successor queued: 800001 (partition b200, dependency afterany:9102) ===
+=== starting the loop: $SIM/codes/loop/synchronous_loop_9x9.sh ktg9 $SIM/ktg/loop t9 b7c96h3tfrs 1 ===
+FAKE LOOP ran: ktg9 $SIM/ktg/loop t9 b7c96h3tfrs 1
+=== loop exited rc=3 after 5s ===
+=== the loop stopped on the storage guard ($SIM/ktg/loop/STOP present) -- treating as a deliberate chain stop ===
+=== deliberate chain stop (rc=3 after 5s) -- failcount left at 0 ===
+=== cancelling queued successor 800001 (storage guard stopped the chain) ===
+wrapper exit=3  .failcount=0$|  .chain_depth=1$|  .cycles_completed=<absent>  breaker_tripped=no  STOP=yes
+accounting lines: 2
+--- scheduler shim log
+SBATCH[800001] --parsable --partition=b200 --dependency=afterany:9102 $AZ/results/ktg/paper_1902.10565/codes/loop/loop.sbatch
+SCANCEL 800001
+
+########## N: process-group SIGTERM after the loop wrote STOP but before its exit 3, then the successor link
+----- link: N1   (signal mode=pgrp, after 'starting the loop'; KTG_MIN_RUNTIME_SECONDS=1)
+=== chain depth 1/200, failcount 0/3, cycles completed so far 0 ===
+=== successor queued: 800001 (partition b200, dependency afterany:9301) ===
+=== starting the loop: $SIM/codes/loop/synchronous_loop_9x9.sh ktg9 $SIM/ktg/loop t9 b7c96h3tfrs 1 ===
+FAKE LOOP ran: ktg9 $SIM/ktg/loop t9 b7c96h3tfrs 1
+Terminated
+=== SIGTERM received -- scheduler termination (walltime or scancel); the queued successor is the resume path ===
+=== loop exited rc=143 after 6s ===
+=== scheduler termination at walltime after 6s (SIGTERM to this wrapper) -- successor continues, failcount left at 0 ===
+wrapper exit=143  .failcount=0$|  .chain_depth=1$|  .cycles_completed=<absent>  breaker_tripped=no  STOP=yes
+accounting lines: 1
+----- link: N2   (KTG_MIN_RUNTIME_SECONDS=1)
+=== chain depth 2/200, failcount 0/3, cycles completed so far 0 ===
+=== STOP present -- not resubmitting ===
+=== STOP present at entry -- nothing to do ===
+=== exit 0 before the loop started -- failcount left at 0 ===
+wrapper exit=0  .failcount=0$|  .chain_depth=2$|  .cycles_completed=<absent>  breaker_tripped=no  STOP=yes
+accounting lines: 1
+--- scheduler shim log
+SBATCH[800001] --parsable --partition=b200 --dependency=afterany:9301 $AZ/results/ktg/paper_1902.10565/codes/loop/loop.sbatch
+
+########## O: no cycles recorded (fail, TERM, TERM, fail, TERM, fail) -- the count must still not decay
+----- link: O1   (KTG_MIN_RUNTIME_SECONDS=1)
+=== chain depth 1/200, failcount 0/3, cycles completed so far 0 ===
+=== successor queued: 800001 (partition b200, dependency afterany:9401) ===
+=== starting the loop: $SIM/codes/loop/synchronous_loop_9x9.sh ktg9 $SIM/ktg/loop t9 b7c96h3tfrs 1 ===
+FAKE LOOP ran: ktg9 $SIM/ktg/loop t9 b7c96h3tfrs 1
+=== loop exited rc=1 after 5s ===
+=== failure rc=1 -- failcount now 1/3 ===
+=== chain continues, 2 attempt(s) left before the breaker ===
+wrapper exit=1  .failcount=1$|  .chain_depth=1$|  .cycles_completed=<absent>  breaker_tripped=no  STOP=no
+accounting lines: 1
+----- link: O2   (signal mode=pgrp, after 'starting the loop'; KTG_MIN_RUNTIME_SECONDS=1)
+=== chain depth 2/200, failcount 1/3, cycles completed so far 0 ===
+=== successor queued: 800002 (partition b200, dependency afterany:9402) ===
+=== starting the loop: $SIM/codes/loop/synchronous_loop_9x9.sh ktg9 $SIM/ktg/loop t9 b7c96h3tfrs 1 ===
+FAKE LOOP ran: ktg9 $SIM/ktg/loop t9 b7c96h3tfrs 1
+Terminated
+=== SIGTERM received -- scheduler termination (walltime or scancel); the queued successor is the resume path ===
+=== loop exited rc=143 after 6s ===
+=== scheduler termination at walltime after 6s (SIGTERM to this wrapper) -- successor continues, failcount left at 1 ===
+wrapper exit=143  .failcount=1$|  .chain_depth=2$|  .cycles_completed=<absent>  breaker_tripped=no  STOP=no
+accounting lines: 1
+----- link: O3   (signal mode=pgrp, after 'starting the loop'; KTG_MIN_RUNTIME_SECONDS=1)
+=== chain depth 3/200, failcount 1/3, cycles completed so far 0 ===
+=== successor queued: 800003 (partition b200, dependency afterany:9403) ===
+=== starting the loop: $SIM/codes/loop/synchronous_loop_9x9.sh ktg9 $SIM/ktg/loop t9 b7c96h3tfrs 1 ===
+FAKE LOOP ran: ktg9 $SIM/ktg/loop t9 b7c96h3tfrs 1
+Terminated
+=== SIGTERM received -- scheduler termination (walltime or scancel); the queued successor is the resume path ===
+=== loop exited rc=143 after 7s ===
+=== scheduler termination at walltime after 7s (SIGTERM to this wrapper) -- successor continues, failcount left at 1 ===
+wrapper exit=143  .failcount=1$|  .chain_depth=3$|  .cycles_completed=<absent>  breaker_tripped=no  STOP=no
+accounting lines: 1
+----- link: O4   (KTG_MIN_RUNTIME_SECONDS=1)
+=== chain depth 4/200, failcount 1/3, cycles completed so far 0 ===
+=== successor queued: 800004 (partition b200, dependency afterany:9404) ===
+=== starting the loop: $SIM/codes/loop/synchronous_loop_9x9.sh ktg9 $SIM/ktg/loop t9 b7c96h3tfrs 1 ===
+FAKE LOOP ran: ktg9 $SIM/ktg/loop t9 b7c96h3tfrs 1
+=== loop exited rc=1 after 5s ===
+=== failure rc=1 -- failcount now 2/3 ===
+=== chain continues, 1 attempt(s) left before the breaker ===
+wrapper exit=1  .failcount=2$|  .chain_depth=4$|  .cycles_completed=<absent>  breaker_tripped=no  STOP=no
+accounting lines: 1
+----- link: O5   (signal mode=pgrp, after 'starting the loop'; KTG_MIN_RUNTIME_SECONDS=1)
+=== chain depth 5/200, failcount 2/3, cycles completed so far 0 ===
+=== successor queued: 800005 (partition b200, dependency afterany:9405) ===
+=== starting the loop: $SIM/codes/loop/synchronous_loop_9x9.sh ktg9 $SIM/ktg/loop t9 b7c96h3tfrs 1 ===
+FAKE LOOP ran: ktg9 $SIM/ktg/loop t9 b7c96h3tfrs 1
+Terminated
+=== SIGTERM received -- scheduler termination (walltime or scancel); the queued successor is the resume path ===
+=== loop exited rc=143 after 7s ===
+=== scheduler termination at walltime after 7s (SIGTERM to this wrapper) -- successor continues, failcount left at 2 ===
+wrapper exit=143  .failcount=2$|  .chain_depth=5$|  .cycles_completed=<absent>  breaker_tripped=no  STOP=no
+accounting lines: 1
+----- link: O6   (KTG_MIN_RUNTIME_SECONDS=1)
+=== chain depth 6/200, failcount 2/3, cycles completed so far 0 ===
+=== successor queued: 800006 (partition b200, dependency afterany:9406) ===
+=== starting the loop: $SIM/codes/loop/synchronous_loop_9x9.sh ktg9 $SIM/ktg/loop t9 b7c96h3tfrs 1 ===
+FAKE LOOP ran: ktg9 $SIM/ktg/loop t9 b7c96h3tfrs 1
+=== loop exited rc=1 after 5s ===
+=== failure rc=1 -- failcount now 3/3 ===
+=== circuit breaker tripped after 3 consecutive failures (last ran 5s) ===
+=== cancelling queued successor 800006 (circuit breaker tripped) ===
+wrapper exit=1  .failcount=3$|  .chain_depth=6$|  .cycles_completed=<absent>  breaker_tripped=yes  STOP=no
+accounting lines: 1
+--- scheduler shim log
+SBATCH[800001] --parsable --partition=b200 --dependency=afterany:9401 $AZ/results/ktg/paper_1902.10565/codes/loop/loop.sbatch
+SBATCH[800002] --parsable --partition=b200 --dependency=afterany:9402 $AZ/results/ktg/paper_1902.10565/codes/loop/loop.sbatch
+SBATCH[800003] --parsable --partition=b200 --dependency=afterany:9403 $AZ/results/ktg/paper_1902.10565/codes/loop/loop.sbatch
+SBATCH[800004] --parsable --partition=b200 --dependency=afterany:9404 $AZ/results/ktg/paper_1902.10565/codes/loop/loop.sbatch
+SBATCH[800005] --parsable --partition=b200 --dependency=afterany:9405 $AZ/results/ktg/paper_1902.10565/codes/loop/loop.sbatch
+SBATCH[800006] --parsable --partition=b200 --dependency=afterany:9406 $AZ/results/ktg/paper_1902.10565/codes/loop/loop.sbatch
+SCANCEL 800006
+
+########## P3: scenario O with a loop that records a cycle (REAL writer block) before the TERM links (fail, TERM+cycle, TERM+cycle, fail, TERM+cycle, fail)
+----- link: P3-1   (KTG_MIN_RUNTIME_SECONDS=1)
+=== chain depth 1/200, failcount 0/3, cycles completed so far 0 ===
+=== successor queued: 800001 (partition b200, dependency afterany:9411) ===
+=== starting the loop: $SIM/codes/loop/synchronous_loop_9x9.sh ktg9 $SIM/ktg/loop t9 b7c96h3tfrs 1 ===
+FAKE LOOP ran: ktg9 $SIM/ktg/loop t9 b7c96h3tfrs 1
+=== loop exited rc=1 after 4s ===
+=== failure rc=1 -- failcount now 1/3 ===
+=== chain continues, 2 attempt(s) left before the breaker ===
+wrapper exit=1  .failcount=1$|  .chain_depth=1$|  .cycles_completed=<absent>  breaker_tripped=no  STOP=no
+accounting lines: 1
+----- link: P3-2   (signal mode=pgrp, after 'starting the loop'; KTG_MIN_RUNTIME_SECONDS=1)
+=== chain depth 2/200, failcount 1/3, cycles completed so far 0 ===
+=== successor queued: 800002 (partition b200, dependency afterany:9412) ===
+=== starting the loop: $SIM/codes/loop/synchronous_loop_9x9.sh ktg9 $SIM/ktg/loop t9 b7c96h3tfrs 1 ===
+FAKE LOOP ran: ktg9 $SIM/ktg/loop t9 b7c96h3tfrs 1
+FAKE LOOP recorded a cycle: 1
+Terminated
+=== SIGTERM received -- scheduler termination (walltime or scancel); the queued successor is the resume path ===
+=== loop exited rc=143 after 6s ===
+=== scheduler termination at walltime after 6s (SIGTERM to this wrapper) -- successor continues; 1 cycle(s) completed, so failcount 1 is cleared ===
+wrapper exit=143  .failcount=0$|  .chain_depth=2$|  .cycles_completed=1$|  breaker_tripped=no  STOP=no
+accounting lines: 1
+----- link: P3-3   (signal mode=pgrp, after 'starting the loop'; KTG_MIN_RUNTIME_SECONDS=1)
+=== chain depth 3/200, failcount 0/3, cycles completed so far 1 ===
+=== successor queued: 800003 (partition b200, dependency afterany:9413) ===
+=== starting the loop: $SIM/codes/loop/synchronous_loop_9x9.sh ktg9 $SIM/ktg/loop t9 b7c96h3tfrs 1 ===
+FAKE LOOP ran: ktg9 $SIM/ktg/loop t9 b7c96h3tfrs 1
+FAKE LOOP recorded a cycle: 2
+Terminated
+=== SIGTERM received -- scheduler termination (walltime or scancel); the queued successor is the resume path ===
+=== loop exited rc=143 after 6s ===
+=== scheduler termination at walltime after 6s (SIGTERM to this wrapper) -- successor continues, failcount left at 0 ===
+wrapper exit=143  .failcount=0$|  .chain_depth=3$|  .cycles_completed=2$|  breaker_tripped=no  STOP=no
+accounting lines: 1
+----- link: P3-4   (KTG_MIN_RUNTIME_SECONDS=1)
+=== chain depth 4/200, failcount 0/3, cycles completed so far 2 ===
+=== successor queued: 800004 (partition b200, dependency afterany:9414) ===
+=== starting the loop: $SIM/codes/loop/synchronous_loop_9x9.sh ktg9 $SIM/ktg/loop t9 b7c96h3tfrs 1 ===
+FAKE LOOP ran: ktg9 $SIM/ktg/loop t9 b7c96h3tfrs 1
+=== loop exited rc=1 after 4s ===
+=== failure rc=1 -- failcount now 1/3 ===
+=== chain continues, 2 attempt(s) left before the breaker ===
+wrapper exit=1  .failcount=1$|  .chain_depth=4$|  .cycles_completed=2$|  breaker_tripped=no  STOP=no
+accounting lines: 1
+----- link: P3-5   (signal mode=pgrp, after 'starting the loop'; KTG_MIN_RUNTIME_SECONDS=1)
+=== chain depth 5/200, failcount 1/3, cycles completed so far 2 ===
+=== successor queued: 800005 (partition b200, dependency afterany:9415) ===
+=== starting the loop: $SIM/codes/loop/synchronous_loop_9x9.sh ktg9 $SIM/ktg/loop t9 b7c96h3tfrs 1 ===
+FAKE LOOP ran: ktg9 $SIM/ktg/loop t9 b7c96h3tfrs 1
+FAKE LOOP recorded a cycle: 3
+Terminated
+=== SIGTERM received -- scheduler termination (walltime or scancel); the queued successor is the resume path ===
+=== loop exited rc=143 after 6s ===
+=== scheduler termination at walltime after 6s (SIGTERM to this wrapper) -- successor continues; 1 cycle(s) completed, so failcount 1 is cleared ===
+wrapper exit=143  .failcount=0$|  .chain_depth=5$|  .cycles_completed=3$|  breaker_tripped=no  STOP=no
+accounting lines: 1
+----- link: P3-6   (KTG_MIN_RUNTIME_SECONDS=1)
+=== chain depth 6/200, failcount 0/3, cycles completed so far 3 ===
+=== successor queued: 800006 (partition b200, dependency afterany:9416) ===
+=== starting the loop: $SIM/codes/loop/synchronous_loop_9x9.sh ktg9 $SIM/ktg/loop t9 b7c96h3tfrs 1 ===
+FAKE LOOP ran: ktg9 $SIM/ktg/loop t9 b7c96h3tfrs 1
+=== loop exited rc=1 after 5s ===
+=== failure rc=1 -- failcount now 1/3 ===
+=== chain continues, 2 attempt(s) left before the breaker ===
+wrapper exit=1  .failcount=1$|  .chain_depth=6$|  .cycles_completed=3$|  breaker_tripped=no  STOP=no
+accounting lines: 1
+--- scheduler shim log
+SBATCH[800001] --parsable --partition=b200 --dependency=afterany:9411 $AZ/results/ktg/paper_1902.10565/codes/loop/loop.sbatch
+SBATCH[800002] --parsable --partition=b200 --dependency=afterany:9412 $AZ/results/ktg/paper_1902.10565/codes/loop/loop.sbatch
+SBATCH[800003] --parsable --partition=b200 --dependency=afterany:9413 $AZ/results/ktg/paper_1902.10565/codes/loop/loop.sbatch
+SBATCH[800004] --parsable --partition=b200 --dependency=afterany:9414 $AZ/results/ktg/paper_1902.10565/codes/loop/loop.sbatch
+SBATCH[800005] --parsable --partition=b200 --dependency=afterany:9415 $AZ/results/ktg/paper_1902.10565/codes/loop/loop.sbatch
+SBATCH[800006] --parsable --partition=b200 --dependency=afterany:9416 $AZ/results/ktg/paper_1902.10565/codes/loop/loop.sbatch
+
+########## P4: .failcount=2 at entry, the link completes one cycle then fails (floor 1)
+----- link: P4   (KTG_MIN_RUNTIME_SECONDS=1)
+=== chain depth 1/200, failcount 2/3, cycles completed so far 0 ===
+=== successor queued: 800001 (partition b200, dependency afterany:9421) ===
+=== starting the loop: $SIM/codes/loop/synchronous_loop_9x9.sh ktg9 $SIM/ktg/loop t9 b7c96h3tfrs 1 ===
+FAKE LOOP ran: ktg9 $SIM/ktg/loop t9 b7c96h3tfrs 1
+FAKE LOOP recorded a cycle: 1
+=== loop exited rc=1 after 5s ===
+=== this link completed 1 cycle(s) before failing -- the run of consecutive failures restarts, old count 2 dropped ===
+=== failure rc=1 -- failcount now 1/3 ===
+=== chain continues, 2 attempt(s) left before the breaker ===
+wrapper exit=1  .failcount=1$|  .chain_depth=1$|  .cycles_completed=1$|  breaker_tripped=no  STOP=no
+accounting lines: 1
+--- scheduler shim log
+SBATCH[800001] --parsable --partition=b200 --dependency=afterany:9421 $AZ/results/ktg/paper_1902.10565/codes/loop/loop.sbatch
+
+########## P5: three links that each complete a cycle then fail, at the default floor (the (r4) residual)
+----- link: P5-1   (KTG_MIN_RUNTIME_SECONDS=<default 600>)
+=== chain depth 1/200, failcount 0/3, cycles completed so far 0 ===
+=== successor queued: 800001 (partition b200, dependency afterany:9431) ===
+=== starting the loop: $SIM/codes/loop/synchronous_loop_9x9.sh ktg9 $SIM/ktg/loop t9 b7c96h3tfrs 1 ===
+FAKE LOOP ran: ktg9 $SIM/ktg/loop t9 b7c96h3tfrs 1
+FAKE LOOP recorded a cycle: 1
+=== loop exited rc=1 after 5s ===
+=== fast failure: 5s < 600s -- counting it twice ===
+=== failure rc=1 -- failcount now 2/3 ===
+=== chain continues, 1 attempt(s) left before the breaker ===
+wrapper exit=1  .failcount=2$|  .chain_depth=1$|  .cycles_completed=1$|  breaker_tripped=no  STOP=no
+accounting lines: 1
+----- link: P5-2   (KTG_MIN_RUNTIME_SECONDS=<default 600>)
+=== chain depth 2/200, failcount 2/3, cycles completed so far 1 ===
+=== successor queued: 800002 (partition b200, dependency afterany:9432) ===
+=== starting the loop: $SIM/codes/loop/synchronous_loop_9x9.sh ktg9 $SIM/ktg/loop t9 b7c96h3tfrs 1 ===
+FAKE LOOP ran: ktg9 $SIM/ktg/loop t9 b7c96h3tfrs 1
+FAKE LOOP recorded a cycle: 2
+=== loop exited rc=1 after 5s ===
+=== this link completed 1 cycle(s) before failing -- the run of consecutive failures restarts, old count 2 dropped ===
+=== fast failure: 5s < 600s -- counting it twice ===
+=== failure rc=1 -- failcount now 2/3 ===
+=== chain continues, 1 attempt(s) left before the breaker ===
+wrapper exit=1  .failcount=2$|  .chain_depth=2$|  .cycles_completed=2$|  breaker_tripped=no  STOP=no
+accounting lines: 1
+----- link: P5-3   (KTG_MIN_RUNTIME_SECONDS=<default 600>)
+=== chain depth 3/200, failcount 2/3, cycles completed so far 2 ===
+=== successor queued: 800003 (partition b200, dependency afterany:9433) ===
+=== starting the loop: $SIM/codes/loop/synchronous_loop_9x9.sh ktg9 $SIM/ktg/loop t9 b7c96h3tfrs 1 ===
+FAKE LOOP ran: ktg9 $SIM/ktg/loop t9 b7c96h3tfrs 1
+FAKE LOOP recorded a cycle: 3
+=== loop exited rc=1 after 5s ===
+=== this link completed 1 cycle(s) before failing -- the run of consecutive failures restarts, old count 2 dropped ===
+=== fast failure: 5s < 600s -- counting it twice ===
+=== failure rc=1 -- failcount now 2/3 ===
+=== chain continues, 1 attempt(s) left before the breaker ===
+wrapper exit=1  .failcount=2$|  .chain_depth=3$|  .cycles_completed=3$|  breaker_tripped=no  STOP=no
+accounting lines: 1
+--- scheduler shim log
+SBATCH[800001] --parsable --partition=b200 --dependency=afterany:9431 $AZ/results/ktg/paper_1902.10565/codes/loop/loop.sbatch
+SBATCH[800002] --parsable --partition=b200 --dependency=afterany:9432 $AZ/results/ktg/paper_1902.10565/codes/loop/loop.sbatch
+SBATCH[800003] --parsable --partition=b200 --dependency=afterany:9433 $AZ/results/ktg/paper_1902.10565/codes/loop/loop.sbatch
+
+########## cleanup
+ls: cannot access '$SIM': No such file or directory
+done 2026-09-04T03:41:19-04:00
+
+================================================================================
+val4a.sh source, verbatim
+================================================================================
+#!/bin/bash
+# Validator's independent harness, part A, for the FOURTH repair of node
+# arxiv-1902.10565::loop_resume_under_walltime (o35, non-blocking).
+# Login node, CPU only, no Slurm job, no GPU. The REAL loop script at HEAD 0c6d38d is
+# executed in PART 2 and PART 3; the pre-repair copies come from `git show cd6cbf2:...`.
+set -u
+AZ=$HOME/az
+RT=$RT
+SIM="$RT/simA"
+LOOPDIR="$AZ/results/ktg/paper_1902.10565/codes/loop"
+CODES="$AZ/results/ktg/paper_1902.10565/codes"
+REAL_LOOP="$LOOPDIR/synchronous_loop_9x9.sh"
+REAL_SBATCH="$LOOPDIR/loop.sbatch"
+PRE_LOOP="$RT/pre/synchronous_loop_9x9_pre.sh"
+PRE_SBATCH="$RT/pre/loop_pre.sbatch"
+rm -rf "$SIM"; mkdir -p "$SIM/probe" "$SIM/dummy" "$SIM/stage"
+filt() { sed -e "s#/weka$SIM#\$SIM#g" -e "s#$SIM#\$SIM#g" -e "s#/weka$RT#\$RT#g" -e "s#$RT#\$RT#g" -e "s#$AZ#\$AZ#g" -e "s#$HOME#\$HOME#g" -e '/^quotas.py /d' -e 's/dated\/[0-9]\{8\}-[0-9]\{6\}/dated\/<ts>/g'; }
+
+echo "########## PART 0: environment"
+echo "host    : $(hostname)   bash: $(bash --version | head -1)"
+echo "date    : $(date -Is)   az HEAD: $(cd "$AZ" && git rev-parse --short HEAD)   codes/ last commit: $(cd "$AZ" && git log -1 --format=%h -- results/ktg/paper_1902.10565/codes/)"
+(cd "$AZ" && git diff --quiet HEAD -- results/ktg/paper_1902.10565/codes/ && echo "codes/ working tree == HEAD" || echo "codes/ working tree DIFFERS from HEAD")
+echo "--- sha256 under test (HEAD)"
+(cd "$AZ" && sha256sum results/ktg/paper_1902.10565/codes/loop/synchronous_loop_9x9.sh results/ktg/paper_1902.10565/codes/loop/loop.sbatch results/ktg/paper_1902.10565/codes/loop/export_model_for_selfplay_9x9.sh results/ktg/paper_1902.10565/codes/loop/smoke_loop.sbatch results/ktg/paper_1902.10565/evidence/loop_resume/repair_o35.txt results/ktg/paper_1902.10565/evidence/loop_resume/candidate_rows_repair4.json)
+echo "--- sha256 pre-repair (cd6cbf2)"; sha256sum "$PRE_LOOP" "$PRE_SBATCH" | filt
+echo "--- files changed by the repair commit 0c6d38d (must not include smoke_loop.sbatch)"; (cd "$AZ" && git show --stat --format='%h %s' 0c6d38d | filt)
+echo "--- smoke_loop.sbatch identical at cd6cbf2 and HEAD?"; (cd "$AZ" && git diff --quiet cd6cbf2 HEAD -- results/ktg/paper_1902.10565/codes/loop/smoke_loop.sbatch && echo yes || echo NO)
+echo "--- queue at start"; squeue -u "$USER" -h -o '%i %j %T'
+echo
+
+echo "########## PART 1: static"
+for f in synchronous_loop_9x9.sh loop.sbatch export_model_for_selfplay_9x9.sh smoke_loop.sbatch; do bash -n "$LOOPDIR/$f"; echo "bash -n $f exit=$?"; done
+echo "--- 1.1 read_counter() at :160-167 and its call sites (every read of a state file must go through it)"
+awk 'NR>=160 && NR<=167 {printf "  :%d %s\n", NR, $0}' "$REAL_SBATCH"
+grep -n 'read_counter' "$REAL_SBATCH" | grep -v '^\s*[0-9]*:\s*#' | sed 's/^/  /'
+echo "--- 1.2 every cat of a state file in loop.sbatch (each must be inside read_counter or feed the WARNING comparison)"
+grep -n -E 'cat "\$(FAILCOUNT_FILE|CHAINDEPTH_FILE|CYCLES_FILE)"' "$REAL_SBATCH" | sed 's/^/  /'
+echo "--- 1.3 every \$(( )) in loop.sbatch and what it consumes"
+grep -n '\$((' "$REAL_SBATCH" | grep -v '^\s*[0-9]*:\s*#' | sed 's/^/  /'
+echo "--- 1.4 every [ ... -ge/-lt/-ne/-eq ... ] whose operand is an environment knob (not a state file: recorded, o33 d)"
+grep -n -E '\-(ge|lt|le|gt|eq|ne) "\$KTG_(MAX_FAILS|MAX_CHAIN|MIN_RUNTIME_SECONDS)"' "$REAL_SBATCH" | sed 's/^/  /'
+echo "--- 1.5 CHANGE 10 writer :308-324"
+awk 'NR>=308 && NR<=324 {printf "  :%d %s\n", NR, $0}' "$REAL_LOOP"
+echo "--- 1.6 read_counter in isolation (function extracted verbatim from HEAD with sed, not retyped)"
+sed -n '/^read_counter() {/,/^}/p' "$REAL_SBATCH" > "$SIM/probe/read_counter.fn"; echo "  extracted $(wc -l < "$SIM/probe/read_counter.fn") lines, md5 $(md5sum < "$SIM/probe/read_counter.fn" | cut -c1-12)"
+bash "$RT/probe/rc_probe.sh" "$SIM/probe/read_counter.fn" 2>&1 | filt
+echo "--- 1.7 DIFFERENTIAL: the loop's inline writer parse (:317-322, extracted verbatim) versus read_counter over the same seeds (must agree on every seed)"
+awk 'NR>=317 && NR<=322' "$REAL_LOOP" | sed -e 's/^    //' > "$SIM/probe/writer_parse.txt"
+cat "$SIM/probe/writer_parse.txt" | sed 's/^/    | /'
+printf '#!/bin/bash\nset -uo pipefail\n. "%s"\nwriter_parse() { local CYCLES_DONE="$1"\n%s\necho "$CYCLES_DONE"\n}\n' "$SIM/probe/read_counter.fn" "$(sed -e 's/^CYCLES_DONE=\$(cat.*$/:/' -e 's/^CYCLES_DONE=\$(( 10#\$CYCLES_DONE + 1 ))$/CYCLES_DONE=$(( 10#$CYCLES_DONE ))/' "$SIM/probe/writer_parse.txt")" > "$SIM/probe/diff_parse.sh"
+cat >> "$SIM/probe/diff_parse.sh" <<'EOF'
+n=0; bad=0
+for s in 08 09 007 abc '' ' 5' '5 ' '-1' 1e3 0x10 '+7' 99999999999999999999 999999999999999999 1000000000000000000 0000000000000000001 000000000000000001 $'5\r' $'5\r\n' $'\t5\t' $'5\n6' '  ' '*' 9223372036854775807 '5 5' 0 1 42; do
+  a=$(read_counter "$s"); b=$(writer_parse "$s"); n=$((n+1)); [ "$a" = "$b" ] || { bad=$((bad+1)); printf '  DISAGREE seed=%q read_counter=%s writer=%s\n' "$s" "$a" "$b"; }
+done
+echo "  seeds=$n disagreements=$bad"
+EOF
+bash "$SIM/probe/diff_parse.sh" 2>&1 | filt
+echo "--- 1.8 writer audit: any padded integer writer under codes/ ? (printf %0Nd, seq -w)"; grep -rn -E 'printf .*%0[0-9]+d|seq -w' "$CODES/" | filt; echo "  grep exit=$? (1 = none)"
+echo "--- 1.9 every write of a state file (must be an unpadded \$(( )) result or a literal 0)"; grep -n -E '> "?\$(BASEDIR"?/\.cycles_completed|FAILCOUNT_FILE|CHAINDEPTH_FILE)' "$REAL_SBATCH" "$REAL_LOOP" | filt | sed 's/^/  /'
+echo "--- 1.10 is any state-file write checked for failure? (a write that fails leaves the count where it was)"; grep -n -E '> "\$(FAILCOUNT_FILE|CHAINDEPTH_FILE)"( *\|\||.*then)' "$REAL_SBATCH"; echo "  grep exit=$? (1 = no write is checked)"
+echo "--- literal grep (o27) over loop.sbatch + synchronous_loop_9x9.sh"; grep -n -E '214748364800|193273528320|536870912000|1099511627776|du -sb "|/apps/helpers/quotas.py' "$REAL_SBATCH" "$REAL_LOOP"; echo "grep exit=$?"
+echo "--- literal grep (o27) over all of codes/loop/"; grep -rn -E '214748364800|193273528320|536870912000|1099511627776|du -sb "|/apps/helpers/quotas.py' "$LOOPDIR/" | filt; echo "grep exit=$?"
+echo "--- o08"; grep -rn 'export_model\.py' "$CODES/"; echo "grep exit=$?"
+echo "--- anything in codes/loop/ removing STOP or .cycles_completed?"; grep -n -E 'rm .*(STOP|cycles_completed)' "$LOOPDIR"/loop.sbatch "$LOOPDIR"/synchronous_loop_9x9.sh; echo "grep exit=$?"
+echo
+
+echo "########## PART 2: the REAL loop script, KTG_ONE_CYCLE=1, stand-in git tree with dummy stages, seeded .cycles_completed (BEFORE = cd6cbf2 copy, AFTER = HEAD)"
+mkrepo() { local d="$1"; rm -rf "$d"; mkdir -p "$d/python/selfplay" "$d/python/katago" "$d/python/muon" "$d/cpp/build"
+  printf '# dummy\n' > "$d/python/a.py"; printf '# dummy\n' > "$d/python/b.py"; printf '# dummy\n' > "$d/python/selfplay/s.py"
+  printf '#!/bin/bash\necho "DUMMY shuffle.sh $*"; exit 0\n' > "$d/python/selfplay/shuffle.sh"; chmod +x "$d/python/selfplay/shuffle.sh"
+  printf '' > "$d/python/katago/__init__.py"; printf '' > "$d/python/muon/__init__.py"
+  printf '#!/bin/bash\necho "DUMMY ENGINE $*"; exit 0\n' > "$d/cpp/build/katago"; chmod +x "$d/cpp/build/katago"
+  (cd "$d" && git init -q && git config user.email v@x && git config user.name v && git add -A && git commit -q -m init) ; }
+mkrepo "$SIM/repo"
+printf '#!/bin/bash\necho "DUMMY train_9x9.sh $*"; exit 0\n' > "$SIM/dummy/train_9x9.sh"
+printf '#!/bin/bash\necho "DUMMY export $*"; exit 0\n' > "$SIM/dummy/export_9x9.sh"
+printf '#!/bin/bash\necho "FASTGUARD ok"; exit 0\n' > "$SIM/dummy/fastguard.sh"
+chmod +x "$SIM"/dummy/*
+export KTG_CODES="$CODES" TRAIN_WRAPPER="$SIM/dummy/train_9x9.sh" EXPORT_WRAPPER="$SIM/dummy/export_9x9.sh"
+one_cycle() { local script="$1" base="$2"; ( cd "$SIM/repo" && KATAGO_SRC="$SIM/repo" KATAGO_BIN="$SIM/repo/cpp/build/katago" KTG_SCRATCH_GUARD="$SIM/dummy/fastguard.sh" KTG_ONE_CYCLE=1 bash "$script" ktg9 "$base" t9 b7c96h3tfrs 1 ) > "$SIM/out.txt" 2>&1; echo $?; }
+echo "--- W1: two clean cycles through the REAL script on a fresh BASEDIR (real scratch guard on the first, fast guard on the second)"
+rm -rf "$SIM/stage/W1"; mkdir -p "$SIM/stage/W1"
+( cd "$SIM/repo" && KATAGO_SRC="$SIM/repo" KATAGO_BIN="$SIM/repo/cpp/build/katago" KTG_ONE_CYCLE=1 bash "$REAL_LOOP" ktg9 "$SIM/stage/W1" t9 b7c96h3tfrs 1 ) > "$SIM/out.txt" 2>&1; rc=$?
+grep -E 'cycle .* complete|scratch_guard:|Gatekeeper' "$SIM/out.txt" | filt | sed 's/^/    /'; echo "    -> W1 cycle 1 exit=$rc  .cycles_completed=$(cat "$SIM/stage/W1/.cycles_completed")"
+rc=$(one_cycle "$REAL_LOOP" "$SIM/stage/W1"); grep -E 'cycle .* complete' "$SIM/out.txt" | filt | sed 's/^/    /'; echo "    -> W1 cycle 2 exit=$rc  .cycles_completed=$(cat "$SIM/stage/W1/.cycles_completed")"
+echo "--- W2: seeded .cycles_completed, KTG_ONE_CYCLE=1, fast guard; BEFORE then AFTER for every seed"
+seedfile() { local f="$1" s="$2"; rm -rf "$f"; case "$s" in
+  '<missing>') ;; '<newline>') printf '5\n' > "$f" ;; '<space>') printf '5 ' > "$f" ;; '<crlf>') printf '5\r\n' > "$f" ;; '<nul>') printf '5\0' > "$f" ;; '<nulmid>') printf '5\0007' > "$f" ;; '<dir>') mkdir -p "$f" ;;
+  *) printf '%s' "$s" > "$f" ;; esac; }
+showfile() { local f="$1"; if [ -d "$f" ]; then echo '<dir>'; elif [ -e "$f" ]; then cat -A "$f" | tr '\n' '|'; else echo '<absent>'; fi; }
+for v in before after; do s="$REAL_LOOP"; [ $v = before ] && s="$PRE_LOOP"; b="$SIM/stage/W2_$v"; rm -rf "$b"; mkdir -p "$b"
+  rc=$(one_cycle "$s" "$b"); echo "  [$v] warm-up cycle exit=$rc file=$(showfile "$b/.cycles_completed")"
+  for seed in 08 09 007 abc '' '<missing>' '<newline>' '<space>' -1 1e3 0x10 '+7' 99999999999999999999 ' 5' '5 ' 999999999999999999 1000000000000000000 0000000000000000001 '<crlf>' '<nul>' '<nulmid>' '<dir>'; do
+    seedfile "$b/.cycles_completed" "$seed"
+    rc=$(one_cycle "$s" "$b")
+    printf '  [%s] seed=%-24s -> exit=%s  file after=%-24s  msg: %s\n' "$v" "'$seed'" "$rc" "'$(showfile "$b/.cycles_completed")'" "$(grep -E 'cycle .* complete|value too great|error token|syntax error|Is a directory|ignored null byte' "$SIM/out.txt" | head -2 | tr '\n' ' ' | filt)"
+  done
+done
+echo
+
+echo "########## PART 3: KTG_STAGE_ONLY=1 from the REAL scratch clone, 'bash <script>' form, BEFORE (cd6cbf2) and AFTER (HEAD)"
+( source /scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/env.sh >/dev/null 2>&1 || { echo "env.sh failed"; exit 1; }
+  echo "KATAGO_SRC=$KATAGO_SRC  git HEAD $(git -C "$KATAGO_SRC" rev-parse --short HEAD)  KATAGO_BIN size $(stat -c %s "$KATAGO_BIN")"
+  unset TRAIN_WRAPPER EXPORT_WRAPPER
+  for v in before after; do s="$REAL_LOOP"; [ $v = before ] && s="$PRE_LOOP"; b="$RT/stage_$v"; rm -rf "$b"; mkdir -p "$b"
+    ( cd "$KATAGO_SRC" && KTG_STAGE_ONLY=1 bash "$s" ktg9 "$b" t9 b7c96h3tfrs 1 ) > "$SIM/out.txt" 2>&1; rc=$?
+    filt < "$SIM/out.txt" | sed 's/^/    /'; echo "  [$v] STAGE_EXIT=$rc"
+    arc=$(ls -d "$b"/scripts/dated/*/ | head -1)
+    ( cd "$arc" && find . -type f | sort | xargs sha256sum ) > "$SIM/manifest_$v"
+    echo "  [$v] files: $(wc -l < "$SIM/manifest_$v")  bytes: $(du -sb "$arc" | cut -f1)"
+    cmp "$arc/bin/katago" "$KATAGO_BIN"; echo "  [$v] cmp bin/katago \$KATAGO_BIN exit=$?"
+    cmp "$arc/selfplay.cfg" "$CODES/cfg/selfplay_9x9.cfg"; echo "  [$v] cmp selfplay.cfg exit=$?  dataBoardLen: $(grep -E '^dataBoardLen' "$arc/selfplay.cfg")"
+  done
+  diff "$SIM/manifest_before" "$SIM/manifest_after" && echo "  manifest diff exit=0 (byte-identical staging before/after)"
+  rm -rf "$RT/stage_before" "$RT/stage_after"; echo "  staged archives removed"
+)
+echo
+
+echo "########## PART 5: closing checks in a clean environment (real PATH, no shims)"
+( unset KTG_ROOT KTG_CODES BASEDIR KTG_LOOP_SBATCH KTG_BUDGET_ENV AZ_ROOT TRAIN_WRAPPER EXPORT_WRAPPER KTG_MIN_RUNTIME_SECONDS; cd "$AZ" || exit 1
+  echo "sbatch resolves to: $(command -v sbatch)"
+  bash -n results/ktg/paper_1902.10565/codes/loop/loop.sbatch && grep -q afterany results/ktg/paper_1902.10565/codes/loop/loop.sbatch && grep -q failcount results/ktg/paper_1902.10565/codes/loop/loop.sbatch && grep -q 'cpp/build/katago' results/ktg/paper_1902.10565/codes/loop/synchronous_loop_9x9.sh && ! grep -q 'cpp/katago"' results/ktg/paper_1902.10565/codes/loop/synchronous_loop_9x9.sh && bash "$(python3 -c 'import json;print(json.load(open("mission.json"))["compute"]["policyCheck"])')" --gpus 1 --cpus 24 --partition b200
+  echo "SECTION2_EXIT=$?"
+  echo "grep -c afterany=$(grep -c afterany results/ktg/paper_1902.10565/codes/loop/loop.sbatch) failcount=$(grep -c failcount results/ktg/paper_1902.10565/codes/loop/loop.sbatch) cpp/build/katago=$(grep -c 'cpp/build/katago' results/ktg/paper_1902.10565/codes/loop/synchronous_loop_9x9.sh) cpp/katago\"=$(grep -c 'cpp/katago"' results/ktg/paper_1902.10565/codes/loop/synchronous_loop_9x9.sh)"
+  echo "--- vendor / model name sweep over the artifacts, evidence and candidate (case-insensitive; empty = clean)"
+  grep -rn -i -E "$(cat "$RT/sweep.pat")" results/ktg/paper_1902.10565/codes/loop/ results/ktg/paper_1902.10565/evidence/loop_resume/repair_o35.txt results/ktg/paper_1902.10565/evidence/loop_resume/candidate_rows_repair4.json | head -5; echo "sweep grep exit=${PIPESTATUS[0]} (1 = clean)"
+  echo "--- queue (must not have been touched)"; squeue -u "$USER" -h -o '%i %j %T' )
+echo
+echo "########## cleanup"; rm -rf "$SIM"; ls -d "$SIM" 2>&1 | filt; echo "done $(date -Is)"
+
+================================================================================
+val4b_common.sh source, verbatim
+================================================================================
+#!/bin/bash
+# Shared preamble for the validator's part B harnesses (fourth repair, o35): the wrapper
+# loop.sbatch at HEAD 0c6d38d under the validator's own PATH shims, stand-in loops, real
+# mission.json, real check.sh, real codes/data_budget/ tools. No Slurm job, no GPU.
+# Usage: source val4b_common.sh <simname>
+set -u
+AZ=$HOME/az
+RT=$RT
+SIM="$RT/$1"
+DB="$AZ/results/ktg/paper_1902.10565/codes/data_budget"
+LOOPDIR="$AZ/results/ktg/paper_1902.10565/codes/loop"
+REAL_SBATCH="$LOOPDIR/loop.sbatch"
+REAL_LOOP="$LOOPDIR/synchronous_loop_9x9.sh"
+PRE_SBATCH="$RT/pre/loop_pre.sbatch"
+rm -rf "$SIM"; mkdir -p "$SIM/bin" "$SIM/ktg/loop" "$SIM/ktg/logs" "$SIM/codes/loop" "$SIM/src"
+cat > "$SIM/bin/sbatch" <<'EOF'
+#!/bin/bash
+n=$(cat "$VAL_JOBCTR" 2>/dev/null || echo 800000); n=$((n+1)); echo "$n" > "$VAL_JOBCTR"
+echo "SBATCH[$n] $*" >> "$VAL_SHIMLOG"; echo "$n"
+EOF
+cat > "$SIM/bin/scancel" <<'EOF'
+#!/bin/bash
+echo "SCANCEL $*" >> "$VAL_SHIMLOG"
+EOF
+for c in sinfo sacct scontrol squeue nvidia-smi; do printf '#!/bin/bash\nexit 0\n' > "$SIM/bin/$c"; done
+chmod +x "$SIM"/bin/*
+export VAL_SHIMLOG="$SIM/shim.log" VAL_JOBCTR="$SIM/jobctr"
+export PATH="$SIM/bin:$PATH"
+ln -s "$DB" "$SIM/codes/data_budget"
+printf 'export KATAGO_SRC=%s\nexport KATAGO_BIN=%s/katago\n' "$SIM/src" "$SIM/src" > "$SIM/ktg/env.sh"
+
+# the loop's CHANGE 10 writer block, extracted VERBATIM from HEAD (:317-323) for the cycle-recording stand-in
+awk 'NR>=317 && NR<=323' "$REAL_LOOP" | sed -e 's/^    //' -e "s#\"\$BASEDIR\"/#$SIM/ktg/loop/#g" > "$SIM/writer_block.sh"
+
+fake_loop() { printf '#!/bin/bash\necho "FAKE LOOP ran: $*"\n%s\n' "$1" > "$SIM/codes/loop/synchronous_loop_9x9.sh"; chmod +x "$SIM/codes/loop/synchronous_loop_9x9.sh"; }
+# a stand-in that records one completed cycle with the REAL writer block (set -e like the real script), then does $1
+cycle_loop() { { printf '#!/bin/bash\nset -eu -o pipefail\necho "FAKE LOOP ran: $*"\nCYCLE_INDEX=1\n'; cat "$SIM/writer_block.sh"; printf 'set +e\necho "FAKE LOOP recorded a cycle: $(cat %s/.cycles_completed)"\n%s\n' "$SIM/ktg/loop" "$1"; } > "$SIM/codes/loop/synchronous_loop_9x9.sh"; chmod +x "$SIM/codes/loop/synchronous_loop_9x9.sh"; }
+eu_loop() { printf '#!/bin/bash -eu\nset -eu -o pipefail\necho "FAKE LOOP (set -eu -o pipefail in the body) ran: $*"\nsleep 30 | cat\nexit 0\n' > "$SIM/codes/loop/synchronous_loop_9x9.sh"; chmod +x "$SIM/codes/loop/synchronous_loop_9x9.sh"; }
+
+export AZ_ROOT="$AZ" KTG_ROOT="$SIM/ktg" KTG_CODES="$SIM/codes" BASEDIR="$SIM/ktg/loop" KTG_LOOP_SBATCH="$REAL_SBATCH"
+
+reset_state() { chmod -R u+rwx "$BASEDIR" 2>/dev/null; rm -rf "$BASEDIR/.failcount" "$BASEDIR/.chain_depth" "$BASEDIR/.breaker_tripped" "$BASEDIR/STOP" "$BASEDIR/.cycles_completed"; : > "$VAL_SHIMLOG"; echo 800000 > "$VAL_JOBCTR"; }
+showf() { local f="$1"; if [ -d "$f" ]; then echo '<dir>'; elif [ -e "$f" ]; then cat -A "$f" 2>/dev/null | tr '\n' '|' || echo '<unreadable>'; else echo '<absent>'; fi; }
+state() { printf '.failcount=%s  .chain_depth=%s  .cycles_completed=%s  breaker_tripped=%s  STOP=%s' "$(showf "$BASEDIR/.failcount")" "$(showf "$BASEDIR/.chain_depth")" "$(showf "$BASEDIR/.cycles_completed")" "$([ -e "$BASEDIR/.breaker_tripped" ] && echo yes || echo no)" "$([ -e "$BASEDIR/STOP" ] && echo yes || echo no)"; }
+filt() { sed -e "s#$SIM#\$SIM#g" -e "s#$AZ#\$AZ#g" -e 's/=== \[[^]]*\] /=== /' -e '/^== scratch_guard/,/^scratch_guard: /d' -e '/^== prune_retention/,/removed [0-9]* paths/{/removed [0-9]* paths/!d}' -e '/^== compute-budget self-check/,/^OK  *: request/d' -e '/^quotas.py /d' -e '/^   PROTECT /d' -e '/^-- /d' -e '/(nothing to remove)/d' -e '/^   *[a-z_]* *: /d' "$1"; }
+acct() { echo "accounting lines: $(grep -c -E 'failure rc=|clean exit|PRE-FLIGHT|scheduler termination at|deliberate chain stop|exit 0 before the loop' "$SIM/out.txt")"; }
+# did finalize reach its last statement? every branch ends in one of these lines
+fin_end() { if grep -q -E 'chain continues, |circuit breaker tripped after|cancelling queued successor|no queued successor to cancel|scheduler termination at walltime|clean exit -- failcount|exit 0 before the loop started|deliberate chain stop' "$SIM/out.txt"; then echo "finalize_end=yes"; else echo "finalize_end=NO"; fi; }
+# invariant: SCANCEL in the shim log iff the breaker tripped, a pre-flight failure, or a deliberate stop
+cancel_check() { local c t; c=$(grep -c SCANCEL "$VAL_SHIMLOG"); if grep -q -E 'circuit breaker tripped after|pre-flight failure -- the successor|storage guard stopped' "$SIM/out.txt"; then t=1; else t=0; fi
+  if { [ "$t" -eq 1 ] && [ "$c" -ge 1 ]; } || { [ "$t" -eq 0 ] && [ "$c" -eq 0 ]; }; then echo "cancel_iff_trip=ok"; else echo "cancel_iff_trip=VIOLATED (scancel=$c trip=$t)"; fi; }
+link() { local script="${3:-$REAL_SBATCH}" rc; echo "----- link: $1   (KTG_MIN_RUNTIME_SECONDS=${KTG_MIN_RUNTIME_SECONDS:-<default 600>})"; SLURM_JOB_ID="$2" bash "$script" > "$SIM/out.txt" 2>&1; rc=$?; filt "$SIM/out.txt" | grep -v -E '^=== (loop.sbatch job|BASEDIR=|compute-budget pre-flight|sourcing|startup sweep|startup retention prune|scratch guard \()'; echo "wrapper exit=$rc  $(state)"; acct; }
+# compact link: one block per seeded run, with the automatic checks
+clink() { local label="$1" jid="$2" script="${3:-$REAL_SBATCH}" rc
+  SLURM_JOB_ID="$jid" bash "$script" > "$SIM/out.txt" 2>&1; rc=$?
+  echo "  [$label]"
+  grep -E 'WARNING|value too great|error token|unbound variable|syntax error|integer expression|Is a directory|Permission denied|ignored null byte|chain depth|failure rc=|circuit breaker|cancelling|no queued successor|scheduler termination|clean exit|exit 0 before|deliberate|chain continues|completed .* cycle|breaker already|not resubmitting|FAKE LOOP recorded' "$SIM/out.txt" | filt /dev/stdin | sed 's/^/      /'
+  echo "      wrapper exit=$rc  $(state)"; echo "      $(fin_end)  $(cancel_check)  $(acct)"
+  echo "      shim: $(if [ -s "$VAL_SHIMLOG" ]; then sed -e "s#$SIM#\$SIM#g" -e "s#$AZ#\$AZ#g" -e 's/ --parsable.*loop.sbatch$//' "$VAL_SHIMLOG" | tr '\n' ' '; else echo '(no sbatch, no scancel)'; fi)"; }
+siglink() {
+  local label="$1" jid="$2" mode="$3" script="${4:-$REAL_SBATCH}" waitfor="${5:-starting the loop}" pid lp rc i
+  echo "----- link: $label   (signal mode=$mode, after '$waitfor'; KTG_MIN_RUNTIME_SECONDS=${KTG_MIN_RUNTIME_SECONDS:-<default 600>})"
+  SLURM_JOB_ID="$jid" setsid bash "$script" > "$SIM/out.txt" 2>&1 &
+  pid=$!
+  for i in $(seq 1 120); do grep -q -- "$waitfor" "$SIM/out.txt" 2>/dev/null && break; sleep 0.5; done
+  sleep 1
+  lp=$(pgrep -P "$pid" -f synchronous_loop_9x9.sh | head -1)
+  case "$mode" in
+    pgrp)         kill -TERM -- "-$pid" ;;
+    loop-only)    [ -n "$lp" ] && kill -TERM "$lp" ;;
+    child+loop)   [ -n "$lp" ] && { pkill -TERM -P "$lp"; kill -TERM "$lp"; } ;;
+    child-only)   [ -n "$lp" ] && pkill -TERM -P "$lp" ;;
+    wrapper-only) kill -TERM "$pid" ;;
+    kill9)        kill -KILL -- "-$pid" ;;
+  esac
+  wait "$pid"; rc=$?
+  pkill -KILL -g "$pid" 2>/dev/null; pkill -KILL -f "$SIM/codes/loop/synchronous_loop_9x9.sh" 2>/dev/null
+  filt "$SIM/out.txt" | grep -v -E '^=== (loop.sbatch job|BASEDIR=|compute-budget pre-flight|sourcing|startup sweep|startup retention prune|scratch guard \()'; echo "wrapper exit=$rc  $(state)"; acct
+}
+shimlog() { echo "--- scheduler shim log"; if [ -s "$VAL_SHIMLOG" ]; then sed -e "s#$SIM#\$SIM#g" -e "s#$AZ#\$AZ#g" "$VAL_SHIMLOG"; else echo "(no sbatch, no scancel)"; fi; }
+seedfile() { local f="$1" s="$2"; rm -rf "$f"; case "$s" in
+  '<missing>') ;; '<newline>') printf '%s\n' "$3" > "$f" ;; '<space>') printf '%s ' "$3" > "$f" ;; '<crlf>') printf '%s\r\n' "$3" > "$f" ;; '<nul>') printf '%s\0' "$3" > "$f" ;; '<dir>') mkdir -p "$f" ;;
+  '<unreadable>') printf '%s' "$3" > "$f"; chmod 000 "$f" ;; '<readonly>') printf '%s' "$3" > "$f"; chmod 444 "$f" ;;
+  *) printf '%s' "$s" > "$f" ;; esac; }
+echo "########## environment"
+echo "host: $(hostname)  date: $(date -Is)  az HEAD: $(cd "$AZ" && git rev-parse --short HEAD)  loop.sbatch sha256: $(sha256sum "$REAL_SBATCH" | cut -c1-16)...  pre-repair copy: $(sha256sum "$PRE_SBATCH" | cut -c1-16)...  shims: $(ls "$SIM/bin" | tr '\n' ' ')"
+echo "writer block used by cycle_loop (verbatim from synchronous_loop_9x9.sh :317-323, BASEDIR substituted):"; sed 's/^/    | /' "$SIM/writer_block.sh" | sed -e "s#$SIM#\$SIM#g"
+echo
+
+================================================================================
+val4b1.sh source, verbatim
+================================================================================
+#!/bin/bash
+# Part B1: the seed matrix through the WHOLE wrapper for the three state files, then new
+# attacks on read_counter and on the state-file writes.
+. "$(dirname "$0")/val4b_common.sh" simB1
+SEEDS=(08 09 007 abc '' '<missing>' '<newline>' '<space>' -1 1e3 0x10 '+7' 99999999999999999999 ' 5' '5 ')
+unset KTG_MIN_RUNTIME_SECONDS
+
+echo "########## T1: .cycles_completed seeded at entry, .failcount=2, failing loop (records nothing), default floor"
+echo "########## expected AFTER: every seed -> 'failcount now 4/3', breaker, SCANCEL; finalize_end=yes; BEFORE shown for 08, abc, +7, ' 5'"
+for seed in "${SEEDS[@]}"; do
+  for v in after before; do
+    [ $v = before ] && case "$seed" in 08|abc|'+7'|' 5') ;; *) continue ;; esac
+    s="$REAL_SBATCH"; [ $v = before ] && s="$PRE_SBATCH"
+    reset_state; seedfile "$BASEDIR/.cycles_completed" "$seed" 5; echo 2 > "$BASEDIR/.failcount"; fake_loop 'exit 1'
+    KTG_LOOP_SBATCH="$s" clink "$v seed='$seed'" 9910 "$s"
+  done
+done
+echo
+echo "########## T2: .failcount seeded at entry, no .cycles_completed, failing loop, default floor"
+echo "########## expected AFTER: WARNING when raw != read; value >=3 -> post-trip guard at entry (exit 0, no sbatch); otherwise read+2, written; finalize_end=yes"
+for seed in "${SEEDS[@]}"; do
+  for v in after before; do
+    [ $v = before ] && case "$seed" in 08|abc|'+7'|' 5') ;; *) continue ;; esac
+    s="$REAL_SBATCH"; [ $v = before ] && s="$PRE_SBATCH"
+    reset_state; seedfile "$BASEDIR/.failcount" "$seed" 2; fake_loop 'exit 1'
+    KTG_LOOP_SBATCH="$s" clink "$v seed='$seed'" 9920 "$s"
+  done
+done
+echo
+echo "########## T3: .chain_depth seeded at entry, failing loop, default floor"
+echo "########## expected AFTER: WARNING when raw != read; depth = read+1 written; successor queued unless depth >= 200; finalize_end=yes"
+for seed in "${SEEDS[@]}" 199 999999999999999999; do
+  for v in after before; do
+    [ $v = before ] && case "$seed" in 08|abc|'+7'|' 5') ;; *) continue ;; esac
+    s="$REAL_SBATCH"; [ $v = before ] && s="$PRE_SBATCH"
+    reset_state; seedfile "$BASEDIR/.chain_depth" "$seed" 5; fake_loop 'exit 1'
+    KTG_LOOP_SBATCH="$s" clink "$v seed='$seed'" 9930 "$s"
+  done
+done
+echo
+
+echo "########## T4: the o35 crash-loop seed end to end: .cycles_completed=08, .failcount=2, a loop that records a cycle with the REAL writer block then fails"
+for v in before after; do s="$REAL_SBATCH"; [ $v = before ] && s="$PRE_SBATCH"
+  reset_state; printf '08' > "$BASEDIR/.cycles_completed"; echo 2 > "$BASEDIR/.failcount"; cycle_loop 'exit 1'; KTG_LOOP_SBATCH="$s" clink "$v" 9911 "$s"; done
+echo "########## T5: three consecutive links seeded 08 in .cycles_completed (failing loop, records nothing), AFTER"
+reset_state; printf '08' > "$BASEDIR/.cycles_completed"; fake_loop 'exit 1'; clink T5-1 9941; clink T5-2 9942; clink T5-3 9943
+echo
+
+echo "########## X: new attacks (AFTER unless stated)"
+echo "----- X1: width boundary. .failcount = 18 nines (accepted) / 19 digits 1000000000000000000 (rejected -> 0) / 0000000000000000001 (19 chars, valid decimal 1, rejected -> 0) / 000000000000000001 (18 chars -> 1)"
+for seed in 999999999999999999 1000000000000000000 0000000000000000001 000000000000000001; do reset_state; printf '%s' "$seed" > "$BASEDIR/.failcount"; fake_loop 'exit 1'; clink "X1 .failcount='$seed'" 9951; done
+echo "----- X1b: .cycles_completed = 18 nines at entry, loop records with the REAL writer (-> 19 digits), then fails; .failcount=2 (is the cycle credited?)"
+reset_state; printf '999999999999999999' > "$BASEDIR/.cycles_completed"; echo 2 > "$BASEDIR/.failcount"; cycle_loop 'exit 1'; clink "X1b" 9952
+echo "----- X1c: .cycles_completed = 0000000000000000001 at entry, cycle-recording loop then fails, .failcount=2"
+reset_state; printf '0000000000000000001' > "$BASEDIR/.cycles_completed"; echo 2 > "$BASEDIR/.failcount"; cycle_loop 'exit 1'; clink "X1c" 9953
+echo "----- X2: CRLF / NUL in the files (.failcount='2\\r\\n' -> 4/3 trip expected; .cycles_completed='5\\0' with a cycle-recording loop)"
+reset_state; seedfile "$BASEDIR/.failcount" '<crlf>' 2; fake_loop 'exit 1'; clink "X2a .failcount=2<crlf>" 9954
+reset_state; seedfile "$BASEDIR/.failcount" '<nul>' 2; fake_loop 'exit 1'; clink "X2b .failcount=2<nul>" 9955
+reset_state; seedfile "$BASEDIR/.cycles_completed" '<crlf>' 5; echo 2 > "$BASEDIR/.failcount"; cycle_loop 'exit 1'; clink "X2c .cycles_completed=5<crlf>, cycle then fail" 9956
+reset_state; seedfile "$BASEDIR/.cycles_completed" '<nul>' 5; echo 2 > "$BASEDIR/.failcount"; cycle_loop 'exit 1'; clink "X2d .cycles_completed=5<nul>, cycle then fail" 9957
+reset_state; printf '5\0007' > "$BASEDIR/.failcount"; fake_loop 'exit 1'; clink "X2e .failcount=5<nul>7 (NUL dropped by \$(cat) -> reads 57?)" 9958
+echo "----- X3: .failcount is a DIRECTORY (cat fails -> 0, no WARNING; the write in finalize fails); three failing links -- does the count ever advance?"
+reset_state; seedfile "$BASEDIR/.failcount" '<dir>'; fake_loop 'exit 1'; clink X3-1 9961; clink X3-2 9962; clink X3-3 9963
+echo "----- X4: .failcount UNREADABLE (chmod 000, content 2): read -> ?, write -> ?; two failing links"
+reset_state; seedfile "$BASEDIR/.failcount" '<unreadable>' 2; fake_loop 'exit 1'; clink X4-1 9964; clink X4-2 9965
+echo "----- X5: .failcount READ-ONLY (chmod 444) content 0; three failing links (fast failures: 0 -> 2 each link, never written?)"
+reset_state; seedfile "$BASEDIR/.failcount" '<readonly>' 0; fake_loop 'exit 1'; clink X5-1 9966; clink X5-2 9967; clink X5-3 9968
+echo "----- X5b: .failcount READ-ONLY content 2; one failing link (in-memory 4 -> does the breaker still trip and cancel?)"
+reset_state; seedfile "$BASEDIR/.failcount" '<readonly>' 2; fake_loop 'exit 1'; clink X5b 9969
+echo "----- X6: .chain_depth READ-ONLY content 1; two failing links (does the depth advance?)"
+reset_state; seedfile "$BASEDIR/.chain_depth" '<readonly>' 1; fake_loop 'exit 1'; clink X6-1 9970; clink X6-2 9971
+echo "----- X7: BASEDIR itself read-only (chmod 555) with fresh state files 0/0; three failing links (no bound at all?)"
+reset_state; echo 0 > "$BASEDIR/.failcount"; echo 0 > "$BASEDIR/.chain_depth"; fake_loop 'exit 1'; chmod 555 "$BASEDIR"; clink X7-1 9972; clink X7-2 9973; clink X7-3 9974; chmod 755 "$BASEDIR"
+echo "----- X8: the forgiving direction, cost bounded? .failcount='abc' seeded, crash loop of 3 links (link 1 reads 0 with WARNING; does link 2 trip?)"
+reset_state; printf 'abc' > "$BASEDIR/.failcount"; fake_loop 'exit 1'; clink X8-1 9975; clink X8-2 9976; clink X8-3 9977
+echo "----- X8b: same with slow failures (KTG_MIN_RUNTIME_SECONDS=1, no penalty): 0 -> 1 -> 2 -> 3, trips on link 3?"
+export KTG_MIN_RUNTIME_SECONDS=1; reset_state; printf 'abc' > "$BASEDIR/.failcount"; fake_loop 'sleep 2; exit 1'; clink X8b-1 9978; clink X8b-2 9979; clink X8b-3 9980; unset KTG_MIN_RUNTIME_SECONDS
+echo "----- X9: corrupt .failcount='abc' persists across a scheduler-terminated healthy link (count left alone), then a failure heals it"
+export KTG_MIN_RUNTIME_SECONDS=1; reset_state; printf 'abc' > "$BASEDIR/.failcount"; fake_loop 'sleep 30; exit 0'; siglink X9-1 9981 pgrp; fake_loop 'exit 1'; clink X9-2 9982; unset KTG_MIN_RUNTIME_SECONDS
+echo "----- X10: the operator knob the worker flagged. KTG_MAX_FAILS=08 (finalize :375 arithmetic) and KTG_MAX_FAILS=abc ([ -ge abc ] is false: breaker dead?), failing loop, 3 links each"
+reset_state; fake_loop 'exit 1'; KTG_MAX_FAILS=08 clink "X10a KTG_MAX_FAILS=08 link1" 9983; KTG_MAX_FAILS=08 clink "X10a link2" 9984
+reset_state; fake_loop 'exit 1'; KTG_MAX_FAILS=abc clink "X10b KTG_MAX_FAILS=abc link1" 9985; KTG_MAX_FAILS=abc clink "X10b link2" 9986; KTG_MAX_FAILS=abc clink "X10b link3" 9987
+reset_state; fake_loop 'exit 1'; KTG_MAX_CHAIN=abc clink "X10c KTG_MAX_CHAIN=abc" 9988
+echo "----- X11: .cycles_completed is a DIRECTORY, cycle-recording loop (REAL writer under set -e): the loop itself?"
+reset_state; seedfile "$BASEDIR/.cycles_completed" '<dir>'; echo 2 > "$BASEDIR/.failcount"; cycle_loop 'exit 0'; clink X11 9989
+echo "----- X12: whitespace-only .failcount and a two-line .failcount ('2\\n3')"
+reset_state; printf '   ' > "$BASEDIR/.failcount"; fake_loop 'exit 1'; clink "X12a .failcount='   '" 9990
+reset_state; printf '2\n3' > "$BASEDIR/.failcount"; fake_loop 'exit 1'; clink "X12b .failcount='2\\n3'" 9991
+echo
+echo "########## cleanup"; chmod -R u+rwx "$SIM" 2>/dev/null; pkill -KILL -f "$SIM/" 2>/dev/null; rm -rf "$SIM"; ls -d "$SIM" 2>&1 | sed "s#$SIM#\$SIM#"; echo "done $(date -Is)"
+
+================================================================================
+val4b2.sh source, verbatim
+================================================================================
+#!/bin/bash
+# Part B2: the unchanged-behaviour regression set A-J, K1-K6, L1/L2, M, N, O, P3-P5 against
+# validation_repair3.md section 1, with the cycle-recording stand-in now using the REAL writer block.
+. "$(dirname "$0")/val4b_common.sh" simB2
+
+echo "########## regression A: crash loop, 3 links"; reset_state; fake_loop 'exit 1'; link A1 1001; link A2 1002; link A3 1003; shimlog; echo
+echo "########## regression B: env.sh missing, 2 links"; reset_state; fake_loop 'exit 1'; mv "$SIM/ktg/env.sh" "$SIM/ktg/env.sh.hidden"; link B1 2001; link B2 2002; shimlog; mv "$SIM/ktg/env.sh.hidden" "$SIM/ktg/env.sh"; echo
+echo "########## regression B2a: explicit env.sh checks deleted -> raw set -u abort"
+python3 - "$REAL_SBATCH" "$SIM/loop_nochecks.sbatch" <<'PYEOF'
+import sys
+t=open(sys.argv[1]).read()
+for block in ('if [ ! -r "$KTG_ROOT/env.sh" ]; then\n    say "missing or unreadable $KTG_ROOT/env.sh -- pre-flight failure"\n    exit 2\nfi\n',
+              'if [ -z "${KATAGO_SRC:-}" ]; then\n    say "env.sh did not export KATAGO_SRC -- pre-flight failure"\n    exit 2\nfi\n'):
+    assert t.count(block)==1, block; t=t.replace(block,'')
+open(sys.argv[2],'w').write(t)
+PYEOF
+reset_state; fake_loop 'exit 1'; mv "$SIM/ktg/env.sh" "$SIM/ktg/env.sh.hidden"; KTG_LOOP_SBATCH="$SIM/loop_nochecks.sbatch" link B2a 2101 "$SIM/loop_nochecks.sbatch"; shimlog; mv "$SIM/ktg/env.sh.hidden" "$SIM/ktg/env.sh"; echo
+echo "########## regression C: LOOP_SH missing, 2 links"; reset_state; fake_loop 'exit 1'; mv "$SIM/codes/loop/synchronous_loop_9x9.sh" "$SIM/codes/loop/hidden.sh"; link C1 3001; link C2 3002; shimlog; mv "$SIM/codes/loop/hidden.sh" "$SIM/codes/loop/synchronous_loop_9x9.sh"; echo
+echo "########## regression D: guard exit 1 (in-tree fixture)"; reset_state; fake_loop 'exit 0'; export KTG_BUDGET_ENV="$DB/tests/fixture_tinycap.env"; link D1 4001; unset KTG_BUDGET_ENV; shimlog; echo
+echo "########## regression E: guard exit 2 (in-tree fixture)"; reset_state; fake_loop 'exit 0'; export KTG_BUDGET_ENV="$DB/tests/fixture_failfloor.env"; link E1 5001; unset KTG_BUDGET_ENV; shimlog; echo
+echo "########## regression F: guard exit 3 (out-of-tree constants file)"; reset_state; fake_loop 'exit 0'; export KTG_BUDGET_ENV="$SIM/loose.env"; printf 'KTG_SCRATCH_HARD_BYTES=99999999999999\n' > "$SIM/loose.env"; link F1 6001; unset KTG_BUDGET_ENV; shimlog; echo
+echo "########## regression G: clean cycle resets"; reset_state; fake_loop 'exit 1'; link G1 7001; fake_loop 'exit 0'; link G2 7002; shimlog; echo
+echo "########## regression H: STOP at entry leaves the count"; reset_state; fake_loop 'exit 1'; link H1 8001; touch "$BASEDIR/STOP"; link H2 8002; shimlog; rm -f "$BASEDIR/STOP"; echo
+echo "########## regression J: trap probes (probe copy)"
+python3 - "$REAL_SBATCH" "$SIM/loop_trapprobe.sbatch" <<'PYEOF'
+import sys
+t=open(sys.argv[1]).read()
+a="trap 'finalize $?' EXIT\n"; assert t.count(a)==1
+t=t.replace(a, a+'( exit 7 ); _x=$(exit 4); ( sleep 0 ) & wait\nsay "TRAPPROBE subshells done"\n')
+tail='exit "$RC"\n'; assert t.endswith(tail)
+t=t[:-len(tail)]+'finalize "$RC"; finalize "$RC"\nsay "TRAPPROBE explicit double finalize done"\n'+tail
+open(sys.argv[2],'w').write(t)
+PYEOF
+reset_state; fake_loop 'exit 1'; KTG_LOOP_SBATCH="$SIM/loop_trapprobe.sbatch" link J1 8101 "$SIM/loop_trapprobe.sbatch"; shimlog; echo
+
+echo "########## K1-K3: SIGTERM to the process group with the loop running, three consecutive links (KTG_MIN_RUNTIME_SECONDS=1)"
+export KTG_MIN_RUNTIME_SECONDS=1
+reset_state; fake_loop 'sleep 30; exit 0'; siglink K1 9001 pgrp; siglink K2 9002 pgrp; siglink K3 9003 pgrp; shimlog; echo
+echo "########## K4: loop signalled, wrapper NOT signalled (stand-in with set -eu -o pipefail in the body, 'sleep 30 | cat'), three orderings"
+eu_loop; reset_state; siglink K4a 9004 child+loop; shimlog; reset_state; siglink K4b 9014 loop-only; shimlog; reset_state; siglink K4c 9024 child-only; shimlog; echo
+echo "########## K5: wrapper only signalled, loop left alone (fake loop sleeps 6 s then exits 0)"; reset_state; fake_loop 'sleep 6; exit 0'; siglink K5 9005 wrapper-only; shimlog; echo
+echo "########## K6: process-group SIGTERM on a link that starts with .failcount=2"; reset_state; echo 2 > "$BASEDIR/.failcount"; fake_loop 'sleep 30; exit 0'; siglink K6 9006 pgrp; shimlog; echo
+echo "########## M (control): SIGKILL to the process group"; reset_state; siglink M1 9201 kill9; shimlog; echo
+echo "########## L1: loop exit 3, no STOP (once at MIN_RUNTIME=1, once at the default 600)"; reset_state; fake_loop 'exit 3'; link L1a 9101; shimlog; reset_state; unset KTG_MIN_RUNTIME_SECONDS; link L1b 9111; shimlog; echo
+echo "########## L2: loop writes STOP then exits 3"; reset_state; fake_loop "touch $BASEDIR/STOP; exit 3"; link L2 9102; shimlog; echo
+export KTG_MIN_RUNTIME_SECONDS=1
+echo "########## N: process-group SIGTERM after the loop wrote STOP but before its exit 3, then the successor link"; reset_state; fake_loop "touch $BASEDIR/STOP; sleep 30; exit 3"; siglink N1 9301 pgrp; fake_loop 'exit 1'; link N2 9302; shimlog; echo
+echo "########## O: no cycles recorded (fail, TERM, TERM, fail, TERM, fail) -- the count must still not decay"
+reset_state; fake_loop 'exit 1'; link O1 9401; fake_loop 'sleep 30; exit 0'; siglink O2 9402 pgrp; siglink O3 9403 pgrp; fake_loop 'exit 1'; link O4 9404; fake_loop 'sleep 30; exit 0'; siglink O5 9405 pgrp; fake_loop 'exit 1'; link O6 9406; shimlog; echo
+echo "########## P3: scenario O with a loop that records a cycle (REAL writer block) before the TERM links (fail, TERM+cycle, TERM+cycle, fail, TERM+cycle, fail)"
+reset_state; fake_loop 'exit 1'; link P3-1 9411; cycle_loop 'sleep 30; exit 0'; siglink P3-2 9412 pgrp; siglink P3-3 9413 pgrp; fake_loop 'exit 1'; link P3-4 9414; cycle_loop 'sleep 30; exit 0'; siglink P3-5 9415 pgrp; fake_loop 'exit 1'; link P3-6 9416; shimlog; echo
+echo "########## P4: .failcount=2 at entry, the link completes one cycle then fails (floor 1)"; reset_state; echo 2 > "$BASEDIR/.failcount"; cycle_loop 'exit 1'; link P4 9421; shimlog; echo
+echo "########## P5: three links that each complete a cycle then fail, at the default floor (the (r4) residual)"; unset KTG_MIN_RUNTIME_SECONDS; reset_state; cycle_loop 'exit 1'; link P5-1 9431; link P5-2 9432; link P5-3 9433; shimlog; echo
+echo "########## cleanup"; pkill -KILL -f "$SIM/" 2>/dev/null; rm -rf "$SIM"; ls -d "$SIM" 2>&1 | sed "s#$SIM#\$SIM#"; echo "done $(date -Is)"
+
+================================================================================
+probe/rc_probe.sh source, verbatim
+================================================================================
+#!/bin/bash
+set -uo pipefail
+. "$1"
+show() { local lbl="$1" v="$2" out rc; out=$(read_counter "$v"); rc=$?; printf '  %-28s -> %-22s rc=%s\n' "$lbl" "'$out'" "$rc"; }
+show "'08'" '08'; show "'09'" '09'; show "'007'" '007'; show "'abc'" abc; show "''" ''; show "' 5'" ' 5'; show "'5 '" '5 '
+show "'-1'" '-1'; show "'1e3'" 1e3; show "'0x10'" 0x10; show "'+7'" '+7'; show "'99999999999999999999'" 99999999999999999999
+show "18 nines" 999999999999999999; show "19 digits 1e18" 1000000000000000000; show "'0000000000000000001' (19)" 0000000000000000001; show "'000000000000000001' (18)" 000000000000000001
+show "'5\\r' (CR)" $'5\r'; show "'5\\r\\n'" $'5\r\n'; show "'\\t5\\t'" $'\t5\t'; show "'5\\n6' (two lines)" $'5\n6'; show "'  ' (spaces only)" '  '; show "'*'" '*'; show "'[0-9]'" '[0-9]'
+show "'9223372036854775807'(19)" 9223372036854775807; show "'٥' (arabic-indic)" '٥'; show "'5 5'" '5 5'
+echo "  NUL via \$(cat): $(printf '5\0' > $TMPFILE$$; read_counter "$(cat $TMPFILE$$)"; rm -f $TMPFILE$$)"
+echo "  NUL in middle via \$(cat): $(printf '5\0007' > $TMPFILE$$; read_counter "$(cat $TMPFILE$$)"; rm -f $TMPFILE$$)"
+echo "  LANG=$LANG LC_ALL=${LC_ALL:-}"
+
+(the vendor/model-name sweep pattern file sweep.pat is deliberately not listed)
