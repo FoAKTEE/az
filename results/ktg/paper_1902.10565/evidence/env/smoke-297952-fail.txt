@@ -1,0 +1,59 @@
+# env_build attempt 1 -- job 297952 (b200/gb205, 1x B200, 16 cpus, 96G, 06:34 elapsed) -- FAILED
+# full log: /scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/logs/env_build-297952.log
+
+## sacct
+JobID         Partition    Elapsed      State ExitCode 
+------------ ---------- ---------- ---------- -------- 
+297952             b200   00:06:34     FAILED      1:0 
+
+## smoke output (verbatim, trimmed to the decisive lines)
+== ktg-train env_build smoke, job 297952, gb205, 2026-09-03T21:55:26-04:00
+== gpu: NVIDIA B200, 10.0
+== katago sha: fd0723fdbc0e9d82cf269c9630af8c27c57c07c4 (v1.18.2)
+--- katago version
+KataGo v1.18.2
+Git revision: fd0723fdbc0e9d82cf269c9630af8c27c57c07c4
+Compile Time: Sep  3 2026 21:54:43
+Using CUDA backend
+Compiled with CUDA version 12.8.93
+[OK] katago version
+--- katago runtests
+Running rng and hash tests
+...
+2026-09-03 21:55:40-0400: Cuda backend thread 0: Found GPU NVIDIA B200 memory 191495471104 compute capability major 10 minor 0
+2026-09-03 21:55:40-0400: Cuda backend thread 0: Model version 17 useFP16 = true useNHWC = true
+2026-09-03 21:55:40-0400: Cuda backend thread 0: Model name: ktg-smoke-b5c48h3tfr (transformer, 125241 params)
+2026-09-03 21:55:42-0400: ERROR: NN server thread failed: Non-SwiGLU transformer FFN is not yet supported in CUDA backend
+ERROR: NN server thread failed: Non-SwiGLU transformer FFN is not yet supported in CUDA backend
+terminate called after throwing an instance of 'StringError'
+  what():  Non-SwiGLU transformer FFN is not yet supported in CUDA backend
+[FAIL] katago benchmark (b5c48h3tfr, 9x9 board, 80 visits, 1 thread) (exit 134)
+--- katago gtp genmove on 9x9 vs b5c48h3tfr
+KataGo v1.18.2
+Using TrompTaylor rules initially, unless GTP/GUI overrides this
+ERROR: NN server thread failed: Non-SwiGLU transformer FFN is not yet supported in CUDA backend
+terminate called after throwing an instance of 'StringError'
+  what():  Non-SwiGLU transformer FFN is not yet supported in CUDA backend
+bash: line 1: 652872 Aborted                 (core dumped) "/scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/build/KataGo/cpp/build/katago" gtp -model "/scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/runtime/smoke/model/model.bin.gz" -config "/scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/build/KataGo/cpp/configs/gtp_example.cfg" < gtp_in.txt
+[FAIL] katago gtp genmove on 9x9 vs b5c48h3tfr (exit 134)
+--- torch cuda forward/backward (b5c48h3tfr, pos_len 9)
+/scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/runtime/smoke/torch_smoke.py:40: UserWarning: Converting a tensor with requires_grad=True to a scalar may lead to unexpected behavior.
+Consider using tensor.detach() first. (Triggered internally at /pytorch/torch/csrc/autograd/generated/python_variable_methods.cpp:836.)
+  print("loss        = %.6f" % float(loss))
+torch 2.11.0+cu128 cuda 12.8 cudnn 91900
+torch.cuda.is_available() = True
+device name = NVIDIA B200
+capability  = (10, 0)
+model=b5c48h3tfr pos_len=9 bin_feats=22 global_feats=19
+parameters  = 128221
+forward ok: 9 output tensors, shapes[:4]=[(4, 6, 82), (4, 3), (4, 10), (4, 8)]
+loss        = 32.429893
+grad l2norm = 11.019217
+mem alloc MB=21.6
+TORCH_SMOKE_OK
+[OK] torch cuda forward/backward (b5c48h3tfr, pos_len 9)
+SMOKE RESULT: FAIL
+
+## compiled SASS architectures in the katago binary (cuobjdump --list-elf, CUDA 12.8.1)
+sm_100 count = 0   <-- B200 is sm_100; CMakeLists hard-sets the 12.8 arch list without it
+present: sm_50 sm_52 sm_53 sm_60 sm_61 sm_62 sm_70 sm_72 sm_75 sm_80 sm_86 sm_87 sm_90 sm_120

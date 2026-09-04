@@ -26,7 +26,7 @@ R=/scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train
 REPO=/home/schmidt/ssci-haiyangw/az/phys-agentic-loop
 KATAGO_TAG=v1.18.2
 KATAGO_SHA=fd0723fdbc0e9d82cf269c9630af8c27c57c07c4
-MODEL_KIND=b5c48h3tfr
+MODEL_KIND=b7c96h3tfrs
 POS_LEN=9
 NPROC=${SLURM_CPUS_PER_TASK:-16}
 
@@ -108,6 +108,22 @@ echo "expected      = $KATAGO_SHA"
 [ "$GOT_SHA" = "$KATAGO_SHA" ] || die "SHA mismatch: $GOT_SHA != $KATAGO_SHA"
 git -C "$R/build/KataGo" describe --tags --exact-match 2>&1 || true
 
+# ------------------------------------------------------- 2b. sm_100 arch patch
+# cpp/CMakeLists.txt hard-sets CMAKE_CUDA_ARCHITECTURES for CUDA 12.8 with a plain
+# set(), which shadows any -DCMAKE_CUDA_ARCHITECTURES, and its list has no 100 --
+# so a stock build carries no sm_100 SASS for the B200. Patch the scratch clone
+# only; the ref-code mirror stays read-only (alignment kernel S4).
+say "stage 2b: sm_100 architecture patch"
+PATCH="$REPO/results/ktg/paper_1902.10565/codes/env/cmake-sm100.diff"
+if grep -q "86 87 90 100 120" "$R/build/KataGo/cpp/CMakeLists.txt"; then
+  echo "already patched, skipping"
+else
+  git -C "$R/build/KataGo" apply --verbose "$PATCH" || die "git apply cmake-sm100.diff"
+  rm -f "$STAMPS/build"          # architecture list changed -> force a rebuild
+  echo "patch applied; build stamp invalidated"
+fi
+grep -n "CMAKE_CUDA_ARCHITECTURES 50" "$R/build/KataGo/cpp/CMakeLists.txt"
+
 # ------------------------------------------------------------------ 3. build
 if done_stage build && [ -x "$R/build/KataGo/cpp/build/katago" ]; then
   say "stage 3: build -- already done, skipping"
@@ -115,6 +131,7 @@ else
   say "stage 3: cmake configure + build (USE_BACKEND=CUDA)"
   mkdir -p "$R/build/KataGo/cpp/build"
   cd "$R/build/KataGo/cpp/build" || die "cd build"
+  rm -f CMakeCache.txt
   cmake .. \
     -DCMAKE_BUILD_TYPE=Release \
     -DUSE_BACKEND=CUDA \
@@ -163,19 +180,26 @@ echo "== katago sha: $GOT_SHA ($KATAGO_TAG)" >> "$SMOKE"
 smoke "katago version" "$KATAGO_BIN" version
 smoke "katago runtests" "$KATAGO_BIN" runtests
 
+# (a2) the binary must carry real sm_100 SASS, not just lower-arch PTX to JIT
+smoke "sm_100 SASS present in katago binary" bash -c \
+  'n=$(cuobjdump --list-elf "'"$KATAGO_BIN"'" | grep -c sm_100);
+   echo "cuobjdump --list-elf | grep -c sm_100 = $n";
+   cuobjdump --list-elf "'"$KATAGO_BIN"'" | grep -oP "sm_[0-9]+" | sort -u | tr "\n" " "; echo;
+   [ "$n" -gt 0 ]'
+
 # (b) a transformer net actually runs on the GPU
-if [ ! -f "$R/runtime/smoke/model/model.bin.gz" ]; then
+if [ ! -f "$R/runtime/smoke/model-$MODEL_KIND/model.bin.gz" ]; then
   say "exporting a fresh random-initialized $MODEL_KIND"
   ( cd "$KATAGO_SRC/python" && python export_model_pytorch.py \
       -export-random-initialized-model "$MODEL_KIND" \
-      -export-dir "$R/runtime/smoke/model" \
+      -export-dir "$R/runtime/smoke/model-$MODEL_KIND" \
       -model-name "ktg-smoke-$MODEL_KIND" \
       -filename-prefix model ) || die "export_model_pytorch"
-  gzip -kf "$R/runtime/smoke/model/model.bin" || die "gzip model"
+  gzip -kf "$R/runtime/smoke/model-$MODEL_KIND/model.bin" || die "gzip model"
 fi
-ls -l "$R/runtime/smoke/model/" | tee -a "$SMOKE"
+ls -l "$R/runtime/smoke/model-$MODEL_KIND/" | tee -a "$SMOKE"
 
-MODEL="$R/runtime/smoke/model/model.bin.gz"
+MODEL="$R/runtime/smoke/model-$MODEL_KIND/model.bin.gz"
 CFG="$KATAGO_SRC/cpp/configs/gtp_example.cfg"
 
 smoke "katago benchmark ($MODEL_KIND, 9x9 board, 80 visits, 1 thread)" \
