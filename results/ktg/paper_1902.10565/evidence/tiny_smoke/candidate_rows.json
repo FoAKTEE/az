@@ -25,7 +25,7 @@
     "exit_code": "0:0",
     "seff": "CPU 13.12% of core-walltime, memory 2.97 GB of 64 GB - a smoke, sized as a smoke",
     "slurm_log": "/scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/logs/export-smoke-298358.log",
-    "compute_budget_check": "bash .claude/skills/compute-budget/check.sh --gpus 1 --cpus 8 --partition b200 -> exit 0, 'OK: request gpus=1 cpus=8 part=b200 within policy'",
+    "compute_budget_check": "bash \"$(python3 -c 'import json;print(json.load(open(\"mission.json\"))[\"compute\"][\"policyCheck\"])')\" --gpus 1 --cpus 8 --partition b200 -> exit 0, 'OK: request gpus=1 cpus=8 part=b200 within policy'; output in compute_budget_check.txt",
     "scratch_cost": "6.1 MB at $W plus 964 KB at $W_neg; no core file left by the deliberate leg-5 abort (ulimit -c 0)"
   },
   "verification": {
