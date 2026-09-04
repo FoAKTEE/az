@@ -169,6 +169,15 @@ EXPORT_WRAPPER="${EXPORT_WRAPPER:-$KTG_CODES/loop/export_model_for_selfplay_9x9.
 # script holds no storage number of its own.
 SCRATCH_GUARD="${KTG_SCRATCH_GUARD:-$KTG_CODES/data_budget/scratch_guard.sh}"
 
+# CHANGE 12 (obligations o03 / c06): the stage sampler's phase label. The sampler itself is
+# started and stopped by codes/loop/loop.sbatch, which owns the link; this loop only retags
+# the samples with the cycle they belong to, so audit_smoke.py can report nlwp_max and GPU
+# duty per (phase, stage) instead of per stage over a whole three-day link. The call is
+# guarded on the run file, so smoke_loop.sbatch (which starts its own monitor with its own
+# phase labels) and the KTG_STAGE_ONLY dry run are unaffected, and it is never fatal.
+STAGE_MONITOR="${KTG_STAGE_MONITOR:-$KTG_CODES/eval/stage_monitor.sh}"
+MONITOR_DIR="${KTG_MONITOR_DIR:-$BASEDIR/monitor}"
+
 for f in "$SELFPLAY_CONFIG" "$GATING_CONFIG" "$TRAIN_WRAPPER" "$EXPORT_WRAPPER" "$SCRATCH_GUARD"
 do
     if [ ! -f "$f" ]
@@ -258,6 +267,13 @@ do
     #   3 could not measure.
     CYCLE_INDEX=$((CYCLE_INDEX + 1))
     set +x
+    # CHANGE 12: retag the link's samples with this cycle. Only when loop.sbatch's monitor
+    # is actually running -- smoke_loop.sbatch drives its own phases and the dry run has
+    # none -- and never fatal.
+    if [ -e "$MONITOR_DIR"/monitor.run ] && [ -f "$STAGE_MONITOR" ]
+    then
+        bash "$STAGE_MONITOR" phase "$MONITOR_DIR" "cycle$CYCLE_INDEX" || true
+    fi
     set +e
     bash "$SCRATCH_GUARD" --label "cycle $CYCLE_INDEX pre-gatekeeper"
     GUARD_RC=$?

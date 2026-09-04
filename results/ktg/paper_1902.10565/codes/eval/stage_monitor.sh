@@ -10,8 +10,17 @@
 # It never asserts. The thresholds live in audit_smoke.py; this script only records.
 #
 # usage:
-#   stage_monitor.sh start <outdir> [rootpid] begin sampling (ps 0.2 s, nvidia-smi 2 s);
-#                                            rootpid defaults to the caller's PPID
+#   stage_monitor.sh start <outdir> [rootpid] begin sampling; rootpid defaults to the
+#                                            caller's PPID
+#   KTG_MON_PS_INTERVAL   seconds between ps sweeps       (default 0.2)
+#   KTG_MON_GPU_INTERVAL  seconds between nvidia-smi polls (default 2)
+#
+# The two intervals are knobs because the smoke and the production chain want opposite
+# things from the same instrument. The smoke ran minutes and needed every thread peak, so
+# 0.2 s (the default, which keeps every recorded smoke number reproducible). A 3-day chain
+# link at 0.2 s would be ~1.3 M sweeps and a ~250 MB tsv, so codes/loop/loop.sbatch's link
+# sets 1 s / 5 s; at ~20 ms per `ps -eo` sweep on a shared 124-core node that is ~2 % of one
+# core. Neither interval changes what is sampled or how it is attributed.
 #   stage_monitor.sh phase <outdir> <label>  retag subsequent samples (cycle1, cycle2,
 #                                            probe_search, probe_train, ...)
 #   stage_monitor.sh stop  <outdir>          stop both samplers
@@ -38,6 +47,11 @@
 
 set -u
 
+# Sampling intervals. Read once here so `start` records them in the log line and the
+# background samplers inherit exactly what was announced.
+PS_INTERVAL="${KTG_MON_PS_INTERVAL:-0.2}"
+GPU_INTERVAL="${KTG_MON_GPU_INTERVAL:-2}"
+
 ACTION="${1:-}"
 OUT="${2:-}"
 ROOT_PID_ARG="${3:-}"
@@ -60,12 +74,16 @@ PHASE_FILE="$OUT/phase"
 ROOT_FILE="$OUT/monitor.rootpid"
 
 sample_ps() {
-  # One ps sweep per 0.2 s. Classification is on the command line, so it catches the
+  # One ps sweep per $PS_INTERVAL. Classification is on the command line, so it catches the
   # engine both as ./bin/katago (loop, run out of the dated archive) and as an absolute
   # $KATAGO_BIN path (the probes). Only descendants of ROOT_PID are recorded.
   local root
   root="$(cat "$ROOT_FILE" 2>/dev/null || echo 1)"
-  while [ -e "$RUN_FILE" ]; do
+  # Second exit condition, on top of the run file: if the root process is gone the job
+  # this sampler belongs to has ended, whatever happened to the run file. Without it a
+  # SIGKILL of the job -- which runs no trap, so nothing removes the run file -- would
+  # leave a `ps -eo` poller running on the node forever.
+  while [ -e "$RUN_FILE" ] && kill -0 "$root" 2>/dev/null; do
     now="$(date +%s.%N)"
     ph="$(cat "$PHASE_FILE" 2>/dev/null || echo unknown)"
     ps -eo pid=,ppid=,nlwp=,rss=,args= 2>/dev/null | awk -v now="$now" -v ph="$ph" -v root="$root" '
@@ -94,15 +112,17 @@ sample_ps() {
             printf "%s\t%s\t%s\t%s\t%s\t%s\t%s\n", now, ph, n_stage[i], n_pid[i], n_nlwp[i], n_rss[i], n_ppid[i]
         }
       }' >> "$PS_FILE"
-    sleep 0.2
+    sleep "$PS_INTERVAL"
   done
 }
 
 sample_gpu() {
-  while [ -e "$RUN_FILE" ]; do
+  local root
+  root="$(cat "$ROOT_FILE" 2>/dev/null || echo 1)"
+  while [ -e "$RUN_FILE" ] && kill -0 "$root" 2>/dev/null; do
     nvidia-smi --query-gpu=timestamp,index,utilization.gpu,memory.used \
                --format=csv,noheader 2>/dev/null >> "$GPU_FILE" || true
-    sleep 2
+    sleep "$GPU_INTERVAL"
   done
 }
 
@@ -119,7 +139,7 @@ case "$ACTION" in
     sample_ps  & PS_PID=$!
     sample_gpu & GPU_PID=$!
     printf '%s\n%s\n' "$PS_PID" "$GPU_PID" > "$PID_FILE"
-    echo "stage_monitor: started (ps pid $PS_PID, gpu pid $GPU_PID) -> $PS_FILE"
+    echo "stage_monitor: started (ps pid $PS_PID every ${PS_INTERVAL}s, gpu pid $GPU_PID every ${GPU_INTERVAL}s) -> $PS_FILE"
     ;;
   phase)
     LABEL="${3:-}"
@@ -135,10 +155,11 @@ case "$ACTION" in
       done < "$PID_FILE"
       rm -f "$PID_FILE"
     fi
-    # the ps sweep sleeps 0.2 s and nvidia-smi 2 s; give them a beat to notice
-    for _ in 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15; do
-      sleep 0.2
-    done
+    # the samplers sleep between sweeps; give them a beat to notice the run file is gone.
+    # The kill above is what actually ends them, so this is belt and braces: it is bounded
+    # at 3.5 s so a 3-day link's finalize -- which runs on the walltime path, seconds
+    # before slurmstepd's SIGKILL -- is never held up by an instrument.
+    sleep "$(awk -v g="$GPU_INTERVAL" 'BEGIN{if (g > 3) g = 3; printf "%.2f", g + 0.5}')"
     pkill -f "nvidia-smi --query-gpu=timestamp,index,utilization.gpu" 2>/dev/null || true
     echo "stage_monitor: stopped; $(wc -l < "$PS_FILE" 2>/dev/null || echo 0) ps samples, $(wc -l < "$GPU_FILE" 2>/dev/null || echo 0) gpu samples"
     ;;

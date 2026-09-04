@@ -73,6 +73,20 @@ LOOP_SH="$KTG_CODES/loop/synchronous_loop_9x9.sh"
 SCRATCH_GUARD="${KTG_SCRATCH_GUARD:-$KTG_CODES/data_budget/scratch_guard.sh}"
 PRUNE_RETENTION="${KTG_PRUNE_RETENTION:-$KTG_CODES/data_budget/prune_retention.py}"
 
+# The stage sampler (node synchronous_loop_smoke's instrument, codes/eval/stage_monitor.sh).
+# The smoke job carried it in smoke_loop.sbatch and this wrapper had none, so a production
+# link produced no thread or GPU sample at all -- which is the measurement o03 (thread
+# budget), o39's third conjunct (nlwp_max <= 32 on a real-net cycle) and c06 (GPU duty) all
+# wait on. It is started once per link here and stopped in finalize, so every stage of
+# every cycle of the link is inside one file per JOB (stage_monitor.sh:50-55, o37).
+STAGE_MONITOR="${KTG_STAGE_MONITOR:-$KTG_CODES/eval/stage_monitor.sh}"
+MONITOR_DIR="${KTG_MONITOR_DIR:-$BASEDIR/monitor}"
+# A 3-day link at the smoke's 0.2 s / 2 s would be ~1.3 M ps sweeps and a ~250 MB tsv. The
+# link samples at 1 s / 5 s instead; the smoke's own defaults are untouched, so every
+# recorded smoke number stays reproducible (stage_monitor.sh header).
+export KTG_MON_PS_INTERVAL="${KTG_MON_PS_INTERVAL:-1}"
+export KTG_MON_GPU_INTERVAL="${KTG_MON_GPU_INTERVAL:-5}"
+
 # The compute-policy check script and the GPU cap are named by mission.json;
 # there is deliberately no hard-coded fallback for either, so a missing or
 # unreadable mission.json stops the chain instead of silently skipping the
@@ -313,9 +327,19 @@ cancel_successor() {
 finalize() {
     local rc="${1:-0}" elapsed reason cycles_now cycles_this_link
     [ "$FINALIZED" -eq 0 ] || return 0
-    FINALIZED=1
-    trap - EXIT
+    # Read the clock BEFORE anything in this function can sleep: the monitor's stop drains
+    # its samplers for a few seconds, and that must not be booked as link runtime, which is
+    # what the minimum-runtime rule below classifies on.
     elapsed=$(( $(date +%s) - START_EPOCH ))
+    FINALIZED=1
+    # First statement after the guard: the samplers are background children of this step
+    # and every other path out of this function ends the link. `|| true` because an
+    # instrument must never change how a link is accounted -- if the stop fails the
+    # samplers still end on their own when this pid is gone (stage_monitor.sh sample_ps).
+    if [ -f "$STAGE_MONITOR" ] && [ -e "$MONITOR_DIR/monitor.run" ]; then
+        bash "$STAGE_MONITOR" stop "$MONITOR_DIR" || true
+    fi
+    trap - EXIT
 
     # obligation o33 (c): what this link actually achieved. Every cycle whose
     # five stages all returned 0 bumps $BASEDIR/.cycles_completed, so the
@@ -579,6 +603,20 @@ for _cfg in "$KTG_CODES/cfg/selfplay_9x9.cfg" "$KTG_CODES/cfg/gatekeeper_9x9.cfg
     fi
 done
 say "cfg numGameThreads = ${KTG_NUM_GAME_THREADS} on both engine configs"
+# ---------------------------------------------------------------- stage monitor
+# obligation o03 / o39 (third conjunct) / c06: the link's own thread and GPU samples.
+# Started here, after env.sh (so nvidia-smi resolves) and after the knob asserts (so a link
+# that is about to refuse never leaves a sampler behind), with THIS wrapper's pid as the
+# root: stage_monitor.sh walks each candidate's ppid chain and keeps only descendants of
+# it, so no other tenant of a shared node can enter the measurement (stage_monitor.sh:71-94,
+# o37). Missing instrument = pre-flight failure, like the other mission tools: a three-day
+# link that produces no measurement is a link that has to be run again.
+if [ ! -f "$STAGE_MONITOR" ]; then
+    say "missing $STAGE_MONITOR (node synchronous_loop_smoke's sampler) -- pre-flight failure"
+    exit 2
+fi
+bash "$STAGE_MONITOR" start "$MONITOR_DIR" "$$" || say "stage_monitor start returned non-zero -- the link continues without samples"
+
 # 32 CPUs for the whole job; keep BLAS/OMP from oversubscribing the trainer.
 export OMP_NUM_THREADS="${OMP_NUM_THREADS:-4}"
 export MKL_NUM_THREADS="${MKL_NUM_THREADS:-4}"
