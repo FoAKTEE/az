@@ -2,7 +2,7 @@
 
 # Obligations — paper_arxiv-1902.10565
 
-16 entries; 1 discharged, 15 open.
+18 entries; 1 discharged, 17 open.
 
 | entry_id | statement | status | blocking | discharged_by | owner | node_ids |
 |---|---|---|---|---|---|---|
@@ -22,3 +22,5 @@
 | o14_gpool_in_transformer | Record from model_pytorch.py whether b5c48h3tfr still contains global-pooling bias blocks or gpool heads and whether their board-size channels are used at pos_len 9. | discharged | no | arxiv-1902.10565::head_gpool_degeneracy_9x9 | brain decompose | arxiv-1902.10565::transformer_trunk_b5c48h3tfr; arxiv-1902.10565::head_gpool_degeneracy_9x9 |
 | o15_attn_logit_export_guard | export_model_pytorch.py refuses a checkpoint whose data-free attention logit bound exceeds -attn-logit-bound-limit 2.5e4 (model_pytorch.py:3010); the mission loop must either enable -attn-logit-penalty-cap in train.py (default off) or detect the refusal (export stage exit != 0) and record it in the error ledger rather than letting the loop die silently. | open | no | — | worker export_stage | arxiv-1902.10565::export_stage; arxiv-1902.10565::train_stage |
 | o16_usegating_decision | Decide and record USEGATING for the production loop: gating (200 games x 150 visits per candidate, ~0.53 acceptance at equal strength) costs a sizeable fraction of one GPU's selfplay budget; USEGATING=0 routes exports straight to models/ (export_model_for_selfplay.sh:115-120). Default design: USEGATING=1 for the smoke and first production run because eval_improvement (c13) counts acceptances; revisit at scale_up. | open | no | — | brain design | arxiv-1902.10565::gatekeeper_stage; arxiv-1902.10565::eval_improvement |
+| o17_loop_katago_bin_path | python/selfplay/synchronous_loop.sh:81 copies $GITROOTDIR/cpp/katago into the dated archive, but the mission build (cmake run from cpp/build, env_build.sbatch) emits cpp/build/katago; under bash -eu the stock loop dies on cycle 1. The mission copy synchronous_loop_9x9.sh must copy $KATAGO_BIN (env.sh) instead. | open | yes | — | worker synchronous_loop_smoke | arxiv-1902.10565::synchronous_loop_smoke |
+| o18_smoke_model_decision | Reconcile the smoke model: codes/env/env_build.sbatch:29 now exports b7c96h3tfrs (attnrope+ffnsg) for its smoke while DESIGN.md and tasks use b5c48h3tfr (attnrope+ffng); both are exportable. Record one choice for tiny_model_export_smoke and synchronous_loop_smoke and update the other document. | open | no | — | brain design + worker env_build | arxiv-1902.10565::tiny_model_export_smoke; arxiv-1902.10565::env_build |
