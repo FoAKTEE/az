@@ -79,10 +79,12 @@ request):
   declaration that is false by more than 5x, and 128 game threads × 1 search thread each on one node oversubscribes
   the cores regardless of any policy. The mission configs must override the key whatever the policy says.
   verify: `selfplay1_maxsize9.cfg:84`, `gatekeeper1_maxsize9.cfg:18`; arithmetic in `audit_loop_scripts_configs.md` §D; node `selfplay_search_params`.
-- [SOLID] Selfplay at `numGameThreads=18` peaks at 22 live threads, so the 24-CPU declaration is honest with 2 to spare.
-  Measured, not computed: `ps -o nlwp=` sampled every 50 ms on the live `katago selfplay` pid inside job 298359
-  (`--cpus-per-task=24`), 36 games so that all 18 game threads are simultaneously busy.
-  verify: `codes/eval/check_cfg_9x9.sh` lines `NLWP_MAX`, `NLWP_SAMPLES`, `CPU_BUDGET`; evidence `../evidence/cfg_9x9/check_cfg_9x9-298359.txt`; claim `c06`, obligation `o03`.
+- [SOLID] Selfplay's row is measured, not asserted, and lands exactly on the arithmetic: **22 live threads**
+  against the 24 declared, 52 samples of `ps -o nlwp=` at 50 ms on the live `katago selfplay` pid inside job 298359
+  (`--cpus-per-task=24`, `-max-games-total 36` so all 18 game threads are simultaneously busy — with 1 game total
+  17 of them break at once, `selfplay.cpp:291-293`). Headroom 2 = the mid-run net-switch allowance, unconsumed here
+  because one model was loaded and never switched.
+  verify: `../evidence/cfg_9x9/check_cfg_9x9-298359.txt` lines `NLWP_SAMPLES = 52`, `NLWP_MAX     = 22`, `CPU_BUDGET   = 24`, `ok   NLWP_MAX 22 <= CPU_BUDGET 24`; claim `c06` (selfplay clause), obligation `o03`.
 - [PRELIMINARY] The gatekeeper, shuffle and train rows of the table are still computed, not measured; they are
   admitted only from `ps -o nlwp=` on those live processes when their nodes run.
   verify: claim `c06` for `gatekeeper_stage` / `train_stage`; obligation `o03`.
@@ -156,10 +158,10 @@ request):
   significant lines carry the whitelisted keys, and `codes/loop/train_9x9.sh` differs from upstream `train.sh`
   in exactly one line. Rows 3 and 4 land in one commit, as `o02` requires.
   verify: `codes/eval/check_cfg_9x9.sh` checks 1-2 (`OUT_OF_SET_KEYS = 0` on both diffs); `diff <(tail -n +3 ref-code/lightvector-KataGo/python/selfplay/train.sh) <(tail -n +13 results/ktg/paper_1902.10565/codes/loop/train_9x9.sh)` shows only line 86 of the tail.
-- Acceptance test for this section: every SGF has `SZ[9]` (claim c04) — executed by `codes/eval/check_cfg_9x9.sh`
-  check 4 as `n9 == n_all` over every `.sgfs` line of the parse run, with rectangular games (`SZ[x:y]`,
-  `sgf.cpp:2015`) counted separately and required to be 0.
-  verify: `../evidence/cfg_9x9/check_cfg_9x9-298359.txt` lines `n_all`, `n9`, `SZ9_FRACTION`, `n_rectangular`.
+- [SOLID] Acceptance test for this section passed: every SGF has `SZ[9]` (claim c04). `codes/eval/check_cfg_9x9.sh`
+  check 4 counts `n9 == n_all == 37` over both parse runs, `SZ9_FRACTION = 1.000`, with rectangular games
+  (`SZ[x:y]`, `sgf.cpp:2015`) counted separately at `n_rectangular = 0`.
+  verify: `../evidence/cfg_9x9/check_cfg_9x9-298359.txt` lines `n_all = 37`, `n9    = 37`, `SZ9_FRACTION = 1.000`, `n_rectangular = 0`, `CHECK_CFG_9X9: PASS`.
 
 ## 4. Checkpoint / resume under the 3-day walltime
 

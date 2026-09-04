@@ -1,0 +1,56 @@
+# Key-diffs for node arxiv-1902.10565::cfg_9x9_override
+# Upstream: ref-code/lightvector-KataGo @ fd0723fdbc0e9d82cf269c9630af8c27c57c07c4 (v1.18.2)
+# Blank lines and comment-only lines are stripped from both sides before diffing
+# (grep -vE '^[[:space:]]*(#|$)'), so the mission provenance headers are invisible here.
+
+## 1. cpp/configs/training/selfplay1_maxsize9.cfg -> codes/cfg/selfplay_9x9.cfg
+$ diff <(grep -vE '^[[:space:]]*(#|$)' ref-code/lightvector-KataGo/cpp/configs/training/selfplay1_maxsize9.cfg) <(grep -vE '^[[:space:]]*(#|$)' results/ktg/paper_1902.10565/codes/cfg/selfplay_9x9.cfg)
+5c5
+< dataBoardLen = 19
+---
+> dataBoardLen = 9
+37c37
+< numGameThreads = 128
+---
+> numGameThreads = 18
+44,46c44,46
+< bSizes = 7,8,9
+< bSizeRelProbs = 1,1,8
+< allowRectangleProb = 0.50
+---
+> bSizes = 9
+> bSizeRelProbs = 1
+> allowRectangleProb = 0
+(exit 1)
+
+## 2. cpp/configs/training/gatekeeper1_maxsize9.cfg -> codes/cfg/gatekeeper_9x9.cfg
+$ diff <(grep -vE '^[[:space:]]*(#|$)' ref-code/lightvector-KataGo/cpp/configs/training/gatekeeper1_maxsize9.cfg) <(grep -vE '^[[:space:]]*(#|$)' results/ktg/paper_1902.10565/codes/cfg/gatekeeper_9x9.cfg)
+5c5
+< numGameThreads = 128
+---
+> numGameThreads = 18
+16,18c16,18
+< bSizes = 7,8,9
+< bSizeRelProbs = 1,1,8
+< allowRectangleProb = 0.50
+---
+> bSizes = 9
+> bSizeRelProbs = 1
+> allowRectangleProb = 0
+(exit 1)
+
+## 3. python/selfplay/train.sh -> codes/loop/train_9x9.sh
+# 10 comment lines were inserted after line 2 of the mission copy, so the upstream file is
+# compared from line 3 and the mission file from line 13.
+$ diff <(tail -n +3 ref-code/lightvector-KataGo/python/selfplay/train.sh) <(tail -n +13 results/ktg/paper_1902.10565/codes/loop/train_9x9.sh)
+86c86
+<      -pos-len 19 \
+---
+>      -pos-len 9 \
+(exit 1)
+
+## 4. flag counts in codes/loop/train_9x9.sh
+$ grep -c -- '-pos-len 9'  results/ktg/paper_1902.10565/codes/loop/train_9x9.sh
+1
+$ grep -c -- '-pos-len 19' results/ktg/paper_1902.10565/codes/loop/train_9x9.sh
+0
