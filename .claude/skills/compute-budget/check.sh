@@ -28,10 +28,12 @@ ok=0
 echo "== compute-budget self-check  $(date -Is) =="
 
 # --- my footprint right now -------------------------------------------------
-my_gpus=$(squeue -u "$USER" -t RUNNING,PENDING -h -o "%b %D" 2>/dev/null \
-  | awk '{n=$1; sub(/.*:/,"",n); if(n=="") n=0; s+=n*$2} END{print s+0}')
+# jobs pending on a Dependency (chain successors) cannot run concurrently with their
+# predecessor, so they do not count toward the GPU footprint
+my_gpus=$(squeue -u "$USER" -t RUNNING,PENDING -h -o "%b %D %r" 2>/dev/null \
+  | awk '$3!="Dependency" {n=$1; sub(/.*:/,"",n); if(n=="") n=0; s+=n*$2} END{print s+0}')
 my_cpus=$(squeue -u "$USER" -t RUNNING,PENDING -h -o "%C" 2>/dev/null | awk '{s+=$1} END{print s+0}')
-echo "my jobs      : gpus=${my_gpus} cpus=${my_cpus}  ($(squeue -u "$USER" -h | wc -l) jobs)"
+echo "my jobs      : gpus=${my_gpus} cpus=${my_cpus}  ($(squeue -u "$USER" -h | wc -l) jobs incl. $(squeue -u "$USER" -h -t PENDING -o "%r" | grep -c Dependency) dependency-pending, not counted)"
 
 # --- free GPUs on the allowed partitions -------------------------------------
 for p in b200 b300 l40s; do
