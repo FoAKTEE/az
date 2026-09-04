@@ -1,0 +1,1941 @@
+################################################################################
+# Worker record -- SIXTH repair packet of node
+# arxiv-1902.10565::loop_resume_under_walltime
+#
+# Obligation to propose: o46_successor_id_parse_billing_banner
+#   "the successor's job id must survive whatever the site's Slurm wrappers print"
+#
+# Defect (found by the production_chain_9x9 monitoring read 1 of link 1, job 301099,
+# evidence/production_chain/status_log.txt, and escalated there rather than fixed,
+# because editing an admitted script is this node's work, not the reader's):
+#   codes/loop/loop.sbatch resubmit() (:554-560 at 8e394116, the script job 301099 is
+#   running) captured sbatch with `2>&1` and then tested the WHOLE capture against
+#   ^[0-9]+$. The site's Slurm cli_filter prints a two-line banner
+#       [BILLING] loaded!
+#       [BILLING] Re-emitting cost at job start!
+#   on STDERR at every submission, so $out was those two lines plus the id and the
+#   test failed although sbatch --parsable had SUCCEEDED. Link 1 logged
+#       === [2026-09-04T18:52:22-04:00] sbatch did not return a job id -- chain not
+#           extended: [BILLING] loaded!
+#       [BILLING] Re-emitting cost at job start!
+#       305318 ===
+#   while scontrol showed 305318 PENDING with Dependency=afterany:301099(unfulfilled),
+#   Partition=b200,l40s, TimeLimit=23:30:00 -- the successor was created and correctly
+#   wired. Consequences, all of them in the wrapper's own bookkeeping and none of them
+#   in the chain itself:
+#     BROKEN      SUCCESSOR is always "", so cancel_successor() can never fire. The
+#                 path that exists to cut a DETERMINISTIC pre-flight failure early
+#                 ("pre-flight failure -- the successor would repeat it") was dead:
+#                 that successor would start, fail the same way and spend another
+#                 breaker attempt. Same for the breaker trip and the storage stop.
+#     MISLEADING  every link logs "chain not extended" over a chain it did extend, and
+#                 the "successor queued:" line P9 looks for never appears.
+#     unaffected  chain continuity, the post-trip guard, and the STOP brake, each of
+#                 which is enforced a second way at the top of the successor's body.
+#
+# Second defect, same read, same file family:
+#   codes/eval/chain_status.sh P10 counted only '[cycle N pre-gatekeeper]' guard block
+#   headers but ALL 'scratch_guard: OK' lines. Every link makes one more guard call
+#   than it starts cycles -- the wrapper's own '[chain link N pre-flight]' call before
+#   the loop -- so the two can never be equal on a healthy link and the reader printed
+#   "NOTICE: P10: 1 guard blocks but 2 'scratch_guard: OK' lines" with both verdicts
+#   clean. Worse in the other direction: a link whose per-cycle guard ended WARNING
+#   went unreported, because the shortfall of one cancelled the surplus of one.
+#
+# Repair (this packet, two files):
+#   loop.sbatch resubmit(): stderr goes to its own file under $BASEDIR; the id is
+#   parsed off stdout as the LAST line matching ^[0-9]+(;[^;]*)?$ (--parsable prints
+#   "jobid" locally and "jobid;cluster" on a federated cluster); sbatch stderr is
+#   logged verbatim whenever it is non-empty; an sbatch that EXITS 0 with no readable
+#   id is a WARNING that retries an squeue --name/--dependency lookup three times
+#   before giving up, and is never reported as "chain not extended"; only a non-zero
+#   sbatch exit is. Every other behaviour of the wrapper is untouched.
+#   chain_status.sh P10: the equality is over ALL scratch_guard invocations, and the
+#   per-cycle subset -- the count P10 wants equal to the cycles started in the link --
+#   is reported next to it.
+#
+# LIVE-CHAIN SAFETY. loop.sbatch is safe to edit while the chain runs: each link
+# re-reads $SELF from the repo path at start (SELF="${KTG_LOOP_SBATCH:-$KTG_CODES/loop/
+# loop.sbatch}"), and Slurm hands the RUNNING link its own spooled copy, so job 301099
+# is unaffected by this edit and link 2 -- which starts when 301099 ends, ~2026-09-05T18:22
+# -- picks the fix up. codes/loop/{smoke_loop.sbatch,converged_7x7.sbatch,t7_continue.sbatch,
+# t7_cycle.sh} are NOT touched: the 7x7 run is live on them (PART 1.3).
+#
+# CPU only, login node. No sbatch, no srun, no scancel, no GPU: every scheduler call in
+# PART 2 / PART 2b / PART 3 goes to a PATH shim. The only real Slurm calls anywhere in
+# this record are READ-ONLY (squeue, scontrol show job, scontrol write batch_script,
+# sinfo through the compute-budget script). Job 301099 was RUNNING at the start and at
+# the end of this packet and was not touched; 305318 stayed PENDING.
+#
+# Harness provenance: PART 3 runs the wave-3 validator's own v2_regress.sh / v3_seeds.sh
+# / w3v_common.sh, extracted VERBATIM from evidence/wave3_prelaunch_repairs/
+# validation_harness.txt, hashes checked against the three the fifth repair packet
+# recorded. PART 2 / PART 2b add r6_common.sh, which SOURCES that same w3v_common.sh and
+# replaces exactly TWO shims -- sbatch (mode-selectable: BILLING banner on stderr, the
+# two --parsable stdout shapes, site chatter, a refusal, and a silent rc-0) and squeue
+# (the '%i|%E' pending-successor lookup only; every other squeue caller still sees the
+# wave-3 shim). All harness sources are listed verbatim at the end of this file.
+#
+# Sections: PART 1 static | PART 2 resubmit() under a site-behaving sbatch, BEFORE vs
+#           AFTER, 11 scenarios | PART 2b the same two links unfiltered | PART 3 the
+#           regression set A-J, K1-K6, L1/L2, M, N, O, P3-P5 and the seed matrix T1-T5
+#           against the recorded transcript | PART 4 chain_status.sh P10 BEFORE vs AFTER
+#           on two fixtures and the live link-1 log | PART 5 closing checks +
+#           KTG_STAGE_ONLY dry run | harness sources | vendor sweep
+################################################################################
+
+################################################################################
+# PART 1: static
+################################################################################
+########## PART 0: environment
+host: login03  date: 2026-09-04T19:15:38-04:00  user: ssci-haiyangw  az HEAD: d926196
+bash: GNU bash, version 5.1.8(1)-release (x86_64-redhat-linux-gnu)   grep: /usr/bin/grep, grep (GNU grep) 3.6
+sbatch: /opt/mprov/cloack/slurm/current/bin/sbatch   squeue: /opt/mprov/cloack/slurm/current/bin/squeue   (neither is called by this packet except read-only squeue)
+--- artifacts of this packet
+  9e64864df848280572654e7f7015b3afbdee5fc11faab166139829afb51b5f54  results/ktg/paper_1902.10565/codes/loop/loop.sbatch
+  b43c8a499fdb171a8056b01b3cfbfe6a60fb6af8fdaaeececb7245bd2ae53e02  results/ktg/paper_1902.10565/codes/eval/chain_status.sh
+--- the same two files at git HEAD (the pre-repair state; loop.sbatch 8e394116 is the script job 301099 is running)
+  8e394116f7efdab6053ff1a058cc04c819bcc01e20f5107fceaff84f8ed51a81  results/ktg/paper_1902.10565/codes/loop/loop.sbatch (HEAD)
+  557f7fe96156b81d80b3df47b59b4bcb6fd59d908634fdbe285ff27748fb7672  results/ktg/paper_1902.10565/codes/eval/chain_status.sh (HEAD)
+--- the script the RUNNING link 1 (job 301099) was submitted with, read back from the scheduler
+  scontrol write batch_script 301099 -  sha256 8e394116f7efdab6053ff1a058cc04c819bcc01e20f5107fceaff84f8ed51a81  -
+--- the live queue at the start of this packet (read-only)
+       JOBID    PARTITION         NAME     STATE    TIME_LEFT          SUBMIT_TIME NODELIST(REASON)
+      301096         b200       ktg-t7   RUNNING      3:13:56  2026-09-04T17:14:33 gb207
+      305318    b200,l40s     ktg-loop   PENDING     23:30:00  2026-09-04T18:52:22 (Dependency)
+      301186    b200,l40s      ktg-t7c   PENDING      8:00:00  2026-09-04T18:15:28 (Dependency)
+      301099         l40s     ktg-loop   RUNNING     23:06:34  2026-09-04T17:18:56 gl111
+
+########## PART 1.1: the whole diff of this repair
+diff --git a/results/ktg/paper_1902.10565/codes/eval/chain_status.sh b/results/ktg/paper_1902.10565/codes/eval/chain_status.sh
+index 0af39f6..25f0537 100755
+--- a/results/ktg/paper_1902.10565/codes/eval/chain_status.sh
++++ b/results/ktg/paper_1902.10565/codes/eval/chain_status.sh
+@@ -420,13 +420,27 @@ report() {
+          keep{buf = buf $0 "\n"}
+          /^scratch_guard: (OK|WARNING|no usable)/{if (keep) {last = buf; keep = 0}}
+          END{printf "%s", last}' "${LOGFILES[@]}" 2>/dev/null | sed 's/^/    /'
+-    local n_blocks n_ok
+-    n_blocks="$(grep -ch '^== scratch_guard .*\[cycle [0-9]* pre-gatekeeper\] ==' "${LOGFILES[@]}" 2>/dev/null | sum_lines)"
++    # P10 counts two different things and they must be compared like for like.
++    # Every scratch_guard INVOCATION emits one '== scratch_guard ... ==' header
++    # and one verdict line, and a link makes one more invocation than it starts
++    # cycles: the wrapper's own '[chain link N pre-flight]' call before the loop
++    # (loop.sbatch, scratch guard section) plus one '[cycle N pre-gatekeeper]'
++    # call per cycle. Counting only the per-cycle headers against ALL 'OK' lines
++    # therefore reported a shortfall of exactly one on every healthy link -- job
++    # 301099 read 1 logged "1 guard blocks but 2 'scratch_guard: OK' lines" with
++    # both verdicts clean. So the equality is over all invocations, and the
++    # per-cycle subset is reported separately because that is the count P10 wants
++    # equal to the cycles started in the link.
++    local n_blocks n_cycle n_ok
++    n_blocks="$(grep -ch '^== scratch_guard ' "${LOGFILES[@]}" 2>/dev/null | sum_lines)"
++    n_cycle="$(grep -ch '^== scratch_guard .*\[cycle [0-9]* pre-gatekeeper\] ==' "${LOGFILES[@]}" 2>/dev/null | sum_lines)"
+     n_ok="$(grep -ch 'scratch_guard: OK' "${LOGFILES[@]}" 2>/dev/null | sum_lines)"
+-    echo "    guard blocks [cycle N pre-gatekeeper]: ${n_blocks:-0}    'scratch_guard: OK': ${n_ok:-0}"
+-    echo "    (P10 wants the two equal, and equal to the cycles started in the link)"
++    echo "    guard invocations: ${n_blocks:-0}    'scratch_guard: OK': ${n_ok:-0}    of which [cycle N pre-gatekeeper]: ${n_cycle:-0}"
++    echo "    (P10 wants every invocation to carry a clean verdict, and the per-cycle"
++    echo "     subset to equal the cycles started in the link; the extra invocation is"
++    echo "     the wrapper's own '[chain link N pre-flight]' call, one per link)"
+     if [ "${n_blocks:-0}" -ne "${n_ok:-0}" ]; then
+-      notice "P10: ${n_blocks:-0} guard blocks but ${n_ok:-0} 'scratch_guard: OK' lines -- a cycle started without a clean guard verdict"
++      notice "P10: ${n_blocks:-0} scratch_guard invocations but ${n_ok:-0} 'scratch_guard: OK' lines -- a guard call ended without a clean verdict"
+     fi
+   fi
+   if [ "$DO_DU" -eq 1 ]; then
+diff --git a/results/ktg/paper_1902.10565/codes/loop/loop.sbatch b/results/ktg/paper_1902.10565/codes/loop/loop.sbatch
+index 5002ea7..4f2efd5 100755
+--- a/results/ktg/paper_1902.10565/codes/loop/loop.sbatch
++++ b/results/ktg/paper_1902.10565/codes/loop/loop.sbatch
+@@ -539,7 +539,7 @@ resubmit() {
+     if [ "$REQ_CPUS_RESOLVED" -ne 1 ]; then
+         say "REQ_CPUS unresolved (KTG_CPUS_PER_TASK not read from $KNOBS_ENV) -- refusing to chain"; return 0
+     fi
+-    local part check_out check_rc out
++    local part check_out check_rc out sb_rc sb_err sb_id _try
+     part=$(pick_partition)
+     say "compute-budget pre-flight for the successor (gpus=$REQ_GPUS cpus=$REQ_CPUS part=$part)"
+     if [ -z "$POLICY_CHECK_REL" ] || [ ! -f "$POLICY_CHECK" ]; then
+@@ -551,15 +551,81 @@ resubmit() {
+     if [ "$check_rc" -ne 0 ] && ! preflight_self_gpu_ok "$check_out"; then
+         say "compute-budget check failed (exit $check_rc) -- refusing to chain"; return 0
+     fi
++    # The successor's id must be read from sbatch's STDOUT alone. The site's
++    # Slurm cli_filter prints a two-line banner
++    #     [BILLING] loaded!
++    #     [BILLING] Re-emitting cost at job start!
++    # on STDERR at every submission, and the old form captured the two streams
++    # together with `2>&1` and then tested the whole capture against ^[0-9]+$.
++    # A submission that SUCCEEDED therefore read as a failed one: SUCCESSOR
++    # stayed empty for the life of the chain, so cancel_successor() could never
++    # fire (the pre-flight-failure and breaker paths that exist to cut a
++    # deterministic crash early were dead), the storage stop logged "no queued
++    # successor to cancel" while one was queued, and every link logged "chain
++    # not extended" over a successor scontrol showed correctly wired. Measured
++    # on job 301099, link 1 of the production chain: the log carried the banner
++    # and the id 305318 on one "did not return a job id" line while 305318 was
++    # PENDING with Dependency=afterany:301099 (evidence/production_chain/
++    # status_log.txt, read 1).
++    #
++    # So: stderr goes to its own file -- it is diagnostic, never the id, and it
++    # is echoed verbatim when something actually went wrong -- and the id is
++    # parsed out of stdout. `: >` first, because a redirection that cannot be
++    # created would abort the whole command substitution and the successor would
++    # never be submitted at all; /dev/null loses the diagnostic, not the chain.
++    sb_err="$BASEDIR/.resubmit_stderr.${SLURM_JOB_ID:-$$}"
++    : > "$sb_err" 2>/dev/null || sb_err=/dev/null
+     out=$(sbatch --parsable --partition="$part" \
+-        --dependency=afterany:"${SLURM_JOB_ID:-0}" "$SELF" 2>&1)
+-    if [[ "$out" =~ ^[0-9]+$ ]]; then
+-        SUCCESSOR="$out"
++        --dependency=afterany:"${SLURM_JOB_ID:-0}" "$SELF" 2>"$sb_err")
++    sb_rc=$?
++    # --parsable prints "jobid" on a stand-alone cluster and "jobid;clustername"
++    # on a federated one, so both shapes are accepted and only the leading digits
++    # are kept. The LAST matching line wins: a site wrapper is free to print its
++    # own lines on stdout before it, and the id is the last thing sbatch writes.
++    sb_id=$(printf '%s\n' "$out" | sed -n 's/^\([0-9][0-9]*\)\(;[^;]*\)\{0,1\}$/\1/p' | tail -1)
++    if [ -n "$sb_id" ]; then
++        SUCCESSOR="$sb_id"
+         say "successor queued: $SUCCESSOR (partition $part, dependency afterany:${SLURM_JOB_ID:-0})"
++        if [ -s "$sb_err" ]; then
++            say "sbatch wrote to stderr and still succeeded -- verbatim: $(tr '\n' ' ' < "$sb_err")"
++        fi
++    elif [ "$sb_rc" -eq 0 ]; then
++        # sbatch reported success but this wrapper could not read an id out of
++        # its stdout. The submission most likely EXISTS, so this is a WARNING and
++        # never "chain not extended": declaring the chain dead here is what the
++        # banner defect did, and it is the one wrong answer. Ask the scheduler
++        # instead -- a pending job of this job's own name whose dependency names
++        # this job id is the successor, whatever sbatch printed.
++        say "WARNING: sbatch exited 0 but no job id could be parsed from its stdout: '${out:-<empty>}' -- looking the successor up in squeue"
++        if [ -s "$sb_err" ]; then
++            say "sbatch stderr, verbatim: $(tr '\n' ' ' < "$sb_err")"
++        fi
++        for _try in 1 2 3; do
++            sb_id=$(squeue -h -u "${USER:-$(id -un)}" \
++                        -n "${SLURM_JOB_NAME:-ktg-loop}" -t PENDING -o '%i|%E' 2>/dev/null \
++                    | grep -F "afterany:${SLURM_JOB_ID:-0}" | cut -d'|' -f1 \
++                    | sed -n 's/^\([0-9][0-9]*\)$/\1/p' | tail -1)
++            [ -n "$sb_id" ] && break
++            say "squeue lookup attempt $_try/3 found no pending successor of ${SLURM_JOB_NAME:-ktg-loop} depending on afterany:${SLURM_JOB_ID:-0}"
++            [ "$_try" -lt 3 ] && sleep 5
++        done
++        if [ -n "$sb_id" ]; then
++            SUCCESSOR="$sb_id"
++            say "successor queued: $SUCCESSOR (partition $part, dependency afterany:${SLURM_JOB_ID:-0}) -- id recovered from squeue, not from sbatch stdout"
++        else
++            SUCCESSOR=""
++            say "WARNING: sbatch exited 0 but neither its stdout nor squeue yielded a successor id -- the successor may nevertheless exist; cancel_successor() cannot reach it, so read the queue before assuming the chain ended"
++        fi
+     else
+         SUCCESSOR=""
+-        say "sbatch did not return a job id -- chain not extended: $out"
++        say "sbatch failed (exit $sb_rc) -- chain not extended; stdout: '${out:-<empty>}'"
++        if [ -s "$sb_err" ]; then
++            say "sbatch stderr, verbatim: $(tr '\n' ' ' < "$sb_err")"
++        else
++            say "sbatch wrote nothing to stderr"
++        fi
+     fi
++    [ "$sb_err" = /dev/null ] || rm -f "$sb_err"
+ }
+ resubmit
+ 
+
+########## PART 1.2: code lines changed (comment and blank lines excluded)
+  -    local n_blocks n_ok
+  -    n_blocks="$(grep -ch '^== scratch_guard .*\[cycle [0-9]* pre-gatekeeper\] ==' "${LOGFILES[@]}" 2>/dev/null | sum_lines)"
+  +    local n_blocks n_cycle n_ok
+  +    n_blocks="$(grep -ch '^== scratch_guard ' "${LOGFILES[@]}" 2>/dev/null | sum_lines)"
+  +    n_cycle="$(grep -ch '^== scratch_guard .*\[cycle [0-9]* pre-gatekeeper\] ==' "${LOGFILES[@]}" 2>/dev/null | sum_lines)"
+  -    echo "    guard blocks [cycle N pre-gatekeeper]: ${n_blocks:-0}    'scratch_guard: OK': ${n_ok:-0}"
+  -    echo "    (P10 wants the two equal, and equal to the cycles started in the link)"
+  +    echo "    guard invocations: ${n_blocks:-0}    'scratch_guard: OK': ${n_ok:-0}    of which [cycle N pre-gatekeeper]: ${n_cycle:-0}"
+  +    echo "    (P10 wants every invocation to carry a clean verdict, and the per-cycle"
+  +    echo "     subset to equal the cycles started in the link; the extra invocation is"
+  +    echo "     the wrapper's own '[chain link N pre-flight]' call, one per link)"
+  -      notice "P10: ${n_blocks:-0} guard blocks but ${n_ok:-0} 'scratch_guard: OK' lines -- a cycle started without a clean guard verdict"
+  +      notice "P10: ${n_blocks:-0} scratch_guard invocations but ${n_ok:-0} 'scratch_guard: OK' lines -- a guard call ended without a clean verdict"
+  -    local part check_out check_rc out
+  +    local part check_out check_rc out sb_rc sb_err sb_id _try
+  +    sb_err="$BASEDIR/.resubmit_stderr.${SLURM_JOB_ID:-$$}"
+  +    : > "$sb_err" 2>/dev/null || sb_err=/dev/null
+  -        --dependency=afterany:"${SLURM_JOB_ID:-0}" "$SELF" 2>&1)
+  -    if [[ "$out" =~ ^[0-9]+$ ]]; then
+  -        SUCCESSOR="$out"
+  +        --dependency=afterany:"${SLURM_JOB_ID:-0}" "$SELF" 2>"$sb_err")
+  +    sb_rc=$?
+  +    sb_id=$(printf '%s\n' "$out" | sed -n 's/^\([0-9][0-9]*\)\(;[^;]*\)\{0,1\}$/\1/p' | tail -1)
+  +    if [ -n "$sb_id" ]; then
+  +        SUCCESSOR="$sb_id"
+  +        if [ -s "$sb_err" ]; then
+  +            say "sbatch wrote to stderr and still succeeded -- verbatim: $(tr '\n' ' ' < "$sb_err")"
+  +        fi
+  +    elif [ "$sb_rc" -eq 0 ]; then
+  +        say "WARNING: sbatch exited 0 but no job id could be parsed from its stdout: '${out:-<empty>}' -- looking the successor up in squeue"
+  +        if [ -s "$sb_err" ]; then
+  +            say "sbatch stderr, verbatim: $(tr '\n' ' ' < "$sb_err")"
+  +        fi
+  +        for _try in 1 2 3; do
+  +            sb_id=$(squeue -h -u "${USER:-$(id -un)}" \
+  +                        -n "${SLURM_JOB_NAME:-ktg-loop}" -t PENDING -o '%i|%E' 2>/dev/null \
+  +                    | grep -F "afterany:${SLURM_JOB_ID:-0}" | cut -d'|' -f1 \
+  +                    | sed -n 's/^\([0-9][0-9]*\)$/\1/p' | tail -1)
+  +            [ -n "$sb_id" ] && break
+  +            say "squeue lookup attempt $_try/3 found no pending successor of ${SLURM_JOB_NAME:-ktg-loop} depending on afterany:${SLURM_JOB_ID:-0}"
+  +            [ "$_try" -lt 3 ] && sleep 5
+  +        done
+  +        if [ -n "$sb_id" ]; then
+  +            SUCCESSOR="$sb_id"
+  +            say "successor queued: $SUCCESSOR (partition $part, dependency afterany:${SLURM_JOB_ID:-0}) -- id recovered from squeue, not from sbatch stdout"
+  +        else
+  +            SUCCESSOR=""
+  +            say "WARNING: sbatch exited 0 but neither its stdout nor squeue yielded a successor id -- the successor may nevertheless exist; cancel_successor() cannot reach it, so read the queue before assuming the chain ended"
+  +        fi
+  -        say "sbatch did not return a job id -- chain not extended: $out"
+  +        say "sbatch failed (exit $sb_rc) -- chain not extended; stdout: '${out:-<empty>}'"
+  +        if [ -s "$sb_err" ]; then
+  +            say "sbatch stderr, verbatim: $(tr '\n' ' ' < "$sb_err")"
+  +        else
+  +            say "sbatch wrote nothing to stderr"
+  +        fi
+  +    [ "$sb_err" = /dev/null ] || rm -f "$sb_err"
+
+########## PART 1.3: files this packet must NOT have touched
+--- the 7x7 run is LIVE on these three; git diff must be clean
+  codes/loop/smoke_loop.sbatch                                             git-diff-lines=0  sha256=4515b83c870d013b...
+  codes/loop/converged_7x7.sbatch                                          git-diff-lines=0  sha256=945ddb4df4d1e623...
+  codes/loop/t7_continue.sbatch                                            git-diff-lines=0  sha256=e06e524a570fb0ee...
+  codes/loop/t7_cycle.sh                                                   git-diff-lines=0  sha256=15caf8651793b14f...
+--- everything else of codes/ this packet must not have changed
+  results/ktg/paper_1902.10565/codes/loop/synchronous_loop_9x9.sh          git-diff-lines=0
+  results/ktg/paper_1902.10565/codes/loop/knobs_9x9.env                    git-diff-lines=0
+  results/ktg/paper_1902.10565/codes/loop/export_model_for_selfplay_9x9.sh git-diff-lines=0
+  results/ktg/paper_1902.10565/codes/loop/train_9x9.sh                     git-diff-lines=0
+  results/ktg/paper_1902.10565/codes/loop/smoke_one_cycle.sh               git-diff-lines=0
+  results/ktg/paper_1902.10565/codes/eval/stage_monitor.sh                 git-diff-lines=0
+  results/ktg/paper_1902.10565/codes/data_budget/scratch_guard.sh          git-diff-lines=0
+  results/ktg/paper_1902.10565/codes/data_budget/budget.env                git-diff-lines=0
+  mission.json                                                             git-diff-lines=0
+  results/ktg/paper_1902.10565/tasks/loop_resume_under_walltime/implementation.md git-diff-lines=0
+  results/ktg/paper_1902.10565/tasks/production_chain_9x9/implementation.md git-diff-lines=0
+--- every file this packet has modified in the working tree (git diff --numstat, whole repo)
+  19	5	results/ktg/paper_1902.10565/codes/eval/chain_status.sh
+  71	5	results/ktg/paper_1902.10565/codes/loop/loop.sbatch
+  5296	0	results/ktg/paper_1902.10565/evidence/converged_7x7/metrics_train-301096.json
+  55	0	results/ktg/paper_1902.10565/evidence/converged_7x7/status_log.txt
+  59184	505	results/ktg/paper_1902.10565/evidence/converged_7x7/summary-301096.json
+  (rows other than the two artifacts belong to the concurrent 7x7 and DAG packets; this packet commits with
+   'git commit --only --' over its own paths, so nothing of theirs is carried in)
+
+########## PART 1.4: bash -n on every script of codes/loop, codes/eval and the pre-repair copies
+  ok   converged_7x7.sbatch
+  ok   loop.sbatch
+  ok   smoke_loop.sbatch
+  ok   t7_continue.sbatch
+  ok   export_model_for_selfplay_9x9.sh
+  ok   smoke_one_cycle.sh
+  ok   synchronous_loop_9x9.sh
+  ok   t7_cycle.sh
+  ok   train_9x9.sh
+  ok   chain_status.sh
+  ok   check_board_param.sh
+  ok   check_cfg_9x9.sh
+  ok   export_smoke.sh
+  ok   probe_gate_9x9.sh
+  ok   probe_resume_9x9.sh
+  ok   probe_search_9x9.sh
+  ok   probe_train_9x9.sh
+  ok   stage_monitor.sh
+  ok   loop_pre.sbatch
+  ok   chain_status_pre.sh
+
+########## PART 1.5: the defect and the fix, as greps
+--- the pre-repair sbatch capture (HEAD)
+  554:    out=$(sbatch --parsable --partition="$part" \
+  555-        --dependency=afterany:"${SLURM_JOB_ID:-0}" "$SELF" 2>&1)
+  556-    if [[ "$out" =~ ^[0-9]+$ ]]; then
+  557-        SUCCESSOR="$out"
+  558-        say "successor queued: $SUCCESSOR (partition $part, dependency afterany:${SLURM_JOB_ID:-0})"
+  559-    else
+  560-        SUCCESSOR=""
+  561-        say "sbatch did not return a job id -- chain not extended: $out"
+  562-    fi
+--- the repaired one
+  578:    out=$(sbatch --parsable --partition="$part" \
+  579-        --dependency=afterany:"${SLURM_JOB_ID:-0}" "$SELF" 2>"$sb_err")
+  580-    sb_rc=$?
+  581-    # --parsable prints "jobid" on a stand-alone cluster and "jobid;clustername"
+  582-    # on a federated one, so both shapes are accepted and only the leading digits
+  583-    # are kept. The LAST matching line wins: a site wrapper is free to print its
+  584-    # own lines on stdout before it, and the id is the last thing sbatch writes.
+--- the sbatch command substitution, flattened to one line (the call spans two lines in both files)
+  HEAD  : out=$(sbatch --parsable --partition="$part" \         --dependency=afterany:"${SLURM_JOB_ID:-0}" "$SELF" 2>&1)
+  after : out=$(sbatch --parsable --partition="$part" \         --dependency=afterany:"${SLURM_JOB_ID:-0}" "$SELF" 2>"$sb_err")
+  '2>&1' inside that substitution   HEAD: 1   after: 0
+--- 'chain not extended' occurrences, before and after
+  HEAD  561:        say "sbatch did not return a job id -- chain not extended: $out"
+  after 595:        # never "chain not extended": declaring the chain dead here is what the
+  after 621:        say "sbatch failed (exit $sb_rc) -- chain not extended; stdout: '${out:-<empty>}'"
+  (after the repair the only say() that carries the phrase is the sbatch-exit != 0 branch;
+   the other hit is the comment that says why the rc-0 branch must not use it)
+--- '--export' on non-comment lines of loop.sbatch (0 = Slurm's default --export=ALL still applies)
+  0
+--- resubmit()'s span at this sha, and the lines the status_log defect report cited (:554-560 at 8e394116)
+  resubmit() now spans lines 522-629
+  at HEAD it spanned 522-563
+--- the P10 counter in chain_status.sh, before and after
+  HEAD  424:    n_blocks="$(grep -ch '^== scratch_guard .*\[cycle [0-9]* pre-gatekeeper\] ==' "${LOGFILES[@]}" 2>/dev/null | sum_lines)"
+  HEAD  425:    n_ok="$(grep -ch 'scratch_guard: OK' "${LOGFILES[@]}" 2>/dev/null | sum_lines)"
+  HEAD  426:    echo "    guard blocks [cycle N pre-gatekeeper]: ${n_blocks:-0}    'scratch_guard: OK': ${n_ok:-0}"
+  HEAD  429:      notice "P10: ${n_blocks:-0} guard blocks but ${n_ok:-0} 'scratch_guard: OK' lines -- a cycle started without a clean guard verdict"
+  after 435:    n_blocks="$(grep -ch '^== scratch_guard ' "${LOGFILES[@]}" 2>/dev/null | sum_lines)"
+  after 436:    n_cycle="$(grep -ch '^== scratch_guard .*\[cycle [0-9]* pre-gatekeeper\] ==' "${LOGFILES[@]}" 2>/dev/null | sum_lines)"
+  after 437:    n_ok="$(grep -ch 'scratch_guard: OK' "${LOGFILES[@]}" 2>/dev/null | sum_lines)"
+  after 438:    echo "    guard invocations: ${n_blocks:-0}    'scratch_guard: OK': ${n_ok:-0}    of which [cycle N pre-gatekeeper]: ${n_cycle:-0}"
+  after 443:      notice "P10: ${n_blocks:-0} scratch_guard invocations but ${n_ok:-0} 'scratch_guard: OK' lines -- a guard call ended without a clean verdict"
+
+########## PART 1.6: the evidence this repair is written against (read-only)
+--- /scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/logs/loop-301099.log, the resubmit block of link 1, verbatim
+  === [2026-09-04T18:52:22-04:00] sbatch did not return a job id -- chain not extended: [BILLING] loaded!
+  [BILLING] Re-emitting cost at job start!
+  305318 ===
+--- and what the scheduler says about the successor it names
+  JobId=305318 JobName=ktg-loop
+     UserId=ssci-haiyangw(30154) GroupId=users(30000) MCS_label=N/A
+     Priority=18204 Nice=0 Account=ssci-anima QOS=scavenger
+     JobState=PENDING Reason=Dependency Dependency=afterany:301099(unfulfilled)
+     Requeue=1 Restarts=0 BatchFlag=1 Reboot=0 ExitCode=0:0
+     RunTime=00:00:00 TimeLimit=23:30:00 TimeMin=N/A
+--- the guard invocations of that link
+  38:== scratch_guard 2026-09-04T18:52:23-04:00 [chain link 1 pre-flight] ==
+  47:scratch_guard: OK  used=9925282667 B  projected_total=31400119147 B  group_free=6940183867392 B
+  55:== scratch_guard 2026-09-04T18:52:25-04:00 [cycle 1 pre-gatekeeper] ==
+  64:scratch_guard: OK  used=9954197718 B  projected_total=31429034198 B  group_free=6940183867392 B
+  739:== scratch_guard 2026-09-04T18:55:48-04:00 [cycle 2 pre-gatekeeper] ==
+  748:scratch_guard: OK  used=10094983350 B  projected_total=31569819830 B  group_free=6959167066112 B
+  1423:== scratch_guard 2026-09-04T18:58:02-04:00 [cycle 3 pre-gatekeeper] ==
+  1432:scratch_guard: OK  used=10183728658 B  projected_total=31658565138 B  group_free=6970422824960 B
+  2109:== scratch_guard 2026-09-04T19:00:15-04:00 [cycle 4 pre-gatekeeper] ==
+  2118:scratch_guard: OK  used=10275392018 B  projected_total=31750228498 B  group_free=6983435628544 B
+  2792:== scratch_guard 2026-09-04T19:02:26-04:00 [cycle 5 pre-gatekeeper] ==
+  2801:scratch_guard: OK  used=10364265006 B  projected_total=31839101486 B  group_free=6995591716864 B
+  3599:== scratch_guard 2026-09-04T19:04:55-04:00 [cycle 6 pre-gatekeeper] ==
+  3608:scratch_guard: OK  used=10474832643 B  projected_total=31949669123 B  group_free=7008427155456 B
+########## cleanup
+done 2026-09-04T19:15:42-04:00
+
+################################################################################
+# PART 2: resubmit() under a shim sbatch that behaves like the site's.
+#   BEFORE = git HEAD 8e394116 (the script job 301099 is running)
+#   AFTER  = the working tree
+#   'cancel_iff_trip' is the wave-3 harness's own invariant: a scancel is issued
+#   if and only if the link took a path that must cut the chain. VIOLATED on the
+#   BEFORE side of S3 / S9 / S10 IS the defect.
+################################################################################
+########## environment
+host: login03  date: 2026-09-04T19:09:39-04:00  az HEAD: fd09b92  loop.sbatch sha256: 9e64864df8482805...  loop sha256: b5acb1d8ad1a313f...  stage_monitor sha256: c28ce54477c9d784...  shims: nvidia-smi sacct sbatch scancel scontrol sinfo squeue 
+knobs_9x9.env copy: 5ae5358791974ae1... (real 5ae5358791974ae1...)  SLURM_CPUS_PER_TASK exported as 32 for every link unless a scenario says otherwise
+writer block (lines 421-428 of synchronous_loop_9x9.sh, BASEDIR substituted):
+    | CYCLES_DONE=$(cat $SIM/ktg/loop/.cycles_completed 2>/dev/null || echo 0)
+    | CYCLES_DONE="${CYCLES_DONE#"${CYCLES_DONE%%[![:space:]]*}"}"
+    | CYCLES_DONE="${CYCLES_DONE%"${CYCLES_DONE##*[![:space:]]}"}"
+    | case "$CYCLES_DONE" in ''|*[!0-9]*) CYCLES_DONE=0 ;; esac
+    | [ "${#CYCLES_DONE}" -le 18 ] || CYCLES_DONE=0
+    | CYCLES_DONE=$(( 10#$CYCLES_DONE + 1 ))
+    | echo "$CYCLES_DONE" > $SIM/ktg/loop/.cycles_completed
+    | echo "cycle $CYCLE_INDEX complete -- $CYCLES_DONE cycle(s) recorded in $BASEDIR/.cycles_completed"
+
+r6 shims installed: sbatch(mode=$R6_SBATCH_MODE) squeue(mode=$R6_SQUEUE_MODE); all other shims are w3v_common.sh's
+
+########## S1: the real site behaviour -- BILLING banner on stderr, '<id>' on stdout, exit 0
+  [pre] healthy submit, loop then fails   (R6_SBATCH_MODE=banner R6_SQUEUE_MODE=empty)
+      === sbatch did not return a job id -- chain not extended: [BILLING] loaded!
+      === failure rc=1 -- failcount now 2/3 ===
+      === chain continues, 1 attempt(s) left before the breaker ===
+      wrapper exit=1  .failcount=2$|  .chain_depth=1$|  .cycles_completed=<absent>  breaker_tripped=no  STOP=no
+      cancel_iff_trip=ok
+      shim: SBATCH[800001] 
+      SUCCESSOR-carrying stderr files left in BASEDIR: 0
+  [post] healthy submit, loop then fails   (R6_SBATCH_MODE=banner R6_SQUEUE_MODE=empty)
+      === successor queued: 800001 (partition b200, dependency afterany:1002) ===
+      === sbatch wrote to stderr and still succeeded -- verbatim: [BILLING] loaded! [BILLING] Re-emitting cost at job start!  ===
+      === failure rc=1 -- failcount now 2/3 ===
+      === chain continues, 1 attempt(s) left before the breaker ===
+      wrapper exit=1  .failcount=2$|  .chain_depth=1$|  .cycles_completed=<absent>  breaker_tripped=no  STOP=no
+      cancel_iff_trip=ok
+      shim: SBATCH[800001] 
+      SUCCESSOR-carrying stderr files left in BASEDIR: 0
+
+########## S2: the federated --parsable form '<id>;<cluster>' with the same banner
+  [pre] healthy submit, jobid;skipjack   (R6_SBATCH_MODE=banner-fed R6_SQUEUE_MODE=empty)
+      === sbatch did not return a job id -- chain not extended: [BILLING] loaded!
+      === failure rc=1 -- failcount now 2/3 ===
+      === chain continues, 1 attempt(s) left before the breaker ===
+      wrapper exit=1  .failcount=2$|  .chain_depth=1$|  .cycles_completed=<absent>  breaker_tripped=no  STOP=no
+      cancel_iff_trip=ok
+      shim: SBATCH[800001] 
+      SUCCESSOR-carrying stderr files left in BASEDIR: 0
+  [post] healthy submit, jobid;skipjack   (R6_SBATCH_MODE=banner-fed R6_SQUEUE_MODE=empty)
+      === successor queued: 800001 (partition b200, dependency afterany:1012) ===
+      === sbatch wrote to stderr and still succeeded -- verbatim: [BILLING] loaded! [BILLING] Re-emitting cost at job start!  ===
+      === failure rc=1 -- failcount now 2/3 ===
+      === chain continues, 1 attempt(s) left before the breaker ===
+      wrapper exit=1  .failcount=2$|  .chain_depth=1$|  .cycles_completed=<absent>  breaker_tripped=no  STOP=no
+      cancel_iff_trip=ok
+      shim: SBATCH[800001] 
+      SUCCESSOR-carrying stderr files left in BASEDIR: 0
+
+########## S3: PRE-FLIGHT FAILURE (env.sh hidden) -- does cancel_successor() reach the successor?
+  [pre] pre-flight failure, successor must be cancelled   (R6_SBATCH_MODE=banner R6_SQUEUE_MODE=empty)
+      === sbatch did not return a job id -- chain not extended: [BILLING] loaded!
+      === PRE-FLIGHT FAILURE rc=2 after 1s -- the loop never started ===
+      === failure rc=2 -- failcount now 2/3 ===
+      === no queued successor to cancel (pre-flight failure -- the successor would repeat it) ===
+      wrapper exit=2  .failcount=2$|  .chain_depth=1$|  .cycles_completed=<absent>  breaker_tripped=no  STOP=no
+      cancel_iff_trip=VIOLATED (scancel=0 trip=1)
+      shim: SBATCH[800001] 
+      SUCCESSOR-carrying stderr files left in BASEDIR: 0
+  [post] pre-flight failure, successor must be cancelled   (R6_SBATCH_MODE=banner R6_SQUEUE_MODE=empty)
+      === successor queued: 800001 (partition b200, dependency afterany:2002) ===
+      === sbatch wrote to stderr and still succeeded -- verbatim: [BILLING] loaded! [BILLING] Re-emitting cost at job start!  ===
+      === PRE-FLIGHT FAILURE rc=2 after 1s -- the loop never started ===
+      === failure rc=2 -- failcount now 2/3 ===
+      === cancelling queued successor 800001 (pre-flight failure -- the successor would repeat it) ===
+      wrapper exit=2  .failcount=2$|  .chain_depth=1$|  .cycles_completed=<absent>  breaker_tripped=no  STOP=no
+      cancel_iff_trip=ok
+      shim: SBATCH[800001] SCANCEL 800001 
+      SUCCESSOR-carrying stderr files left in BASEDIR: 0
+
+########## S4: sbatch FAILS (exit 1, message on stderr, nothing on stdout)
+  [pre] submission refused by the scheduler   (R6_SBATCH_MODE=fail R6_SQUEUE_MODE=empty)
+      === sbatch did not return a job id -- chain not extended: sbatch: error: Batch job submission failed: Invalid account or account/partition combination specified ===
+      === failure rc=1 -- failcount now 2/3 ===
+      === chain continues, 1 attempt(s) left before the breaker ===
+      wrapper exit=1  .failcount=2$|  .chain_depth=1$|  .cycles_completed=<absent>  breaker_tripped=no  STOP=no
+      cancel_iff_trip=ok
+      shim: SBATCH[800001] 
+      SUCCESSOR-carrying stderr files left in BASEDIR: 0
+  [post] submission refused by the scheduler   (R6_SBATCH_MODE=fail R6_SQUEUE_MODE=empty)
+      === sbatch failed (exit 1) -- chain not extended; stdout: '<empty>' ===
+      === sbatch stderr, verbatim: sbatch: error: Batch job submission failed: Invalid account or account/partition combination specified  ===
+      === failure rc=1 -- failcount now 2/3 ===
+      === chain continues, 1 attempt(s) left before the breaker ===
+      wrapper exit=1  .failcount=2$|  .chain_depth=1$|  .cycles_completed=<absent>  breaker_tripped=no  STOP=no
+      cancel_iff_trip=ok
+      shim: SBATCH[800001] 
+      SUCCESSOR-carrying stderr files left in BASEDIR: 0
+
+########## S5: sbatch exit 0 but no id on stdout, and squeue KNOWS the successor
+  [pre] no id, rc 0, squeue hit   (R6_SBATCH_MODE=silent R6_SQUEUE_MODE=hit)
+      === sbatch did not return a job id -- chain not extended:  ===
+      === failure rc=1 -- failcount now 2/3 ===
+      === chain continues, 1 attempt(s) left before the breaker ===
+      wrapper exit=1  .failcount=2$|  .chain_depth=1$|  .cycles_completed=<absent>  breaker_tripped=no  STOP=no
+      cancel_iff_trip=ok
+      shim: SBATCH[800001] 
+      SUCCESSOR-carrying stderr files left in BASEDIR: 0
+  [post] no id, rc 0, squeue hit   (R6_SBATCH_MODE=silent R6_SQUEUE_MODE=hit)
+      === WARNING: sbatch exited 0 but no job id could be parsed from its stdout: '<empty>' -- looking the successor up in squeue ===
+      === successor queued: 800001 (partition b200, dependency afterany:4002) -- id recovered from squeue, not from sbatch stdout ===
+      === failure rc=1 -- failcount now 2/3 ===
+      === chain continues, 1 attempt(s) left before the breaker ===
+      wrapper exit=1  .failcount=2$|  .chain_depth=1$|  .cycles_completed=<absent>  breaker_tripped=no  STOP=no
+      cancel_iff_trip=ok
+      shim: SBATCH[800001] SQUEUE -h -u ssci-haiyangw -n ktg-loop -t PENDING -o %i|%E 
+      SUCCESSOR-carrying stderr files left in BASEDIR: 0
+
+########## S6: sbatch exit 0, no id on stdout, and squeue finds nothing (3 attempts, 5 s apart)
+  [pre] no id, rc 0, squeue empty   (R6_SBATCH_MODE=silent R6_SQUEUE_MODE=empty)
+      === sbatch did not return a job id -- chain not extended:  ===
+      === failure rc=1 -- failcount now 2/3 ===
+      === chain continues, 1 attempt(s) left before the breaker ===
+      wrapper exit=1  .failcount=2$|  .chain_depth=1$|  .cycles_completed=<absent>  breaker_tripped=no  STOP=no
+      cancel_iff_trip=ok
+      shim: SBATCH[800001] 
+      SUCCESSOR-carrying stderr files left in BASEDIR: 0
+  [post] no id, rc 0, squeue empty   (R6_SBATCH_MODE=silent R6_SQUEUE_MODE=empty)
+      === WARNING: sbatch exited 0 but no job id could be parsed from its stdout: '<empty>' -- looking the successor up in squeue ===
+      === squeue lookup attempt 1/3 found no pending successor of ktg-loop depending on afterany:4012 ===
+      === squeue lookup attempt 2/3 found no pending successor of ktg-loop depending on afterany:4012 ===
+      === squeue lookup attempt 3/3 found no pending successor of ktg-loop depending on afterany:4012 ===
+      === WARNING: sbatch exited 0 but neither its stdout nor squeue yielded a successor id -- the successor may nevertheless exist; cancel_successor() cannot reach it, so read the queue before assuming the chain ended ===
+      === failure rc=1 -- failcount now 2/3 ===
+      === chain continues, 1 attempt(s) left before the breaker ===
+      wrapper exit=1  .failcount=2$|  .chain_depth=1$|  .cycles_completed=<absent>  breaker_tripped=no  STOP=no
+      cancel_iff_trip=ok
+      shim: SBATCH[800001] SQUEUE -h -u ssci-haiyangw -n ktg-loop -t PENDING -o %i|%E SQUEUE -h -u ssci-haiyangw -n ktg-loop -t PENDING -o %i|%E SQUEUE -h -u ssci-haiyangw -n ktg-loop -t PENDING -o %i|%E 
+      SUCCESSOR-carrying stderr files left in BASEDIR: 0
+
+########## S7: site chatter on stdout BEFORE the id (the last matching line must win)
+  [pre] chatter line then the id   (R6_SBATCH_MODE=noise R6_SQUEUE_MODE=empty)
+      === sbatch did not return a job id -- chain not extended: [BILLING] loaded!
+      === failure rc=1 -- failcount now 2/3 ===
+      === chain continues, 1 attempt(s) left before the breaker ===
+      wrapper exit=1  .failcount=2$|  .chain_depth=1$|  .cycles_completed=<absent>  breaker_tripped=no  STOP=no
+      cancel_iff_trip=ok
+      shim: SBATCH[800001] 
+      SUCCESSOR-carrying stderr files left in BASEDIR: 0
+  [post] chatter line then the id   (R6_SBATCH_MODE=noise R6_SQUEUE_MODE=empty)
+      === successor queued: 800001 (partition b200, dependency afterany:5002) ===
+      === sbatch wrote to stderr and still succeeded -- verbatim: [BILLING] loaded! [BILLING] Re-emitting cost at job start!  ===
+      === failure rc=1 -- failcount now 2/3 ===
+      === chain continues, 1 attempt(s) left before the breaker ===
+      wrapper exit=1  .failcount=2$|  .chain_depth=1$|  .cycles_completed=<absent>  breaker_tripped=no  STOP=no
+      cancel_iff_trip=ok
+      shim: SBATCH[800001] 
+      SUCCESSOR-carrying stderr files left in BASEDIR: 0
+
+########## S8: the wave-3 shim's own behaviour (clean stdout, silent stderr) -- the regression anchor
+  [pre] clean sbatch, unchanged both sides   (R6_SBATCH_MODE=clean R6_SQUEUE_MODE=empty)
+      === successor queued: 800001 (partition b200, dependency afterany:6001) ===
+      === failure rc=1 -- failcount now 2/3 ===
+      === chain continues, 1 attempt(s) left before the breaker ===
+      wrapper exit=1  .failcount=2$|  .chain_depth=1$|  .cycles_completed=<absent>  breaker_tripped=no  STOP=no
+      cancel_iff_trip=ok
+      shim: SBATCH[800001] 
+      SUCCESSOR-carrying stderr files left in BASEDIR: 0
+  [post] clean sbatch, unchanged both sides   (R6_SBATCH_MODE=clean R6_SQUEUE_MODE=empty)
+      === successor queued: 800001 (partition b200, dependency afterany:6002) ===
+      === failure rc=1 -- failcount now 2/3 ===
+      === chain continues, 1 attempt(s) left before the breaker ===
+      wrapper exit=1  .failcount=2$|  .chain_depth=1$|  .cycles_completed=<absent>  breaker_tripped=no  STOP=no
+      cancel_iff_trip=ok
+      shim: SBATCH[800001] 
+      SUCCESSOR-carrying stderr files left in BASEDIR: 0
+
+########## S9: breaker trip on the second link under the banner -- cancel_successor on the trip path
+  [pre] link 1 of 2   (R6_SBATCH_MODE=banner R6_SQUEUE_MODE=empty)
+      === sbatch did not return a job id -- chain not extended: [BILLING] loaded!
+      === failure rc=1 -- failcount now 2/3 ===
+      === chain continues, 1 attempt(s) left before the breaker ===
+      wrapper exit=1  .failcount=2$|  .chain_depth=1$|  .cycles_completed=<absent>  breaker_tripped=no  STOP=no
+      cancel_iff_trip=ok
+      shim: SBATCH[800001] 
+      SUCCESSOR-carrying stderr files left in BASEDIR: 0
+  [pre] link 2 of 2 (breaker)   (R6_SBATCH_MODE=banner R6_SQUEUE_MODE=empty)
+      === sbatch did not return a job id -- chain not extended: [BILLING] loaded!
+      === failure rc=1 -- failcount now 4/3 ===
+      === circuit breaker tripped after 4 consecutive failures (last ran 6s) ===
+      === no queued successor to cancel (circuit breaker tripped) ===
+      wrapper exit=1  .failcount=4$|  .chain_depth=2$|  .cycles_completed=<absent>  breaker_tripped=yes  STOP=no
+      cancel_iff_trip=VIOLATED (scancel=0 trip=1)
+      shim: SBATCH[800001] SBATCH[800002] 
+      SUCCESSOR-carrying stderr files left in BASEDIR: 0
+  [post] link 1 of 2   (R6_SBATCH_MODE=banner R6_SQUEUE_MODE=empty)
+      === successor queued: 800001 (partition b200, dependency afterany:7011) ===
+      === sbatch wrote to stderr and still succeeded -- verbatim: [BILLING] loaded! [BILLING] Re-emitting cost at job start!  ===
+      === failure rc=1 -- failcount now 2/3 ===
+      === chain continues, 1 attempt(s) left before the breaker ===
+      wrapper exit=1  .failcount=2$|  .chain_depth=1$|  .cycles_completed=<absent>  breaker_tripped=no  STOP=no
+      cancel_iff_trip=ok
+      shim: SBATCH[800001] 
+      SUCCESSOR-carrying stderr files left in BASEDIR: 0
+  [post] link 2 of 2 (breaker)   (R6_SBATCH_MODE=banner R6_SQUEUE_MODE=empty)
+      === successor queued: 800002 (partition b200, dependency afterany:7012) ===
+      === sbatch wrote to stderr and still succeeded -- verbatim: [BILLING] loaded! [BILLING] Re-emitting cost at job start!  ===
+      === failure rc=1 -- failcount now 4/3 ===
+      === circuit breaker tripped after 4 consecutive failures (last ran 7s) ===
+      === cancelling queued successor 800002 (circuit breaker tripped) ===
+      wrapper exit=1  .failcount=4$|  .chain_depth=2$|  .cycles_completed=<absent>  breaker_tripped=yes  STOP=no
+      cancel_iff_trip=ok
+      shim: SBATCH[800001] SBATCH[800002] SCANCEL 800002 
+      SUCCESSOR-carrying stderr files left in BASEDIR: 0
+
+########## S10: storage refusal (guard exit 1 fixture) -- the deliberate-stop cancel path
+  [pre] guard hard cap -> deliberate chain stop   (R6_SBATCH_MODE=banner R6_SQUEUE_MODE=empty)
+      === sbatch did not return a job id -- chain not extended: [BILLING] loaded!
+      === deliberate chain stop (rc=3 after 6s) -- failcount left at 0 ===
+      === no queued successor to cancel (storage guard stopped the chain) ===
+      wrapper exit=3  .failcount=0$|  .chain_depth=1$|  .cycles_completed=<absent>  breaker_tripped=no  STOP=yes
+      cancel_iff_trip=VIOLATED (scancel=0 trip=1)
+      shim: SBATCH[800001] 
+      SUCCESSOR-carrying stderr files left in BASEDIR: 0
+  [post] guard hard cap -> deliberate chain stop   (R6_SBATCH_MODE=banner R6_SQUEUE_MODE=empty)
+      === successor queued: 800001 (partition b200, dependency afterany:8002) ===
+      === sbatch wrote to stderr and still succeeded -- verbatim: [BILLING] loaded! [BILLING] Re-emitting cost at job start!  ===
+      === deliberate chain stop (rc=3 after 6s) -- failcount left at 0 ===
+      === cancelling queued successor 800001 (storage guard stopped the chain) ===
+      wrapper exit=3  .failcount=0$|  .chain_depth=1$|  .cycles_completed=<absent>  breaker_tripped=no  STOP=yes
+      cancel_iff_trip=ok
+      shim: SBATCH[800001] SCANCEL 800001 
+      SUCCESSOR-carrying stderr files left in BASEDIR: 0
+
+########## S11: STOP brake at entry -- resubmit() must not run at all, on either side
+  [pre] STOP present   (R6_SBATCH_MODE=banner R6_SQUEUE_MODE=empty)
+      wrapper exit=0  .failcount=0$|  .chain_depth=1$|  .cycles_completed=<absent>  breaker_tripped=no  STOP=yes
+      cancel_iff_trip=ok
+      shim: (no sbatch, no scancel)
+      SUCCESSOR-carrying stderr files left in BASEDIR: 0
+  [post] STOP present   (R6_SBATCH_MODE=banner R6_SQUEUE_MODE=empty)
+      wrapper exit=0  .failcount=0$|  .chain_depth=1$|  .cycles_completed=<absent>  breaker_tripped=no  STOP=yes
+      cancel_iff_trip=ok
+      shim: (no sbatch, no scancel)
+      SUCCESSOR-carrying stderr files left in BASEDIR: 0
+
+########## cleanup
+done 2026-09-04T19:13:26-04:00
+
+################################################################################
+# PART 2b: the same two links, UNFILTERED
+################################################################################
+########## environment
+host: login03  date: 2026-09-04T19:14:16-04:00  az HEAD: d926196  loop.sbatch sha256: 9e64864df8482805...  loop sha256: b5acb1d8ad1a313f...  stage_monitor sha256: c28ce54477c9d784...  shims: nvidia-smi sacct sbatch scancel scontrol sinfo squeue 
+knobs_9x9.env copy: 5ae5358791974ae1... (real 5ae5358791974ae1...)  SLURM_CPUS_PER_TASK exported as 32 for every link unless a scenario says otherwise
+writer block (lines 421-428 of synchronous_loop_9x9.sh, BASEDIR substituted):
+    | CYCLES_DONE=$(cat $SIM/ktg/loop/.cycles_completed 2>/dev/null || echo 0)
+    | CYCLES_DONE="${CYCLES_DONE#"${CYCLES_DONE%%[![:space:]]*}"}"
+    | CYCLES_DONE="${CYCLES_DONE%"${CYCLES_DONE##*[![:space:]]}"}"
+    | case "$CYCLES_DONE" in ''|*[!0-9]*) CYCLES_DONE=0 ;; esac
+    | [ "${#CYCLES_DONE}" -le 18 ] || CYCLES_DONE=0
+    | CYCLES_DONE=$(( 10#$CYCLES_DONE + 1 ))
+    | echo "$CYCLES_DONE" > $SIM/ktg/loop/.cycles_completed
+    | echo "cycle $CYCLE_INDEX complete -- $CYCLES_DONE cycle(s) recorded in $BASEDIR/.cycles_completed"
+
+r6 shims installed: sbatch(mode=$R6_SBATCH_MODE) squeue(mode=$R6_SQUEUE_MODE); all other shims are w3v_common.sh's
+
+########## [pre] loop_pre.sbatch  sha256 8e394116f7efdab6...
+wrapper exit=1
+    === [2026-09-04T19:14:17-04:00] loop.sbatch job 1101 on login03 ===
+    === [2026-09-04T19:14:17-04:00] BASEDIR=$SIM/ktg/loop  MODELKIND=b7c96h3tfrs  TRAININGNAME=t9 ===
+    === [2026-09-04T19:14:17-04:00] loop knobs $SIM/codes/loop/knobs_9x9.env (sha256 5ae5358791974ae1) KTG_CPUS_PER_TASK=32 KTG_NUM_GAME_THREADS=18 ===
+    === [2026-09-04T19:14:17-04:00] chain depth 1/200, failcount 0/3, cycles completed so far 0 ===
+    === [2026-09-04T19:14:17-04:00] compute-budget pre-flight for the successor (gpus=1 cpus=32 part=b200) ===
+    === [2026-09-04T19:14:18-04:00] sbatch did not return a job id -- chain not extended: [BILLING] loaded!
+    [BILLING] Re-emitting cost at job start!
+    800001 ===
+    === [2026-09-04T19:14:18-04:00] sourcing $SIM/ktg/env.sh ===
+    === [2026-09-04T19:14:18-04:00] cpus granted 32 == KTG_CPUS_PER_TASK 32 ===
+    === [2026-09-04T19:14:18-04:00] cfg numGameThreads = 18 on both engine configs ===
+    stage_monitor: root pid = 4193931 (only its descendants are sampled)
+    stage_monitor: started (ps pid 4194035 every 1s, gpu pid 4194036 every 5s) -> $SIM/ktg/loop/monitor/ps_samples-1101.tsv
+    === [2026-09-04T19:14:18-04:00] startup sweep ===
+    === [2026-09-04T19:14:18-04:00] startup retention prune ===
+    constants : $SIM/codes/data_budget/budget.env
+    root      : /scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train
+    basedir   : $SIM/ktg/loop
+    === [2026-09-04T19:14:18-04:00] scratch guard (thresholds from codes/data_budget/budget.env) ===
+    constants            : /weka$AZ/results/ktg/paper_1902.10565/codes/data_budget/budget.env
+    root                 : /scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train
+    projected write      : 21474836480 B
+    projected root total : 32195792687 B   (hard cap 536870912000 B = 500 GiB)
+    group scratch free   : 6990000000000 B   (source: quotas.py; fail floor 1099511627776 B, warn floor 1649267441664 B)
+    === [2026-09-04T19:14:23-04:00] starting the loop: $SIM/codes/loop/synchronous_loop_9x9.sh ktg9 $SIM/ktg/loop t9 b7c96h3tfrs 1 ===
+    FAKE LOOP ran: ktg9 $SIM/ktg/loop t9 b7c96h3tfrs 1
+    === [2026-09-04T19:14:24-04:00] loop exited rc=1 after 7s ===
+    stage_monitor: stopped; 0 ps samples, 0 gpu samples
+    === [2026-09-04T19:14:27-04:00] fast failure: 7s < 600s -- counting it twice ===
+    === [2026-09-04T19:14:27-04:00] failure rc=1 -- failcount now 2/3 ===
+    === [2026-09-04T19:14:28-04:00] chain continues, 1 attempt(s) left before the breaker ===
+
+########## [post] loop.sbatch  sha256 9e64864df8482805...
+wrapper exit=1
+    === [2026-09-04T19:14:28-04:00] loop.sbatch job 1101 on login03 ===
+    === [2026-09-04T19:14:28-04:00] BASEDIR=$SIM/ktg/loop  MODELKIND=b7c96h3tfrs  TRAININGNAME=t9 ===
+    === [2026-09-04T19:14:28-04:00] loop knobs $SIM/codes/loop/knobs_9x9.env (sha256 5ae5358791974ae1) KTG_CPUS_PER_TASK=32 KTG_NUM_GAME_THREADS=18 ===
+    === [2026-09-04T19:14:28-04:00] chain depth 1/200, failcount 0/3, cycles completed so far 0 ===
+    === [2026-09-04T19:14:29-04:00] compute-budget pre-flight for the successor (gpus=1 cpus=32 part=b200) ===
+    === [2026-09-04T19:14:29-04:00] successor queued: 800001 (partition b200, dependency afterany:1101) ===
+    === [2026-09-04T19:14:29-04:00] sbatch wrote to stderr and still succeeded -- verbatim: [BILLING] loaded! [BILLING] Re-emitting cost at job start!  ===
+    === [2026-09-04T19:14:29-04:00] sourcing $SIM/ktg/env.sh ===
+    === [2026-09-04T19:14:29-04:00] cpus granted 32 == KTG_CPUS_PER_TASK 32 ===
+    === [2026-09-04T19:14:29-04:00] cfg numGameThreads = 18 on both engine configs ===
+    stage_monitor: root pid = 702 (only its descendants are sampled)
+    stage_monitor: started (ps pid 946 every 1s, gpu pid 948 every 5s) -> $SIM/ktg/loop/monitor/ps_samples-1101.tsv
+    === [2026-09-04T19:14:30-04:00] startup sweep ===
+    === [2026-09-04T19:14:30-04:00] startup retention prune ===
+    constants : $SIM/codes/data_budget/budget.env
+    root      : /scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train
+    basedir   : $SIM/ktg/loop
+    === [2026-09-04T19:14:30-04:00] scratch guard (thresholds from codes/data_budget/budget.env) ===
+    constants            : /weka$AZ/results/ktg/paper_1902.10565/codes/data_budget/budget.env
+    root                 : /scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train
+    projected write      : 21474836480 B
+    projected root total : 32196283889 B   (hard cap 536870912000 B = 500 GiB)
+    group scratch free   : 6990000000000 B   (source: quotas.py; fail floor 1099511627776 B, warn floor 1649267441664 B)
+    === [2026-09-04T19:14:35-04:00] starting the loop: $SIM/codes/loop/synchronous_loop_9x9.sh ktg9 $SIM/ktg/loop t9 b7c96h3tfrs 1 ===
+    FAKE LOOP ran: ktg9 $SIM/ktg/loop t9 b7c96h3tfrs 1
+    === [2026-09-04T19:14:35-04:00] loop exited rc=1 after 7s ===
+    stage_monitor: stopped; 0 ps samples, 0 gpu samples
+    === [2026-09-04T19:14:39-04:00] fast failure: 7s < 600s -- counting it twice ===
+    === [2026-09-04T19:14:39-04:00] failure rc=1 -- failcount now 2/3 ===
+    === [2026-09-04T19:14:39-04:00] chain continues, 1 attempt(s) left before the breaker ===
+
+########## and the same two links with the sbatch shim REFUSING (exit 1, message on stderr)
+########## [pre]
+wrapper exit=1
+    === [2026-09-04T19:14:39-04:00] loop.sbatch job 1102 on login03 ===
+    === [2026-09-04T19:14:39-04:00] BASEDIR=$SIM/ktg/loop  MODELKIND=b7c96h3tfrs  TRAININGNAME=t9 ===
+    === [2026-09-04T19:14:39-04:00] loop knobs $SIM/codes/loop/knobs_9x9.env (sha256 5ae5358791974ae1) KTG_CPUS_PER_TASK=32 KTG_NUM_GAME_THREADS=18 ===
+    === [2026-09-04T19:14:39-04:00] chain depth 1/200, failcount 0/3, cycles completed so far 0 ===
+    === [2026-09-04T19:14:40-04:00] compute-budget pre-flight for the successor (gpus=1 cpus=32 part=b200) ===
+    === [2026-09-04T19:14:40-04:00] sbatch did not return a job id -- chain not extended: sbatch: error: Batch job submission failed: Invalid account or account/partition combination specified ===
+    === [2026-09-04T19:14:40-04:00] sourcing $SIM/ktg/env.sh ===
+    === [2026-09-04T19:14:40-04:00] cpus granted 32 == KTG_CPUS_PER_TASK 32 ===
+    === [2026-09-04T19:14:40-04:00] cfg numGameThreads = 18 on both engine configs ===
+    stage_monitor: root pid = 1869 (only its descendants are sampled)
+    stage_monitor: started (ps pid 2044 every 1s, gpu pid 2045 every 5s) -> $SIM/ktg/loop/monitor/ps_samples-1102.tsv
+    === [2026-09-04T19:14:40-04:00] startup sweep ===
+    === [2026-09-04T19:14:41-04:00] startup retention prune ===
+    constants : $SIM/codes/data_budget/budget.env
+    root      : /scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train
+    basedir   : $SIM/ktg/loop
+    === [2026-09-04T19:14:41-04:00] scratch guard (thresholds from codes/data_budget/budget.env) ===
+    constants            : /weka$AZ/results/ktg/paper_1902.10565/codes/data_budget/budget.env
+    root                 : /scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train
+    projected write      : 21474836480 B
+    projected root total : 32197202876 B   (hard cap 536870912000 B = 500 GiB)
+    group scratch free   : 6990000000000 B   (source: quotas.py; fail floor 1099511627776 B, warn floor 1649267441664 B)
+    === [2026-09-04T19:14:49-04:00] starting the loop: $SIM/codes/loop/synchronous_loop_9x9.sh ktg9 $SIM/ktg/loop t9 b7c96h3tfrs 1 ===
+    FAKE LOOP ran: ktg9 $SIM/ktg/loop t9 b7c96h3tfrs 1
+    === [2026-09-04T19:14:49-04:00] loop exited rc=1 after 10s ===
+    stage_monitor: stopped; 0 ps samples, 0 gpu samples
+    === [2026-09-04T19:14:53-04:00] fast failure: 10s < 600s -- counting it twice ===
+    === [2026-09-04T19:14:53-04:00] failure rc=1 -- failcount now 2/3 ===
+    === [2026-09-04T19:14:53-04:00] chain continues, 1 attempt(s) left before the breaker ===
+
+########## [post]
+wrapper exit=1
+    === [2026-09-04T19:14:54-04:00] loop.sbatch job 1102 on login03 ===
+    === [2026-09-04T19:14:54-04:00] BASEDIR=$SIM/ktg/loop  MODELKIND=b7c96h3tfrs  TRAININGNAME=t9 ===
+    === [2026-09-04T19:14:54-04:00] loop knobs $SIM/codes/loop/knobs_9x9.env (sha256 5ae5358791974ae1) KTG_CPUS_PER_TASK=32 KTG_NUM_GAME_THREADS=18 ===
+    === [2026-09-04T19:14:54-04:00] chain depth 1/200, failcount 0/3, cycles completed so far 0 ===
+    === [2026-09-04T19:14:54-04:00] compute-budget pre-flight for the successor (gpus=1 cpus=32 part=b200) ===
+    === [2026-09-04T19:14:54-04:00] sbatch failed (exit 1) -- chain not extended; stdout: '<empty>' ===
+    === [2026-09-04T19:14:54-04:00] sbatch stderr, verbatim: sbatch: error: Batch job submission failed: Invalid account or account/partition combination specified  ===
+    === [2026-09-04T19:14:54-04:00] sourcing $SIM/ktg/env.sh ===
+    === [2026-09-04T19:14:54-04:00] cpus granted 32 == KTG_CPUS_PER_TASK 32 ===
+    === [2026-09-04T19:14:55-04:00] cfg numGameThreads = 18 on both engine configs ===
+    stage_monitor: root pid = 2890 (only its descendants are sampled)
+    stage_monitor: started (ps pid 3029 every 1s, gpu pid 3030 every 5s) -> $SIM/ktg/loop/monitor/ps_samples-1102.tsv
+    === [2026-09-04T19:14:55-04:00] startup sweep ===
+    === [2026-09-04T19:14:55-04:00] startup retention prune ===
+    constants : $SIM/codes/data_budget/budget.env
+    root      : /scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train
+    basedir   : $SIM/ktg/loop
+    === [2026-09-04T19:14:55-04:00] scratch guard (thresholds from codes/data_budget/budget.env) ===
+    constants            : /weka$AZ/results/ktg/paper_1902.10565/codes/data_budget/budget.env
+    root                 : /scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train
+    projected write      : 21474836480 B
+    projected root total : 32206288512 B   (hard cap 536870912000 B = 500 GiB)
+    group scratch free   : 6990000000000 B   (source: quotas.py; fail floor 1099511627776 B, warn floor 1649267441664 B)
+    === [2026-09-04T19:15:00-04:00] starting the loop: $SIM/codes/loop/synchronous_loop_9x9.sh ktg9 $SIM/ktg/loop t9 b7c96h3tfrs 1 ===
+    FAKE LOOP ran: ktg9 $SIM/ktg/loop t9 b7c96h3tfrs 1
+    === [2026-09-04T19:15:00-04:00] loop exited rc=1 after 6s ===
+    stage_monitor: stopped; 0 ps samples, 0 gpu samples
+    === [2026-09-04T19:15:05-04:00] fast failure: 6s < 600s -- counting it twice ===
+    === [2026-09-04T19:15:05-04:00] failure rc=1 -- failcount now 2/3 ===
+    === [2026-09-04T19:15:05-04:00] chain continues, 1 attempt(s) left before the breaker ===
+
+########## cleanup
+done 2026-09-04T19:15:06-04:00
+
+################################################################################
+# PART 3: the unchanged-behaviour regression set and seed matrix
+################################################################################
+########## harness provenance
+--- extracted from /home/schmidt/ssci-haiyangw/az/results/ktg/paper_1902.10565/evidence/wave3_prelaunch_repairs/validation_harness.txt
+    7d91e5ba189907841e2cf95cdae908b9e7dd15180cc51c05634dbddfe22c1592  w3v_common.sh
+    9d4648ab8f7c747c76509044dd2baebf776d645fe0be9ce24de0bc01800bd0a1  v2_regress.sh
+    02199febff5189862dc96f6dca49dd614758eb65b58f8eed79691a284c248a1e  v3_seeds.sh
+--- the fifth repair packet recorded the same three hashes (repair_partitions.txt, 'harness sources, verbatim'):
+    7d91e5ba189907841e2cf95cdae908b9e7dd15180cc51c05634dbddfe22c1592  w3v_common.sh
+    9d4648ab8f7c747c76509044dd2baebf776d645fe0be9ce24de0bc01800bd0a1  v2_regress.sh
+    02199febff5189862dc96f6dca49dd614758eb65b58f8eed79691a284c248a1e  v3_seeds.sh
+--- reference blocks of /home/schmidt/ssci-haiyangw/az/results/ktg/paper_1902.10565/evidence/wave3_prelaunch_repairs/validation_harness.txt
+    ref_v2: 631 lines   ref_v3: 420 lines
+
+########## v2_regress.sh against the repaired file
+    v2 exit=0  raw lines: 645
+    compared block: 630 lines
+
+########## v3_seeds.sh against the repaired file
+    v3 exit=0  raw lines: 435
+    compared block: 420 lines
+
+########## RAW diffs (reference vs this run) -- every differing line, by shape (digits collapsed to N)
+--- v2
+    RAW_DIFF_EXIT=1  (139 differing lines)
+         31 > === loop exited rc=N after Ns ===
+         31 < === loop exited rc=N after Ns ===
+         14 > === fast failure: Ns < Ns -- counting it twice ===
+         14 < === fast failure: Ns < Ns -- counting it twice ===
+          8 > === scheduler termination at walltime after Ns (SIGTERM to this wrapper) -- successor continues, failcount left at N ===
+          8 < === scheduler termination at walltime after Ns (SIGTERM to this wrapper) -- successor continues, failcount left at N ===
+          5 > === PRE-FLIGHT FAILURE rc=N after Ns -- the loop never started ===
+          5 < === PRE-FLIGHT FAILURE rc=N after Ns -- the loop never started ===
+          3 > === circuit breaker tripped after N consecutive failures (last ran Ns) ===
+          3 < === circuit breaker tripped after N consecutive failures (last ran Ns) ===
+          2 > === scheduler termination at walltime after Ns (loop status N, this wrapper not signalled) -- successor continues, failcount left at N ===
+          2 > === scheduler termination at walltime after Ns (SIGTERM to this wrapper) -- successor continues; N cycle(s) completed, so failcount N is cleared ===
+          2 < === scheduler termination at walltime after Ns (loop status N, this wrapper not signalled) -- successor continues, failcount left at N ===
+          2 < === scheduler termination at walltime after Ns (SIGTERM to this wrapper) -- successor continues; N cycle(s) completed, so failcount N is cleared ===
+          1 > === deliberate chain stop (rc=N after Ns) -- failcount left at N ===
+          1 > ./wNv_common.sh: line N: N Killed                  SLURM_JOB_ID="$jid" setsid bash "$script" > "$SIM/out.txt" N>&N
+          1 > $SIM/loop_nochecks.sbatch: line N: KATAGO_SRC: unbound variable
+          1 > $SIM/loop_nochecks.sbatch: line N: $SIM/ktg/env.sh: No such file or directory
+          1 < Terminated
+          1 < === deliberate chain stop (rc=N after Ns) -- failcount left at N ===
+          1 < $SIM/loop_nochecks.sbatch: line N: KATAGO_SRC: unbound variable
+          1 < $SIM/loop_nochecks.sbatch: line N: $SIM/ktg/env.sh: No such file or directory
+          1 < $HD/wNv_common.sh: line N: N Killed                  SLURM_JOB_ID="$jid" setsid bash "$script" > "$SIM/out.txt" N>&N
+--- v3
+    RAW_DIFF_EXIT=1  (34 differing lines)
+         17 >       === circuit breaker tripped after N consecutive failures (last ran Ns) ===
+         17 <       === circuit breaker tripped after N consecutive failures (last ran Ns) ===
+
+########## NORMALISED diffs (the recorded norm.sed / norm2.sed of the fifth repair packet, unmodified)
+--- norm.sed
+    s/ after [0-9]\+s / after <ELAPSED>s /g
+    s/fast failure: [0-9]\+s </fast failure: <ELAPSED>s </g
+    s/(last ran [0-9]\+s)/(last ran <ELAPSED>s)/g
+    s/\.sbatch: line [0-9]\+:/.sbatch: line <LINENO>:/g
+    s#^\$HD/w3v_common.sh#w3v_common.sh#
+    s#^\./w3v_common.sh#w3v_common.sh#
+    s/^w3v_common.sh: line 88: [0-9]\+ Killed/w3v_common.sh: line 88: <PID> Killed/
+--- norm2.sed
+    s/ after [0-9]\+s / after <ELAPSED>s /g
+    s/fast failure: [0-9]\+s </fast failure: <ELAPSED>s </g
+    s/(last ran [0-9]\+s)/(last ran <ELAPSED>s)/g
+    s/\.sbatch: line [0-9]\+:/.sbatch: line <LINENO>:/g
+    s#^\$HD/w3v_common.sh#w3v_common.sh#
+    s#^\./w3v_common.sh#w3v_common.sh#
+    s/^w3v_common.sh: line 88: [0-9]\+ Killed/w3v_common.sh: line 88: <PID> Killed/
+    /scratch_guard: WARNING du -sb attempt/d
+$ diff <(sed -f norm.sed ref_v2) <(sed -f norm.sed new_v2)
+    263d262
+    < Terminated
+    379c378
+    < === deliberate chain stop (rc=3 after 6s) -- failcount left at 0 ===
+    ---
+    > === deliberate chain stop (rc=3 after 9s) -- failcount left at 0 ===
+V2_NORMALISED_DIFF_EXIT=1  (norm.sed)
+$ diff <(sed -f norm2.sed ref_v2) <(sed -f norm2.sed new_v2)
+    263d262
+    < Terminated
+    379c378
+    < === deliberate chain stop (rc=3 after 6s) -- failcount left at 0 ===
+    ---
+    > === deliberate chain stop (rc=3 after 9s) -- failcount left at 0 ===
+V2_NORMALISED_DIFF_EXIT=1  (norm2.sed)
+$ diff <(sed -f norm.sed ref_v3) <(sed -f norm.sed new_v3)
+V3_NORMALISED_DIFF_EXIT=0  (norm.sed)
+$ diff <(sed -f norm2.sed ref_v3) <(sed -f norm2.sed new_v3)
+V3_NORMALISED_DIFF_EXIT=0  (norm2.sed)
+--- line counts: reference v2 631 / this run 630; reference v3 420 / this run 420
+
+########## the accounting lines alone (no line of these may differ)
+    v2: DIFFERS:
+        131c131
+        < === deliberate chain stop (rc=3 after 6s) -- failcount left at 0 ===
+        ---
+        > === deliberate chain stop (rc=3 after 9s) -- failcount left at 0 ===
+    v3: 231 accounting lines, IDENTICAL
+########## cleanup
+done 2026-09-04T19:33:25-04:00
+
+########## ADDENDUM: the two v2 residual lines are the two the FIFTH-repair VALIDATOR already
+##########           classified as harness timing, and its own norm3.sed -- extracted verbatim from
+##########           evidence/loop_resume/validation_repair5_harness.txt, sha256 35b4d275a93c93d6... --
+##########           takes both to 0. Its rationale, quoted from that record (:607-610):
+##########             'the four v2 residual lines are (a) three placements of bash's job-control
+##########              message Terminated for the sampler pids stage_monitor.sh stop kills from
+##########              finalize (:154), which the record itself carries 21 times at timing-dependent
+##########              positions (ref_v2:262-263 has it twice in a row), and (b) one elapsed-seconds
+##########              instance inside parentheses, (rc=3 after Ns), that norm.sed's " after Ns "
+##########              rule (which needs a trailing space) does not cover.'
+##########           Neither line is an accounting line and neither is produced by this repair: both
+##########           appear in scenario L2 / N, whose sbatch shim output the repair does not change.
+--- norm3.sed, verbatim
+    s/ after [0-9]\+s / after <ELAPSED>s /g
+    s/fast failure: [0-9]\+s </fast failure: <ELAPSED>s </g
+    s/(last ran [0-9]\+s)/(last ran <ELAPSED>s)/g
+    s/\.sbatch: line [0-9]\+:/.sbatch: line <LINENO>:/g
+    s#^\$HD/w3v_common.sh#w3v_common.sh#
+    s#^\./w3v_common.sh#w3v_common.sh#
+    s/^w3v_common.sh: line 88: [0-9]\+ Killed/w3v_common.sh: line 88: <PID> Killed/
+    /^Terminated$/d
+    s/(rc=\([0-9]*\) after [0-9]\+s)/(rc=\1 after <ELAPSED>s)/g
+$ diff <(sed -f norm3.sed ref_v2) <(sed -f norm3.sed new_v2)
+V2_NORM3_DIFF_EXIT=0  (0 = line-identical to the recorded transcript)
+$ diff <(sed -f norm3.sed ref_v3) <(sed -f norm3.sed new_v3)
+V3_NORM3_DIFF_EXIT=0  (0 = line-identical to the recorded transcript)
+--- the accounting lines alone, under norm3.sed
+    v2: 217 accounting lines, IDENTICAL
+    v3: 231 accounting lines, IDENTICAL
+--- 'successor queued:' lines in this run vs the record (the wave-3 shim prints a clean id, so this
+    line must be present and identical on BOTH sides -- it is the S8 regression anchor)
+    ref_v2 43   new_v2 43
+    ref_v3 44   new_v3 44   (shim submissions, seed matrix)
+    'did not return a job id' / 'chain not extended' anywhere in this run: 0 (v2), 0 (v3)
+addendum done 2026-09-04T19:34:26-04:00
+
+################################################################################
+# PART 4: chain_status.sh section E / P10, BEFORE vs AFTER
+#   'healthy'   = 1 wrapper pre-flight guard + 3 per-cycle guards, all OK
+#   'defective' = 1 wrapper pre-flight guard + 2 per-cycle guards, one of which
+#                 ends 'no usable measurement -- exit 3'
+#   'live-301099' = the production link-1 log, opened read-only
+#   The 'DIFFERS outside section E' blocks at the end hold exactly two kinds of
+#   line: the sacct Elapsed clock of the RUNNING job 301099, which ticks between
+#   the two invocations, and the P10 verdict line itself, which lives in the
+#   verdict block rather than in section E.
+################################################################################
+########## fixture: healthy   (/scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/repair6/p10/healthy.log)
+--- raw counts in the log
+    '^== scratch_guard ' headers                      : 4
+    of which '[cycle N pre-gatekeeper]'               : 3
+    of which '[chain link N pre-flight]'              : 1
+    'scratch_guard: OK' lines                         : 4
+    'cycle N complete' lines (cycles started/finished): 3
+--- [pre] section E, verbatim   (chain_status exit 0)
+    -- E. storage -------------------------------------------------------------
+    last scratch_guard block:
+        == scratch_guard 2026-09-05T00:00:00-04:00 [cycle 3 pre-gatekeeper] ==
+        constants            : /home/schmidt/ssci-haiyangw/az/results/ktg/paper_1902.10565/codes/data_budget/budget.env
+        root                 : /scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train
+        du -sb               : 9954197718	/scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train
+        df -B1               : wekafs1/scratchssci 40000000000000 33059816132608 6940183867392 83% /weka/scratch/schmidt
+        scratch_guard: OK  used=1 B  projected_total=2 B  group_free=3 B
+        guard blocks [cycle N pre-gatekeeper]: 3    'scratch_guard: OK': 4
+        (P10 wants the two equal, and equal to the cycles started in the link)
+    
+--- [pre] P10 verdict lines
+    NOTICE:   P10: 3 guard blocks but 4 'scratch_guard: OK' lines -- a cycle started without a clean guard verdict
+--- [post] section E, verbatim   (chain_status exit 0)
+    -- E. storage -------------------------------------------------------------
+    last scratch_guard block:
+        == scratch_guard 2026-09-05T00:00:00-04:00 [cycle 3 pre-gatekeeper] ==
+        constants            : /home/schmidt/ssci-haiyangw/az/results/ktg/paper_1902.10565/codes/data_budget/budget.env
+        root                 : /scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train
+        du -sb               : 9954197718	/scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train
+        df -B1               : wekafs1/scratchssci 40000000000000 33059816132608 6940183867392 83% /weka/scratch/schmidt
+        scratch_guard: OK  used=1 B  projected_total=2 B  group_free=3 B
+        guard invocations: 4    'scratch_guard: OK': 4    of which [cycle N pre-gatekeeper]: 3
+        (P10 wants every invocation to carry a clean verdict, and the per-cycle
+         subset to equal the cycles started in the link; the extra invocation is
+         the wrapper's own '[chain link N pre-flight]' call, one per link)
+    
+--- [post] P10 verdict lines
+    (none)
+
+########## fixture: defective   (/scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/repair6/p10/defective.log)
+--- raw counts in the log
+    '^== scratch_guard ' headers                      : 3
+    of which '[cycle N pre-gatekeeper]'               : 2
+    of which '[chain link N pre-flight]'              : 1
+    'scratch_guard: OK' lines                         : 2
+    'cycle N complete' lines (cycles started/finished): 2
+--- [pre] section E, verbatim   (chain_status exit 0)
+    -- E. storage -------------------------------------------------------------
+    last scratch_guard block:
+        == scratch_guard 2026-09-05T00:00:00-04:00 [cycle 2 pre-gatekeeper] ==
+        constants            : /home/schmidt/ssci-haiyangw/az/results/ktg/paper_1902.10565/codes/data_budget/budget.env
+        root                 : /scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train
+        du -sb               : 9954197718	/scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train
+        df -B1               : wekafs1/scratchssci 40000000000000 33059816132608 6940183867392 83% /weka/scratch/schmidt
+        scratch_guard: no usable measurement -- exit 3
+        guard blocks [cycle N pre-gatekeeper]: 2    'scratch_guard: OK': 2
+        (P10 wants the two equal, and equal to the cycles started in the link)
+    
+--- [pre] P10 verdict lines
+    (none)
+--- [post] section E, verbatim   (chain_status exit 0)
+    -- E. storage -------------------------------------------------------------
+    last scratch_guard block:
+        == scratch_guard 2026-09-05T00:00:00-04:00 [cycle 2 pre-gatekeeper] ==
+        constants            : /home/schmidt/ssci-haiyangw/az/results/ktg/paper_1902.10565/codes/data_budget/budget.env
+        root                 : /scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train
+        du -sb               : 9954197718	/scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train
+        df -B1               : wekafs1/scratchssci 40000000000000 33059816132608 6940183867392 83% /weka/scratch/schmidt
+        scratch_guard: no usable measurement -- exit 3
+        guard invocations: 3    'scratch_guard: OK': 2    of which [cycle N pre-gatekeeper]: 2
+        (P10 wants every invocation to carry a clean verdict, and the per-cycle
+         subset to equal the cycles started in the link; the extra invocation is
+         the wrapper's own '[chain link N pre-flight]' call, one per link)
+    
+--- [post] P10 verdict lines
+    NOTICE:   P10: 3 scratch_guard invocations but 2 'scratch_guard: OK' lines -- a guard call ended without a clean verdict
+
+########## fixture: live-301099   (/scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/logs/loop-301099.log)
+--- raw counts in the log
+    '^== scratch_guard ' headers                      : 7
+    of which '[cycle N pre-gatekeeper]'               : 6
+    of which '[chain link N pre-flight]'              : 1
+    'scratch_guard: OK' lines                         : 7
+    'cycle N complete' lines (cycles started/finished): 5
+--- [pre] section E, verbatim   (chain_status exit 0)
+    -- E. storage -------------------------------------------------------------
+    last scratch_guard block:
+        == scratch_guard 2026-09-04T19:04:55-04:00 [cycle 6 pre-gatekeeper] ==
+        constants            : /weka/home/schmidt/ssci-haiyangw/az/results/ktg/paper_1902.10565/codes/data_budget/budget.env
+        root                 : /scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train
+        du -sb               : 10474832643	/scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train
+        df -B1               : wekafs1/scratchssci 40000000000000 32991572844544 7008427155456 83% /weka/scratch/schmidt
+        scratch_guard: WARNING quotas.py unreadable or unparseable at /apps/helpers/quotas.py; using df -B1 on the same pool
+        guard blocks [cycle N pre-gatekeeper]: 6    'scratch_guard: OK': 7
+        (P10 wants the two equal, and equal to the cycles started in the link)
+    
+--- [pre] P10 verdict lines
+    NOTICE:   P10: 6 guard blocks but 7 'scratch_guard: OK' lines -- a cycle started without a clean guard verdict
+--- [post] section E, verbatim   (chain_status exit 0)
+    -- E. storage -------------------------------------------------------------
+    last scratch_guard block:
+        == scratch_guard 2026-09-04T19:04:55-04:00 [cycle 6 pre-gatekeeper] ==
+        constants            : /weka/home/schmidt/ssci-haiyangw/az/results/ktg/paper_1902.10565/codes/data_budget/budget.env
+        root                 : /scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train
+        du -sb               : 10474832643	/scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train
+        df -B1               : wekafs1/scratchssci 40000000000000 32991572844544 7008427155456 83% /weka/scratch/schmidt
+        scratch_guard: WARNING quotas.py unreadable or unparseable at /apps/helpers/quotas.py; using df -B1 on the same pool
+        guard invocations: 7    'scratch_guard: OK': 7    of which [cycle N pre-gatekeeper]: 6
+        (P10 wants every invocation to carry a clean verdict, and the per-cycle
+         subset to equal the cycles started in the link; the extra invocation is
+         the wrapper's own '[chain link N pre-flight]' call, one per link)
+    
+--- [post] P10 verdict lines
+    (none)
+
+########## the full BEFORE/AFTER verdict block on the live link-1 log (every line, not just P10)
+--- [pre]
+    -- verdict ----------------------------------------------------------------
+    NOTICE:   job 299366 ended CANCELLED by 30154 without ever being allocated (Start None, Elapsed 00:00:00) -- not a link end, no resume evidence either way
+    NOTICE:   job 299461 ended CANCELLED by 30154 without ever being allocated (Start None, Elapsed 00:00:00) -- not a link end, no resume evidence either way
+    NOTICE:   P10: 6 guard blocks but 7 'scratch_guard: OK' lines -- a cycle started without a clean guard verdict
+    chain_status: OK -- no section-11 escalate condition present.
+--- [post]
+    -- verdict ----------------------------------------------------------------
+    NOTICE:   job 299366 ended CANCELLED by 30154 without ever being allocated (Start None, Elapsed 00:00:00) -- not a link end, no resume evidence either way
+    NOTICE:   job 299461 ended CANCELLED by 30154 without ever being allocated (Start None, Elapsed 00:00:00) -- not a link end, no resume evidence either way
+    chain_status: OK -- no section-11 escalate condition present.
+
+########## every OTHER section of the report must be byte-identical (only section E changed)
+    healthy: DIFFERS outside section E:
+        13c13
+        <     301099   ktg-loop   l40s          RUNNING   00:21:39  2026-09-04T18:52:13              Unknown    0:0
+        ---
+        >     301099   ktg-loop   l40s          RUNNING   00:21:40  2026-09-04T18:52:13              Unknown    0:0
+        60d59
+        < NOTICE:   P10: 3 guard blocks but 4 'scratch_guard: OK' lines -- a cycle started without a clean guard verdict
+    defective: DIFFERS outside section E:
+        13c13
+        <     301099   ktg-loop   l40s          RUNNING   00:21:43  2026-09-04T18:52:13              Unknown    0:0
+        ---
+        >     301099   ktg-loop   l40s          RUNNING   00:21:45  2026-09-04T18:52:13              Unknown    0:0
+        59a60
+        > NOTICE:   P10: 3 scratch_guard invocations but 2 'scratch_guard: OK' lines -- a guard call ended without a clean verdict
+    live-301099: DIFFERS outside section E:
+        13c13
+        <     301099   ktg-loop   l40s          RUNNING   00:21:48  2026-09-04T18:52:13              Unknown    0:0
+        ---
+        >     301099   ktg-loop   l40s          RUNNING   00:21:50  2026-09-04T18:52:13              Unknown    0:0
+        61d60
+        < NOTICE:   P10: 6 guard blocks but 7 'scratch_guard: OK' lines -- a cycle started without a clean guard verdict
+
+########## bash -n
+    ok chain_status_pre.sh
+    ok chain_status.sh
+########## cleanup
+done 2026-09-04T19:14:06-04:00
+
+################################################################################
+# PART 5: closing checks in a clean environment, and the KTG_STAGE_ONLY=1 dry run
+################################################################################
+########## the real sbatch is on PATH and is NOT called anywhere below
+sbatch resolves to: /opt/mprov/cloack/slurm/current/bin/sbatch
+squeue resolves to: /opt/mprov/cloack/slurm/current/bin/squeue
+########## section 2 closing check of tasks/loop_resume_under_walltime/implementation.md, verbatim
+== compute-budget self-check  2026-09-04T19:17:00-04:00 ==
+my jobs      : gpus=4 cpus=96  (4 jobs)
+partition b200 : free_gpus=16/128 (excludes reserved/drained nodes)
+partition b300 : free_gpus=0/8 (excludes reserved/drained nodes)
+partition l40s : free_gpus=9/48 (excludes reserved/drained nodes)
+reservations : 9 defined (6 active) — scontrol show reservation
+quota        : | /home/ssci-haiyangw/ | 4.04 GB  | 100.00 GB |  4.04%   |
+quota        : | /scratch/ssci-anima/ | 33.01 TB |  40.00 TB |   82%    |
+VIOLATION    : my_gpus(4) + request(1) > cap 4 — wait for running jobs or shrink
+SECTION2_EXIT=1
+grep -c afterany=12 failcount=35 cpp/build/katago=5 cpp/katago"=0
+
+########## the verification.command carried on the admitted result row 423b1bdf (fifth-repair form), verbatim
+== compute-budget self-check  2026-09-04T19:17:04-04:00 ==
+my jobs      : gpus=4 cpus=96  (4 jobs)
+partition b200 : free_gpus=16/128 (excludes reserved/drained nodes)
+partition b300 : free_gpus=0/8 (excludes reserved/drained nodes)
+partition l40s : free_gpus=9/48 (excludes reserved/drained nodes)
+reservations : 9 defined (6 active) — scontrol show reservation
+quota        : | /home/ssci-haiyangw/ | 4.04 GB  | 100.00 GB |  4.04%   |
+quota        : | /scratch/ssci-anima/ | 33.01 TB |  40.00 TB |   82%    |
+VIOLATION    : my_gpus(4) + request(1) > cap 4 — wait for running jobs or shrink
+ROW_VERIFICATION_EXIT=1
+
+########## why both commands exit 1 today: the LAST conjunct is a LIVE compute-budget check
+--- the same two commands with the final check.sh conjunct removed (the artifact half alone)
+SECTION2_WITHOUT_POLICY_EXIT=0
+ROW_VERIFICATION_WITHOUT_POLICY_EXIT=0
+--- the policy conjunct alone
+POLICY_CHECK_ALONE_EXIT=1  (this is what makes both commands exit 1 right now)
+--- the four jobs of this user that the cap is counting
+      301096 ktg-t7 RUNNING gres/gpu:1
+      305318 ktg-loop PENDING gres/gpu:1
+      301186 ktg-t7c PENDING gres/gpu:1
+      301099 ktg-loop RUNNING gres/gpu:1
+--- the SAME two commands against the PRE-repair file (git HEAD 8e394116): identical exits, so this
+    is a live-cluster state, not a property of this repair
+SECTION2_EXIT_ON_PRE_REPAIR_FILE=1
+
+########## the conjuncts this repair adds, as greps over the repaired file
+  sbatch substitution still ends in 2>&1 (the defect form)   0
+  sbatch substitution redirects stderr to a file             1
+  id parse accepts jobid and jobid;cluster                   1
+  'chain not extended' in a say(), sbatch-exit != 0 only     1
+  squeue recovery lookup                                     1
+  stderr scratch file removed before resubmit returns        1
+  P10 counts every scratch_guard invocation                  1
+  P10 still reports the per-cycle subset                     1
+
+########## KTG_STAGE_ONLY=1 dry run from the REAL scratch clone, 'bash <script>' form
+########## (this repair touches only resubmit(); synchronous_loop_9x9.sh is byte-identical to HEAD)
+KATAGO_SRC=/scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/build/KataGo  git HEAD fd0723fd  KATAGO_BIN size 27273864
+    pos_len check: 0 npz (loop start) -- nothing new to verify
+    KTG_STAGE_ONLY=1 -- archive staged at /weka$RT/stage_run1/scripts/dated/<ts>, no cycle run.
+    -rwxr-xr-x 1 ssci-haiyangw users 27273864 Sep  4 19:17 /weka$RT/stage_run1/scripts/dated/<ts>/bin/katago
+    -rwxr-xr-x 1 ssci-haiyangw users     9264 Sep  4 19:17 /weka$RT/stage_run1/scripts/dated/<ts>/export_model_for_selfplay_9x9.sh
+    -rw-r--r-- 1 ssci-haiyangw users     4704 Sep  4 19:17 /weka$RT/stage_run1/scripts/dated/<ts>/gatekeeper.cfg
+    -rw-r--r-- 1 ssci-haiyangw users     9786 Sep  4 19:17 /weka$RT/stage_run1/scripts/dated/<ts>/selfplay.cfg
+    -rwxr-xr-x 1 ssci-haiyangw users     5021 Sep  4 19:17 /weka$RT/stage_run1/scripts/dated/<ts>/train_9x9.sh
+  [run1] STAGE_EXIT=0
+  [run1] files: 87  bytes: 28837759
+  [run1] cmp bin/katago $KATAGO_BIN exit=0
+    pos_len check: 0 npz (loop start) -- nothing new to verify
+    KTG_STAGE_ONLY=1 -- archive staged at /weka$RT/stage_run2/scripts/dated/<ts>, no cycle run.
+    -rwxr-xr-x 1 ssci-haiyangw users 27273864 Sep  4 19:17 /weka$RT/stage_run2/scripts/dated/<ts>/bin/katago
+    -rwxr-xr-x 1 ssci-haiyangw users     9264 Sep  4 19:17 /weka$RT/stage_run2/scripts/dated/<ts>/export_model_for_selfplay_9x9.sh
+    -rw-r--r-- 1 ssci-haiyangw users     4704 Sep  4 19:17 /weka$RT/stage_run2/scripts/dated/<ts>/gatekeeper.cfg
+    -rw-r--r-- 1 ssci-haiyangw users     9786 Sep  4 19:17 /weka$RT/stage_run2/scripts/dated/<ts>/selfplay.cfg
+    -rwxr-xr-x 1 ssci-haiyangw users     5021 Sep  4 19:17 /weka$RT/stage_run2/scripts/dated/<ts>/train_9x9.sh
+  [run2] STAGE_EXIT=0
+  [run2] files: 87  bytes: 28837759
+  [run2] cmp bin/katago $KATAGO_BIN exit=0
+  manifest diff exit=0 (0 = byte-identical staging across runs)
+  staged archives removed
+
+########## queue at the end (must be untouched -- read-only)
+         JOBID    PARTITION         NAME    STATE   TIME_LIMIT           START_TIME NODELIST(REASON)
+        301096         b200       ktg-t7  RUNNING      5:15:00  2026-09-04T17:14:35 gb207
+        305318    b200,l40s     ktg-loop  PENDING     23:30:00                  N/A (Dependency)
+        301186    b200,l40s      ktg-t7c  PENDING      8:00:00                  N/A (Dependency)
+        301099         l40s     ktg-loop  RUNNING     23:30:00  2026-09-04T18:52:13 gl111
+########## cleanup
+done 2026-09-04T19:17:27-04:00
+
+################################################################################
+# PART 5b: the SAME closing checks re-run at 19:37, after a CONCURRENT packet landed
+#          az commit 91e6399 'fix(policy,ktg): do not count dependency-pending
+#          successors toward the GPU cap'. That is what the PART 5 [OPEN] was about:
+#          the check.sh conjunct of both commands was counting this chain's own
+#          dependency-pending successor (305318) and the 7x7 packet's (301186)
+#          against the 4-GPU cap. With that fixed the cap sees gpus=2, and BOTH
+#          commands now exit 0 end to end. Nothing in THIS packet's two artifacts
+#          changed between the two runs -- only .claude/skills/compute-budget/check.sh,
+#          which belongs to another packet and is not committed here. The PART 5
+#          transcript above is left in place because it is what was measured when
+#          the error-ledger row 900fcd7c... was appended.
+################################################################################
+########## the real sbatch is on PATH and is NOT called anywhere below
+sbatch resolves to: /opt/mprov/cloack/slurm/current/bin/sbatch
+squeue resolves to: /opt/mprov/cloack/slurm/current/bin/squeue
+########## section 2 closing check of tasks/loop_resume_under_walltime/implementation.md, verbatim
+== compute-budget self-check  2026-09-04T19:37:35-04:00 ==
+my jobs      : gpus=2 cpus=96  (4 jobs incl. 2 dependency-pending, not counted)
+partition b200 : free_gpus=16/128 (excludes reserved/drained nodes)
+partition b300 : free_gpus=0/8 (excludes reserved/drained nodes)
+partition l40s : free_gpus=9/48 (excludes reserved/drained nodes)
+reservations : 9 defined (6 active) — scontrol show reservation
+quota        : | /home/ssci-haiyangw/ | 4.04 GB  | 100.00 GB |  4.04%   |
+quota        : | /scratch/ssci-anima/ | 33.01 TB |  40.00 TB |   82%    |
+OK           : request gpus=1 cpus=24 part=b200 within policy (gpu<=4, no cpu cap)
+SECTION2_EXIT=0
+grep -c afterany=12 failcount=35 cpp/build/katago=5 cpp/katago"=0
+
+########## the verification.command carried on the admitted result row 423b1bdf (fifth-repair form), verbatim
+== compute-budget self-check  2026-09-04T19:37:40-04:00 ==
+my jobs      : gpus=2 cpus=96  (4 jobs incl. 2 dependency-pending, not counted)
+partition b200 : free_gpus=16/128 (excludes reserved/drained nodes)
+partition b300 : free_gpus=0/8 (excludes reserved/drained nodes)
+partition l40s : free_gpus=9/48 (excludes reserved/drained nodes)
+reservations : 9 defined (6 active) — scontrol show reservation
+quota        : | /home/ssci-haiyangw/ | 4.04 GB  | 100.00 GB |  4.04%   |
+quota        : | /scratch/ssci-anima/ | 33.01 TB |  40.00 TB |   82%    |
+OK           : request gpus=1 cpus=32 part=b200 within policy (gpu<=4, no cpu cap)
+ROW_VERIFICATION_EXIT=0
+
+########## why both commands exit 1 today: the LAST conjunct is a LIVE compute-budget check
+--- the same two commands with the final check.sh conjunct removed (the artifact half alone)
+SECTION2_WITHOUT_POLICY_EXIT=0
+ROW_VERIFICATION_WITHOUT_POLICY_EXIT=0
+--- the policy conjunct alone
+POLICY_CHECK_ALONE_EXIT=0  (this is what makes both commands exit 1 right now)
+--- the four jobs of this user that the cap is counting
+      301096 ktg-t7 RUNNING gres/gpu:1
+      305318 ktg-loop PENDING gres/gpu:1
+      301186 ktg-t7c PENDING gres/gpu:1
+      301099 ktg-loop RUNNING gres/gpu:1
+--- the SAME two commands against the PRE-repair file (git HEAD 8e394116): identical exits, so this
+    is a live-cluster state, not a property of this repair
+SECTION2_EXIT_ON_PRE_REPAIR_FILE=0
+
+########## the conjuncts this repair adds, as greps over the repaired file
+  sbatch substitution still ends in 2>&1 (the defect form)   0
+  sbatch substitution redirects stderr to a file             1
+  id parse accepts jobid and jobid;cluster                   1
+  'chain not extended' in a say(), sbatch-exit != 0 only     1
+  squeue recovery lookup                                     1
+  stderr scratch file removed before resubmit returns        1
+  P10 counts every scratch_guard invocation                  1
+  P10 still reports the per-cycle subset                     1
+
+########## KTG_STAGE_ONLY=1 dry run from the REAL scratch clone, 'bash <script>' form
+########## (this repair touches only resubmit(); synchronous_loop_9x9.sh is byte-identical to HEAD)
+KATAGO_SRC=/scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/build/KataGo  git HEAD fd0723fd  KATAGO_BIN size 27273864
+    pos_len check: 0 npz (loop start) -- nothing new to verify
+    KTG_STAGE_ONLY=1 -- archive staged at /weka$RT/stage_run1/scripts/dated/<ts>, no cycle run.
+    -rwxr-xr-x 1 ssci-haiyangw users 27273864 Sep  4 19:37 /weka$RT/stage_run1/scripts/dated/<ts>/bin/katago
+    -rwxr-xr-x 1 ssci-haiyangw users     9264 Sep  4 19:37 /weka$RT/stage_run1/scripts/dated/<ts>/export_model_for_selfplay_9x9.sh
+    -rw-r--r-- 1 ssci-haiyangw users     4704 Sep  4 19:37 /weka$RT/stage_run1/scripts/dated/<ts>/gatekeeper.cfg
+    -rw-r--r-- 1 ssci-haiyangw users     9786 Sep  4 19:37 /weka$RT/stage_run1/scripts/dated/<ts>/selfplay.cfg
+    -rwxr-xr-x 1 ssci-haiyangw users     5021 Sep  4 19:37 /weka$RT/stage_run1/scripts/dated/<ts>/train_9x9.sh
+  [run1] STAGE_EXIT=0
+  [run1] files: 87  bytes: 28837759
+  [run1] cmp bin/katago $KATAGO_BIN exit=0
+    pos_len check: 0 npz (loop start) -- nothing new to verify
+    KTG_STAGE_ONLY=1 -- archive staged at /weka$RT/stage_run2/scripts/dated/<ts>, no cycle run.
+    -rwxr-xr-x 1 ssci-haiyangw users 27273864 Sep  4 19:38 /weka$RT/stage_run2/scripts/dated/<ts>/bin/katago
+    -rwxr-xr-x 1 ssci-haiyangw users     9264 Sep  4 19:38 /weka$RT/stage_run2/scripts/dated/<ts>/export_model_for_selfplay_9x9.sh
+    -rw-r--r-- 1 ssci-haiyangw users     4704 Sep  4 19:38 /weka$RT/stage_run2/scripts/dated/<ts>/gatekeeper.cfg
+    -rw-r--r-- 1 ssci-haiyangw users     9786 Sep  4 19:38 /weka$RT/stage_run2/scripts/dated/<ts>/selfplay.cfg
+    -rwxr-xr-x 1 ssci-haiyangw users     5021 Sep  4 19:38 /weka$RT/stage_run2/scripts/dated/<ts>/train_9x9.sh
+  [run2] STAGE_EXIT=0
+  [run2] files: 87  bytes: 28837759
+  [run2] cmp bin/katago $KATAGO_BIN exit=0
+  manifest diff exit=0 (0 = byte-identical staging across runs)
+  staged archives removed
+
+########## queue at the end (must be untouched -- read-only)
+         JOBID    PARTITION         NAME    STATE   TIME_LIMIT           START_TIME NODELIST(REASON)
+        301096         b200       ktg-t7  RUNNING      5:15:00  2026-09-04T17:14:35 gb207
+        305318    b200,l40s     ktg-loop  PENDING     23:30:00                  N/A (Dependency)
+        301186    b200,l40s      ktg-t7c  PENDING      8:00:00                  N/A (Dependency)
+        301099         l40s     ktg-loop  RUNNING     23:30:00  2026-09-04T18:52:13 gl111
+########## cleanup
+done 2026-09-04T19:38:04-04:00
+
+################################################################################
+# harness sources, verbatim
+################################################################################
+==== norm.sed ====
+s/ after [0-9]\+s / after <ELAPSED>s /g
+s/fast failure: [0-9]\+s </fast failure: <ELAPSED>s </g
+s/(last ran [0-9]\+s)/(last ran <ELAPSED>s)/g
+s/\.sbatch: line [0-9]\+:/.sbatch: line <LINENO>:/g
+s#^\$HD/w3v_common.sh#w3v_common.sh#
+s#^\./w3v_common.sh#w3v_common.sh#
+s/^w3v_common.sh: line 88: [0-9]\+ Killed/w3v_common.sh: line 88: <PID> Killed/
+==== norm2.sed ====
+s/ after [0-9]\+s / after <ELAPSED>s /g
+s/fast failure: [0-9]\+s </fast failure: <ELAPSED>s </g
+s/(last ran [0-9]\+s)/(last ran <ELAPSED>s)/g
+s/\.sbatch: line [0-9]\+:/.sbatch: line <LINENO>:/g
+s#^\$HD/w3v_common.sh#w3v_common.sh#
+s#^\./w3v_common.sh#w3v_common.sh#
+s/^w3v_common.sh: line 88: [0-9]\+ Killed/w3v_common.sh: line 88: <PID> Killed/
+/scratch_guard: WARNING du -sb attempt/d
+==== norm3.sed ====
+s/ after [0-9]\+s / after <ELAPSED>s /g
+s/fast failure: [0-9]\+s </fast failure: <ELAPSED>s </g
+s/(last ran [0-9]\+s)/(last ran <ELAPSED>s)/g
+s/\.sbatch: line [0-9]\+:/.sbatch: line <LINENO>:/g
+s#^\$HD/w3v_common.sh#w3v_common.sh#
+s#^\./w3v_common.sh#w3v_common.sh#
+s/^w3v_common.sh: line 88: [0-9]\+ Killed/w3v_common.sh: line 88: <PID> Killed/
+/^Terminated$/d
+s/(rc=\([0-9]*\) after [0-9]\+s)/(rc=\1 after <ELAPSED>s)/g
+==== r6_common.sh ====
+#!/bin/bash
+# Sixth repair packet preamble (successor-id parsing past the site BILLING banner).
+# It SOURCES the wave-3 validator's own w3v_common.sh VERBATIM (extracted from
+# evidence/wave3_prelaunch_repairs/validation_harness.txt) so every shim, filter and
+# accounting check below is the recorded one, and then replaces exactly TWO shims:
+#
+#   sbatch  -- modes selected by $R6_SBATCH_MODE, so the harness can reproduce what the
+#              site's Slurm cli_filter actually does:
+#                banner      "[BILLING] loaded!" + "[BILLING] Re-emitting cost at job
+#                            start!" on STDERR, "<id>" on STDOUT, exit 0   <- the real site
+#                banner-fed  the same banner, "<id>;skipjack" on STDOUT (the federated
+#                            --parsable form), exit 0
+#                clean       nothing on stderr, "<id>" on stdout, exit 0   <- w3v default
+#                noise       banner on stderr, a site chatter line BEFORE the id on
+#                            stdout, exit 0
+#                fail        "sbatch: error: ..." on STDERR, nothing on stdout, exit 1
+#                silent      nothing on either stream, exit 0  (the "no id, rc 0" anomaly)
+#              Every mode logs "SBATCH[<n>] <args>" to $VAL_SHIMLOG exactly as the wave-3
+#              shim does, so shimlog/cancel_check/state are unchanged.
+#   squeue  -- $R6_SQUEUE_MODE=empty prints nothing (w3v behaviour: exit 0, no output);
+#              =hit prints one PENDING row "<id>|afterany:<jobid>(unfulfilled)" in the
+#              '%i|%E' shape the repaired lookup asks for, using the id the sbatch shim
+#              would have handed back and the SLURM_JOB_ID of the running link.
+#
+# Nothing else is touched: same PATH, same fake loops, same reset_state/link/clink/
+# siglink/state/filt/acct/cancel_check/shimlog helpers.
+. "$(dirname "$0")/w3v_common.sh" "$1"
+
+export R6_SBATCH_MODE="${R6_SBATCH_MODE:-banner}"
+export R6_SQUEUE_MODE="${R6_SQUEUE_MODE:-empty}"
+
+cat > "$SIM/bin/sbatch" <<'EOF'
+#!/bin/bash
+n=$(cat "$VAL_JOBCTR" 2>/dev/null || echo 800000); n=$((n+1)); echo "$n" > "$VAL_JOBCTR"
+echo "SBATCH[$n] $*" >> "$VAL_SHIMLOG"
+banner() { echo "[BILLING] loaded!" >&2; echo "[BILLING] Re-emitting cost at job start!" >&2; }
+case "${R6_SBATCH_MODE:-banner}" in
+  banner)     banner; echo "$n" ;;
+  banner-fed) banner; echo "$n;skipjack" ;;
+  clean)      echo "$n" ;;
+  noise)      banner; echo "site-wrapper: submitting to partition"; echo "$n" ;;
+  silent)     : ;;
+  fail)       echo "sbatch: error: Batch job submission failed: Invalid account or account/partition combination specified" >&2; exit 1 ;;
+  *)          banner; echo "$n" ;;
+esac
+exit 0
+EOF
+cat > "$SIM/bin/squeue" <<'EOF'
+#!/bin/bash
+# Only the resubmit lookup asks for the '%i|%E' shape; every other squeue caller in
+# this harness is check.sh, which must keep seeing the wave-3 shim (exit 0, no output).
+case "$*" in
+  *'%i|%E'*) echo "SQUEUE $*" >> "$VAL_SHIMLOG"
+             if [ "${R6_SQUEUE_MODE:-empty}" = hit ]; then
+               n=$(cat "$VAL_JOBCTR" 2>/dev/null || echo 800000)
+               echo "${n}|afterany:${SLURM_JOB_ID:-0}(unfulfilled)"
+             fi ;;
+esac
+exit 0
+EOF
+chmod +x "$SIM/bin/sbatch" "$SIM/bin/squeue"
+echo "r6 shims installed: sbatch(mode=\$R6_SBATCH_MODE) squeue(mode=\$R6_SQUEUE_MODE); all other shims are w3v_common.sh's"
+echo
+==== r6_shim.sh ====
+#!/bin/bash
+# PART 2 driver: resubmit() under a shim sbatch that behaves like the site's, BEFORE
+# (git HEAD 8e394116, the file job 301099 is running) and AFTER (the working tree).
+. "$(dirname "$0")/r6_common.sh" simR6
+PRE="$RT/pre/loop_pre.sbatch"
+POST="$REAL_SBATCH"
+
+run() {   # run <label> <jobid> <which:pre|post> [extra state note]
+  local label="$1" jid="$2" which="$3" script rc
+  if [ "$which" = pre ]; then script="$PRE"; else script="$POST"; fi
+  echo "  [$which] $label   (R6_SBATCH_MODE=$R6_SBATCH_MODE R6_SQUEUE_MODE=$R6_SQUEUE_MODE)"
+  KTG_LOOP_SBATCH="$script" SLURM_JOB_ID="$jid" SLURM_JOB_NAME=ktg-loop \
+    bash "$script" > "$SIM/out.txt" 2>&1
+  rc=$?
+  grep -E 'successor queued|did not return a job id|chain not extended|WARNING|sbatch stderr|sbatch wrote|squeue lookup|cancelling queued successor|no queued successor|circuit breaker tripped|failure rc=|PRE-FLIGHT FAILURE|deliberate chain stop|chain continues' "$SIM/out.txt" \
+    | filt /dev/stdin | sed 's/^/      /'
+  echo "      wrapper exit=$rc  $(state)"
+  echo "      $(cancel_check)"
+  echo "      shim: $(if [ -s "$VAL_SHIMLOG" ]; then sed -e "s#$SIM#\$SIM#g" -e "s#$AZ#\$AZ#g" -e 's/ --parsable.*loop.sbatch$//' -e 's/ --parsable.*loop_pre.sbatch$//' "$VAL_SHIMLOG" | tr '\n' ' '; else echo '(no sbatch, no scancel)'; fi)"
+  echo "      SUCCESSOR-carrying stderr files left in BASEDIR: $(ls -1 "$BASEDIR"/.resubmit_stderr.* 2>/dev/null | wc -l)"
+}
+
+pair() {  # pair <label> <jobid-pre> <jobid-post> ; same state for both
+  local label="$1" j1="$2" j2="$3"
+  reset_state; run "$label" "$j1" pre
+  reset_state; run "$label" "$j2" post
+  echo
+}
+
+echo "########## S1: the real site behaviour -- BILLING banner on stderr, '<id>' on stdout, exit 0"
+export R6_SBATCH_MODE=banner R6_SQUEUE_MODE=empty
+fake_loop 'exit 1'; pair "healthy submit, loop then fails" 1001 1002
+
+echo "########## S2: the federated --parsable form '<id>;<cluster>' with the same banner"
+export R6_SBATCH_MODE=banner-fed
+fake_loop 'exit 1'; pair "healthy submit, jobid;skipjack" 1011 1012
+
+echo "########## S3: PRE-FLIGHT FAILURE (env.sh hidden) -- does cancel_successor() reach the successor?"
+export R6_SBATCH_MODE=banner
+fake_loop 'exit 1'; mv "$SIM/ktg/env.sh" "$SIM/ktg/env.sh.hidden"
+pair "pre-flight failure, successor must be cancelled" 2001 2002
+mv "$SIM/ktg/env.sh.hidden" "$SIM/ktg/env.sh"
+
+echo "########## S4: sbatch FAILS (exit 1, message on stderr, nothing on stdout)"
+export R6_SBATCH_MODE=fail
+fake_loop 'exit 1'; pair "submission refused by the scheduler" 3001 3002
+
+echo "########## S5: sbatch exit 0 but no id on stdout, and squeue KNOWS the successor"
+export R6_SBATCH_MODE=silent R6_SQUEUE_MODE=hit
+fake_loop 'exit 1'; pair "no id, rc 0, squeue hit" 4001 4002
+
+echo "########## S6: sbatch exit 0, no id on stdout, and squeue finds nothing (3 attempts, 5 s apart)"
+export R6_SBATCH_MODE=silent R6_SQUEUE_MODE=empty
+fake_loop 'exit 1'; pair "no id, rc 0, squeue empty" 4011 4012
+
+echo "########## S7: site chatter on stdout BEFORE the id (the last matching line must win)"
+export R6_SBATCH_MODE=noise R6_SQUEUE_MODE=empty
+fake_loop 'exit 1'; pair "chatter line then the id" 5001 5002
+
+echo "########## S8: the wave-3 shim's own behaviour (clean stdout, silent stderr) -- the regression anchor"
+export R6_SBATCH_MODE=clean
+fake_loop 'exit 1'; pair "clean sbatch, unchanged both sides" 6001 6002
+
+echo "########## S9: breaker trip on the second link under the banner -- cancel_successor on the trip path"
+export R6_SBATCH_MODE=banner
+fake_loop 'exit 1'
+reset_state; run "link 1 of 2" 7001 pre;  run "link 2 of 2 (breaker)" 7002 pre
+reset_state; run "link 1 of 2" 7011 post; run "link 2 of 2 (breaker)" 7012 post
+echo
+
+echo "########## S10: storage refusal (guard exit 1 fixture) -- the deliberate-stop cancel path"
+fake_loop 'exit 0'; export KTG_BUDGET_ENV="$DB/tests/fixture_tinycap.env"
+pair "guard hard cap -> deliberate chain stop" 8001 8002
+unset KTG_BUDGET_ENV
+
+echo "########## S11: STOP brake at entry -- resubmit() must not run at all, on either side"
+export R6_SBATCH_MODE=banner
+fake_loop 'exit 0'
+reset_state; touch "$BASEDIR/STOP"; run "STOP present" 9001 pre
+reset_state; touch "$BASEDIR/STOP"; run "STOP present" 9002 post
+rm -f "$BASEDIR/STOP"
+echo
+
+echo "########## cleanup"; pkill -KILL -f "$SIM/" 2>/dev/null; rm -rf "$SIM"; echo "done $(date -Is)"
+==== r6_raw.sh ====
+#!/bin/bash
+# PART 2b: the same two links as S1, UNFILTERED, so the multi-line shape of the
+# pre-repair "chain not extended" message (the banner folded into $out) is on the
+# record verbatim, next to what the repaired file logs.
+. "$(dirname "$0")/r6_common.sh" simR6b
+PRE="$RT/pre/loop_pre.sbatch"
+export R6_SBATCH_MODE=banner R6_SQUEUE_MODE=empty
+fake_loop 'exit 1'
+for which in pre post; do
+  if [ "$which" = pre ]; then s="$PRE"; else s="$REAL_SBATCH"; fi
+  reset_state
+  echo "########## [$which] $(basename "$s")  sha256 $(sha256sum "$s" | cut -c1-16)..."
+  KTG_LOOP_SBATCH="$s" SLURM_JOB_ID=1101 SLURM_JOB_NAME=ktg-loop bash "$s" > "$SIM/out.txt" 2>&1
+  echo "wrapper exit=$?"
+  sed -e "s#$SIM#\$SIM#g" -e "s#$AZ#\$AZ#g" "$SIM/out.txt" \
+    | grep -v -E '^(== |quotas.py |   |-- |du -sb|df -B1|scratch_guard|prune_retention|my jobs|partition |reservations|quota|OK )' \
+    | sed 's/^/    /'
+  echo
+done
+echo "########## and the same two links with the sbatch shim REFUSING (exit 1, message on stderr)"
+export R6_SBATCH_MODE=fail
+for which in pre post; do
+  if [ "$which" = pre ]; then s="$PRE"; else s="$REAL_SBATCH"; fi
+  reset_state
+  echo "########## [$which]"
+  KTG_LOOP_SBATCH="$s" SLURM_JOB_ID=1102 SLURM_JOB_NAME=ktg-loop bash "$s" > "$SIM/out.txt" 2>&1
+  echo "wrapper exit=$?"
+  sed -e "s#$SIM#\$SIM#g" -e "s#$AZ#\$AZ#g" "$SIM/out.txt" \
+    | grep -v -E '^(== |quotas.py |   |-- |du -sb|df -B1|scratch_guard|prune_retention|my jobs|partition |reservations|quota|OK )' \
+    | sed 's/^/    /'
+  echo
+done
+echo "########## cleanup"; pkill -KILL -f "$SIM/" 2>/dev/null; rm -rf "$SIM"; echo "done $(date -Is)"
+==== r6_p10.sh ====
+#!/bin/bash
+# PART 4 driver: chain_status.sh section E / P10, BEFORE (git HEAD 557f7fe9) and AFTER.
+# Read-only: --no-append --no-du, and the production log is opened read-only.
+set -u
+AZ=$HOME/az
+PAPER="$AZ/results/ktg/paper_1902.10565"
+PRE="$RT/pre/chain_status_pre.sh"
+POST="$PAPER/codes/eval/chain_status.sh"
+LIVE=/scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/logs/loop-301099.log
+P1=/scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/runs/p1
+FIX="$RT/p10"; rm -rf "$FIX"; mkdir -p "$FIX/base"
+
+guard() { # guard <label> <verdict>
+  printf '== scratch_guard 2026-09-05T00:00:00-04:00 [%s] ==\n' "$1"
+  printf 'constants            : %s/codes/data_budget/budget.env\n' "$PAPER"
+  printf 'root                 : /scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train\n'
+  printf 'du -sb               : 9954197718\t/scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train\n'
+  printf 'df -B1               : wekafs1/scratchssci 40000000000000 33059816132608 6940183867392 83%% /weka/scratch/schmidt\n'
+  printf '%s\n' "$2"
+}
+
+# F1: a healthy link -- one wrapper pre-flight guard + three per-cycle guards, all OK.
+{ guard "chain link 1 pre-flight" "scratch_guard: OK  used=1 B  projected_total=2 B  group_free=3 B"
+  for c in 1 2 3; do
+    guard "cycle $c pre-gatekeeper" "scratch_guard: OK  used=1 B  projected_total=2 B  group_free=3 B"
+    printf 'cycle %s complete -- %s cycle(s) recorded in %s/.cycles_completed\n' "$c" "$c" "$P1"
+  done
+} > "$FIX/healthy.log"
+
+# F2: a genuinely defective link -- the second cycle's guard ends WARNING, not OK.
+{ guard "chain link 1 pre-flight" "scratch_guard: OK  used=1 B  projected_total=2 B  group_free=3 B"
+  guard "cycle 1 pre-gatekeeper" "scratch_guard: OK  used=1 B  projected_total=2 B  group_free=3 B"
+  printf 'cycle 1 complete -- 1 cycle(s) recorded in %s/.cycles_completed\n' "$P1"
+  guard "cycle 2 pre-gatekeeper" "scratch_guard: no usable measurement -- exit 3"
+  printf 'cycle 2 complete -- 2 cycle(s) recorded in %s/.cycles_completed\n' "$P1"
+} > "$FIX/defective.log"
+
+sect() { sed -n '/^-- E. storage/,/^-- F. monitor/p' "$1" | sed '$d'; }
+
+for pair in "healthy:$FIX/healthy.log" "defective:$FIX/defective.log" "live-301099:$LIVE"; do
+  name="${pair%%:*}"; log="${pair#*:}"
+  echo "########## fixture: $name   ($log)"
+  echo "--- raw counts in the log"
+  echo "    '^== scratch_guard ' headers                      : $(grep -c '^== scratch_guard ' "$log")"
+  echo "    of which '[cycle N pre-gatekeeper]'               : $(grep -c '^== scratch_guard .*\[cycle [0-9]* pre-gatekeeper\] ==' "$log")"
+  echo "    of which '[chain link N pre-flight]'              : $(grep -c '^== scratch_guard .*\[chain link [0-9]* pre-flight\] ==' "$log")"
+  echo "    'scratch_guard: OK' lines                         : $(grep -c 'scratch_guard: OK' "$log")"
+  echo "    'cycle N complete' lines (cycles started/finished): $(grep -c 'cycle(s) recorded in' "$log")"
+  for which in pre post; do
+    if [ "$which" = pre ]; then s="$PRE"; else s="$POST"; fi
+    bash "$s" "$FIX/base" --log "$log" --no-append --no-du > "$FIX/$name.$which.txt" 2>&1
+    rc=$?
+    echo "--- [$which] section E, verbatim   (chain_status exit $rc)"
+    sect "$FIX/$name.$which.txt" | sed 's/^/    /'
+    echo "--- [$which] P10 verdict lines"
+    grep -E '^(NOTICE|ESCALATE): *P10' "$FIX/$name.$which.txt" | sed 's/^/    /' || true
+    [ "$(grep -cE '^(NOTICE|ESCALATE): *P10' "$FIX/$name.$which.txt")" -eq 0 ] && echo "    (none)"
+  done
+  echo
+done
+
+echo "########## the full BEFORE/AFTER verdict block on the live link-1 log (every line, not just P10)"
+for which in pre post; do
+  echo "--- [$which]"
+  sed -n '/^-- verdict/,$p' "$FIX/live-301099.$which.txt" | sed 's/^/    /'
+done
+echo
+echo "########## every OTHER section of the report must be byte-identical (only section E changed)"
+for name in healthy defective live-301099; do
+  a=$(sed '/^-- E. storage/,/^-- F. monitor/d' "$FIX/$name.pre.txt" | sed 's/^\(chain_status  \).*/\1<STAMP>/')
+  b=$(sed '/^-- E. storage/,/^-- F. monitor/d' "$FIX/$name.post.txt" | sed 's/^\(chain_status  \).*/\1<STAMP>/')
+  if [ "$a" = "$b" ]; then echo "    $name: identical outside section E (and outside the P10 verdict line)"
+  else echo "    $name: DIFFERS outside section E:"; diff <(printf '%s\n' "$a") <(printf '%s\n' "$b") | sed 's/^/        /'; fi
+done
+echo
+echo "########## bash -n"
+bash -n "$PRE" && echo "    ok chain_status_pre.sh"
+bash -n "$POST" && echo "    ok chain_status.sh"
+echo "########## cleanup"; echo "done $(date -Is)"
+==== r6_regress.sh ====
+#!/bin/bash
+# PART 3 driver: the wave-3 validator's OWN v2_regress.sh / v3_seeds.sh (extracted verbatim
+# from evidence/wave3_prelaunch_repairs/validation_harness.txt, sha256 checked below) run
+# UNMODIFIED against the repaired loop.sbatch, and diffed against the recorded transcript in
+# the same file. The reference block of each script is that file's "v2_regress.out" /
+# "v3_seeds.out" section with its environment header (13 lines: host/sha/knobs/writer block)
+# and its trailing "########## cleanup" ... "done <stamp>" lines dropped -- the same 631 /
+# 420 line blocks the fifth repair packet compared against.
+set -u
+AZ=$HOME/az
+W3="$AZ/results/ktg/paper_1902.10565/evidence/wave3_prelaunch_repairs/validation_harness.txt"
+OUT="$RT/regress"; mkdir -p "$OUT"
+HD="$(cd "$(dirname "$0")" && pwd)"
+
+block() { sed -n "$1,$2p" "$W3" | tail -n +14 | sed '/^########## cleanup$/,$d'; }
+trim()  { tail -n +14 "$1" | sed '/^########## cleanup$/,$d'; }
+
+echo "########## harness provenance"
+echo "--- extracted from $W3"
+( cd "$HD" && sha256sum w3v_common.sh v2_regress.sh v3_seeds.sh ) | sed 's/^/    /'
+echo "--- the fifth repair packet recorded the same three hashes (repair_partitions.txt, 'harness sources, verbatim'):"
+echo "    7d91e5ba189907841e2cf95cdae908b9e7dd15180cc51c05634dbddfe22c1592  w3v_common.sh"
+echo "    9d4648ab8f7c747c76509044dd2baebf776d645fe0be9ce24de0bc01800bd0a1  v2_regress.sh"
+echo "    02199febff5189862dc96f6dca49dd614758eb65b58f8eed79691a284c248a1e  v3_seeds.sh"
+echo "--- reference blocks of $W3"
+block 796 1442 > "$OUT/ref_v2"; block 1446 1881 > "$OUT/ref_v3"
+echo "    ref_v2: $(wc -l < "$OUT/ref_v2") lines   ref_v3: $(wc -l < "$OUT/ref_v3") lines"
+echo
+
+echo "########## v2_regress.sh against the repaired file"
+( cd "$HD" && bash v2_regress.sh ) > "$OUT/new_v2.raw" 2>&1
+echo "    v2 exit=$?  raw lines: $(wc -l < "$OUT/new_v2.raw")"
+trim "$OUT/new_v2.raw" > "$OUT/new_v2"
+echo "    compared block: $(wc -l < "$OUT/new_v2") lines"
+echo
+
+echo "########## v3_seeds.sh against the repaired file"
+( cd "$HD" && bash v3_seeds.sh ) > "$OUT/new_v3.raw" 2>&1
+echo "    v3 exit=$?  raw lines: $(wc -l < "$OUT/new_v3.raw")"
+trim "$OUT/new_v3.raw" > "$OUT/new_v3"
+echo "    compared block: $(wc -l < "$OUT/new_v3") lines"
+echo
+
+echo "########## RAW diffs (reference vs this run) -- every differing line, by shape (digits collapsed to N)"
+for t in v2 v3; do
+  echo "--- $t"
+  diff "$OUT/ref_$t" "$OUT/new_$t" > "$OUT/raw_$t.diff"; echo "    RAW_DIFF_EXIT=$?  ($(grep -c '^[<>]' "$OUT/raw_$t.diff") differing lines)"
+  grep '^[<>]' "$OUT/raw_$t.diff" | sed 's/[0-9][0-9]*/N/g' | sort | uniq -c | sort -rn | sed 's/^/    /'
+done
+echo
+
+echo "########## NORMALISED diffs (the recorded norm.sed / norm2.sed of the fifth repair packet, unmodified)"
+for f in norm.sed norm2.sed; do echo "--- $f"; sed 's/^/    /' "$HD/$f"; done
+for t in v2 v3; do
+  for f in norm.sed norm2.sed; do
+    diff <(sed -f "$HD/$f" "$OUT/ref_$t") <(sed -f "$HD/$f" "$OUT/new_$t") > "$OUT/${t}_$f.diff"
+    rc=$?
+    echo "\$ diff <(sed -f $f ref_$t) <(sed -f $f new_$t)"
+    [ "$rc" -eq 0 ] || sed 's/^/    /' "$OUT/${t}_$f.diff"
+    echo "$(echo "$t" | tr a-z A-Z)_NORMALISED_DIFF_EXIT=$rc  ($f)"
+  done
+done
+echo "--- line counts: reference v2 $(wc -l < "$OUT/ref_v2") / this run $(wc -l < "$OUT/new_v2"); reference v3 $(wc -l < "$OUT/ref_v3") / this run $(wc -l < "$OUT/new_v3")"
+echo
+echo "########## the accounting lines alone (no line of these may differ)"
+for t in v2 v3; do
+  a=$(grep -E 'failure rc=|clean exit|PRE-FLIGHT|scheduler termination at|deliberate chain stop|exit 0 before the loop|successor queued:|did not return a job id|chain not extended|cancelling queued successor|no queued successor|circuit breaker tripped|chain continues|not resubmitting|breaker already|accounting lines:|cancel_iff_trip|finalize_end|wrapper exit=' "$OUT/ref_$t" | sed -f "$HD/norm.sed")
+  b=$(grep -E 'failure rc=|clean exit|PRE-FLIGHT|scheduler termination at|deliberate chain stop|exit 0 before the loop|successor queued:|did not return a job id|chain not extended|cancelling queued successor|no queued successor|circuit breaker tripped|chain continues|not resubmitting|breaker already|accounting lines:|cancel_iff_trip|finalize_end|wrapper exit=' "$OUT/new_$t" | sed -f "$HD/norm.sed")
+  if [ "$a" = "$b" ]; then echo "    $t: $(printf '%s\n' "$a" | wc -l) accounting lines, IDENTICAL"
+  else echo "    $t: DIFFERS:"; diff <(printf '%s\n' "$a") <(printf '%s\n' "$b") | sed 's/^/        /'; fi
+done
+echo "########## cleanup"; echo "done $(date -Is)"
+==== r6_static.sh ====
+#!/bin/bash
+# PART 1: static. Environment, the whole diff of this repair, what it must NOT have
+# touched, bash -n, and the greps that pin the defect and the fix.
+set -u
+AZ=$HOME/az
+P=results/ktg/paper_1902.10565
+cd "$AZ" || exit 2
+echo "########## PART 0: environment"
+echo "host: $(hostname)  date: $(date -Is)  user: $USER  az HEAD: $(git rev-parse --short HEAD)"
+echo "bash: $(bash --version | head -1)   grep: $(command -v grep), $(grep --version | head -1)"
+echo "sbatch: $(command -v sbatch)   squeue: $(command -v squeue)   (neither is called by this packet except read-only squeue)"
+echo "--- artifacts of this packet"
+sha256sum "$P/codes/loop/loop.sbatch" "$P/codes/eval/chain_status.sh" | sed 's/^/  /'
+echo "--- the same two files at git HEAD (the pre-repair state; loop.sbatch 8e394116 is the script job 301099 is running)"
+git show "HEAD:$P/codes/loop/loop.sbatch"     | sha256sum | sed "s#-#$P/codes/loop/loop.sbatch (HEAD)#" | sed 's/^/  /'
+git show "HEAD:$P/codes/eval/chain_status.sh" | sha256sum | sed "s#-#$P/codes/eval/chain_status.sh (HEAD)#" | sed 's/^/  /'
+echo "--- the script the RUNNING link 1 (job 301099) was submitted with, read back from the scheduler"
+scontrol write batch_script 301099 - 2>/dev/null | sha256sum | sed 's/^/  scontrol write batch_script 301099 -  sha256 /'
+echo "--- the live queue at the start of this packet (read-only)"
+squeue -u "$USER" -o '%.10i %.12P %.12j %.9T %.12L %.20V %R' | sed 's/^/  /'
+
+echo
+echo "########## PART 1.1: the whole diff of this repair"
+git --no-pager diff -- "$P/codes/loop/loop.sbatch" "$P/codes/eval/chain_status.sh"
+
+echo
+echo "########## PART 1.2: code lines changed (comment and blank lines excluded)"
+git --no-pager diff -U0 -- "$P/codes/loop/loop.sbatch" "$P/codes/eval/chain_status.sh" \
+  | grep -E '^[+-]' | grep -vE '^(\+\+\+|---)' \
+  | grep -vE '^[+-][[:space:]]*#' | grep -vE '^[+-][[:space:]]*$' | sed 's/^/  /'
+
+echo
+echo "########## PART 1.3: files this packet must NOT have touched"
+echo "--- the 7x7 run is LIVE on these three; git diff must be clean"
+for f in "$P/codes/loop/smoke_loop.sbatch" "$P/codes/loop/converged_7x7.sbatch" \
+         "$P/codes/loop/t7_continue.sbatch" "$P/codes/loop/t7_cycle.sh"; do
+  printf '  %-72s git-diff-lines=%s  sha256=%s\n' "${f#results/ktg/paper_1902.10565/}" \
+    "$(git --no-pager diff --numstat -- "$f" | wc -l)" "$(sha256sum "$f" | cut -c1-16)..."
+done
+echo "--- everything else of codes/ this packet must not have changed"
+for f in "$P/codes/loop/synchronous_loop_9x9.sh" "$P/codes/loop/knobs_9x9.env" \
+         "$P/codes/loop/export_model_for_selfplay_9x9.sh" "$P/codes/loop/train_9x9.sh" \
+         "$P/codes/loop/smoke_one_cycle.sh" "$P/codes/eval/stage_monitor.sh" \
+         "$P/codes/data_budget/scratch_guard.sh" "$P/codes/data_budget/budget.env" \
+         "mission.json" "$P/tasks/loop_resume_under_walltime/implementation.md" \
+         "$P/tasks/production_chain_9x9/implementation.md"; do
+  printf '  %-72s git-diff-lines=%s\n' "$f" "$(git --no-pager diff --numstat -- "$f" | wc -l)"
+done
+echo "--- every file this packet has modified in the working tree (git diff --numstat, whole repo)"
+git --no-pager diff --numstat | sed 's/^/  /'
+echo "  (rows other than the two artifacts belong to the concurrent 7x7 and DAG packets; this packet commits with"
+echo "   'git commit --only --' over its own paths, so nothing of theirs is carried in)"
+
+echo
+echo "########## PART 1.4: bash -n on every script of codes/loop, codes/eval and the pre-repair copies"
+for f in "$P"/codes/loop/*.sbatch "$P"/codes/loop/*.sh "$P"/codes/eval/*.sh "$RT/pre/loop_pre.sbatch" "$RT/pre/chain_status_pre.sh"; do
+  if bash -n "$f" 2>/dev/null; then echo "  ok   $(basename "$f")"; else echo "  FAIL $(basename "$f")"; fi
+done
+
+echo
+echo "########## PART 1.5: the defect and the fix, as greps"
+echo "--- the pre-repair sbatch capture (HEAD)"
+git show "HEAD:$P/codes/loop/loop.sbatch" | grep -n -A8 'out=\$(sbatch --parsable' | sed 's/^/  /'
+echo "--- the repaired one"
+grep -n -A6 'out=\$(sbatch --parsable' "$P/codes/loop/loop.sbatch" | sed 's/^/  /'
+echo "--- the sbatch command substitution, flattened to one line (the call spans two lines in both files)"
+echo "  HEAD  : $(git show "HEAD:$P/codes/loop/loop.sbatch" | tr '\n' ' ' | grep -o 'out=$(sbatch --parsable[^)]*)' )"
+echo "  after : $(tr '\n' ' ' < "$P/codes/loop/loop.sbatch" | grep -o 'out=$(sbatch --parsable[^)]*)' )"
+echo "  '2>&1' inside that substitution   HEAD: $(git show "HEAD:$P/codes/loop/loop.sbatch" | tr '\n' ' ' | grep -o 'out=$(sbatch --parsable[^)]*)' | grep -c '2>&1')   after: $(tr '\n' ' ' < "$P/codes/loop/loop.sbatch" | grep -o 'out=$(sbatch --parsable[^)]*)' | grep -c '2>&1')"
+echo "--- 'chain not extended' occurrences, before and after"
+git show "HEAD:$P/codes/loop/loop.sbatch" | grep -n 'chain not extended' | sed 's/^/  HEAD  /'
+grep -n 'chain not extended' "$P/codes/loop/loop.sbatch" | sed 's/^/  after /'
+echo "  (after the repair the only say() that carries the phrase is the sbatch-exit != 0 branch;"
+echo "   the other hit is the comment that says why the rc-0 branch must not use it)"
+echo "--- '--export' on non-comment lines of loop.sbatch (0 = Slurm's default --export=ALL still applies)"
+echo "  $(grep -v '^[[:space:]]*#' "$P/codes/loop/loop.sbatch" | grep -c -- '--export')"
+echo "--- resubmit()'s span at this sha, and the lines the status_log defect report cited (:554-560 at 8e394116)"
+awk '/^resubmit\(\) \{/{s=NR} /^\}$/{if(s && !e){e=NR}} END{}' "$P/codes/loop/loop.sbatch" >/dev/null
+echo "  resubmit() now spans lines $(grep -n '^resubmit() {' "$P/codes/loop/loop.sbatch" | cut -d: -f1)-$(awk 'f&&/^}$/{print NR;exit} /^resubmit\(\) \{/{f=1}' "$P/codes/loop/loop.sbatch")"
+echo "  at HEAD it spanned $(git show "HEAD:$P/codes/loop/loop.sbatch" | grep -n '^resubmit() {' | cut -d: -f1)-$(git show "HEAD:$P/codes/loop/loop.sbatch" | awk 'f&&/^}$/{print NR;exit} /^resubmit\(\) \{/{f=1}')"
+echo "--- the P10 counter in chain_status.sh, before and after"
+git show "HEAD:$P/codes/eval/chain_status.sh" | grep -n 'n_blocks=\|n_ok=\|guard blocks\|P10:' | sed 's/^/  HEAD  /'
+grep -n 'n_blocks=\|n_cycle=\|n_ok=\|guard invocations\|P10:' "$P/codes/eval/chain_status.sh" | sed 's/^/  after /'
+
+echo
+echo "########## PART 1.6: the evidence this repair is written against (read-only)"
+L=/scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/logs/loop-301099.log
+echo "--- $L, the resubmit block of link 1, verbatim"
+sed -n '/sbatch did not return a job id/,+2p' "$L" | sed 's/^/  /'
+echo "--- and what the scheduler says about the successor it names"
+scontrol show job 305318 2>/dev/null | sed -n '1,6p' | sed 's/^/  /'
+echo "--- the guard invocations of that link"
+grep -n '^== scratch_guard \|^scratch_guard: OK' "$L" | sed 's/^/  /'
+echo "########## cleanup"; echo "done $(date -Is)"
+==== r6_close.sh ====
+#!/bin/bash
+# PART 5: closing checks in a clean environment (real PATH, real sbatch NOT invoked),
+# the verification.command carried on the admitted result row, and the KTG_STAGE_ONLY=1
+# dry run from the real scratch clone (must stage byte-identically before and after).
+set -u
+AZ=$HOME/az
+cd "$AZ" || exit 2
+echo "########## the real sbatch is on PATH and is NOT called anywhere below"
+echo "sbatch resolves to: $(command -v sbatch)"
+echo "squeue resolves to: $(command -v squeue)"
+
+echo "########## section 2 closing check of tasks/loop_resume_under_walltime/implementation.md, verbatim"
+bash -n results/ktg/paper_1902.10565/codes/loop/loop.sbatch \
+  && grep -q afterany results/ktg/paper_1902.10565/codes/loop/loop.sbatch \
+  && grep -q failcount results/ktg/paper_1902.10565/codes/loop/loop.sbatch \
+  && grep -q 'cpp/build/katago' results/ktg/paper_1902.10565/codes/loop/synchronous_loop_9x9.sh \
+  && ! grep -q 'cpp/katago"' results/ktg/paper_1902.10565/codes/loop/synchronous_loop_9x9.sh \
+  && bash "$(python3 -c 'import json;print(json.load(open("mission.json"))["compute"]["policyCheck"])')" --gpus 1 --cpus 24 --partition b200
+echo "SECTION2_EXIT=$?"
+printf 'grep -c afterany=%s failcount=%s cpp/build/katago=%s cpp/katago"=%s\n' \
+  "$(grep -c afterany results/ktg/paper_1902.10565/codes/loop/loop.sbatch)" \
+  "$(grep -c failcount results/ktg/paper_1902.10565/codes/loop/loop.sbatch)" \
+  "$(grep -c 'cpp/build/katago' results/ktg/paper_1902.10565/codes/loop/synchronous_loop_9x9.sh)" \
+  "$(grep -c 'cpp/katago"' results/ktg/paper_1902.10565/codes/loop/synchronous_loop_9x9.sh)"
+
+echo
+echo "########## the verification.command carried on the admitted result row 423b1bdf (fifth-repair form), verbatim"
+bash -n results/ktg/paper_1902.10565/codes/loop/loop.sbatch \
+  && grep -q '^#SBATCH --cpus-per-task=32$' results/ktg/paper_1902.10565/codes/loop/loop.sbatch \
+  && grep -q 'REQ_CPUS="${KTG_CPUS_PER_TASK' results/ktg/paper_1902.10565/codes/loop/loop.sbatch \
+  && ! grep -n 'cpus-per-task=24\|REQ_CPUS=24' results/ktg/paper_1902.10565/codes/loop/loop.sbatch \
+  && grep -q 'cpp/build/katago' results/ktg/paper_1902.10565/codes/loop/synchronous_loop_9x9.sh \
+  && grep -q 'check_pos_len_npz.py' results/ktg/paper_1902.10565/codes/loop/synchronous_loop_9x9.sh \
+  && grep -q 'stage_monitor.sh' results/ktg/paper_1902.10565/codes/loop/loop.sbatch \
+  && bash "$(python3 -c 'import json;print(json.load(open("mission.json"))["compute"]["policyCheck"])')" --gpus 1 --cpus 32 --partition b200
+echo "ROW_VERIFICATION_EXIT=$?"
+
+echo
+echo "########## why both commands exit 1 today: the LAST conjunct is a LIVE compute-budget check"
+echo "--- the same two commands with the final check.sh conjunct removed (the artifact half alone)"
+bash -n results/ktg/paper_1902.10565/codes/loop/loop.sbatch \
+  && grep -q afterany results/ktg/paper_1902.10565/codes/loop/loop.sbatch \
+  && grep -q failcount results/ktg/paper_1902.10565/codes/loop/loop.sbatch \
+  && grep -q 'cpp/build/katago' results/ktg/paper_1902.10565/codes/loop/synchronous_loop_9x9.sh \
+  && ! grep -q 'cpp/katago"' results/ktg/paper_1902.10565/codes/loop/synchronous_loop_9x9.sh
+echo "SECTION2_WITHOUT_POLICY_EXIT=$?"
+bash -n results/ktg/paper_1902.10565/codes/loop/loop.sbatch \
+  && grep -q '^#SBATCH --cpus-per-task=32$' results/ktg/paper_1902.10565/codes/loop/loop.sbatch \
+  && grep -q 'REQ_CPUS="${KTG_CPUS_PER_TASK' results/ktg/paper_1902.10565/codes/loop/loop.sbatch \
+  && ! grep -n 'cpus-per-task=24\|REQ_CPUS=24' results/ktg/paper_1902.10565/codes/loop/loop.sbatch \
+  && grep -q 'cpp/build/katago' results/ktg/paper_1902.10565/codes/loop/synchronous_loop_9x9.sh \
+  && grep -q 'check_pos_len_npz.py' results/ktg/paper_1902.10565/codes/loop/synchronous_loop_9x9.sh \
+  && grep -q 'stage_monitor.sh' results/ktg/paper_1902.10565/codes/loop/loop.sbatch
+echo "ROW_VERIFICATION_WITHOUT_POLICY_EXIT=$?"
+echo "--- the policy conjunct alone"
+bash "$(python3 -c 'import json;print(json.load(open("mission.json"))["compute"]["policyCheck"])')" --gpus 1 --cpus 32 --partition b200 >/dev/null 2>&1
+echo "POLICY_CHECK_ALONE_EXIT=$?  (this is what makes both commands exit 1 right now)"
+echo "--- the four jobs of this user that the cap is counting"
+squeue -h -u "$USER" -o '    %i %j %T %b' | sed 's/^/  /'
+echo "--- the SAME two commands against the PRE-repair file (git HEAD 8e394116): identical exits, so this"
+echo "    is a live-cluster state, not a property of this repair"
+PRE=$RT/pre/loop_pre.sbatch
+bash -n "$PRE" && grep -q afterany "$PRE" && grep -q failcount "$PRE" \
+  && grep -q 'cpp/build/katago' results/ktg/paper_1902.10565/codes/loop/synchronous_loop_9x9.sh \
+  && ! grep -q 'cpp/katago"' results/ktg/paper_1902.10565/codes/loop/synchronous_loop_9x9.sh \
+  && bash "$(python3 -c 'import json;print(json.load(open("mission.json"))["compute"]["policyCheck"])')" --gpus 1 --cpus 24 --partition b200 >/dev/null 2>&1
+echo "SECTION2_EXIT_ON_PRE_REPAIR_FILE=$?"
+
+echo
+echo "########## the conjuncts this repair adds, as greps over the repaired file"
+L=results/ktg/paper_1902.10565/codes/loop/loop.sbatch
+C=results/ktg/paper_1902.10565/codes/eval/chain_status.sh
+printf '  %-58s %s\n' \
+  "sbatch substitution still ends in 2>&1 (the defect form)"  "$(tr '\n' ' ' < "$L" | grep -o 'out=$(sbatch --parsable[^)]*)' | grep -c '2>&1')" \
+  "sbatch substitution redirects stderr to a file"            "$(tr '\n' ' ' < "$L" | grep -o 'out=$(sbatch --parsable[^)]*)' | grep -c '2>"[$]sb_err"')" \
+  "id parse accepts jobid and jobid;cluster"                  "$(grep -c 'sb_id=$(printf' "$L")" \
+  "'chain not extended' in a say(), sbatch-exit != 0 only"    "$(grep -c 'say "sbatch failed (exit $sb_rc) -- chain not extended' "$L")" \
+  "squeue recovery lookup"                                    "$(grep -c 'squeue -h -u' "$L")" \
+  "stderr scratch file removed before resubmit returns"       "$(grep -c 'rm -f "$sb_err"' "$L")" \
+  "P10 counts every scratch_guard invocation"                 "$(grep -c 'n_blocks=.*== scratch_guard ' "$C")" \
+  "P10 still reports the per-cycle subset"                    "$(grep -c 'n_cycle=' "$C")"
+
+echo
+echo "########## KTG_STAGE_ONLY=1 dry run from the REAL scratch clone, 'bash <script>' form"
+echo "########## (this repair touches only resubmit(); synchronous_loop_9x9.sh is byte-identical to HEAD)"
+S=/scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train
+# shellcheck disable=SC1091
+. "$S/env.sh"
+echo "KATAGO_SRC=$KATAGO_SRC  git HEAD $(cd "$KATAGO_SRC" && git rev-parse --short HEAD)  KATAGO_BIN size $(stat -c%s "$KATAGO_BIN")"
+for run in run1 run2; do
+  D="$RT/stage_$run"; rm -rf "$D"; mkdir -p "$D"
+  ( cd "$KATAGO_SRC" && KTG_STAGE_ONLY=1 KTG_CODES="$AZ/results/ktg/paper_1902.10565/codes" \
+      bash "$AZ/results/ktg/paper_1902.10565/codes/loop/synchronous_loop_9x9.sh" ktg9 "$D" t9 b7c96h3tfrs 1 ) 2>&1 \
+    | sed -e "s#$RT#\$RT#g" -e 's#/dated/[0-9-]*#/dated/<ts>#g' | sed 's/^/    /'
+  echo "  [$run] STAGE_EXIT=$?"
+  echo "  [$run] files: $(find "$D" -type f | wc -l)  bytes: $(find "$D" -type f -printf '%s\n' | awk '{s+=$1} END{print s+0}')"
+  ( cd "$D" && find . -type f -printf '%P %s\n' | sed 's#scripts/dated/[0-9-]*#scripts/dated/<ts>#' | sort ) > "$RT/manifest_$run.txt"
+  cmp "$(find "$D" -name katago -type f | head -1)" "$KATAGO_BIN" >/dev/null 2>&1 && echo "  [$run] cmp bin/katago \$KATAGO_BIN exit=0" || echo "  [$run] cmp bin/katago FAILED"
+done
+diff "$RT/manifest_run1.txt" "$RT/manifest_run2.txt" > /dev/null
+echo "  manifest diff exit=$? (0 = byte-identical staging across runs)"
+rm -rf "$RT/stage_run1" "$RT/stage_run2"
+echo "  staged archives removed"
+
+echo
+echo "########## queue at the end (must be untouched -- read-only)"
+squeue -u "$USER" -o '%.10i %.12P %.12j %.8T %.12l %.20S %R' | sed 's/^/    /'
+echo "########## cleanup"; echo "done $(date -Is)"
+==== w3v_common.sh / v2_regress.sh / v3_seeds.sh ====
+Not reproduced here: they are the wave-3 validator's own scripts, used UNMODIFIED.
+They were extracted programmatically from the "harness sources, verbatim" block of
+results/ktg/paper_1902.10565/evidence/wave3_prelaunch_repairs/validation_harness.txt
+(the ==== <name> ==== blocks) and run as-is. sha256 of the extracted copies:
+  7d91e5ba189907841e2cf95cdae908b9e7dd15180cc51c05634dbddfe22c1592  w3v_common.sh
+  9d4648ab8f7c747c76509044dd2baebf776d645fe0be9ce24de0bc01800bd0a1  v2_regress.sh
+  02199febff5189862dc96f6dca49dd614758eb65b58f8eed79691a284c248a1e  v3_seeds.sh
+The fifth repair packet recorded the same three hashes.
+
+################################################################################
+# FINAL SECTION: vendor / model name sweep (case-insensitive) over everything above,
+# over both repaired artifacts, and over this packet's commit message. The pattern
+# file itself is deliberately NOT printed, exactly as in the earlier records.
+################################################################################
+pattern: 19 terms, sha256 38450a68e1172cc4... (not listed)
+--- the repaired artifacts
+  codes/loop/loop.sbatch: 0 match(es)
+  codes/eval/chain_status.sh: 0 match(es)
+--- this record, everything above this section
+  1241:#          changed between the two runs -- only .claude/skills/compute-budget/check.sh,
+  total: 2 match(es)
+  Every hit above is the same string, ".claude/skills/compute-budget/check.sh" -- the value of
+  mission.json compute.policyCheck, a TRACKED PATH in this repository that already appears in
+  16 committed files including mission.json and the claim, error and knowledge ledgers.
+  It is a directory name in the mission's own layout, not an attribution and not a tool or model
+  name introduced by this packet; the fifth repair record classified the identical hit the same way.
+  matches that are NOT that repository path: 0
+--- the commit message this packet uses (written before this sweep ran)
+  commit message: 0 match(es)   [116 lines, sha256 cbc8a07857ae3861...]
+--- NOT covered here, because it is written after this file is closed and hashed:
+    evidence/loop_resume/candidate_rows_repair6.json and this packet's error-ledger row.
+    Their sweep result is recorded on the error-ledger row's parameter_regime.
+sweep done 2026-09-04T19:41:08-04:00
+
+################################################################################
+# end of record
+################################################################################

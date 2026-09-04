@@ -420,13 +420,27 @@ report() {
          keep{buf = buf $0 "\n"}
          /^scratch_guard: (OK|WARNING|no usable)/{if (keep) {last = buf; keep = 0}}
          END{printf "%s", last}' "${LOGFILES[@]}" 2>/dev/null | sed 's/^/    /'
-    local n_blocks n_ok
-    n_blocks="$(grep -ch '^== scratch_guard .*\[cycle [0-9]* pre-gatekeeper\] ==' "${LOGFILES[@]}" 2>/dev/null | sum_lines)"
+    # P10 counts two different things and they must be compared like for like.
+    # Every scratch_guard INVOCATION emits one '== scratch_guard ... ==' header
+    # and one verdict line, and a link makes one more invocation than it starts
+    # cycles: the wrapper's own '[chain link N pre-flight]' call before the loop
+    # (loop.sbatch, scratch guard section) plus one '[cycle N pre-gatekeeper]'
+    # call per cycle. Counting only the per-cycle headers against ALL 'OK' lines
+    # therefore reported a shortfall of exactly one on every healthy link -- job
+    # 301099 read 1 logged "1 guard blocks but 2 'scratch_guard: OK' lines" with
+    # both verdicts clean. So the equality is over all invocations, and the
+    # per-cycle subset is reported separately because that is the count P10 wants
+    # equal to the cycles started in the link.
+    local n_blocks n_cycle n_ok
+    n_blocks="$(grep -ch '^== scratch_guard ' "${LOGFILES[@]}" 2>/dev/null | sum_lines)"
+    n_cycle="$(grep -ch '^== scratch_guard .*\[cycle [0-9]* pre-gatekeeper\] ==' "${LOGFILES[@]}" 2>/dev/null | sum_lines)"
     n_ok="$(grep -ch 'scratch_guard: OK' "${LOGFILES[@]}" 2>/dev/null | sum_lines)"
-    echo "    guard blocks [cycle N pre-gatekeeper]: ${n_blocks:-0}    'scratch_guard: OK': ${n_ok:-0}"
-    echo "    (P10 wants the two equal, and equal to the cycles started in the link)"
+    echo "    guard invocations: ${n_blocks:-0}    'scratch_guard: OK': ${n_ok:-0}    of which [cycle N pre-gatekeeper]: ${n_cycle:-0}"
+    echo "    (P10 wants every invocation to carry a clean verdict, and the per-cycle"
+    echo "     subset to equal the cycles started in the link; the extra invocation is"
+    echo "     the wrapper's own '[chain link N pre-flight]' call, one per link)"
     if [ "${n_blocks:-0}" -ne "${n_ok:-0}" ]; then
-      notice "P10: ${n_blocks:-0} guard blocks but ${n_ok:-0} 'scratch_guard: OK' lines -- a cycle started without a clean guard verdict"
+      notice "P10: ${n_blocks:-0} scratch_guard invocations but ${n_ok:-0} 'scratch_guard: OK' lines -- a guard call ended without a clean verdict"
     fi
   fi
   if [ "$DO_DU" -eq 1 ]; then

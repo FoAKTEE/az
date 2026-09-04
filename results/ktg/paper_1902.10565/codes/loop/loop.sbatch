@@ -539,7 +539,7 @@ resubmit() {
     if [ "$REQ_CPUS_RESOLVED" -ne 1 ]; then
         say "REQ_CPUS unresolved (KTG_CPUS_PER_TASK not read from $KNOBS_ENV) -- refusing to chain"; return 0
     fi
-    local part check_out check_rc out
+    local part check_out check_rc out sb_rc sb_err sb_id _try
     part=$(pick_partition)
     say "compute-budget pre-flight for the successor (gpus=$REQ_GPUS cpus=$REQ_CPUS part=$part)"
     if [ -z "$POLICY_CHECK_REL" ] || [ ! -f "$POLICY_CHECK" ]; then
@@ -551,15 +551,81 @@ resubmit() {
     if [ "$check_rc" -ne 0 ] && ! preflight_self_gpu_ok "$check_out"; then
         say "compute-budget check failed (exit $check_rc) -- refusing to chain"; return 0
     fi
+    # The successor's id must be read from sbatch's STDOUT alone. The site's
+    # Slurm cli_filter prints a two-line banner
+    #     [BILLING] loaded!
+    #     [BILLING] Re-emitting cost at job start!
+    # on STDERR at every submission, and the old form captured the two streams
+    # together with `2>&1` and then tested the whole capture against ^[0-9]+$.
+    # A submission that SUCCEEDED therefore read as a failed one: SUCCESSOR
+    # stayed empty for the life of the chain, so cancel_successor() could never
+    # fire (the pre-flight-failure and breaker paths that exist to cut a
+    # deterministic crash early were dead), the storage stop logged "no queued
+    # successor to cancel" while one was queued, and every link logged "chain
+    # not extended" over a successor scontrol showed correctly wired. Measured
+    # on job 301099, link 1 of the production chain: the log carried the banner
+    # and the id 305318 on one "did not return a job id" line while 305318 was
+    # PENDING with Dependency=afterany:301099 (evidence/production_chain/
+    # status_log.txt, read 1).
+    #
+    # So: stderr goes to its own file -- it is diagnostic, never the id, and it
+    # is echoed verbatim when something actually went wrong -- and the id is
+    # parsed out of stdout. `: >` first, because a redirection that cannot be
+    # created would abort the whole command substitution and the successor would
+    # never be submitted at all; /dev/null loses the diagnostic, not the chain.
+    sb_err="$BASEDIR/.resubmit_stderr.${SLURM_JOB_ID:-$$}"
+    : > "$sb_err" 2>/dev/null || sb_err=/dev/null
     out=$(sbatch --parsable --partition="$part" \
-        --dependency=afterany:"${SLURM_JOB_ID:-0}" "$SELF" 2>&1)
-    if [[ "$out" =~ ^[0-9]+$ ]]; then
-        SUCCESSOR="$out"
+        --dependency=afterany:"${SLURM_JOB_ID:-0}" "$SELF" 2>"$sb_err")
+    sb_rc=$?
+    # --parsable prints "jobid" on a stand-alone cluster and "jobid;clustername"
+    # on a federated one, so both shapes are accepted and only the leading digits
+    # are kept. The LAST matching line wins: a site wrapper is free to print its
+    # own lines on stdout before it, and the id is the last thing sbatch writes.
+    sb_id=$(printf '%s\n' "$out" | sed -n 's/^\([0-9][0-9]*\)\(;[^;]*\)\{0,1\}$/\1/p' | tail -1)
+    if [ -n "$sb_id" ]; then
+        SUCCESSOR="$sb_id"
         say "successor queued: $SUCCESSOR (partition $part, dependency afterany:${SLURM_JOB_ID:-0})"
+        if [ -s "$sb_err" ]; then
+            say "sbatch wrote to stderr and still succeeded -- verbatim: $(tr '\n' ' ' < "$sb_err")"
+        fi
+    elif [ "$sb_rc" -eq 0 ]; then
+        # sbatch reported success but this wrapper could not read an id out of
+        # its stdout. The submission most likely EXISTS, so this is a WARNING and
+        # never "chain not extended": declaring the chain dead here is what the
+        # banner defect did, and it is the one wrong answer. Ask the scheduler
+        # instead -- a pending job of this job's own name whose dependency names
+        # this job id is the successor, whatever sbatch printed.
+        say "WARNING: sbatch exited 0 but no job id could be parsed from its stdout: '${out:-<empty>}' -- looking the successor up in squeue"
+        if [ -s "$sb_err" ]; then
+            say "sbatch stderr, verbatim: $(tr '\n' ' ' < "$sb_err")"
+        fi
+        for _try in 1 2 3; do
+            sb_id=$(squeue -h -u "${USER:-$(id -un)}" \
+                        -n "${SLURM_JOB_NAME:-ktg-loop}" -t PENDING -o '%i|%E' 2>/dev/null \
+                    | grep -F "afterany:${SLURM_JOB_ID:-0}" | cut -d'|' -f1 \
+                    | sed -n 's/^\([0-9][0-9]*\)$/\1/p' | tail -1)
+            [ -n "$sb_id" ] && break
+            say "squeue lookup attempt $_try/3 found no pending successor of ${SLURM_JOB_NAME:-ktg-loop} depending on afterany:${SLURM_JOB_ID:-0}"
+            [ "$_try" -lt 3 ] && sleep 5
+        done
+        if [ -n "$sb_id" ]; then
+            SUCCESSOR="$sb_id"
+            say "successor queued: $SUCCESSOR (partition $part, dependency afterany:${SLURM_JOB_ID:-0}) -- id recovered from squeue, not from sbatch stdout"
+        else
+            SUCCESSOR=""
+            say "WARNING: sbatch exited 0 but neither its stdout nor squeue yielded a successor id -- the successor may nevertheless exist; cancel_successor() cannot reach it, so read the queue before assuming the chain ended"
+        fi
     else
         SUCCESSOR=""
-        say "sbatch did not return a job id -- chain not extended: $out"
+        say "sbatch failed (exit $sb_rc) -- chain not extended; stdout: '${out:-<empty>}'"
+        if [ -s "$sb_err" ]; then
+            say "sbatch stderr, verbatim: $(tr '\n' ' ' < "$sb_err")"
+        else
+            say "sbatch wrote nothing to stderr"
+        fi
     fi
+    [ "$sb_err" = /dev/null ] || rm -f "$sb_err"
 }
 resubmit
 
