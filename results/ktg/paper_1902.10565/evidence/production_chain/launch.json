@@ -98,5 +98,18 @@
     "verdict": "no chain-corrupting defect in the scripts this job runs; no scancel for repair was needed",
     "export_ramp": "exports at cycles ~5, 10, 15, 19, 22 (the trainer consumes whole shuffled files, train.py:1303-1346,:1511, and shuffle.py writes ~70k-row files); first export at cycle 5 stands; no export at cycles 6-9 is NOT a fault",
     "o42": "non-blocking: after a SIGKILLed link a successor failing pre-flight before its own stage_monitor start would run stop on stale monitor.pids; escalate before the successor starts if any link ends SIGKILLed"
+  },
+  "bounded_wait": {
+    "window": "2026-09-04T10:40:24 -> 2026-09-04T11:26:32 (45 min from the resubmission)",
+    "outcome": "the link never started; sacct 299461 -X -> PENDING, Elapsed 00:00:00, Start Unknown",
+    "start_estimate_trace": [
+      "+60 s: 2026-09-05T13:44:02 (Priority)",
+      "10:45: N/A",
+      "10:58 and 11:07: 2026-09-05T15:16:07 (Priority)",
+      "11:26: N/A, priority 18213"
+    ],
+    "basedir_created": false,
+    "link_log_created": false,
+    "first_monitoring_read": "not performed -- no first cycle log exists and the job has not run"
   }
 }
