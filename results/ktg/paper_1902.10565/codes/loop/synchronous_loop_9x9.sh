@@ -49,6 +49,12 @@ set -eu -o pipefail
 #  10  new, end of the while body       $BASEDIR/.cycles_completed progress
 #                                       counter, read by loop.sbatch's breaker
 #                                       (o33)
+#  11  new, loop start + before every    codes/eval/check_pos_len_npz.py over the npz
+#      shuffle                           this BASEDIR holds; a pos_len-19 row set is
+#                                       refused BEFORE it can enter a shuffle window
+#                                       (obligation o02)
+#  12  new, top of the while body        codes/eval/stage_monitor.sh phase cycleN, when
+#                                       loop.sbatch's monitor is running (o03, c06)
 #
 # The script keeps upstream's GITROOTDIR="$(git rev-parse --show-toplevel)" (:35)
 # and the git show/diff calls (:84-86), so it MUST be run from inside the scratch
@@ -178,6 +184,58 @@ SCRATCH_GUARD="${KTG_SCRATCH_GUARD:-$KTG_CODES/data_budget/scratch_guard.sh}"
 STAGE_MONITOR="${KTG_STAGE_MONITOR:-$KTG_CODES/eval/stage_monitor.sh}"
 MONITOR_DIR="${KTG_MONITOR_DIR:-$BASEDIR/monitor}"
 
+# CHANGE 11 (obligation o02): the pre-shuffle pos_len guard. python/katago/train/
+# data_processing_pytorch.py:91 asserts the board size only at TRAIN time, i.e. after a
+# whole selfplay stage has already been written and shuffled into the window; and
+# python/shuffle.py never looks at it at all. A single pos_len-19 row set -- a hand-copied
+# directory, a resumed BASEDIR from another run, a cfg edited mid-chain -- would therefore
+# be discovered a cycle late and after it had already been mixed into shuffleddata.
+# check_pos_len_npz.py reads the shapes out of each npz's zip headers with the standard
+# library alone (~1 ms per file, no numpy, no GPU), so the guard is affordable before every
+# shuffle. It is never advisory: a mismatch ends the cycle with a non-zero exit, and the
+# file that failed is named.
+POS_LEN_CHECK="${KTG_POS_LEN_CHECK:-$KTG_CODES/eval/check_pos_len_npz.py}"
+POS_LEN_MARKER="$BASEDIR/.pos_len_checked"
+
+# Incremental by design: only npz NEWER than the marker are re-read, so a resumed BASEDIR
+# holding thousands of files pays the full walk once and a per-cycle walk after that. With
+# no marker (a fresh BASEDIR, or one whose marker was removed on purpose) every npz under
+# $BASEDIR/selfplay is checked. Zero new files is a clean skip, not a failure --
+# check_pos_len_npz.py itself exits 1 when it is handed nothing, which is right for a
+# closing check and wrong for a per-cycle guard.
+check_pos_len() {
+    local label="$1" n rc
+    if [ ! -f "$POS_LEN_CHECK" ]
+    then
+        echo "missing $POS_LEN_CHECK -- refusing to shuffle unverified training data ($label)" >&2
+        return 2
+    fi
+    if [ -e "$POS_LEN_MARKER" ]
+    then
+        n=$(find "$BASEDIR"/selfplay -name '*.npz' -newer "$POS_LEN_MARKER" 2>/dev/null | wc -l)
+    else
+        n=$(find "$BASEDIR"/selfplay -name '*.npz' 2>/dev/null | wc -l)
+    fi
+    if [ "$n" -eq 0 ]
+    then
+        echo "pos_len check: 0 npz ($label) -- nothing new to verify"
+        return 0
+    fi
+    echo "pos_len check: $n npz ($label)"
+    if [ -e "$POS_LEN_MARKER" ]
+    then
+        find "$BASEDIR"/selfplay -name '*.npz' -newer "$POS_LEN_MARKER" -print0 2>/dev/null \
+            | xargs -0 -r python3 "$POS_LEN_CHECK"
+    else
+        find "$BASEDIR"/selfplay -name '*.npz' -print0 2>/dev/null \
+            | xargs -0 -r python3 "$POS_LEN_CHECK"
+    fi
+    rc=$?
+    [ "$rc" -eq 0 ] || return "$rc"
+    touch "$POS_LEN_MARKER"
+    return 0
+}
+
 for f in "$SELFPLAY_CONFIG" "$GATING_CONFIG" "$TRAIN_WRAPPER" "$EXPORT_WRAPPER" "$SCRATCH_GUARD"
 do
     if [ ! -f "$f" ]
@@ -235,6 +293,16 @@ cd "$DATED_ARCHIVE"
 
 # Cycle counter, used only to label the per-cycle scratch_guard log triple.
 CYCLE_INDEX=0
+
+# CHANGE 11, first call: whatever this BASEDIR already holds, before the first cycle of
+# this link. On a fresh tree it is the 0-npz skip; on a resumed one it is the only thing
+# between another run's data and this run's shuffle window.
+if ! check_pos_len "loop start"
+then
+    echo "pre-shuffle pos_len guard refused the existing data in $BASEDIR/selfplay (obligation o02)." >&2
+    echo "Every training npz must be a dataBoardLen = 9 row set; remove or move the file named above." >&2
+    exit 1
+fi
 
 # Dry-run hook: KTG_STAGE_ONLY=1 stops here, after the archive is staged and the
 # startup sweeps have run but before any engine or trainer stage. It exists so
@@ -302,6 +370,18 @@ do
 
     echo "Selfplay"
     time ./bin/katago selfplay -max-games-total "$NUM_GAMES_PER_CYCLE" -output-dir "$BASEDIR"/selfplay -models-dir "$BASEDIR"/models -config "$DATED_ARCHIVE"/selfplay.cfg | tee -a "$BASEDIR"/selfplay/stdout.txt
+
+    # CHANGE 11, second call: the rows this cycle's selfplay just wrote, before they can
+    # enter a shuffle window. -e is in force, but the guard is called through `if !` so the
+    # message below is printed instead of a bare abort.
+    set +x
+    if ! check_pos_len "cycle $CYCLE_INDEX pre-shuffle"
+    then
+        echo "pre-shuffle pos_len guard refused the data cycle $CYCLE_INDEX wrote (obligation o02)." >&2
+        echo "Every training npz must be a dataBoardLen = 9 row set; remove or move the file named above." >&2
+        exit 1
+    fi
+    set -x
 
     echo "Shuffle"
     (
