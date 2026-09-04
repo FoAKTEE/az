@@ -4,7 +4,7 @@
 
 ```mermaid
 flowchart TD
-  n_arxiv_1902_10565__playout_cap_randomization["◐ <b>playout_cap_randomization</b> · k3<br/>Playout cap randomization as coded: play.cpp:1132-1150 pi… <br/><i>paper l.96-97</i>"]:::preliminary
+  n_arxiv_1902_10565__playout_cap_randomization["● <b>playout_cap_randomization</b> · k4 t1<br/>Playout cap randomization as coded: play.cpp:1132-1150 pi… <br/><i>paper l.96-97</i>"]:::solid
   n_arxiv_1902_10565__root_explore_and_target_pruning["◐ <b>root_explore_and_target_pruning</b> · k3<br/>Forced root exploration (searchexplorehelpers.cpp:166-169… <br/><i>eq:l105, paper l.109</i>"]:::preliminary
   n_arxiv_1902_10565__loss_targets_metrics["◐ <b>loss_targets_metrics</b> · k4<br/>Loss as coded in metrics_pytorch.py:856-882: policy 0.930… <br/><i>eq:l546, eq:l550, eq:l554, eq:l558…</i>"]:::preliminary
   n_arxiv_1902_10565__score_utility_search["◐ <b>score_utility_search</b> · k3<br/>Score utility u = c * (2/pi) atan((x - x0)/(dynamicScoreC… <br/><i>eq:l689, eq:l691, eq:l702</i>"]:::preliminary
@@ -20,8 +20,8 @@ flowchart TD
   n_arxiv_1902_10565__cfg_9x9_override["◐ <b>cfg_9x9_override</b> · k4 t1<br/>Mission-owned codes/cfg/selfplay_9x9.cfg, codes/cfg/gatek…"]:::preliminary
   n_arxiv_1902_10565__tiny_model_export_smoke["◐ <b>tiny_model_export_smoke</b> · k4 t2<br/>Export smoke for the transformer path: codes/eval/export_…"]:::preliminary
   n_arxiv_1902_10565__synchronous_loop_smoke["◐ <b>synchronous_loop_smoke</b> · k4 t6✗4<br/>Attempt 2 (Slurm 299259, b200 gb207, 1 GPU, 24 CPUs, 05:0…"]:::preliminary
-  n_arxiv_1902_10565__loop_resume_under_walltime["◐ <b>loop_resume_under_walltime</b> · k4 t13✗3<br/>Slurm wrapper codes/loop/loop.sbatch (1 GPU / 24 CPU / 12…"]:::preliminary
-  n_arxiv_1902_10565__selfplay_stage["○ <b>selfplay_stage</b> · k2<br/>katago selfplay -max-games-total N -models-dir BASEDIR/mo…"]:::hypothesis
+  n_arxiv_1902_10565__loop_resume_under_walltime["◐ <b>loop_resume_under_walltime</b> · k4 t17✗4<br/>Slurm wrapper codes/loop/loop.sbatch (1 GPU / 24 CPU / 12…"]:::preliminary
+  n_arxiv_1902_10565__selfplay_stage["○ <b>selfplay_stage</b> · k2 t1<br/>katago selfplay -max-games-total N -models-dir BASEDIR/mo…"]:::hypothesis
   n_arxiv_1902_10565__shuffle_stage["○ <b>shuffle_stage</b> · k2<br/>SKIP_VALIDATE=1 ./shuffle.sh BASEDIR TMP 8 -min-rows M -k…"]:::hypothesis
   n_arxiv_1902_10565__train_stage["○ <b>train_stage</b> · k3<br/>codes/loop/train_9x9.sh BASEDIR ktg9 b7c96h3tfrs 128 main…"]:::hypothesis
   n_arxiv_1902_10565__export_stage["○ <b>export_stage</b> · k2<br/>Mission copy of export_model_for_selfplay.sh (mv before r…"]:::hypothesis
@@ -32,7 +32,7 @@ flowchart TD
   n_arxiv_1902_10565__transformer_trunk_b7c96h3tfrs["● <b>transformer_trunk_b7c96h3tfrs</b> △ · k4 t1<br/>b7c96h3tfrs (modelconfigs.py:1008-1029, registered :1887)…"]:::solid
   n_arxiv_1902_10565__engine_ffn_swiglu_constraint["● <b>engine_ffn_swiglu_constraint</b> · k1<br/>Every C++ inference backend requires useSwiGLU=1 for tran…"]:::solid
   n_arxiv_1902_10565__select_transformer_ladder["◐ <b>select_transformer_ladder</b> △ · k2<br/>Architecture ladder decision: b7c96h3tfrs (start: smoke +…"]:::preliminary
-  n_arxiv_1902_10565__derive_cycle_knobs_9x9["◐ <b>derive_cycle_knobs_9x9</b> · k4 t2✗1<br/>The production cycle knobs are DERIVED from the measured …"]:::preliminary
+  n_arxiv_1902_10565__derive_cycle_knobs_9x9["◐ <b>derive_cycle_knobs_9x9</b> · k4 t5✗2<br/>The production cycle knobs are DERIVED from the measured …"]:::preliminary
   n_arxiv_1902_10565__verify_preemption_resume["○ <b>verify_preemption_resume</b> · k1<br/>Executed kill/resume test on the smoke BASEDIR: scancel m…"]:::hypothesis
   n_arxiv_1902_10565__loop_failure_circuit_breaker["○ <b>loop_failure_circuit_breaker</b> · k1<br/>The resubmit chain must stop on deterministic failure: sy…"]:::hypothesis
   n_arxiv_1902_10565__bootstrap_accepted_model["○ <b>bootstrap_accepted_model</b> · k1<br/>Freeze the first directory that appears in models/ (with …"]:::hypothesis
