@@ -32,7 +32,7 @@ flowchart TD
   n_arxiv_1902_10565__transformer_trunk_b7c96h3tfrs["● <b>transformer_trunk_b7c96h3tfrs</b> △ · k4 t1<br/>b7c96h3tfrs (modelconfigs.py:1008-1029, registered :1887)…"]:::solid
   n_arxiv_1902_10565__engine_ffn_swiglu_constraint["● <b>engine_ffn_swiglu_constraint</b> · k1<br/>Every C++ inference backend requires useSwiGLU=1 for tran…"]:::solid
   n_arxiv_1902_10565__select_transformer_ladder["◐ <b>select_transformer_ladder</b> △ · k2<br/>Architecture ladder decision: b7c96h3tfrs (start: smoke +…"]:::preliminary
-  n_arxiv_1902_10565__derive_cycle_knobs_9x9["○ <b>derive_cycle_knobs_9x9</b> · k1 t2✗1<br/>Derive the production loop knobs from the measured rows/g…"]:::hypothesis
+  n_arxiv_1902_10565__derive_cycle_knobs_9x9["◐ <b>derive_cycle_knobs_9x9</b> · k4 t2✗1<br/>The production cycle knobs are DERIVED from the measured …"]:::preliminary
   n_arxiv_1902_10565__verify_preemption_resume["○ <b>verify_preemption_resume</b> · k1<br/>Executed kill/resume test on the smoke BASEDIR: scancel m…"]:::hypothesis
   n_arxiv_1902_10565__loop_failure_circuit_breaker["○ <b>loop_failure_circuit_breaker</b> · k1<br/>The resubmit chain must stop on deterministic failure: sy…"]:::hypothesis
   n_arxiv_1902_10565__bootstrap_accepted_model["○ <b>bootstrap_accepted_model</b> · k1<br/>Freeze the first directory that appears in models/ (with …"]:::hypothesis
