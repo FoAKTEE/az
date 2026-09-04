@@ -19,17 +19,17 @@ flowchart TD
     n_arxiv_1902_10565__data_format_pos_len["◐ <b>data_format_pos_len</b> · k3<br/>Training-row layout at posLen L: binaryInputNCHWPacked 22…"]:::preliminary
     n_arxiv_1902_10565__training_window_shuffle["◐ <b>training_window_shuffle</b> · k3<br/>shuffle.py window: -keep-target-rows (required; loop pass…"]:::preliminary
     n_arxiv_1902_10565__env_build["● <b>env_build</b> · k2<br/>Toolchain on one B200 node under /scratch/schmidt/ssci-an…"]:::solid
-    n_arxiv_1902_10565__cfg_9x9_override["○ <b>cfg_9x9_override</b> · k2<br/>Mission-owned codes/cfg/selfplay_9x9.cfg, codes/cfg/gatek…"]:::hypothesis
-    n_arxiv_1902_10565__tiny_model_export_smoke["○ <b>tiny_model_export_smoke</b> · k3<br/>Random-init b7c96h3tfrs: export_model_pytorch.py -export-…"]:::hypothesis
+    n_arxiv_1902_10565__cfg_9x9_override["◐ <b>cfg_9x9_override</b> · k3 t1<br/>Mission-owned codes/cfg/selfplay_9x9.cfg, codes/cfg/gatek…"]:::preliminary
+    n_arxiv_1902_10565__tiny_model_export_smoke["◐ <b>tiny_model_export_smoke</b> · k4 t2<br/>Export smoke for the transformer path: codes/eval/export_…"]:::preliminary
     n_arxiv_1902_10565__synchronous_loop_smoke["○ <b>synchronous_loop_smoke</b> · k2<br/>One disposable cycle gatekeeper -> selfplay -> shuffle ->…"]:::hypothesis
-    n_arxiv_1902_10565__loop_resume_under_walltime["◐ <b>loop_resume_under_walltime</b> · k4 t1<br/>Slurm wrapper codes/loop/loop.sbatch (1 GPU / 24 CPU / 12…"]:::preliminary
+    n_arxiv_1902_10565__loop_resume_under_walltime["◐ <b>loop_resume_under_walltime</b> · k4 t11✗2<br/>Slurm wrapper codes/loop/loop.sbatch (1 GPU / 24 CPU / 12…"]:::preliminary
     n_arxiv_1902_10565__selfplay_stage["○ <b>selfplay_stage</b> · k2<br/>katago selfplay -max-games-total N -models-dir BASEDIR/mo…"]:::hypothesis
     n_arxiv_1902_10565__shuffle_stage["○ <b>shuffle_stage</b> · k2<br/>SKIP_VALIDATE=1 ./shuffle.sh BASEDIR TMP 8 -min-rows M -k…"]:::hypothesis
     n_arxiv_1902_10565__train_stage["○ <b>train_stage</b> · k3<br/>codes/loop/train_9x9.sh BASEDIR ktg9 b7c96h3tfrs 128 main…"]:::hypothesis
     n_arxiv_1902_10565__export_stage["○ <b>export_stage</b> · k2<br/>Mission copy of export_model_for_selfplay.sh (mv before r…"]:::hypothesis
     n_arxiv_1902_10565__gatekeeper_stage["○ <b>gatekeeper_stage</b> · k2<br/>katago gatekeeper -config gatekeeper_9x9.cfg -quit-if-no-…"]:::hypothesis
     n_arxiv_1902_10565__eval_improvement["○ <b>eval_improvement</b> △ · k2<br/>Declare 'improves under self-play at 9x9' iff (a) >= 1 ga…"]:::hypothesis
-    n_arxiv_1902_10565__data_budget["○ <b>data_budget</b> · k2 t6✗4<br/>Scratch guard for the whole mission root /scratch/schmidt…"]:::hypothesis
+    n_arxiv_1902_10565__data_budget["○ <b>data_budget</b> · k2 t9✗5<br/>Scratch guard for the whole mission root /scratch/schmidt…"]:::hypothesis
     n_arxiv_1902_10565__scale_up["○ <b>scale_up</b> · k3<br/>Next architecture as a FRESH run (never resume a b7 check…"]:::hypothesis
     n_arxiv_1902_10565__transformer_trunk_b7c96h3tfrs["◐ <b>transformer_trunk_b7c96h3tfrs</b> △ · k3 t1<br/>b7c96h3tfrs (modelconfigs.py:1008-1029, registered :1887)…"]:::preliminary
     n_arxiv_1902_10565__engine_ffn_swiglu_constraint["● <b>engine_ffn_swiglu_constraint</b> · k1<br/>Every C++ inference backend requires useSwiGLU=1 for tran…"]:::solid
