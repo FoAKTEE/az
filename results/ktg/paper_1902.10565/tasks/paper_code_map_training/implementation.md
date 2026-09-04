@@ -17,6 +17,7 @@
 
 - **Needed evidence type:** `numerical_simulation`
 - **Done when:** the four assertions below all pass in one recorded GPU-node run.
+- **Where the run happens (wave 2):** leg D2 of the `synchronous_loop_smoke` job (`codes/loop/smoke_loop.sbatch`) — **no separate GPU job for this packet.** Assertion 3 reads a REAL `dataBoardLen = 9` npz written by that job's cycle-1 selfplay (`runs/smoke/selfplay/random/tdata/*.npz`), which also settles the measurement half of `o02`; the resume half of assertion 4 is additionally observed on the smoke's own cycle-2 `train.py` start (S6 of that task).
 - **Verification command:**
   `bash /home/schmidt/ssci-haiyangw/az/results/ktg/paper_1902.10565/codes/eval/probe_train_9x9.sh`
   which sources `$KTG_ROOT/env.sh` and then runs `python codes/eval/probe_train_9x9.py`, asserting:
@@ -25,7 +26,7 @@
   3. **row bytes** — for a real `tdata/*.npz` at `dataBoardLen = 9`, `sum(a.dtype.itemsize * prod(a.shape[1:]) for a in the 7 written arrays) == 2145` (unchanged by the model switch — see §10 and §11);
   4. **resume** — run `train.py -pos-len 9 -model-kind b7c96h3tfrs -batch-size 32 -samples-per-epoch 2048` for 2 epochs on synthetic data, `SIGKILL` it, re-run the identical command, and assert the reloaded `checkpoint.ckpt`'s `train_state["global_step_samples"]` is `>= ` the pre-kill value and strictly increases afterwards, and `train_state["total_num_data_rows"]` is unchanged for the same data dir.
 - **Measured tolerance / metric:** (1) count `== 0`; (2) both residuals `< 1e-5`; (3) exact equality `== 2145`; (4) `global_step_samples_after_resume > global_step_samples_at_kill` and no re-initialisation message (`"Initializing new model!"`, `train.py:798`) in the resumed log. Exit 0 only if all four hold.
-- **Open obligations before start:** `o02_databoardlen_poslen_9` (assertion 3 needs a `dataBoardLen = 9` npz, i.e. `cfg_9x9_override` + one selfplay run), `o11_torch_threads_cap`.
+- **Open obligations before start:** the smoke job's cycle 1 must have written `runs/smoke/selfplay/random/tdata/*.npz` (assertion 3's real npz; `o02` measurement half), `o11_torch_threads_cap` (the driver exports `OMP_NUM_THREADS=MKL_NUM_THREADS=4`; the smoke's `stage_monitor.sh` records the train PID's `nlwp`).
 - **Reduction-to-baseline test:** NA
 
 Assertions 1, 2 and 4 need no self-play data (4 runs on synthetic npz written by the probe in the shuffled-data layout: `<datadir>/train/data0.npz` plus `<datadir>/train.json` carrying `{"range": [start, end]}`, `python/train.py:1226,1240-1242,1273`, matching `python/shuffle.py:1330-1335`).
@@ -56,6 +57,7 @@ Assertions 1, 2 and 4 need no self-play data (4 runs on synthetic npz written by
 - Read `alignment.md` and `_common/contracts/research_admission_contract.md` before work.
 - One cluster only: training-side nodes. Search-side nodes are `paper_code_map_search`.
 - Export `OMP_NUM_THREADS=4` and `MKL_NUM_THREADS=4` before every python leg (`o11_torch_threads_cap`).
+- Submit nothing: the probes run as leg D2 of `tasks/synchronous_loop_smoke/implementation.md` § 8 (one 1-GPU b200 job for the smoke and both probe packets). Stage candidate rows in `evidence/smoke/candidate_rows.json` under the group `r_smoke_probe_training`; the validator promotes the seven nodes from that job's artifacts.
 - 3 iterations / 30 min stuck -> `pipelines/0-acquire/spec.md`.
 
 ## 6. Files And Links
@@ -69,8 +71,8 @@ Assertions 1, 2 and 4 need no self-play data (4 runs on synthetic npz written by
 | Plot / figure output | `results/ktg/paper_1902.10565/plots/` |
 | Loop notes | `results/ktg/paper_1902.10565/loop_note/` |
 | Progress dir | `progress/paper_1902.10565/paper_code_map_training/` |
-| Git branch | `ssci` |
-| Scratch workdir `$W` | `/scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/runtime/probe_train` |
+| Git branch | `main` (az) |
+| Scratch workdir `$W` | `/scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/runs/smoke_probe/train` (inside the smoke job; real npz from `…/runs/smoke/selfplay/random/tdata/`) |
 
 ## 7. Architecture
 
@@ -97,8 +99,8 @@ results/ktg/paper_1902.10565/codes/eval/
 
 ## 9. Quick-Win Path
 
-1. `Phase 1` — one 1-GPU b200 job; model instantiation and the gpool algebra take seconds.
-2. `Phase 2` — same job: synthetic npz, 2 epochs at batch 32, kill, resume.
+1. `Phase 1` — leg D2 of the smoke job; model instantiation and the gpool algebra take seconds; assertion 3 on the job's own cycle-1 npz.
+2. `Phase 2` — same leg: synthetic npz, 2 epochs at batch 32, kill, resume (`probe_resume_9x9.sh`).
 3. **Smoke check:** the resumed log prints the checkpoint path rather than `Initializing new model!`.
 
 ## 10. First Test Parameters
@@ -124,7 +126,7 @@ results/ktg/paper_1902.10565/codes/eval/
 | `-data-prefetch-depth` | default `1` | `train.py:126`; do not raise |
 | checkpoint path | `<traindir>/checkpoint.ckpt` | `train.py:573-574`, existence check `:780`, load `:796`, keep 4 (`:578`) |
 | resume counters | `train_state["global_step_samples"]`, `["total_num_data_rows"]` | `train.py:976`, `:979-980`; the latter is refreshed from `train.json` `range[1]` at `:1242` |
-| `--gres` / `--cpus-per-task` / `--mem` | `gpu:1` / `12` / `120G` | compute-budget `SKILL.md` "Single-GPU training" |
+| `--gres` / `--cpus-per-task` / `--mem` | `gpu:1` / `24` / `64G` | inherited from the smoke job (`tasks/synchronous_loop_smoke` § 10); no job of its own |
 
 ## 11. Risk Mitigation
 
@@ -145,7 +147,7 @@ results/ktg/paper_1902.10565/codes/eval/
 - `[PRELIMINARY]` All seven nodes are `preliminary`; every constant is read at a `path:line` in `evidence/decomposition/audit_paper_code_map.md`, nothing is executed.
 - `[PRELIMINARY]` The gpool collinearity (`pool2 = -0.5*pool1`, `pool3 = 0.15*pool1` at `mask_sum_hw = 81`) is hand-derived from `model_pytorch.py:534,539-540`; assertion 2 is what promotes it.
 - `[PRELIMINARY]` `2145 B/row` is arithmetic over `trainingwrite.cpp:292-299` plus the unconditional q-value write at `:880-882`; no npz at `dataBoardLen = 9` exists yet.
-- `[OPEN]` `o02_databoardlen_poslen_9` — assertion 3 needs a real 9x9 npz, so it waits on `cfg_9x9_override` plus one selfplay run. Until then assertion 3 runs against a probe-synthesised npz and the row is recorded as `approximate`, not `checked`.
+- `[OPEN]` `o02_databoardlen_poslen_9` — assertion 3 runs on the smoke job's real cycle-1 npz (`runs/smoke/selfplay/random/tdata/*.npz`); until that job runs, nothing here is executed. The wiring half of `o02` (a pre-shuffle guard in the loop copy, `codes/eval/check_pos_len_npz.py`) stays with `shuffle_stage`.
 - `[OPEN]` `o11_torch_threads_cap` — closes with a recorded `ps -o nlwp` <= 24 on the train PID.
 - `[OPEN]` `training_window_shuffle` is only partially promoted here (the `N_window` algebra); the real window behaviour needs `shuffle_stage` over actual selfplay dirs.
 - `[OPEN]` `loss_targets_metrics` is promoted only to "all terms finite and parametric in `pos_len`"; the loss-decrease claim `c12_loss_decreases` belongs to `train_stage`.
@@ -158,7 +160,7 @@ results/ktg/paper_1902.10565/codes/eval/
 - Never call `train.py` through upstream `python/selfplay/train.sh` (it hard-codes `-pos-len 19` at `:88`).
 - Never use an `ffng` (non-SwiGLU) config name for `MODELKIND` or `-model-kind` in this probe or in the loop; the single sanctioned use of `b5c48h3tfr` is the negative fixture inside `codes/eval/export_smoke.sh` (`tiny_model_export_smoke`).
 - Never change `mask_sum_hw_sqrt_offset = 14.0` (`model_pytorch.py:505,534`) to "fix" the degeneracy — that forks the mirror and breaks the C++ backends' matching constants.
-- Never run the probe without `OMP_NUM_THREADS`/`MKL_NUM_THREADS` <= 4, and never exceed 24 CPUs or 1 GPU.
+- Never run the probe without `OMP_NUM_THREADS`/`MKL_NUM_THREADS` <= 4, and never submit a separate job for it (it is leg D2 of the smoke job: 1 GPU, 24 CPUs).
 - Never raise `-data-prefetch-depth` above its default 1.
 - Never delete `$W/train/<name>` between the kill and the resume — the resume is the measurement.
 - Never report the resume as passing on `global_step_samples` alone if `Initializing new model!` appears in the log.
@@ -166,7 +168,7 @@ results/ktg/paper_1902.10565/codes/eval/
 ## 14. Promise Tag
 
 - **Promise format:** `<promise>paper_code_map_training GPOOL_COLLINEARITY_RESIDUAL WITHIN 1e-5 AND ROW_BYTES ==2145 AND TRUNK_GPOOL_COUNT ==0 AND RESUME_CONTINUES</promise>`
-- **Required in commit body:** verbatim probe output (all four assertions with numbers), the pre-kill and post-resume `global_step_samples`, evidence path under `evidence/probe_train/`, claims `c05`/`c08`, evidence type `numerical_simulation`, and the node ids promoted.
+- **Required in commit body:** verbatim probe output (all four assertions with numbers), the pre-kill and post-resume `global_step_samples`, evidence path `evidence/smoke/probe_train.txt` (plus the smoke job id), claims `c05`/`c08`, evidence type `numerical_simulation`, and the node ids promoted.
 
 ## 15. Progress Update Principles
 

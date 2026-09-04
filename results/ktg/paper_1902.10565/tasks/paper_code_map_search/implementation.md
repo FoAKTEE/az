@@ -17,6 +17,7 @@
 
 - **Needed evidence type:** `numerical_simulation` (the nodes were read; this run is what promotes them)
 - **Done when:** the probe's four assertions hold on one recorded run.
+- **Where the run happens (wave 2):** inside the `synchronous_loop_smoke` job (`codes/loop/smoke_loop.sbatch`, leg D1 and the cycle-2 gatekeeper) — **no separate GPU job for this packet.** The probe scripts below are authored by this packet and invoked by that job; the numbers are read from `evidence/smoke/`.
 - **Verification command:**
   `bash /home/schmidt/ssci-haiyangw/az/results/ktg/paper_1902.10565/codes/eval/probe_search_9x9.sh 20`
   which runs
@@ -25,14 +26,14 @@
   - `full_frac  = (# "Root visits:" lines with N > 100) / (# "Root visits:" lines)`
   - `rows_per_game = (sum of npz["binaryInputNCHWPacked"].shape[0] over $W/selfplay/*/tdata/*.npz) / (# lines in $W/selfplay/*/sgfs/*.sgfs)`
   - `sz_other = (# .sgfs lines without "SZ[9]")`
-  and then `bash codes/eval/probe_gate_9x9.sh`, which runs the gatekeeper once against an **empty** `$W/models` and asserts:
-  - `gate_random = (# gatekeeper log lines matching "Loaded accepted neural net random")`
+  and then `bash codes/eval/probe_gate_9x9.sh $BASEDIR/gatekeepersgf/stdout.txt`, which reads the smoke's cycle-2 gatekeeper log (the gate of the cycle-1 candidate against an **empty** `models/`) and asserts:
+  - `gate_random = (# gatekeeper log lines matching "Loaded accepted neural net random")` — no extra gatekeeper invocation
 - **Measured tolerance / metric:**
   (a) `full_frac` in `[0.20, 0.30]` (0.25 +- 0.05);
   (b) `rows_per_game` in `[12, 35]`;
   (c) `sz_other == 0`;
   (d) `gate_random >= 1` — with an empty `models/` the gatekeeper does **not** skip. Exit 0 only if all four hold.
-- **Open obligations before start:** `o01_bsizes9_override`, `o02_databoardlen_poslen_9` (the mission cfg must exist) — i.e. task `cfg_9x9_override` must have landed.
+- **Open obligations before start:** `o01_bsizes9_override` (discharged), the exported b7 candidate from smoke cycle 1 (the probe runs a REAL net: `-models-dir` holds a symlink to `models/<n>` or `rejectedmodels/<n>`), `o30` (closed in the same job, leg A).
 - **Reduction-to-baseline test:** NA
 
 **Why (d) is the `gating_rule` promotion:** `LoadModel::findLatestModel` returns `true` unconditionally (`cpp/dataio/loadmodel.cpp:77-78,93`), setting `modelName = "random"` and `modelFile = "/dev/null"`; `cpp/program/setup.cpp:126` turns `/dev/null` into a random-play net (`debugSkipNeuralNet`), and the gatekeeper logs `"Loaded accepted neural net " + acceptedModelName + " from: " + acceptedModelFile` at `cpp/command/gatekeeper.cpp:427`. So cycle 1 gates the first candidate against a random baseline, and the first directory to appear in `models/` is the frozen baseline (node `bootstrap_accepted_model`). `USEGATING=1` for every cycle.
@@ -64,6 +65,7 @@
 
 - Read `alignment.md` and `_common/contracts/research_admission_contract.md` before work.
 - One cluster only: search-side nodes. Training-side nodes are `paper_code_map_training`.
+- Submit nothing: the probes run as leg D1 of `tasks/synchronous_loop_smoke/implementation.md` § 8 (one 1-GPU b200 job for the smoke, this packet and the training packet together). Stage candidate rows in `evidence/smoke/candidate_rows.json` under the group `r_smoke_probe_search`; the validator promotes the six nodes from that job's artifacts.
 - Everything that promotes a node must come from the run's own logs/npz, not from re-reading the code.
 - 3 iterations / 30 min stuck -> `pipelines/0-acquire/spec.md`.
 
@@ -78,8 +80,8 @@
 | Plot / figure output | `results/ktg/paper_1902.10565/plots/` |
 | Loop notes | `results/ktg/paper_1902.10565/loop_note/` |
 | Progress dir | `progress/paper_1902.10565/paper_code_map_search/` |
-| Git branch | `ssci` |
-| Scratch workdir `$W` | `/scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/runtime/probe_search` |
+| Git branch | `main` (az) |
+| Scratch workdir `$W` | `/scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/runs/smoke_probe/search` (inside the smoke job; `$BASEDIR` = `…/runs/smoke`) |
 
 ## 7. Architecture
 
@@ -106,8 +108,8 @@ results/ktg/paper_1902.10565/codes/eval/
 
 ## 9. Quick-Win Path
 
-1. `Phase 1` — one 1-GPU b200 job, empty `$W/models` so the random-net bootstrap runs (`cpp/dataio/loadmodel.cpp:77-78,93`); 20 games at 600/100 visits on 9x9 is minutes.
-2. `Phase 2` — parse the same log; the only extra engine invocation is the gate leg.
+1. `Phase 1` — leg D1 of the smoke job: 20 games at 600/100 visits with the exported cycle-1 net (a real net, so the thread and rows/game numbers are production-like); minutes.
+2. `Phase 2` — parse the same log; the gate assertion (d) is a grep over the smoke's cycle-2 gatekeeper log (`Loaded accepted neural net random`, `cpp/command/gatekeeper.cpp:427`), so no extra engine invocation at all.
 3. **Smoke check:** `full_frac` printed and inside `[0.20, 0.30]`.
 
 ## 10. First Test Parameters
@@ -131,7 +133,7 @@ results/ktg/paper_1902.10565/codes/eval/
 | `estimateLeadProb` | `0.05` -> **`0.0`** | `:78`; spends extra visits |
 | `sidePositionProb` | `0.020` (unchanged) | `:58`; kept at production value because it contributes rows (`play.cpp:974-982`) |
 | `numGameThreads` (gate leg) | `18` | `codes/cfg/gatekeeper_9x9.cfg`; 18 game + 2 NN-server + 1 dataWrite (`cpp/command/gatekeeper.cpp:548`) + main = 22, inside the 24-CPU cap |
-| gate-leg `models/` | empty | forces the random baseline (`loadmodel.cpp:77-78,93`, `setup.cpp:126`); this is what assertion (d) measures |
+| gate-leg `models/` | empty at smoke cycle 2 | forces the random baseline (`loadmodel.cpp:77-78,93`, `setup.cpp:126`); this is what assertion (d) measures, read from `runs/smoke/gatekeepersgf/stdout.txt` |
 | expected `rows_per_game` | `~22` | `(1 - 0.75)*80 + 0.02*80` with `a07_moves_per_game_80`; `derivation.md` §4 |
 
 ## 11. Risk Mitigation
@@ -151,7 +153,8 @@ results/ktg/paper_1902.10565/codes/eval/
 
 - `[PRELIMINARY]` All six nodes are `preliminary`: every constant is read at a `path:line` in `evidence/decomposition/audit_paper_code_map.md`, nothing is executed.
 - `[SOLID]` The engine that will run the probe exists and passes `runtests`: node `env_build` is `solid`, result row `env-toolchain-b200`, evidence `results/ktg/paper_1902.10565/evidence/env/smoke.txt`.
-- `[OPEN]` `codes/cfg/selfplay_9x9.cfg` does not exist yet — the probe cannot start until `cfg_9x9_override` lands. Needed evidence: the cfg files plus a passing `check_cfg_9x9.sh`.
+- `[SOLID]` `codes/cfg/selfplay_9x9.cfg` exists and is admitted (result `cfg-9x9-override`, job 298359, `CHECK_CFG_9X9: PASS`); its knowledge row carries `skip_exec` until the smoke job's leg A re-appends it (`o30`).
+- `[OPEN]` The probe has not run: it is leg D1 of the `synchronous_loop_smoke` job (one allocation for the smoke and both probe packets). Needed evidence: `evidence/smoke/probe_search.txt` with the four metrics, `sacct` for that job.
 - `[OPEN]` `gating_rule` is promoted here only for the cycle-1 baseline behaviour (assertion (d)). The acceptance/rejection decision needs 200 real games between two servable nets and closes in `gatekeeper_stage` (claim `c13_gatekeeper_accepts`).
 - `[OPEN]` `score_utility_search` promotion is partial: the probe confirms the parameters are live in a running search, not the arctan form. Closes with a targeted numeric check of `cpp/neuralnet/nninputs.cpp:56` (`u = c*(2/pi)*atan((x-x0)/(0.5*sqrt(area)))`) against logged root score utilities.
 - `[OPEN]` `visit-caps-9x9` (`convention.md` §10): 600/100 are 19x19-derived; this probe records their 9x9 behaviour but does not justify them. Closes in `selfplay_stage` with a games/hour derivation.
@@ -163,7 +166,7 @@ results/ktg/paper_1902.10565/codes/eval/
 - Never promote a node to `solid` from a code re-read; only this run's logs/npz count.
 - Never leave `reduceVisits=true` in the probe and then report `full_frac` — the two visit regimes become indistinguishable.
 - Never change `cheapSearchProb`, `cheapSearchVisits`, `maxVisits` or `rootDesiredPerChildVisitsCoeff` in the probe: they are the quantities being measured.
-- Never exceed 24 CPUs / 1 GPU for the probe job, and never drop `--gres=gpu:1` on `b200`.
+- Never submit a separate job for this probe; it runs inside the smoke job (1 GPU, 24 CPUs, `b200`).
 - Never count "some SGFs are 9x9": the metric is `sz_other == 0`.
 - Never write "gating is skipped in cycle 1" anywhere: `findLatestModel` returns `true` unconditionally (`loadmodel.cpp:93`) and the gatekeeper runs against a random baseline.
 - Never set `numGameThreads` above 18 in the gate leg — 20 leaves no margin under the 24-CPU cap.
@@ -172,7 +175,7 @@ results/ktg/paper_1902.10565/codes/eval/
 ## 14. Promise Tag
 
 - **Promise format:** `<promise>paper_code_map_search FULL_SEARCH_FRACTION WITHIN 0.25+-0.05 AND ROWS_PER_GAME WITHIN [12,35] AND SZ_OTHER ==0 AND GATE_RANDOM >=1</promise>`
-- **Required in commit body:** verbatim probe output (all four metrics plus searched-turn and game counts), the gatekeeper log line, evidence path under `evidence/probe_search/`, claims `c15`/`c10`/`c04`, evidence type `numerical_simulation`, and the six node ids promoted.
+- **Required in commit body:** verbatim probe output (all four metrics plus searched-turn and game counts), the gatekeeper log line, evidence path `evidence/smoke/probe_search.txt` (plus the smoke job id), claims `c15`/`c10`/`c04`, evidence type `numerical_simulation`, and the six node ids promoted.
 
 ## 15. Progress Update Principles
 
