@@ -1018,3 +1018,26 @@ $ squeue -j 301099 -o '%.10i %.9P %.8T %.20S %R'
   link with KTG_PARTITIONS="b300,b200,l40s", resuming from the same BASEDIR.
   Cancelling a pending successor loses no work: the chain state lives in
   $BASEDIR and the link had not started.
+
+------------------------------------------------------------------------------
+(9) end of the bounded wait (45 min from the 17:18:56 submission)
+------------------------------------------------------------------------------
+$ date -Is
+2026-09-04T18:04:48-04:00
+$ sacct -j 301099 -X -n -o JobID,State,Partition,Elapsed,Start,End,NodeList
+301099          PENDING  b200,l40s   00:00:00             Unknown             Unknown   None assigned 
+$ squeue -j 301099 -o '%.10i %.9P %.8T %.12l %.20S %.10Q %R'
+     JOBID PARTITION    STATE   TIME_LIMIT           START_TIME   PRIORITY NODELIST(REASON)
+    301099 b200,l40s  PENDING     23:30:00  2026-09-04T21:54:14      18222 (Resources)
+$ scontrol show job 301099 | grep -E 'JobState|Reason|SchedNodeList'
+JobState=PENDING
+Reason=Resources
+SchedNodeList=gl111
+$ ls $KTG_ROOT/logs/loop-301099.log ; ls $KTG_ROOT/runs/p1
+  ls: cannot access '/scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/logs/loop-301099.log': No such file or directory
+  ls: cannot access '/scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/runs/p1': No such file or directory
+
+  Still queued at the end of the budget, with the estimate holding at
+  2026-09-04T21:54:14 on gl111 -- about 3.8 h out from here. No first cycle
+  log exists, so there is no monitoring read to perform. The worker stops.
+==============================================================================

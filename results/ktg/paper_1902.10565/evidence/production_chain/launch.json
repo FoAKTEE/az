@@ -143,5 +143,13 @@
     "mitigation": "monitoring rule from link 3 on: if the successor is queued on b300 alone and PENDING > 2 h while b200/l40s have free GPUs, escalate and, with authorisation, scancel that successor only and resubmit that link with KTG_PARTITIONS='b300,b200,l40s' from the same BASEDIR",
     "action_taken": "none -- a cancel-and-resubmit with the single set was proposed and countermanded before any action; 301099 is untouched",
     "standing_constraint": "301099 is the last authorized resubmission of the chain"
+  },
+  "bounded_wait": {
+    "window": "2026-09-04T17:18:56 -> 2026-09-04T18:04:48 (45 min from the submission)",
+    "outcome": "still PENDING (Resources), Elapsed 00:00:00, SchedNodeList=gl111",
+    "start_estimate_held_at": "2026-09-04T21:54:14 (~3.8 h out at the end of the budget)",
+    "basedir_created": false,
+    "link_log_created": false,
+    "first_monitoring_read": "not performed -- no first cycle log exists and the job has not run"
   }
 }
