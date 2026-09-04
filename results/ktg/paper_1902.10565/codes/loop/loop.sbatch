@@ -33,8 +33,14 @@
 #              end apart from a clean cycle and from a failure: it is neither,
 #              the count is left alone and the queued successor -- the resume
 #              itself -- is kept (obligation o31)
-#   breaker    $BASEDIR/.failcount, three consecutive non-zero exits stop the
-#              chain; reset to 0 only after a cycle that ran and exited 0
+#   breaker    $BASEDIR/.failcount, three non-zero exits IN A ROW stop the
+#              chain. "In a row" is measured in completed cycles, not in links:
+#              the count is cleared by a link that exited 0 and by any link that
+#              advanced $BASEDIR/.cycles_completed, the counter the loop bumps
+#              after every cycle whose five stages all returned 0. Without the
+#              second rule the first would never fire in production -- a healthy
+#              link is ended by the scheduler, never by an exit 0 -- and three
+#              failures days apart would trip the breaker (obligation o33)
 #   depth      $BASEDIR/.chain_depth against KTG_MAX_CHAIN
 #   brake      $BASEDIR/STOP -- no resubmit, exit 0
 #   sweep      stale torchmodels_toexport/*.exported and shuffleddata/*.tmp
@@ -82,6 +88,15 @@ GPU_CAP_TOTAL=$(python3 -c 'import json,sys;print(json.load(open(sys.argv[1]))["
 # it is a scaling decision for measure_stage_throughput, not a free win.
 REQ_GPUS=1
 REQ_CPUS=24
+# Operator knobs, deliberately environment-readable. resubmit() calls sbatch with
+# no --export, so Slurm's default --export=ALL carries whatever the submitting
+# shell had in it down the WHOLE chain, not just the first link: a stray
+# KTG_MIN_RUNTIME_SECONDS=0 left over from a test shell would wave every fast
+# crash through as a scheduler termination for 200 links. That propagation is the
+# point -- it is how an operator retunes a running chain without editing a file
+# under a live job -- so the knobs stay overridable and the rule is to submit the
+# first link from a clean shell (obligation o33 (b)/(v)). The two classification
+# CONSTANTS below are not knobs and are hard-coded for exactly that reason.
 KTG_MAX_CHAIN="${KTG_MAX_CHAIN:-200}"
 KTG_MAX_FAILS="${KTG_MAX_FAILS:-3}"
 KTG_MIN_RUNTIME_SECONDS="${KTG_MIN_RUNTIME_SECONDS:-600}"
@@ -115,12 +130,19 @@ say "BASEDIR=$BASEDIR  MODELKIND=$MODELKIND  TRAININGNAME=$TRAININGNAME"
 # ---------------------------------------------------------------- chain state
 FAILCOUNT_FILE="$BASEDIR/.failcount"
 CHAINDEPTH_FILE="$BASEDIR/.chain_depth"
+# Progress counter, written by the loop after every completed cycle
+# (synchronous_loop_9x9.sh CHANGE 10). Read here and again in finalize; the
+# difference is what this link achieved. Absent = 0, and a corrupt value is read
+# as 0 rather than aborting a three-day link on a stray byte.
+CYCLES_FILE="$BASEDIR/.cycles_completed"
 [ -f "$FAILCOUNT_FILE" ] || echo 0 > "$FAILCOUNT_FILE"
 [ -f "$CHAINDEPTH_FILE" ] || echo 0 > "$CHAINDEPTH_FILE"
 failcount=$(cat "$FAILCOUNT_FILE")
 chaindepth=$(( $(cat "$CHAINDEPTH_FILE") + 1 ))
 echo "$chaindepth" > "$CHAINDEPTH_FILE"
-say "chain depth $chaindepth/$KTG_MAX_CHAIN, failcount $failcount/$KTG_MAX_FAILS"
+CYCLES_AT_ENTRY=$(cat "$CYCLES_FILE" 2>/dev/null || echo 0)
+case "$CYCLES_AT_ENTRY" in ''|*[!0-9]*) CYCLES_AT_ENTRY=0 ;; esac
+say "chain depth $chaindepth/$KTG_MAX_CHAIN, failcount $failcount/$KTG_MAX_FAILS, cycles completed so far $CYCLES_AT_ENTRY"
 
 # ---------------------------------------------------------------- partition pick
 pick_partition() {
@@ -144,6 +166,9 @@ SUCCESSOR=""      # job id of the queued successor, "" when none
 LOOP_STARTED=0    # 1 once the loop script has actually been launched
 CHAIN_STOP=0      # 1 for a deliberate stop (storage guard) -- not a failure
 SCHED_TERM=0      # 1 once this wrapper has been sent SIGTERM by the scheduler
+LOOP_RC=0         # the loop's own exit status, valid only once LOOP_RC_SET=1
+LOOP_RC_SET=0     # 1 once that status has been recorded
+TERM_AFTER_LOOP_RC=0  # 1 if a SIGTERM was first seen AFTER that recording
 FINALIZED=0
 
 # The scheduler's SIGTERM is the chain's NORMAL end: slurmstepd signals the whole
@@ -163,6 +188,16 @@ FINALIZED=0
 # obligation o25's, and it is why the successor is queued before anything else.
 on_term() {
     SCHED_TERM=1
+    # obligation o33 (b): remember WHEN the signal was seen relative to the
+    # loop's own exit status. bash defers a trap handler until the foreground
+    # command it is waiting on returns, so on the walltime path this handler runs
+    # after the loop dies but BEFORE the status is recorded below -- LOOP_RC_SET
+    # is still 0 and the link is the scheduler termination it looks like. A
+    # signal that arrives later, with a failure already in hand, must not wave
+    # that failure through, and this flag is how finalize tells the two apart.
+    if [ "$LOOP_RC_SET" -eq 1 ]; then
+        TERM_AFTER_LOOP_RC=1
+    fi
     say "SIGTERM received -- scheduler termination (walltime or scancel); the queued successor is the resume path"
 }
 trap on_term TERM
@@ -183,11 +218,20 @@ cancel_successor() {
 # "KATAGO_SRC: unbound variable", a missing loop script, a failed cd, and any
 # future early exit somebody adds between the resubmit and the end of the file.
 finalize() {
-    local rc="${1:-0}" elapsed reason
+    local rc="${1:-0}" elapsed reason cycles_now cycles_this_link
     [ "$FINALIZED" -eq 0 ] || return 0
     FINALIZED=1
     trap - EXIT
     elapsed=$(( $(date +%s) - START_EPOCH ))
+
+    # obligation o33 (c): what this link actually achieved. Every cycle whose
+    # five stages all returned 0 bumps $BASEDIR/.cycles_completed, so the
+    # difference against the entry value is this link's progress and it is the
+    # only evidence available that the failure run should restart.
+    cycles_now=$(cat "$CYCLES_FILE" 2>/dev/null || echo 0)
+    case "$cycles_now" in ''|*[!0-9]*) cycles_now=0 ;; esac
+    cycles_this_link=$(( cycles_now - CYCLES_AT_ENTRY ))
+    [ "$cycles_this_link" -ge 0 ] || cycles_this_link=0
 
     if [ "$CHAIN_STOP" -eq 1 ]; then
         # Storage refusal: correct behaviour, not a crash. The chain must not
@@ -195,6 +239,21 @@ finalize() {
         say "deliberate chain stop (rc=$rc after ${elapsed}s) -- failcount left at $failcount"
         cancel_successor "storage guard stopped the chain"
         return 0
+    fi
+
+    # obligation o33 (b): a failure the loop had ALREADY reported outranks a
+    # SIGTERM that arrived afterwards. The window is the handful of statements
+    # between the loop's return and this function, and on the cluster SIGKILL
+    # follows KillWait seconds later, so it is narrow -- but a failure waved
+    # through leaves the count untouched and the successor queued, which is the
+    # one wrong answer. A recorded 143 past the runtime floor is a scheduler kill
+    # by the rule below and is deliberately NOT caught here. Residual, and it
+    # keeps the safe direction: a signal landing between the loop's return and
+    # the two assignments that record its status is still read as a walltime end.
+    if [ "$TERM_AFTER_LOOP_RC" -eq 1 ] && [ "$LOOP_RC" -ne 0 ] &&
+       ! { [ "$LOOP_RC" -eq "$KTG_RC_SIGTERM" ] && [ "$elapsed" -ge "$KTG_MIN_RUNTIME_SECONDS" ]; }; then
+        say "the loop had already exited rc=$LOOP_RC when the SIGTERM arrived -- counting the failure, not the signal"
+        SCHED_TERM=0
     fi
 
     # Scheduler termination: the third outcome, and the one every healthy link
@@ -217,7 +276,15 @@ finalize() {
         else
             reason="loop status $rc, this wrapper not signalled"
         fi
-        say "scheduler termination at walltime after ${elapsed}s ($reason) -- successor continues, failcount left at $failcount"
+        if [ "$cycles_this_link" -gt 0 ] && [ "$failcount" -ne 0 ]; then
+            # The link ran real cycles before the scheduler ended it, so any
+            # older failure is not part of a run of consecutive ones.
+            say "scheduler termination at walltime after ${elapsed}s ($reason) -- successor continues; $cycles_this_link cycle(s) completed, so failcount $failcount is cleared"
+            failcount=0
+            echo 0 > "$FAILCOUNT_FILE"
+        else
+            say "scheduler termination at walltime after ${elapsed}s ($reason) -- successor continues, failcount left at $failcount"
+        fi
         return 0
     fi
 
@@ -236,6 +303,10 @@ finalize() {
 
     if [ "$LOOP_STARTED" -eq 0 ]; then
         say "PRE-FLIGHT FAILURE rc=$rc after ${elapsed}s -- the loop never started"
+    fi
+    if [ "$cycles_this_link" -gt 0 ] && [ "$failcount" -ne 0 ]; then
+        say "this link completed $cycles_this_link cycle(s) before failing -- the run of consecutive failures restarts, old count $failcount dropped"
+        failcount=0
     fi
     failcount=$(( failcount + 1 ))
     # Minimum-runtime guard: a link that dies in seconds would otherwise spawn a
@@ -450,10 +521,27 @@ fi
 # (:84-86), so it must run from inside the scratch clone, never the mirror.
 cd "$KATAGO_SRC" || { say "cannot cd to \$KATAGO_SRC"; exit 2; }
 
+# obligation o33 (a): a SIGTERM seen anywhere in the pre-flight above means the
+# scheduler is already tearing this link down -- slurmstepd sends SIGKILL
+# KillWait seconds later -- so launching a three-day loop now can only produce a
+# cycle that is killed seconds in, or a link booked as having run when it did
+# not. bash defers a trap handler until the foreground command it is waiting on
+# returns, so by this line every signal delivered during the pre-flight has been
+# seen. Exit as the scheduler termination it is: finalize leaves .failcount alone
+# and KEEPS the queued afterany successor, which is the resume path.
+if [ "$SCHED_TERM" -eq 1 ]; then
+    say "SIGTERM already received during the pre-flight -- not starting the loop; the queued successor is the resume path"
+    exit "$KTG_RC_SIGTERM"
+fi
+
 say "starting the loop: $LOOP_SH $NAMEPREFIX $BASEDIR $TRAININGNAME $MODELKIND $USEGATING"
 LOOP_STARTED=1
 bash "$LOOP_SH" "$NAMEPREFIX" "$BASEDIR" "$TRAININGNAME" "$MODELKIND" "$USEGATING"
 RC=$?
+# obligation o33 (b): record the loop's own status the instant it is known, so a
+# SIGTERM arriving after this point cannot be mistaken for the cause of the end.
+LOOP_RC="$RC"
+LOOP_RC_SET=1
 ELAPSED=$(( $(date +%s) - START_EPOCH ))
 say "loop exited rc=$RC after ${ELAPSED}s"
 

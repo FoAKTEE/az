@@ -1,5 +1,5 @@
 #!/bin/bash -eu
-set -o pipefail
+set -eu -o pipefail
 {
 
 # Mission copy of python/selfplay/synchronous_loop.sh
@@ -8,8 +8,29 @@ set -o pipefail
 #
 # Copied verbatim except for the numbered changes below; positional args and the
 # cycle order (gatekeeper -> selfplay -> shuffle -> train -> export, upstream
-# :93-116) are unchanged, and `#!/bin/bash -eu` + `set -o pipefail` (upstream
-# :1-2) are kept so any stage failure still stops the loop.
+# :93-116) are unchanged, and errexit + nounset + pipefail are in force from the
+# first line of the body so any stage failure still stops the loop.
+#
+# Obligation o34. Upstream carries -eu on the shebang alone (upstream :1) and
+# relies on the script being EXECUTED, which is how upstream's own
+# synchronous_loop.sh is started. loop.sbatch launches this file from its
+# `bash "$LOOP_SH" ...` line instead, and a shebang -- options included -- is
+# ignored when a script is handed to an interpreter that way: -e and -u were
+# both off for the whole staging section below, so a failed cp, git or cd was
+# followed by cycle 1 out of a wrong or incomplete archive. `set -eu` on line 2
+# is therefore part of the body, not of the shebang, and holds however the file
+# is invoked. The shebang keeps its -eu so a direct ./synchronous_loop_9x9.sh is
+# identical.
+#
+# Every command of the staging section -- everything between the positional
+# assignments below and the `while true` -- was audited against errexit: the
+# only places that may legitimately return non-zero are the `if` / `case` / `for`
+# tests (a condition is exempt from -e), the `rm -rf ... /*.exported` and
+# `/*.tmp` sweeps (`rm -f` on a non-matching glob exits 0), and the scratch-guard
+# call, which is already bracketed by `set +e` / `set -e` at the top of the cycle
+# so its exit code can be read. Every shell variable that is not a positional
+# argument is read through `${VAR:-default}`, so -u adds no new abort path; the
+# positional five are guarded by the `$# -lt 5` check below.
 #
 #   1  upstream :70  SELFPLAY_CONFIG  -> codes/cfg/selfplay_9x9.cfg     (o13)
 #   2  upstream :71  GATING_CONFIG    -> codes/cfg/gatekeeper_9x9.cfg   (o13)
@@ -25,6 +46,9 @@ set -o pipefail
 #                                       (node data_budget; o04, o27)
 #   8  new, top/end of the while body  KTG_ONE_CYCLE=1 runs exactly one cycle
 #   9  upstream :57-66 knob block      one override-able variable block, 9x9 sized
+#  10  new, end of the while body       $BASEDIR/.cycles_completed progress
+#                                       counter, read by loop.sbatch's breaker
+#                                       (o33)
 #
 # The script keeps upstream's GITROOTDIR="$(git rev-parse --show-toplevel)" (:35)
 # and the git show/diff calls (:84-86), so it MUST be run from inside the scratch
@@ -273,6 +297,20 @@ do
     (
         time ./export_model_for_selfplay_9x9.sh "$NAMEPREFIX" "$BASEDIR" "$USEGATING" | tee -a "$BASEDIR"/logs/outexport.txt
     )
+
+    # CHANGE 10 (obligation o33): progress marker. All five stages of this cycle
+    # returned 0, so the link has demonstrably made progress. loop.sbatch reads
+    # the counter at entry and again in finalize, and a link that advanced it
+    # restarts the failure run -- without it the breaker counts three failures
+    # over the whole lifetime of the chain rather than three in a row, because a
+    # healthy production link never exits 0 and so never reaches the reset. One
+    # writer (this loop), one reader (the wrapper), same $BASEDIR.
+    set +x
+    CYCLES_DONE=$(cat "$BASEDIR"/.cycles_completed 2>/dev/null || echo 0)
+    case "$CYCLES_DONE" in ''|*[!0-9]*) CYCLES_DONE=0 ;; esac
+    echo $(( CYCLES_DONE + 1 )) > "$BASEDIR"/.cycles_completed
+    echo "cycle $CYCLE_INDEX complete -- $(( CYCLES_DONE + 1 )) cycle(s) recorded in $BASEDIR/.cycles_completed"
+    set -x
 
     # CHANGE 8: smoke_loop.sbatch (node synchronous_loop_smoke) sets this to run
     # exactly one cycle and exit 0.

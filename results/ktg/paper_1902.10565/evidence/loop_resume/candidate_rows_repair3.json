@@ -1,0 +1,244 @@
+{
+  "_note": "CANDIDATE rows only. Written by the worker for the THIRD repair packet of node arxiv-1902.10565::loop_resume_under_walltime (o34_loop_script_errexit_lost_under_bash_invocation, blocking, and o33_wrapper_classification_residuals, non-blocking). NOT appended: an independent validator admits or refutes them. The only rows this worker appended are the error-ledger trial 65eff50ae219c961f83b2d968405cf4e47e5c32ecb616ecd8950d964e407cd30 (node_seq 8) and its two amendments 7b765d923d20878cf854dfe3739ce6bc4c0bb83088876e1b2a1dcb5e97887a17 (node_seq 9, one wrong grep count in the first row's prose) and a417b03b94c3c0393a3fb0f68e95108e2e39befd6c4b2a58a9ee73bd13d5bad9 (node_seq 10, the final file and evidence hashes after two comment-only corrections).",
+  "node_id": "arxiv-1902.10565::loop_resume_under_walltime",
+  "task_id": "loop_resume_under_walltime",
+  "worker_role": "worker",
+  "supersedes": "results/ktg/paper_1902.10565/evidence/loop_resume/candidate_rows_repair2.json (the second repair packet; its o31 and o26 discharges and its amended result row were admitted, and the validator opened o34 and o33 in the same pass)",
+  "evidence_files": [
+    "results/ktg/paper_1902.10565/evidence/loop_resume/repair_o34.txt"
+  ],
+  "evidence_sha256": {
+    "results/ktg/paper_1902.10565/evidence/loop_resume/repair_o34.txt": "7827857ebbeedb02a00c9ac6409b8357b27e37c4cf81a936a468f0b8e33dd318"
+  },
+  "artifacts": [
+    "results/ktg/paper_1902.10565/codes/loop/synchronous_loop_9x9.sh",
+    "results/ktg/paper_1902.10565/codes/loop/loop.sbatch",
+    "results/ktg/paper_1902.10565/codes/loop/export_model_for_selfplay_9x9.sh"
+  ],
+  "artifact_sha256": {
+    "synchronous_loop_9x9.sh": {
+      "before_this_repair": "20a7f5b3bdda65290f9628a3c88da6029418377212932eaf6e1b1abfa7de6832",
+      "after_this_repair": "7d53df27563d6839c3f059f073b3a93e646aa6b03e2b8e2295b0f3ad3bc64ac1"
+    },
+    "loop.sbatch": {
+      "before_this_repair": "fd498f398369b83628a1b9a5c0b86b92d846d1f3d21ef43b1cd851e3701c7f4b",
+      "after_this_repair": "86248d31b34b35220224bcdbdc8e9993671edba5c801283366fbaa00ded264cc"
+    },
+    "export_model_for_selfplay_9x9.sh": {
+      "before_this_repair": "e616f260a05eab452189694bf1dd0dd8ffcf010b449376045f7a74559ca12ada",
+      "after_this_repair": "a1277ecb84ecaa4f5691176bdf14c192d9bb9cae2f09b36cab7079f7fb6ce694"
+    }
+  },
+  "artifacts_not_touched": [
+    "results/ktg/paper_1902.10565/codes/loop/smoke_loop.sbatch (node synchronous_loop_smoke) -- not edited, and it does not launch synchronous_loop_9x9.sh, so the o34 defect never reached it",
+    "results/ktg/paper_1902.10565/codes/loop/train_9x9.sh (node cfg_9x9_override)",
+    "results/ktg/paper_1902.10565/codes/data_budget/ (node data_budget; called by exit code only)",
+    "results/ktg/paper_1902.10565/tasks/loop_resume_under_walltime/implementation.md (the section 2 command is unchanged and still exits 0)"
+  ],
+  "diff_summary": {
+    "files": 3,
+    "insertions": 139,
+    "deletions": 9,
+    "synchronous_loop_9x9.sh": "line 2 'set -o pipefail' -> 'set -eu -o pipefail'; a header block recording why (o34) and the result of the staging-section audit; CHANGE 10, a $BASEDIR/.cycles_completed progress counter written at the end of every completed cycle",
+    "loop.sbatch": "header breaker paragraph rewritten; a comment on the environment propagation of the three operator knobs (o33 d); CYCLES_FILE / CYCLES_AT_ENTRY read at entry; LOOP_RC / LOOP_RC_SET / TERM_AFTER_LOOP_RC state; on_term records whether the loop status was already in hand; finalize computes cycles_this_link, lets a recorded loop failure outrank a later SIGTERM (o33 b) and clears the failure run on a link that completed cycles (o33 c); a SCHED_TERM check immediately before the loop launch (o33 a); LOOP_RC recorded right after the loop returns",
+    "export_model_for_selfplay_9x9.sh": "line 2 'set -o pipefail' -> 'set -eu -o pipefail' plus change note D -- a no-op today (the loop runs it as ./export_model_for_selfplay_9x9.sh, so the shebang applies) and a guard against the invocation form that dropped -eu from the loop script"
+  },
+  "verification": {
+    "command": "bash -n results/ktg/paper_1902.10565/codes/loop/loop.sbatch && grep -q afterany results/ktg/paper_1902.10565/codes/loop/loop.sbatch && grep -q failcount results/ktg/paper_1902.10565/codes/loop/loop.sbatch && grep -q 'cpp/build/katago' results/ktg/paper_1902.10565/codes/loop/synchronous_loop_9x9.sh && ! grep -q 'cpp/katago\"' results/ktg/paper_1902.10565/codes/loop/synchronous_loop_9x9.sh && bash \"$(python3 -c 'import json;print(json.load(open(\"mission.json\"))[\"compute\"][\"policyCheck\"])')\" --gpus 1 --cpus 24 --partition b200",
+    "exit_code": 0,
+    "conjuncts": {
+      "bash_n_loop_sbatch": "clean",
+      "grep_c_afterany": 8,
+      "grep_c_failcount": 30,
+      "grep_c_cpp_build_katago": 5,
+      "grep_c_cpp_katago_quote": 0,
+      "check_sh_exit": 0
+    },
+    "measured_at": "2026-09-04T02:14:42-04:00 (verbatim in PART 5 of the evidence file)",
+    "additional_gates_run": {
+      "o34_line2": "sed -n 2p on both mission scripts shows 'set -eu -o pipefail'; O34_LINE2_EXIT=0",
+      "o34_header_probe": "a probe copy of the real loop script reading $- in its own shell: BEFORE under `bash` $-=hB errexit=off nounset=off; AFTER under `bash` $-=ehuB errexit=on nounset=on; direct execution unchanged",
+      "o34_staging_failures": "R1a/R1b/R2b -- a failing cp in the staging section: BEFORE staged a broken archive and (without KTG_STAGE_ONLY) started cycle 1 out of it; AFTER exits 1 with nothing staged. R2a -- the explicit missing-file check still exits 2 both ways",
+      "o34_stage_dryrun": "KTG_STAGE_ONLY=1 from the real scratch clone, invoked as `bash <script>`: STAGE_EXIT=0 before and after, 80 staged files byte-for-byte identical (manifest diff exit 0), bin/katago cmp 0 against $KATAGO_BIN, staged selfplay.cfg has dataBoardLen = 9",
+      "o27_no_storage_literal": "grep -rn -E '214748364800|193273528320|536870912000|1099511627776|du -sb \"|/apps/helpers/quotas.py' over loop.sbatch + synchronous_loop_9x9.sh -> no match (exit 1). The pattern is applied to the two files o27's statement names rather than to all of codes/loop/, because another node's smoke_loop.sbatch now carries informational quotas.py / du -sh lines (the validator recorded that the codes/loop/-wide form of this gate is stale as of HEAD bcb1805)",
+      "o08_exporter_name": "grep -rn 'export_model\\.py' over codes/ -> no hit (exit 1), unchanged",
+      "regression_set": "A, B, B2a, C, D, E, F, G, H, J, K1-K6, M, L1a, L1b, L2, N and O re-run unchanged, every one with the outcome the validator's record states, including O still tripping the breaker on the third failure across six links when the loop records no cycles",
+      "reproducibility": "the whole harness was run end to end twice; the two runs' scenario outcome lines diff clean"
+    }
+  },
+  "candidate_claim_transitions": [
+    {
+      "paper": "arxiv-1902.10565",
+      "entry_id": "o34_loop_script_errexit_lost_under_bash_invocation",
+      "kind": "obligation",
+      "status": "discharged",
+      "discharged_by": "r_loop_resume_under_walltime_static",
+      "amends_row_hash": "f8bc0de2a7283af6aac96303207c2e50ba515577d3575f995a61d847e5561fb4",
+      "evidence_path": "results/ktg/paper_1902.10565/evidence/loop_resume/repair_o34.txt",
+      "blocking": true,
+      "owner": "worker loop_resume_under_walltime",
+      "task_id": "loop_resume_under_walltime",
+      "node_ids": [
+        "arxiv-1902.10565::loop_resume_under_walltime"
+      ],
+      "dependencies": [
+        "r_loop_resume_under_walltime_static"
+      ],
+      "statement_of_discharge": "codes/loop/synchronous_loop_9x9.sh:2 now reads 'set -eu -o pipefail' -- errexit and nounset are set in the BODY, so they hold under `bash \"$LOOP_SH\"` (loop.sbatch) exactly as they hold under a direct ./synchronous_loop_9x9.sh, and the archive-staging section is no longer unguarded. The shebang keeps its -eu so the two invocation forms stay identical, and the fix is at line 2: nothing was moved later and the 'set -e' after the guard call inside the cycle is unchanged because it is the restore half of the 'set +e' pair that reads the guard's exit code. codes/loop/export_model_for_selfplay_9x9.sh:2 gets the same line; it is a no-op today (the loop runs that file as ./export_model_for_selfplay_9x9.sh, so its shebang does apply) and exists so the invocation form that dropped -eu from the loop script cannot drop it there either. The staging section was audited command by command against errexit and needed no other change: the only commands that may legitimately return non-zero are if/case/for conditions (exempt from -e), the two `rm -rf .../*.exported` and one `rm -rf .../*.tmp` sweeps (rm -f on a non-matching glob exits 0) and the scratch-guard call, which is already bracketed by set +e / set -e so its exit code can be read. Under nounset, every parameter expansion in the file is either assigned in the script or read through ${VAR:-default}; the five positional arguments are covered by the `$# -lt 5` check.",
+      "verifier_checks": [
+        "sed -n 2p codes/loop/synchronous_loop_9x9.sh -> 'set -eu -o pipefail' (both -e and -u); same for codes/loop/export_model_for_selfplay_9x9.sh; O34_LINE2_EXIT=0",
+        "the validator's shebang probe reproduced verbatim: ./p.sh exit 1; `bash p.sh` prints 'reached after false: errexit=off nounset=off' and exits 0; the repaired header, `bash p2.sh`, exits 1",
+        "the same measurement on a probe copy of the REAL loop script, reading $- in the running shell so the answer is not taken inside a command substitution: BEFORE `bash hdrprobe.sh` -> $-=hB errexit=off nounset=off pipefail=on; AFTER `bash hdrprobe.sh` -> $-=ehuB errexit=on nounset=on pipefail=on; direct execution is $-=ehuB in both",
+        "R1a a failing `cp \"$GITROOTDIR\"/python/*.py ...` in the staging section with KTG_STAGE_ONLY=1: BEFORE exit 0 with 8 files staged out of an archive that has no python/, no katago/ and no muon/; AFTER exit 1 with 0 files staged",
+        "R1b the same failure with no KTG_STAGE_ONLY: BEFORE reached 'Gatekeeper' and invoked the engine out of the incomplete archive -- cycle 1 out of a wrong archive, the exposure the obligation names; AFTER exit 1 before the cycle",
+        "R2a SELFPLAY_CONFIG pointing at a file that does not exist -> 'required mission file missing' and exit 2 before and after, so the explicit checks at :64/:72/:89/:145/:165 are untouched",
+        "R2b SELFPLAY_CONFIG present but unreadable (chmod 000): -f passes, the cp fails -- BEFORE staged an archive with no selfplay.cfg at all and did not stop; AFTER exit 1 at the cp",
+        "KTG_STAGE_ONLY=1 dry run from the real scratch clone $KATAGO_SRC, invoked the way loop.sbatch invokes it: STAGE_EXIT=0 both before and after, 80 staged files, manifest diff exit 0 (byte-for-byte identical trees), bin/katago cmp exit 0 against $KATAGO_BIN (27273864 B), staged selfplay.cfg dataBoardLen = 9",
+        "the task file section 2 closing check still exits 0 (SECTION2_EXIT=0), and bash -n is clean on all three files",
+        "the whole regression set A-J, K1-K6, L1/L2, M, N, O re-run with the outcomes the validator's record states"
+      ],
+      "notes": "Evidence type is static verification plus executed offline fault injection: no Slurm job, no GPU, login node only, as the task file section 13 requires. Two consequences of the fix are worth reading before the next repair: (1) nounset is now on for the staging section, so an operator who exports a half-set environment gets an abort with 'unbound variable' rather than a silently wrong archive -- that is the intended direction and B2a in the regression set shows the wrapper counts such an abort; (2) errexit is not inherited into command substitutions unless shopt inherit_errexit is set, which is why the 0.1 probe prints errexit=off from inside $( ) even when it is on -- the assignments in the staging section still abort correctly, because an assignment's exit status is the substitution's."
+    },
+    {
+      "paper": "arxiv-1902.10565",
+      "entry_id": "o33_wrapper_classification_residuals",
+      "kind": "obligation",
+      "status": "open",
+      "blocking": false,
+      "amends_row_hash": "b1849cade4419c3320ae5ba03eebeab248cf36b594f0ecdf03b28821222bf853",
+      "evidence_path": "results/ktg/paper_1902.10565/evidence/loop_resume/repair_o34.txt",
+      "owner": "worker loop_resume_under_walltime",
+      "task_id": "loop_resume_under_walltime",
+      "node_ids": [
+        "arxiv-1902.10565::loop_resume_under_walltime",
+        "arxiv-1902.10565::loop_failure_circuit_breaker"
+      ],
+      "dependencies": [
+        "r_loop_resume_under_walltime_static",
+        "o25_chain_breaker_executed_proof",
+        "a03_walltime_resume"
+      ],
+      "statement_amended": "AMENDED, narrowed to what is left after the third repair. Three of the four items are closed in codes/loop/loop.sbatch and one is documented as intended. CLOSED (a): a SIGTERM seen during the pre-flight now stops the wrapper before the loop is launched -- SCHED_TERM is tested immediately above the launch, the wrapper says so, exits 143 and finalize books a scheduler termination with the count untouched and the successor kept (probe (i)-b: BEFORE the stand-in printed 'LOOP RAN AFTER THE SIGNAL' and the link exited 0; AFTER 'SIGTERM already received during the pre-flight -- not starting the loop', wrapper exit 143). CLOSED (b, the after-the-fact half): the loop's own status is recorded into LOOP_RC the instant it is known, on_term records whether that recording had already happened, and finalize lets a non-zero recorded status outrank a SIGTERM that arrived after it (probe (iii)-c: BEFORE 'scheduler termination ... failcount left at 0'; AFTER 'the loop had already exited rc=1 when the SIGTERM arrived -- counting the failure, not the signal', failcount 1). A recorded 143 past the runtime floor is deliberately NOT caught by that rule and stays a scheduler kill, so K1-K6 are unchanged. CLOSED (c): the loop writes $BASEDIR/.cycles_completed after every cycle whose five stages returned 0, the wrapper reads it at entry and in finalize, and a link that advanced it clears the failure run in both the scheduler-termination branch and the failure branch. KTG_MAX_FAILS=3 therefore means three failures with no completed cycle between them, which is what the header always claimed. Scenario O re-run with a cycle-recording loop gives 1,0,0,1,0,1 and does not trip; re-run with a loop that records nothing it still gives 1,1,1,2,2,3 and trips, as before. DOCUMENTED, not changed (d): KTG_MIN_RUNTIME_SECONDS, KTG_MAX_FAILS and KTG_MAX_CHAIN read the job environment and Slurm's default --export=ALL carries them down the whole chain; that is how an operator retunes a running chain without editing a file under a live job, so they stay knobs and the operating rule -- submit the first link from a clean shell -- is written next to them. KTG_RC_SIGTERM and KTG_RC_SCRATCH_STOP remain hard-coded. WHAT REMAINS OPEN, all reproduced in the same run: (r1) a loop status 143 arriving after KTG_MIN_RUNTIME_SECONDS is still read as a scheduler termination whatever caused it (probe (ii)-c) -- only Slurm job state can settle it, which is o25's; (r2) SCHED_TERM still outranks a deterministic pre-flight failure that happens after the signal, so probe (i)-c is booked as a scheduler termination and the successor self-corrects in one extra link (probe Ic2 counts it 1/3 and cancels its own successor); (r3) a signal landing in the two statements between the loop's return and the LOOP_RC/LOOP_RC_SET assignments is still read as a walltime end -- the window is irreducible without a lock and the direction is the safe one; (r4) the consequence of (c): a link that completes at least one cycle and then fails never accumulates, so a crash loop that manages a full cycle per link is bounded only by KTG_MAX_CHAIN=200 and not by the breaker (probe P5, count oscillating 2,2,2 over three links). Closes by an executed run under o25 that reads Slurm job state (TIMEOUT / CANCELLED / FAILED) back and confirms each classification, with the closing scenarios of o31 and this repair re-run.",
+      "verifier_checks": [
+        "probe (i)-b BEFORE / AFTER, in one transcript, same shims, same stand-in loop",
+        "probe (iii)-c BEFORE / AFTER, in one transcript, same probe copy of the wrapper (a 6 s window inserted between the loop's return and the final exit)",
+        "P3 scenario O with a cycle-recording loop: failcount 1,0,0,1,0,1, .cycles_completed 6, breaker not tripped; the validator's scenario O with a loop that records nothing: 1,1,1,2,2,3, breaker tripped",
+        "P4 a link that completes one cycle then fails: 'this link completed 1 cycle(s) before failing -- the run of consecutive failures restarts, old count 2 dropped', failcount 2 -> 1",
+        "P5 the residual (r4): three links that each complete one cycle then fail leave the count at 2 every time",
+        "probes (i)-a, (i)-c, (ii)-a..d, (iii)-a, (iii)-b, (iv)-a, (iv)-b re-run unchanged from the validator's record",
+        "K1-K6, M, L1a/L1b, L2, N unchanged, so none of the o31 classifications moved",
+        "static: the sbatch call in resubmit() still passes no --export (grep), the two RC constants are still assignments without ${VAR:-}, and SCHED_TERM is now read at the pre-launch guard as well as in finalize"
+      ],
+      "notes": "The (c) fix introduces one new file, $BASEDIR/.cycles_completed, with one writer (the loop) and one reader (the wrapper) inside one BASEDIR -- it therefore inherits assumption a12_single_chain_per_basedir. A missing or corrupt counter reads as 0, which restores the pre-repair behaviour rather than aborting a link."
+    }
+  ],
+  "candidate_result_row_amendment": {
+    "paper": "arxiv-1902.10565",
+    "result_id": "r_loop_resume_under_walltime_static",
+    "amends_row_hash": "d0f87ded00581ae309379e64f38b6ff7cb98a31b7f2ba218d0cd6e81af58a3d8",
+    "name": "Slurm chain wrapper + mission loop copy: errexit in force however the loop is launched, every process-internal exit accounted, and the scheduler's own termination told apart from a cycle and from a failure (static + offline injection)",
+    "working_context": {
+      "cluster": "skipjack, partition b200 (b300 preferred when free), account ssci-anima; MaxTime 3-00:00:00, KillWait 30 s, OverTimeLimit 0 min",
+      "contract": "1 GPU, 24 CPUs, 120G, --time 2-23:30:00, self-resubmit with --dependency=afterany by absolute path",
+      "upstream": "lightvector/KataGo v1.18.2 @ fd0723fdbc0e9d82cf269c9630af8c27c57c07c4 (read-only mirror ref-code/lightvector-KataGo)",
+      "scope": "static verification plus offline failure and signal injection under PATH shims for the scheduler, and one KTG_STAGE_ONLY dry run from the real scratch clone; no Slurm job submitted, no GPU used; the storage guard is node data_budget's working-tree copy, wired by exit code only"
+    },
+    "claim": "codes/loop/synchronous_loop_9x9.sh and codes/loop/export_model_for_selfplay_9x9.sh carry 'set -eu -o pipefail' in the body, so errexit, nounset and pipefail hold whether the file is executed or handed to `bash` -- the form loop.sbatch uses -- and a failure anywhere in the archive-staging section stops the loop instead of being followed by cycle 1 out of an incomplete archive. In codes/loop/loop.sbatch the .failcount accounting, the minimum-runtime penalty, the breaker and the scancel of the queued afterany successor live in one function, finalize(), run from an EXIT trap installed immediately after resubmit(), and finalize sorts the ways a link can end into five classes. A deliberate storage stop -- the loop exiting 3 WITH $BASEDIR/STOP present, the file the loop writes before that exit -- cancels the successor and spends no attempt. A scheduler termination -- SIGTERM to this wrapper, recorded by a TERM trap installed before the resubmit, or a 128+15 loop status on a link that has run at least KTG_MIN_RUNTIME_SECONDS -- keeps the queued successor, which is the resume itself, and leaves .failcount alone unless the link completed cycles, in which case the run of consecutive failures is cleared. A SIGTERM seen during the pre-flight ends the link before the loop is launched. A loop failure already recorded when a later SIGTERM arrives is counted as the failure it is. A pre-flight failure counts, with the fast-failure penalty, and cancels the successor. A loop failure counts and cancels only when the breaker trips; an exit 3 without STOP is one of these. A cycle that ran and exited 0 resets the count, an exit 0 that never ran the loop leaves it, and a link that advanced $BASEDIR/.cycles_completed restarts the failure run, so KTG_MAX_FAILS means three failures with no completed cycle between them. Neither loop.sbatch nor synchronous_loop_9x9.sh contains a storage threshold or its own du/df/quotas.py measurement: both call codes/data_budget/scratch_guard.sh and honour its exit code, with no --root passed. The three upstream defect repairs (o09, o13 config half, o17) admitted in the earlier rows are unchanged, and a KTG_STAGE_ONLY dry run from the real scratch clone stages the same 80 files byte-for-byte before and after this repair. NOT covered: a SIGKILL end -- KillWait expiry, cgroup OOM, node failure -- runs no handler, writes nothing and simply lets the queued successor resume, shown by scenario M; a loop status 143 after the runtime floor is still read as a scheduler termination whatever caused it; a SIGTERM already seen outranks a deterministic pre-flight failure that follows it, self-correcting in one extra link; and a link that completes a cycle before failing never accumulates toward the breaker. Nothing here ran on a GPU or under a real scheduler.",
+    "evidence_type": "existence_only",
+    "evidence": "results/ktg/paper_1902.10565/evidence/loop_resume/repair_o34.txt",
+    "verifier_result": {
+      "verdict": "pass",
+      "command_exit": 0,
+      "detail": "section 2 closing check exit 0 (afterany 8, failcount 30, cpp/build/katago 5, cpp/katago\" 0, check.sh exit 0); 47 wrapper invocations across 24 scenario groups plus 10 direct invocations of the real loop script (8 fault-injection runs against a stand-in git tree and 2 KTG_STAGE_ONLY dry runs from the real scratch clone), every BEFORE / AFTER pair in one transcript; the whole harness run twice with identical scenario outcomes; the harness was run end to end three times (the first two against a revision differing only in two comment lines) with identical scenario outcomes",
+      "metric": {
+        "name": "loop_and_wrapper_failure_paths_that_stop_the_link_as_specified_offline",
+        "value": 19,
+        "threshold": 19,
+        "pass": true
+      },
+      "metric_breakdown": {
+        "_definition": "distinct failure / termination paths shown offline to end the link the way the claim says, 19 = 11 + 4 + 4",
+        "wrapper_classes_unchanged_from_the_admitted_row (11)": [
+          "deliberate storage stop (loop exit 3 with STOP): successor cancelled, no attempt spent",
+          "scheduler termination seen as SIGTERM to this wrapper: successor kept, count untouched",
+          "scheduler termination seen as loop status 143 past KTG_MIN_RUNTIME_SECONDS: successor kept",
+          "pre-flight failure: counted with the fast-failure penalty, successor cancelled",
+          "loop failure: counted, successor cancelled only when the breaker trips",
+          "loop exit 3 with no STOP: counted as an ordinary failure",
+          "clean cycle (loop exit 0): count reset",
+          "exit 0 before the loop started (STOP at entry): count left",
+          "breaker trip: .breaker_tripped written and the queued successor scancelled",
+          "post-trip guard: a link that starts with the breaker tripped exits without running the loop",
+          "SIGKILL: no handler, nothing written, successor kept -- shown, not claimed as handled (scenario M)"
+        ],
+        "wrapper_classes_added_by_this_repair (4)": [
+          "SIGTERM seen during the pre-flight: the loop is not launched, the link exits 143 as a scheduler termination",
+          "loop failure recorded before a later SIGTERM: counted as the failure, not waved through as the signal",
+          "scheduler termination on a link that completed cycles: the failure run is cleared",
+          "failure on a link that completed cycles: the failure run restarts before the new failure is counted"
+        ],
+        "loop_script_staging_paths_added_by_this_repair (4)": [
+          "failing cp in the staging section with KTG_STAGE_ONLY=1: exit 1, nothing staged (was exit 0 with a broken archive)",
+          "failing cp in the staging section with no KTG_STAGE_ONLY: exit 1 before cycle 1 (was cycle 1 out of the broken archive)",
+          "unreadable but present config: exit 1 at the cp (was a staged archive with no selfplay.cfg)",
+          "missing config: exit 2 from the explicit check, unchanged, proving the explicit guards were not disturbed"
+        ]
+      }
+    },
+    "dependencies": [
+      "arxiv-1902.10565::env_build",
+      "arxiv-1902.10565::train_resume_semantics",
+      "arxiv-1902.10565::data_budget"
+    ],
+    "assumptions": [
+      "a01_single_node",
+      "a02_gpu_cap_start_at_1",
+      "a03_walltime_resume",
+      "a04_b200_fallback",
+      "a12_single_chain_per_basedir"
+    ],
+    "status": "existence_only",
+    "provenance": "worker third repair packet for o34 / o33, 2026-09-04; error-ledger trials 65eff50ae219c961f83b2d968405cf4e47e5c32ecb616ecd8950d964e407cd30, 7b765d923d20878cf854dfe3739ce6bc4c0bb83088876e1b2a1dcb5e97887a17 and a417b03b94c3c0393a3fb0f68e95108e2e39befd6c4b2a58a9ee73bd13d5bad9; candidate rows results/ktg/paper_1902.10565/evidence/loop_resume/candidate_rows_repair3.json; amends the validator's row d0f87ded..., which amends 6227934b..., which amends 7df3425f...",
+    "open_obligations": [
+      "o25_chain_breaker_executed_proof",
+      "o33_wrapper_classification_residuals",
+      "o13_loop_config_paths",
+      "o24_cycle_knobs_derived",
+      "c07_loop_cycle_completes",
+      "c08_resume_no_loss"
+    ],
+    "notes": "Status stays existence_only for the reasons the validator gave three times: nothing here ran on a GPU or under a real scheduler, and c07/c08 need numerical_simulation evidence that does not exist yet. Knowledge status stays preliminary; no knowledge row is proposed."
+  },
+  "open_after_repair": [
+    {
+      "marker": "[OPEN]",
+      "id": "o25_chain_breaker_executed_proof",
+      "reason": "unchanged, owner loop_failure_circuit_breaker. Only a run under a real scheduler can show three real failures with no fourth submission, and the kill classes no in-script handler can see: SIGKILL at KillWait expiry, cgroup OOM at --mem 120G, node failure. Scenario M reproduces that shape offline.",
+      "closing_evidence": "sacct records for one dry-run BASEDIR showing exactly three job records and a cancelled successor, plus one induced Slurm-level kill, and the line 'scheduler termination at walltime' in the job log of a link that really hit its time limit"
+    },
+    {
+      "marker": "[OPEN]",
+      "id": "o33_wrapper_classification_residuals",
+      "reason": "amended above, still open and still non-blocking. Four residuals remain: (r1) a loop status 143 after the runtime floor is read as a scheduler termination whatever caused it; (r2) SCHED_TERM outranks a deterministic pre-flight failure that follows the signal, self-correcting in one extra link; (r3) the two-statement window between the loop's return and the LOOP_RC/LOOP_RC_SET assignments is still read as a walltime end; (r4) a link that completes at least one cycle before failing never accumulates toward the breaker, so a crash loop that manages a full cycle per link is bounded only by KTG_MAX_CHAIN=200.",
+      "closing_evidence": "an executed run under o25 that reads Slurm job state (TIMEOUT / CANCELLED / FAILED) back and confirms each classification; (r4) additionally needs a policy decision on whether a full completed cycle counts as progress even when the link then dies"
+    },
+    {
+      "marker": "[OPEN]",
+      "id": "cycles_completed_counter_is_untested_against_the_real_loop",
+      "reason": "the $BASEDIR/.cycles_completed writer is inside the while body of synchronous_loop_9x9.sh, after the export stage, and no cycle has ever run: every test of it here used a stand-in loop that writes the same file. The KTG_STAGE_ONLY dry run exits before the while loop by construction, so it cannot exercise the writer either.",
+      "closing_evidence": "the first executed cycle (node synchronous_loop_smoke, KTG_ONE_CYCLE=1) leaving .cycles_completed = 1 in its BASEDIR, and the smoke job's log carrying the 'cycle 1 complete -- 1 cycle(s) recorded' line"
+    },
+    {
+      "marker": "[OPEN]",
+      "id": "o13_loop_config_paths",
+      "reason": "unchanged: the ten-variable knob block is sized from an expected ~22 rows/game, not a measurement; closes under derive_cycle_knobs_9x9 (o24_cycle_knobs_derived).",
+      "closing_evidence": "measured rows/game from the smoke cycle"
+    },
+    {
+      "marker": "[OPEN]",
+      "id": "a12_single_chain_per_basedir",
+      "reason": "unchanged, and this repair adds one more shared file under BASEDIR (.cycles_completed) that two concurrent chains would interleave.",
+      "closing_evidence": "either the single-chain rule accepted for the mission, or a lock file in BASEDIR that a second wrapper refuses to start against"
+    }
+  ]
+}

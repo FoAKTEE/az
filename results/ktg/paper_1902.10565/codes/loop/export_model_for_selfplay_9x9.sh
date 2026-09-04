@@ -1,5 +1,5 @@
 #!/bin/bash -eu
-set -o pipefail
+set -eu -o pipefail
 {
 # Mission copy of python/selfplay/export_model_for_selfplay.sh
 #   upstream: lightvector/KataGo v1.18.2 @ fd0723fdbc0e9d82cf269c9630af8c27c57c07c4
@@ -19,6 +19,13 @@ set -o pipefail
 #   C  obligation o15 -- the exporter and checkpoint-cleaner exit codes are
 #      captured explicitly rather than relying on `-e` inside a pipeline
 #      subshell, and a failure leaves SRC untouched for the next cycle to retry.
+#   D  obligation o34 -- `set -eu` is repeated in the BODY, not left on the
+#      shebang alone. synchronous_loop_9x9.sh runs this file as
+#      ./export_model_for_selfplay_9x9.sh, so the shebang does apply today and
+#      the line changes nothing; it is here so that invoking the script as
+#      `bash export_model_for_selfplay_9x9.sh` -- the form that silently dropped
+#      -eu from the loop script (loop.sbatch's `bash "$LOOP_SH"` launch) --
+#      cannot drop it here either.
 #
 # Takes any models in torchmodels_toexport/ and outputs a cuda-runnable model file to modelstobetested/
 # Takes any models in torchmodels_toexport_extra/ and outputs a cuda-runnable model file to models_extra/
