@@ -2,12 +2,12 @@
 
 # Assumptions — paper_arxiv-1902.10565
 
-10 entries; 10 active.
+11 entries; 11 active.
 
 | entry_id | statement | scope | status | reduction_obligation | node_ids |
 |---|---|---|---|---|---|
 | a01_single_node | All five loop stages run on one node in one Slurm job (no distributed selfplay, BUILD_DISTRIBUTED=0); stages share the node's GPUs via cudaDeviceToUse keys. | infrastructure | active | — | arxiv-1902.10565::synchronous_loop_smoke |
-| a02_gpu_cap_start_at_1 | At most 4 GPUs total across all running jobs; the design starts at 1 GPU (b200 free_gpus=2/128, b300 0/8 on 2026-09-03) and scales to 2 only after eval_improvement passes. | compute policy | active | — | arxiv-1902.10565::selfplay_stage; arxiv-1902.10565::scale_up |
+| a02_gpu_cap_start_at_1 | At most 4 GPUs total across all running jobs; the design runs one job on 1 GPU (b200 free 2/128, b300 0/8 on 2026-09-03; a 2-GPU request projected a multi-week wait) and adds GPUs only through async_multi_gpu_layout after measure_stage_throughput shows single-GPU saturation (duty > 70 %). | compute allocation | active | — | arxiv-1902.10565::selfplay_stage; arxiv-1902.10565::scale_up; arxiv-1902.10565::async_multi_gpu_layout |
 | a03_walltime_resume | Every job requests <= 3-00:00:00 and the loop is designed as checkpoint + resubmit; no single job is assumed to finish training. | scheduling | active | — | arxiv-1902.10565::loop_resume_under_walltime |
 | a04_b200_fallback | b300 (gb301) is reserved by another group until at least 2026-09-04 15:00; jobs go to b200 at the same GPU count until b300 frees. | partition | active | — | arxiv-1902.10565::env_build |
 | a05_9x9_only | Training, gating and evaluation use 9x9 only (bSizes=9); no mixed-size data, so paper Elo figures and b_avg-based constants are not targets. | board size | active | — | arxiv-1902.10565::cfg_9x9_override; arxiv-1902.10565::eval_improvement |
@@ -15,4 +15,5 @@
 | a07_moves_per_game_80 | A 9x9 self-play game averages ~80 moves (used only for rows/game and disk estimates; replaced by the measured value in c09/c10). | data budgeting | active | — | arxiv-1902.10565::data_budget |
 | a08_cuda_backend | The C++ engine uses USE_BACKEND=CUDA with cuDNN 9.x from the pip wheel; TensorRT (>= 10 required) is deferred. | backend | active | — | arxiv-1902.10565::env_build |
 | a09_code_first | The v1.18.2 code mirror is the source of truth for every node, claim and plan; arXiv:1902.10565 is background cited only where the code still implements its idea (human redirect, 2026-09-03). | source priority | active | — | arxiv-1902.10565::playout_cap_randomization |
-| a10_random_bootstrap_ok | Cycle-1 self-play with the built-in random net (empty models/) is an acceptable bootstrap; its data is kept in the window like any other cycle. | loop bootstrap | active | — | arxiv-1902.10565::synchronous_loop_smoke |
+| a10_random_bootstrap_ok | Cycle-1 self-play with the built-in random net (empty models/) is an acceptable bootstrap; the first exported candidate is gated against that random baseline (USEGATING = 1) and becomes the frozen first net if it wins; random-play rows are capped at min_rows by the shuffler (shuffle.py:1077) so they cannot flood the window. | bootstrap | active | — | arxiv-1902.10565::synchronous_loop_smoke; arxiv-1902.10565::gatekeeper_stage; arxiv-1902.10565::bootstrap_accepted_model |
+| a11_cpu_policy_summed | The 20 % CPU policy (24 of 124 schedulable CPUs) applies to the SUM over the user's concurrent jobs (the compute-budget check.sh sums squeue -u $USER), so the mission runs exactly one compute job at a time; concurrent evaluation jobs wait for the loop job or for the human's answer (o22). | compute policy | active | — | arxiv-1902.10565::loop_resume_under_walltime; arxiv-1902.10565::match_latest_against_first |
