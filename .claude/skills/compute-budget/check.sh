@@ -2,7 +2,7 @@
 # compute-budget/check.sh — recurring self-check before launching or scaling any
 # compute job on skipjack. Encodes progress/prompt/ktg-train.md "Computation Usage".
 #
-#   CPU : no more than 20% of a node's schedulable CPUs  (124 -> 24)
+#   CPU : no cap (human decision 2026-09-03) — reported for information only
 #   GPU : at most 4 GPUs, b200/b300 only; if GPUs are scarce, take what is free
 #
 # Usage:  check.sh [--gpus N] [--cpus N] [--partition b200|b300]
@@ -20,7 +20,7 @@ while [ $# -gt 0 ]; do
 done
 
 NODE_CPUS=124
-CPU_CAP=$(( NODE_CPUS * 20 / 100 ))     # 24
+CPU_CAP=0   # 0 = no CPU cap (human decision 2026-09-03); CPUs are reported, never enforced
 GPU_CAP=4
 ACCOUNT=ssci-anima
 ok=0
@@ -63,10 +63,10 @@ fi
 if [ $((my_gpus + REQ_GPUS)) -gt "$GPU_CAP" ]; then
   echo "VIOLATION    : my_gpus($my_gpus) + request($REQ_GPUS) > cap $GPU_CAP — wait for running jobs or shrink"; ok=1
 fi
-if [ "$REQ_CPUS" -gt "$CPU_CAP" ]; then
-  echo "VIOLATION    : --cpus $REQ_CPUS > 20% cap $CPU_CAP"; ok=1
+if [ "$CPU_CAP" -gt 0 ] && [ "$REQ_CPUS" -gt "$CPU_CAP" ]; then
+  echo "VIOLATION    : --cpus $REQ_CPUS > cap $CPU_CAP"; ok=1
 fi
 if [ "$REQ_GPUS" -gt 0 ] || [ "$REQ_CPUS" -gt 0 ]; then
-  [ $ok -eq 0 ] && echo "OK           : request gpus=$REQ_GPUS cpus=$REQ_CPUS part=${PART:-b200} within policy (gpu<=$GPU_CAP, cpu<=$CPU_CAP)"
+  [ $ok -eq 0 ] && echo "OK           : request gpus=$REQ_GPUS cpus=$REQ_CPUS part=${PART:-b200} within policy (gpu<=$GPU_CAP, no cpu cap)"
 fi
 exit $ok
