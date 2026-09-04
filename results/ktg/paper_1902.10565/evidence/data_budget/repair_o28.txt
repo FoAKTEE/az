@@ -1,0 +1,313 @@
+== o28_data_budget_guard_repairs - repair verification, verbatim ==
+host      : login03   (login node, CPU only; no Slurm job, no GPU)
+cwd       : /home/schmidt/ssci-haiyangw/az
+branch    : main   parent commit: deb3d19
+date      : 2026-09-04T00:51:02-04:00
+
+############################################################################
+# 1. bash results/ktg/paper_1902.10565/codes/data_budget/tests/run_guard_tests.sh
+#    cases A-K   : the pre-existing threshold contract, unchanged
+#    cases L..S4 : the o28 loosening vectors, each paired with a control
+#    cases T1,T2 : the du -sb retry found while repairing (section 4 below)
+############################################################################
+== scratch_guard exit-code contract  2026-09-04T00:51:03-04:00 ==
+guard: /weka/home/schmidt/ssci-haiyangw/az/results/ktg/paper_1902.10565/codes/data_budget/tests/../scratch_guard.sh
+
+PASS  exit 0   A. within budget, default 20 GiB projection
+      | == scratch_guard 2026-09-04T00:51:03-04:00 [A within-budget] ==
+      | constants            : /weka/home/schmidt/ssci-haiyangw/az/results/ktg/paper_1902.10565/codes/data_budget/budget.env
+      | root                 : /scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train
+      | du -sb               : 7567084124	/scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train
+      | df -B1               : wekafs1/scratchssci 40000000000000 37555822198784 2444177801216 94% /weka/scratch/schmidt
+      | projected write      : 21474836480 B
+      | projected root total : 29041920604 B   (hard cap 536870912000 B = 500 GiB)
+      | group scratch free   : 2370000000000 B   (source: quotas.py; fail floor 1099511627776 B, warn floor 1649267441664 B)
+      | scratch_guard: OK  used=7567084124 B  projected_total=29041920604 B  group_free=2370000000000 B
+PASS  exit 1   B. projected write crosses the 500 GiB hard cap
+      | == scratch_guard 2026-09-04T00:51:07-04:00 [B projected-over-cap] ==
+      | constants            : /weka/home/schmidt/ssci-haiyangw/az/results/ktg/paper_1902.10565/codes/data_budget/budget.env
+      | root                 : /scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train
+      | du -sb               : 7567084124	/scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train
+      | df -B1               : wekafs1/scratchssci 40000000000000 37555822198784 2444177801216 94% /weka/scratch/schmidt
+      | projected write      : 529312333000 B
+      | projected root total : 536879417124 B   (hard cap 536870912000 B = 500 GiB)
+      | group scratch free   : 2370000000000 B   (source: quotas.py; fail floor 1099511627776 B, warn floor 1649267441664 B)
+      | VIOLATION: projected mission-root usage 536879417124 B exceeds the mission-root budget (hard cap 536870912000 B).
+      |            current 7567084124 B + projected 529312333000 B. Run prune_retention.py --apply --target-bytes 536870912000 before retrying.
+PASS  exit 1   C. a stray KTG_SCRATCH_HARD_BYTES in the environment cannot loosen the cap
+      | == scratch_guard 2026-09-04T00:51:11-04:00 [C env-cannot-loosen] ==
+      | constants            : /weka/home/schmidt/ssci-haiyangw/az/results/ktg/paper_1902.10565/codes/data_budget/budget.env
+      | root                 : /scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train
+      | du -sb               : 7567084124	/scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train
+      | df -B1               : wekafs1/scratchssci 40000000000000 37555580309504 2444419690496 94% /weka/scratch/schmidt
+      | projected write      : 529312333000 B
+      | projected root total : 536879417124 B   (hard cap 536870912000 B = 500 GiB)
+      | group scratch free   : 2370000000000 B   (source: quotas.py; fail floor 1099511627776 B, warn floor 1649267441664 B)
+      | VIOLATION: projected mission-root usage 536879417124 B exceeds the mission-root budget (hard cap 536870912000 B).
+      |            current 7567084124 B + projected 529312333000 B. Run prune_retention.py --apply --target-bytes 536870912000 before retrying.
+PASS  exit 1   D. current usage already over the cap, zero projection
+      | == scratch_guard 2026-09-04T00:51:14-04:00 [D over-cap-now] ==
+      | constants            : /weka/home/schmidt/ssci-haiyangw/az/results/ktg/paper_1902.10565/codes/data_budget/tests/fixture_tinycap.env
+      | root                 : /scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train
+      | du -sb               : 7567084124	/scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train
+      | df -B1               : wekafs1/scratchssci 40000000000000 37555580309504 2444419690496 94% /weka/scratch/schmidt
+      | projected write      : 0 B
+      | projected root total : 7567084124 B   (hard cap 1000000 B = 500 GiB)
+      | group scratch free   : 2370000000000 B   (source: quotas.py; fail floor 1099511627776 B, warn floor 1649267441664 B)
+      | VIOLATION: projected mission-root usage 7567084124 B exceeds the mission-root budget (hard cap 1000000 B).
+      |            current 7567084124 B + projected 0 B. Run prune_retention.py --apply --target-bytes 1000000 before retrying.
+PASS  exit 2   E. group scratch free space below the safety floor
+      | == scratch_guard 2026-09-04T00:51:18-04:00 [E group-fail-floor] ==
+      | constants            : /weka/home/schmidt/ssci-haiyangw/az/results/ktg/paper_1902.10565/codes/data_budget/tests/fixture_failfloor.env
+      | root                 : /scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train
+      | du -sb               : 7567084124	/scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train
+      | df -B1               : wekafs1/scratchssci 40000000000000 37555361759232 2444638240768 94% /weka/scratch/schmidt
+      | projected write      : 21474836480 B
+      | projected root total : 29041920604 B   (hard cap 536870912000 B = 500 GiB)
+      | group scratch free   : 2370000000000 B   (source: quotas.py; fail floor 9999999999999999 B, warn floor 1649267441664 B)
+      | VIOLATION: group scratch free space 2370000000000 B is below the 9999999999999999 B safety floor.
+      |            The pool is shared by the whole group; do not start a cycle. Escalate.
+PASS  exit 0   F. group free below the warn floor only: warns, does not abort
+      | == scratch_guard 2026-09-04T00:51:22-04:00 [F warn-only] ==
+      | constants            : /weka/home/schmidt/ssci-haiyangw/az/results/ktg/paper_1902.10565/codes/data_budget/tests/fixture_warnfloor.env
+      | root                 : /scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train
+      | du -sb               : 7567084124	/scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train
+      | df -B1               : wekafs1/scratchssci 40000000000000 37555361759232 2444638240768 94% /weka/scratch/schmidt
+      | projected write      : 21474836480 B
+      | projected root total : 29041920604 B   (hard cap 536870912000 B = 500 GiB)
+      | group scratch free   : 2370000000000 B   (source: quotas.py; fail floor 1099511627776 B, warn floor 9999999999999999 B)
+      | scratch_guard: WARNING group scratch free space 2370000000000 B is below the 9999999999999999 B warn floor; one mission budget of headroom left.
+      | scratch_guard: OK  used=7567084124 B  projected_total=29041920604 B  group_free=2370000000000 B
+PASS  exit 3   G. mission root does not exist
+      | == scratch_guard 2026-09-04T00:51:26-04:00  ==
+      | constants            : /weka/home/schmidt/ssci-haiyangw/az/results/ktg/paper_1902.10565/codes/data_budget/budget.env
+      | root                 : /scratch/schmidt/ssci-anima/ssci-haiyangw/no-such-root
+      | NOTE  measuring an OVERRIDDEN root: --root /scratch/schmidt/ssci-anima/ssci-haiyangw/no-such-root (constants file root: /scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train)
+      | scratch_guard: mission root does not exist: /scratch/schmidt/ssci-anima/ssci-haiyangw/no-such-root
+PASS  exit 3   H. malformed --projected-bytes
+      | scratch_guard: --projected-bytes must be a non-negative integer, got '12.5GB'
+PASS  exit 3   I. unknown argument
+      | scratch_guard: unknown argument '--no-such-flag'
+PASS  exit 3   J. constants file missing
+      | scratch_guard: constants file not readable: /weka/home/schmidt/ssci-haiyangw/az/results/ktg/paper_1902.10565/codes/data_budget/tests/no-such-constants.env
+PASS  exit 0   K. quotas.py unreadable: falls back to df on the same pool and warns
+      | == scratch_guard 2026-09-04T00:51:27-04:00 [K df-fallback] ==
+      | constants            : /weka/home/schmidt/ssci-haiyangw/az/results/ktg/paper_1902.10565/codes/data_budget/budget.env
+      | root                 : /scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train
+      | du -sb               : 7567084124	/scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train
+      | df -B1               : wekafs1/scratchssci 40000000000000 37555437379584 2444562620416 94% /weka/scratch/schmidt
+      | scratch_guard: WARNING quotas.py unreadable or unparseable at /apps/helpers/does-not-exist.py; using df -B1 on the same pool
+      | projected write      : 21474836480 B
+      | projected root total : 29041920604 B   (hard cap 536870912000 B = 500 GiB)
+      | group scratch free   : 2444562620416 B   (source: df (quotas.py unavailable); fail floor 1099511627776 B, warn floor 1649267441664 B)
+      | scratch_guard: OK  used=7567084124 B  projected_total=29041920604 B  group_free=2444562620416 B
+PASS  exit 0   M. control: an EXPLICIT --projected-bytes 0 is caller control and passes
+      | == scratch_guard 2026-09-04T00:51:31-04:00 [M explicit-zero-projection] ==
+      | constants            : /weka/home/schmidt/ssci-haiyangw/az/results/ktg/paper_1902.10565/codes/data_budget/tests/fixture_tinycap.env
+      | root                 : /scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/runtime/guard_tests.YoFP8Z
+      | NOTE  measuring an OVERRIDDEN root: --root /scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/runtime/guard_tests.YoFP8Z (constants file root: /scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train)
+      | du -sb               : 0	/scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/runtime/guard_tests.YoFP8Z
+      | df -B1               : wekafs1/scratchssci 40000000000000 37555437379584 2444562620416 94% /weka/scratch/schmidt
+      | projected write      : 0 B
+      | projected root total : 0 B   (hard cap 1000000 B = 500 GiB)
+      | group scratch free   : 2370000000000 B   (source: quotas.py; fail floor 1099511627776 B, warn floor 1649267441664 B)
+      | scratch_guard: OK  used=0 B  projected_total=0 B  group_free=2370000000000 B
+PASS  exit 1   L. KTG_CYCLE_PROJECTED_BYTES=0 in the environment cannot zero the projection
+      | == scratch_guard 2026-09-04T00:51:31-04:00 [L env-zero-projection] ==
+      | constants            : /weka/home/schmidt/ssci-haiyangw/az/results/ktg/paper_1902.10565/codes/data_budget/tests/fixture_tinycap.env
+      | root                 : /scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/runtime/guard_tests.YoFP8Z
+      | NOTE  measuring an OVERRIDDEN root: --root /scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/runtime/guard_tests.YoFP8Z (constants file root: /scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train)
+      | du -sb               : 0	/scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/runtime/guard_tests.YoFP8Z
+      | df -B1               : wekafs1/scratchssci 40000000000000 37555437379584 2444562620416 94% /weka/scratch/schmidt
+      | projected write      : 21474836480 B
+      | projected root total : 21474836480 B   (hard cap 1000000 B = 500 GiB)
+      | group scratch free   : 2370000000000 B   (source: quotas.py; fail floor 1099511627776 B, warn floor 1649267441664 B)
+      | VIOLATION: projected mission-root usage 21474836480 B exceeds the mission-root budget (hard cap 1000000 B).
+      |            current 0 B + projected 21474836480 B. Run prune_retention.py --apply --target-bytes 1000000 before retrying.
+PASS  exit 0   Q. control: an EXPLICIT --root is caller control, and is announced in the log
+      | == scratch_guard 2026-09-04T00:51:32-04:00 [Q explicit-root-announced] ==
+      | constants            : /weka/home/schmidt/ssci-haiyangw/az/results/ktg/paper_1902.10565/codes/data_budget/tests/fixture_tinycap.env
+      | root                 : /scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/runtime/guard_tests.YoFP8Z
+      | NOTE  measuring an OVERRIDDEN root: --root /scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/runtime/guard_tests.YoFP8Z (constants file root: /scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train)
+      | du -sb               : 0	/scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/runtime/guard_tests.YoFP8Z
+      | df -B1               : wekafs1/scratchssci 40000000000000 37555437379584 2444562620416 94% /weka/scratch/schmidt
+      | projected write      : 0 B
+      | projected root total : 0 B   (hard cap 1000000 B = 500 GiB)
+      | group scratch free   : 2370000000000 B   (source: quotas.py; fail floor 1099511627776 B, warn floor 1649267441664 B)
+      | scratch_guard: OK  used=0 B  projected_total=0 B  group_free=2370000000000 B
+PASS  exit 1   P. KTG_SCRATCH_ROOT in the environment cannot redirect the measured root
+      | == scratch_guard 2026-09-04T00:51:32-04:00 [P env-root-redirect] ==
+      | constants            : /weka/home/schmidt/ssci-haiyangw/az/results/ktg/paper_1902.10565/codes/data_budget/tests/fixture_tinycap.env
+      | root                 : /scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train
+      | du -sb               : 7567084124	/scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train
+      | df -B1               : wekafs1/scratchssci 40000000000000 37555851583488 2444148416512 94% /weka/scratch/schmidt
+      | projected write      : 0 B
+      | projected root total : 7567084124 B   (hard cap 1000000 B = 500 GiB)
+      | group scratch free   : 2370000000000 B   (source: quotas.py; fail floor 1099511627776 B, warn floor 1649267441664 B)
+      | VIOLATION: projected mission-root usage 7567084124 B exceeds the mission-root budget (hard cap 1000000 B).
+      |            current 7567084124 B + projected 0 B. Run prune_retention.py --apply --target-bytes 1000000 before retrying.
+PASS  exit 0   N1. control: a raised-cap constants file INSIDE the guard dir is honoured
+      | == scratch_guard 2026-09-04T00:51:36-04:00 [N1 in-tree-loose-file] ==
+      | constants            : /weka/home/schmidt/ssci-haiyangw/az/results/ktg/paper_1902.10565/codes/data_budget/tests/loose_probe.1354399.env
+      | root                 : /scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train
+      | du -sb               : 7567087401	/scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train
+      | df -B1               : wekafs1/scratchssci 40000000000000 37555851583488 2444148416512 94% /weka/scratch/schmidt
+      | projected write      : 529312333000 B
+      | projected root total : 536879420401 B   (hard cap 99999999999999 B = 500 GiB)
+      | group scratch free   : 2370000000000 B   (source: quotas.py; fail floor 1099511627776 B, warn floor 1649267441664 B)
+      | scratch_guard: OK  used=7567087401 B  projected_total=536879420401 B  group_free=2370000000000 B
+PASS  exit 3   N2. the byte-identical file OUTSIDE the guard dir is refused, cap not raised
+      | scratch_guard: refusing an out-of-tree constants file: /scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/runtime/guard_tests.YoFP8Z/loose.env
+      |                only files under /weka/home/schmidt/ssci-haiyangw/az/results/ktg/paper_1902.10565/codes/data_budget/ may set the byte thresholds.
+PASS  exit 3   O. an in-tree constants file with a ${...} indirection is refused by the guard
+      | scratch_guard: constants file is not literal: /weka/home/schmidt/ssci-haiyangw/az/results/ktg/paper_1902.10565/codes/data_budget/tests/fixture_legacy_shellform.env
+      |                a KTG_* assignment contains a ${...} indirection; write byte
+      |                integers and the root path literally.
+PASS  exit 2   R. a fake KTG_QUOTAS_BIN overstating free space cannot lift the group floor
+      | == scratch_guard 2026-09-04T00:51:41-04:00 [R fake-quotas-cannot-loosen] ==
+      | constants            : /weka/home/schmidt/ssci-haiyangw/az/results/ktg/paper_1902.10565/codes/data_budget/tests/fixture_failfloor.env
+      | root                 : /scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train
+      | du -sb               : 7567087504	/scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train
+      | df -B1               : wekafs1/scratchssci 40000000000000 37555716259840 2444283740160 94% /weka/scratch/schmidt
+      | projected write      : 21474836480 B
+      | projected root total : 29041923984 B   (hard cap 536870912000 B = 500 GiB)
+      | group scratch free   : 2444283740160 B   (source: df; fail floor 9999999999999999 B, warn floor 1649267441664 B)
+      | VIOLATION: group scratch free space 2444283740160 B is below the 9999999999999999 B safety floor.
+      |            The pool is shared by the whole group; do not start a cycle. Escalate.
+PASS  exit 0   S1. pruner with no --root (documented contract) dry-runs the MISSION ROOT
+      | == prune_retention 2026-09-04T00:51:44-0400 DRY-RUN ==
+      | constants : /weka/home/schmidt/ssci-haiyangw/az/results/ktg/paper_1902.10565/codes/data_budget/budget.env
+      | root      : /scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train
+      | basedir   : /scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/loop
+      | -- protected set (1 entries; never a deletion candidate) --
+      |    PROTECT  /scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/evidence    <- evidence tree
+      | -- deletion plan (0 paths, 0 B) --
+      |    (nothing to remove)
+PASS  exit 0   S2. the legacy ${NAME:-default} form resolves to the file default, not the env
+      | == prune_retention 2026-09-04T00:51:45-0400 DRY-RUN ==
+      | constants : /weka/home/schmidt/ssci-haiyangw/az/results/ktg/paper_1902.10565/codes/data_budget/tests/fixture_legacy_shellform.env
+      | NOTE      : KTG_SCRATCH_ROOT written as ${KTG_SCRATCH_ROOT:-...}; pinned to the file default '/scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train' (environment NOT consulted)
+      | NOTE      : KTG_CYCLE_PROJECTED_BYTES written as ${KTG_CYCLE_PROJECTED_BYTES:-...}; pinned to the file default '21474836480' (environment NOT consulted)
+      | root      : /scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train
+      | basedir   : /scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/loop
+      | -- protected set (1 entries; never a deletion candidate) --
+      |    PROTECT  /scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/evidence    <- evidence tree
+      | -- deletion plan (0 paths, 0 B) --
+      |    (nothing to remove)
+PASS  exit 0   S3. an exported KTG_SCRATCH_ROOT cannot redirect the pruner
+      | == prune_retention 2026-09-04T00:51:45-0400 DRY-RUN ==
+      | constants : /weka/home/schmidt/ssci-haiyangw/az/results/ktg/paper_1902.10565/codes/data_budget/budget.env
+      | root      : /scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train
+      | basedir   : /scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/loop
+      | -- protected set (1 entries; never a deletion candidate) --
+      |    PROTECT  /scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/evidence    <- evidence tree
+      | -- deletion plan (0 paths, 0 B) --
+      |    (nothing to remove)
+PASS  exit 3   S4. pruner refuses an out-of-tree --budget-env
+      | prune_retention: refusing an out-of-tree constants file: /scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/runtime/guard_tests.YoFP8Z/loose.env
+      |                  only files under /weka/home/schmidt/ssci-haiyangw/az/results/ktg/paper_1902.10565/codes/data_budget/ may set the retention bounds and the mission root.
+PASS  exit 1   T1. control: the same root, nothing unreadable, measures and refuses on the cap
+      | == scratch_guard 2026-09-04T00:51:45-04:00 [T1 du-readable] ==
+      | constants            : /weka/home/schmidt/ssci-haiyangw/az/results/ktg/paper_1902.10565/codes/data_budget/tests/fixture_tinycap.env
+      | root                 : /scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/runtime/guard_tests.YoFP8Z/duroot
+      | NOTE  measuring an OVERRIDDEN root: --root /scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/runtime/guard_tests.YoFP8Z/duroot (constants file root: /scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train)
+      | du -sb               : 4000000	/scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/runtime/guard_tests.YoFP8Z/duroot
+      | df -B1               : wekafs1/scratchssci 40000000000000 37555716259840 2444283740160 94% /weka/scratch/schmidt
+      | projected write      : 0 B
+      | projected root total : 4000000 B   (hard cap 1000000 B = 500 GiB)
+      | group scratch free   : 2370000000000 B   (source: quotas.py; fail floor 1099511627776 B, warn floor 1649267441664 B)
+      | VIOLATION: projected mission-root usage 4000000 B exceeds the mission-root budget (hard cap 1000000 B).
+      |            current 4000000 B + projected 0 B. Run prune_retention.py --apply --target-bytes 1000000 before retrying.
+PASS  exit 3   T2. du -sb non-zero on every attempt: partial total discarded, guard refuses
+      | == scratch_guard 2026-09-04T00:51:46-04:00 [T2 du-unreadable] ==
+      | constants            : /weka/home/schmidt/ssci-haiyangw/az/results/ktg/paper_1902.10565/codes/data_budget/tests/fixture_tinycap.env
+      | root                 : /scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/runtime/guard_tests.YoFP8Z/duroot
+      | NOTE  measuring an OVERRIDDEN root: --root /scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/runtime/guard_tests.YoFP8Z/duroot (constants file root: /scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train)
+      | scratch_guard: WARNING du -sb attempt 1/3 on /scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/runtime/guard_tests.YoFP8Z/duroot exited non-zero; its partial total is discarded (du: cannot read directory '/scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/runtime/guard_tests.YoFP8Z/duroot/locked': Permission denied )
+      | scratch_guard: WARNING du -sb attempt 2/3 on /scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/runtime/guard_tests.YoFP8Z/duroot exited non-zero; its partial total is discarded (du: cannot read directory '/scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/runtime/guard_tests.YoFP8Z/duroot/locked': Permission denied )
+      | scratch_guard: WARNING du -sb attempt 3/3 on /scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/runtime/guard_tests.YoFP8Z/duroot exited non-zero; its partial total is discarded (du: cannot read directory '/scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/runtime/guard_tests.YoFP8Z/duroot/locked': Permission denied )
+      | scratch_guard: du -sb failed on /scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/runtime/guard_tests.YoFP8Z/duroot after 3 attempts: du: cannot read directory '/scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/runtime/guard_tests.YoFP8Z/duroot/locked': Permission denied 
+
+== 25 passed, 0 failed ==
+run_guard_tests.sh exit=0  wall=45 s
+
+############################################################################
+# 2. tasks/data_budget/implementation.md section 2 verification command,
+#    verbatim and unchanged, run three times back to back
+############################################################################
+bash results/ktg/paper_1902.10565/codes/data_budget/tests/run_guard_tests.sh >/dev/null && bash results/ktg/paper_1902.10565/codes/data_budget/scratch_guard.sh --quiet >/dev/null && grep -q 'KTG_SCRATCH_HARD_BYTES=536870912000' results/ktg/paper_1902.10565/codes/data_budget/budget.env && grep -q 'KTG_GROUP_FREE_FAIL_BYTES=1099511627776' results/ktg/paper_1902.10565/codes/data_budget/budget.env && grep -q 'du -sb' results/ktg/paper_1902.10565/codes/data_budget/scratch_guard.sh && grep -q 'quotas.py' results/ktg/paper_1902.10565/codes/data_budget/scratch_guard.sh && python3 results/ktg/paper_1902.10565/codes/data_budget/prune_retention.py --root /scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train >/dev/null && test $(du -sb /scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train | cut -f1) -le 536870912000
+
+section2_verification run 1 exit=0  wall=54 s
+section2_verification run 2 exit=0  wall=53 s
+section2_verification run 3 exit=0  wall=53 s
+
+############################################################################
+# 3. the loosening vectors, re-probed exactly as the validator ran them
+#    (validator record: evidence/data_budget/validation.md section 3)
+############################################################################
+----- ADV1  was: exit 3, so the documented call contract pruned nothing -----
+$ python3 prune_retention.py            [no --root]
+exit=0
+== prune_retention 2026-09-04T00:54:28-0400 DRY-RUN ==
+constants : /weka/home/schmidt/ssci-haiyangw/az/results/ktg/paper_1902.10565/codes/data_budget/budget.env
+root      : /scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train
+basedir   : /scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/loop
+-- protected set (1 entries; never a deletion candidate) --
+   PROTECT  /scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/evidence    <- evidence tree
+
+----- ADV3  was: projection forced to 0 B, exit 0 -----
+$ env KTG_CYCLE_PROJECTED_BYTES=0 bash scratch_guard.sh --quiet
+exit=0
+projected write      : 21474836480 B
+scratch_guard: OK  used=7567088145 B  projected_total=29041924625 B  group_free=2370000000000 B
+
+----- ADV4  was: cap raised to 99999999999999 B, exit 0 -----
+$ env KTG_BUDGET_ENV=<loose file on scratch> bash scratch_guard.sh --projected-bytes 529312333000
+exit=3
+scratch_guard: refusing an out-of-tree constants file: /scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/runtime/o28_probe.7t4QsO/loose.env
+               only files under /weka/home/schmidt/ssci-haiyangw/az/results/ktg/paper_1902.10565/codes/data_budget/ may set the byte thresholds.
+
+----- ADV2  was: the env var redirected the measured root to an empty dir -----
+$ env KTG_SCRATCH_ROOT=<empty dir> bash scratch_guard.sh --quiet
+exit=0
+root                 : /scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train
+scratch_guard: OK  used=7567089195 B  projected_total=29041925675 B  group_free=2370000000000 B
+
+----- ADV5  documented caller control, unchanged except that it is now announced -----
+$ bash scratch_guard.sh --quiet --root <dir> --projected-bytes 0
+exit=0
+root                 : /scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/runtime/o28_probe.7t4QsO
+NOTE  measuring an OVERRIDDEN root: --root /scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/runtime/o28_probe.7t4QsO (constants file root: /scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train)
+scratch_guard: OK  used=6054 B  projected_total=6054 B  group_free=2370000000000 B
+
+############################################################################
+# 4. a second defect found WHILE repairing, root-caused from tool output
+############################################################################
+An intermediate capture of section 1 (same tree, same command) came back:
+
+    FAIL  exit 3  (wanted 1)  D. current usage already over the cap, zero projection
+          | == scratch_guard 2026-09-04T00:42:12-04:00 [D over-cap-now] ==
+          | constants            : .../tests/fixture_tinycap.env
+          | root                 : /scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train
+          | scratch_guard: du -sb failed on /scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train
+    == 22 passed, 1 failed ==
+
+Root cause: scratch_guard.sh took ONE sample of `du -sb`, and du exits non-zero when
+an entry disappears from under its walk - routine on a live mission root that other
+jobs are writing. A healthy cycle was therefore aborted at exit 3 ('cannot measure').
+An earlier section-2 run in this same repair had returned exit 1 for the same reason;
+at that moment the cause was not yet identified and was recorded as unattributed.
+
+Fix: retry a non-zero du (KTG_DU_ATTEMPTS, default 3, KTG_DU_RETRY_SLEEP 2 s apart) in
+both scratch_guard.sh and prune_retention.py rolling mode. The measurement itself is
+NOT softened: a non-zero du is discarded even when it printed a partial total, because
+a partial total UNDER-counts - an unreadable subtree would otherwise hide usage from
+the cap - and a root that keeps failing still exits 3, exactly as before. Contract
+cases T1 (readable control, exits 1 on the cap) and T2 (unreadable subdirectory: du
+fails on all three attempts and does print a partial total; the guard discards it and
+exits 3) pin both halves.
+
+Also hardened while here: a killed test run used to leave a raised-cap probe file
+(loose_probe.<pid>.env) inside the guard's own allow-listed directory, where a later
+caller could have pointed KTG_BUDGET_ENV at it. run_guard_tests.sh now sweeps those
+at startup as well as on exit.

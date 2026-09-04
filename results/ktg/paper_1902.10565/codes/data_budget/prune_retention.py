@@ -13,8 +13,28 @@ computed and PRINTED before a single path is considered for deletion.
   --target-bytes N   rolling mode: after the fixed rules, keep deleting the oldest
                      unprotected shuffleddata / selfplay generations until the measured
                      root size is at or below N bytes
-  --budget-env FILE  alternate constants file (default: budget.env next to this script)
+  --budget-env FILE  alternate constants file (default: budget.env next to this script).
+                     PINNED (o28): only a file that resolves INSIDE this script's own
+                     directory is honoured - budget.env and the committed tests/ fixtures.
+                     $KTG_BUDGET_ENV supplies the same default and is subject to the same
+                     restriction; anything outside that subtree exits 3.
   --json FILE        also write the full plan as JSON
+
+Root selection (o28). The root comes from KTG_SCRATCH_ROOT in the constants file, resolved
+the way scratch_guard.sh resolves it: the FILE's value, never the environment. An exported
+KTG_SCRATCH_ROOT does not redirect the pruner. Only an explicit --root does, and a --root
+that differs from the constants file's root is announced with a NOTE line, so a re-scoped
+prune cannot pass unremarked in a cycle log. Running with no --root is the documented call
+contract in the scratch_guard.sh header (``python3 prune_retention.py --apply``) and it
+targets the mission root.
+
+Legacy constants files. A value written in the shell-default form ``"${NAME:-default}"``
+resolves to `default` - the quotes are stripped BEFORE the form is recognised (the bug that
+made the no---root call exit 3), and the environment is deliberately NOT consulted, so the
+form cannot be used as an environment channel. The pruner accepts such a file with a NOTE
+where scratch_guard.sh refuses it outright: the guard's refusal protects byte THRESHOLDS,
+which is where an environment channel would matter, while a pruner that refuses to start
+simply stops bounding the tree - which is the failure o28 was opened for.
 
 Retention rules, each with its upstream justification:
 
@@ -59,6 +79,7 @@ from __future__ import annotations
 import argparse
 import json
 import os
+import re
 import shutil
 import subprocess
 import sys
@@ -67,9 +88,41 @@ import time
 HERE = os.path.dirname(os.path.abspath(__file__))
 
 
+SHELL_DEFAULT_RE = re.compile(r"^\$\{([A-Za-z_][A-Za-z0-9_]*):-(.*)\}$", re.S)
+
+
+def resolve_budget_env(path: str) -> str:
+    """Refuse a constants file outside this script's own directory (o28).
+
+    Honouring an arbitrary $KTG_BUDGET_ENV would let any writer choose the retention
+    counts, and scratch_guard.sh applies the identical restriction to the byte thresholds.
+    """
+    here = os.path.realpath(HERE)
+    real = os.path.realpath(os.path.abspath(path))
+    if real != here and not real.startswith(here + os.sep):
+        print(f"prune_retention: refusing an out-of-tree constants file: {path}",
+              file=sys.stderr)
+        print(f"                 only files under {here}{os.sep} may set the retention "
+              f"bounds and the mission root.", file=sys.stderr)
+        return ""
+    return path
+
+
 def load_budget(path: str) -> dict:
-    """Read budget.env without executing it as a shell script."""
+    """Read budget.env without executing it as a shell script.
+
+    Quotes are stripped BEFORE the shell-default form is recognised: budget.env writes
+    ``KTG_SCRATCH_ROOT="${KTG_SCRATCH_ROOT:-/scratch/...}"``-shaped values in quotes, and
+    testing ``startswith("${")`` on the still-quoted string made every such value come back
+    verbatim - the defect that made ``python3 prune_retention.py`` (no --root) exit 3 on a
+    root literally named '${KTG_SCRATCH_ROOT:-...}' and prune nothing (o28).
+
+    The default branch of ``${NAME:-default}`` is used and ``os.environ`` is deliberately
+    NOT consulted: the constants file is the single source of truth, matching how
+    scratch_guard.sh resolves the same value once the file is sourced.
+    """
     out = {}
+    notes = []
     with open(path) as fh:
         for line in fh:
             line = line.strip()
@@ -78,11 +131,50 @@ def load_budget(path: str) -> dict:
             key, _, val = line.partition("=")
             key = key.strip()
             val = val.strip()
-            if val.startswith("${") and ":-" in val:      # ${NAME:-default}
-                val = val.split(":-", 1)[1].rstrip("}")
-            val = val.strip('"').strip("'")
+            # Unquote first, then drop any trailing inline comment - the same order bash
+            # applies when scratch_guard.sh sources this file. Doing it the other way round
+            # is what left a quoted ${...} value unrecognised (o28).
+            quote = val[:1]
+            if quote in ('"', "'"):
+                end = val.find(quote, 1)
+                val = val[1:end] if end != -1 else val[1:]
+            elif "#" in val:
+                val = val.split("#", 1)[0].strip()
+            m = SHELL_DEFAULT_RE.match(val)
+            if m:
+                val = m.group(2)
+                notes.append(f"{key} written as ${{{m.group(1)}:-...}}; pinned to the "
+                             f"file default '{val}' (environment NOT consulted)")
             out[key] = val
+    out["__notes__"] = notes          # printed by main(), never a constant
     return out
+
+
+def du_bytes(root: str, attempts: int = 3, retry_sleep: float = 2.0) -> int | None:
+    """`du -sb <root>` as an int, or None if it never exited 0.
+
+    Same rule as scratch_guard.sh: entries vanishing from under the walk on a live mission
+    root make du exit non-zero, so retry; but a non-zero du is never trusted, not even when
+    it printed a partial total, because a partial total UNDER-counts and rolling mode would
+    then think it had already reached its target.
+    """
+    err = ""
+    for n in range(1, attempts + 1):
+        proc = subprocess.run(["du", "-sb", root], capture_output=True, text=True)
+        if proc.returncode == 0:
+            try:
+                return int(proc.stdout.split("\t")[0])
+            except (ValueError, IndexError):
+                pass
+        err = " ".join(proc.stderr.split())[:300]
+        print(f"prune_retention: WARNING du -sb attempt {n}/{attempts} on {root} exited "
+              f"{proc.returncode}; its partial total is discarded"
+              + (f" ({err})" if err else ""), file=sys.stderr)
+        if n < attempts:
+            time.sleep(retry_sleep)
+    print(f"prune_retention: du -sb failed on {root} after {attempts} attempts"
+          + (f": {err}" if err else ""), file=sys.stderr)
+    return None
 
 
 def dir_bytes(path: str) -> int:
@@ -132,8 +224,15 @@ def main() -> int:
     ap.add_argument("--json")
     args = ap.parse_args()
 
-    cfg = load_budget(args.budget_env)
-    root = args.root or cfg["KTG_SCRATCH_ROOT"]
+    budget_env = resolve_budget_env(args.budget_env)
+    if not budget_env:
+        return 3
+    if not os.path.isfile(budget_env):
+        print(f"prune_retention: constants file not readable: {budget_env}", file=sys.stderr)
+        return 3
+    cfg = load_budget(budget_env)
+    file_root = cfg["KTG_SCRATCH_ROOT"]
+    root = args.root or file_root
     basedir = args.basedir or os.path.join(root, "loop")
     keep_shuf = int(cfg["KTG_KEEP_SHUFFLEDDATA"])
     min_age = int(cfg["KTG_SHUFFLEDDATA_MIN_AGE_S"])
@@ -147,8 +246,13 @@ def main() -> int:
 
     print(f"== prune_retention {time.strftime('%Y-%m-%dT%H:%M:%S%z')} "
           f"{'APPLY' if args.apply else 'DRY-RUN'} ==")
-    print(f"constants : {args.budget_env}")
+    print(f"constants : {budget_env}")
+    for note in cfg["__notes__"]:
+        print(f"NOTE      : {note}")
     print(f"root      : {root}")
+    if args.root and args.root != file_root:
+        print(f"NOTE      : measuring an OVERRIDDEN root: --root {args.root} "
+              f"(constants file root: {file_root})")
     print(f"basedir   : {basedir}")
     if not os.path.isdir(root):
         print(f"prune_retention: mission root does not exist: {root}", file=sys.stderr)
@@ -264,8 +368,9 @@ def main() -> int:
     ROLLING_MIN_SELFPLAY_GENERATIONS = 1
     rolling: list[dict] = []
     if args.target_bytes is not None:
-        used = int(subprocess.run(["du", "-sb", root], capture_output=True, text=True,
-                                  check=True).stdout.split("\t")[0])
+        used = du_bytes(root)
+        if used is None:
+            return 3
         projected = used - sum(e["bytes"] for e in plan)
         print(f"-- rolling mode: du -sb = {used} B, after fixed rules {projected} B, "
               f"target {args.target_bytes} B --")
@@ -341,6 +446,7 @@ def main() -> int:
     if args.json:
         with open(args.json, "w") as fh:
             json.dump({"root": root, "basedir": basedir, "apply": args.apply,
+                       "constants": budget_env,
                        "protected": [{"reason": w, "path": p} for w, p in protected],
                        "plan": plan, "plan_bytes": total}, fh, indent=2)
         print(f"-- plan written to {args.json} --")

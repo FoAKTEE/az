@@ -6,28 +6,75 @@
 #
 #   usage: scratch_guard.sh [--projected-bytes N] [--root DIR] [--label TEXT] [--quiet]
 #
-#   --projected-bytes N  bytes the next cycle is expected to write. Default
-#                        $KTG_CYCLE_PROJECTED_BYTES (20 GiB) from budget.env.
-#   --root DIR           mission root to measure. Default $KTG_SCRATCH_ROOT.
+#   --projected-bytes N  bytes the next cycle is expected to write. Default: the value in
+#                        the constants file ($KTG_CYCLE_PROJECTED_BYTES, 20 GiB).
+#   --root DIR           mission root to measure. Default: the constants file's
+#                        $KTG_SCRATCH_ROOT. A different root is announced with a NOTE line.
 #   --label TEXT         tag echoed on the log triple, e.g. "cycle 7 pre-selfplay".
 #   --quiet              suppress the quotas.py table (the parsed numbers still print).
 #
-# The thresholds come from budget.env next to this script, or from $KTG_BUDGET_ENV if set.
+# --------------------------------------------------------------------------------------
+# WHAT IS PINNED AND WHAT IS CALLER CONTROL (obligation o28; contract cases A-T)
+# --------------------------------------------------------------------------------------
+# PINNED - no environment variable can change these:
+#
+#   * every byte threshold (KTG_SCRATCH_HARD_BYTES, KTG_GROUP_FREE_FAIL_BYTES,
+#     KTG_GROUP_FREE_WARN_BYTES) comes only from the constants FILE the guard prints.
+#     A stray KTG_SCRATCH_HARD_BYTES in a job script is overwritten when the file is
+#     sourced and cannot loosen the cap.                                  [case C]
+#   * the constants FILE itself. $KTG_BUDGET_ENV is honoured only when it resolves
+#     inside this script's own directory (the committed budget.env and tests/ fixtures).
+#     Any path outside that subtree is REFUSED with exit 3 - a loose constants file
+#     dropped on scratch can no longer raise the cap.                     [cases N1/N2]
+#   * the constants file must hold LITERAL values. A file whose KTG_* assignments contain
+#     a ${...} indirection is refused with exit 3, so the file cannot be written in a form
+#     that re-opens an environment channel.                               [case O]
+#   * the measured root and the default projection, therefore, cannot be set from the
+#     environment: exporting KTG_SCRATCH_ROOT or KTG_CYCLE_PROJECTED_BYTES=0 has no
+#     effect on this guard.                                               [cases L, P]
+#
+# CALLER CONTROL, by design, and stated here so the claim does not overreach:
+#
+#   * --projected-bytes N  the caller declares the bytes the cycle will write; that IS
+#     the guard's input and the wrapper is expected to pass an honest figure. Passing
+#     --projected-bytes 0 makes the projection 0.                         [case M]
+#   * --root DIR  the caller may measure a different tree (the negative tests do). The
+#     guard prints "NOTE  measuring an OVERRIDDEN root" naming the constants file's root
+#     whenever they differ, so a re-scoped run cannot pass unremarked in a cycle log.
+#     The task file forbids the wrapper from scoping the guard to BASEDIR.  [case Q]
+#   * KTG_QUOTAS_BIN  selects the quota reporter (the df-fallback test uses it). It cannot
+#     LOOSEN the free-space check: the guard takes min(quotas.py, df -B1), so a reporter
+#     that overstates free space is discarded in favour of live df.       [cases K, R]
+#   * KTG_DU_ATTEMPTS / KTG_DU_RETRY_SLEEP  how often a non-zero `du -sb` is retried before
+#     the guard gives up (default 3, 2 s apart). Both must be integers or the guard exits 3,
+#     and neither can loosen anything: fewer attempts only make the guard refuse sooner, and
+#     a partial du total is discarded however many attempts are made.     [case T]
+#
+# Not pinned, not claimed: the guard measures; it does not stop a caller who never calls
+# it. That conjunct belongs to the loop wrapper (o27_scratch_guard_reconcile_500gib).
+# --------------------------------------------------------------------------------------
 #
 # exit 0  within budget and above the group free-space floor
 # exit 1  PROJECTED mission-root usage would cross the 500 GiB hard cap
 # exit 2  group scratch free space is below the safety floor
-# exit 3  the guard could not measure (missing root, du failed, no usable free-space source)
+# exit 3  the guard could not measure (missing root, du -sb non-zero on every attempt, no
+#         usable free-space source) OR the constants file is missing, out of tree, or not
+#         literal. A non-zero du is retried $KTG_DU_ATTEMPTS times (default 3, 2 s apart)
+#         because entries vanishing mid-walk are normal on a live root; its partial total
+#         is NEVER used, because a partial total under-counts.
 #
 # Every run prints the per-cycle triple required by o04_scratch_budget:
 #   du -sb <root> | df -B1 <root> | python3 /apps/helpers/quotas.py
 #
-# Calling this guard from a loop script (the contract the loop wrapper implements):
+# Calling this guard from a loop script (the contract the loop wrapper implements).
+# This is the exact contract exercised by tests/run_guard_tests.sh cases A and S1:
 #
 #   GUARD=results/ktg/paper_1902.10565/codes/data_budget/scratch_guard.sh
 #   PRUNE=results/ktg/paper_1902.10565/codes/data_budget/prune_retention.py
 #
-#   # once at startup: sweep orphan .tmp dirs and the unbounded trees
+#   # once at startup: sweep orphan .tmp dirs and the unbounded trees.
+#   # No --root: the pruner reads KTG_SCRATCH_ROOT from budget.env next to it, exactly
+#   # as the guard does. (Before o28 this silently exited 3 and pruned nothing.)
 #   python3 "$PRUNE" --apply
 #
 #   # at the top of EVERY cycle, before selfplay writes anything
@@ -42,37 +89,79 @@
 #     fi
 #   fi
 #
+# The wrapper passes neither --root nor KTG_BUDGET_ENV: both are pinned to this directory.
+# Omitting --projected-bytes is safe - the projection then falls back to the file's
+# 20 GiB, which no environment variable can lower.
+#
 # The guard is never advisory: on a non-zero exit the cycle must not start.
 
 set -u
 set -o pipefail
 
-HERE="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
+HERE="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd -P)"
 # The caps are read from a constants FILE, never from loose environment variables: a stray
-# KTG_SCRATCH_HARD_BYTES in a job script must not be able to loosen the guard. A caller that
-# genuinely needs different constants (only the negative tests do) points KTG_BUDGET_ENV at
-# an alternate file, and the guard prints which file it used.
+# KTG_SCRATCH_HARD_BYTES in a job script must not be able to loosen the guard.
+#
+# o28: the FILE is pinned too. $KTG_BUDGET_ENV is honoured only for a file that resolves
+# inside this script's own directory - budget.env itself and the committed tests/ fixtures,
+# which are the only callers that legitimately need different constants. A constants file
+# anywhere else (a loose one dropped on scratch, say) is refused, because honouring it
+# would let any writer choose the cap.
 BUDGET_ENV="${KTG_BUDGET_ENV:-$HERE/budget.env}"
+BUDGET_ENV_REAL="$(realpath -m -- "$BUDGET_ENV" 2>/dev/null)" || BUDGET_ENV_REAL=""
+case "${BUDGET_ENV_REAL:-/dev/null}" in
+  "$HERE"/*) : ;;
+  *) echo "scratch_guard: refusing an out-of-tree constants file: $BUDGET_ENV" >&2
+     echo "               only files under $HERE/ may set the byte thresholds." >&2
+     exit 3 ;;
+esac
 if [ ! -r "$BUDGET_ENV" ]; then
   echo "scratch_guard: constants file not readable: $BUDGET_ENV" >&2
   exit 3
 fi
+# The file must hold LITERAL values. `KTG_X="${KTG_X:-default}"` would re-open exactly the
+# environment channel this guard closes, so such a file is refused rather than sourced.
+if grep -Eq '^[[:space:]]*KTG_[A-Z0-9_]+=[^#]*\$\{' -- "$BUDGET_ENV"; then
+  echo "scratch_guard: constants file is not literal: $BUDGET_ENV" >&2
+  echo "               a KTG_* assignment contains a \${...} indirection; write byte" >&2
+  echo "               integers and the root path literally." >&2
+  exit 3
+fi
 # shellcheck source=budget.env
 . "$BUDGET_ENV"
+# Sourcing overwrites any same-named environment variable, so from here on the thresholds,
+# the default projection and the default root are the FILE's, whatever the caller exported.
+FILE_ROOT="$KTG_SCRATCH_ROOT"
+FILE_PROJECTED="$KTG_CYCLE_PROJECTED_BYTES"
+for _v in KTG_SCRATCH_HARD_BYTES KTG_CYCLE_PROJECTED_BYTES KTG_GROUP_FREE_FAIL_BYTES \
+          KTG_GROUP_FREE_WARN_BYTES; do
+  eval "_val=\${$_v-}"
+  case "${_val:-}" in
+    ''|*[!0-9]*) echo "scratch_guard: $_v is not a byte integer in $BUDGET_ENV: '${_val:-}'" >&2
+                 exit 3 ;;
+  esac
+done
+case "$FILE_ROOT" in
+  /*) : ;;
+  *)  echo "scratch_guard: KTG_SCRATCH_ROOT in $BUDGET_ENV is not an absolute path: '$FILE_ROOT'" >&2
+      exit 3 ;;
+esac
 
 QUOTAS_BIN="${KTG_QUOTAS_BIN:-/apps/helpers/quotas.py}"
-PROJECTED="$KTG_CYCLE_PROJECTED_BYTES"
-ROOT="$KTG_SCRATCH_ROOT"
+# Defaults come from the file and from nowhere else; only an explicit argument moves them.
+PROJECTED="$FILE_PROJECTED"
+ROOT="$FILE_ROOT"
+ROOT_EXPLICIT=0
 LABEL=""
 QUIET=0
 
 while [ $# -gt 0 ]; do
   case "$1" in
     --projected-bytes) PROJECTED="${2:-}"; shift 2 ;;
-    --root)            ROOT="${2:-}";      shift 2 ;;
+    --root)            ROOT="${2:-}"; ROOT_EXPLICIT=1; shift 2 ;;
     --label)           LABEL="${2:-}";     shift 2 ;;
     --quiet)           QUIET=1;            shift ;;
-    -h|--help)         sed -n '2,25p' "${BASH_SOURCE[0]}"; exit 0 ;;
+    -h|--help)         sed -n '2,/^$/p' "${BASH_SOURCE[0]}" | sed -n '/^#/p'; exit 0 ;;
     *) echo "scratch_guard: unknown argument '$1'" >&2; exit 3 ;;
   esac
 done
@@ -85,6 +174,11 @@ STAMP="$(date -Iseconds)"
 echo "== scratch_guard $STAMP ${LABEL:+[$LABEL]} =="
 echo "constants            : $BUDGET_ENV"
 echo "root                 : $ROOT"
+# A re-scoped run must never pass unremarked in a cycle log: --root is caller control, but
+# it is announced next to the root the constants file names.
+if [ "$ROOT_EXPLICIT" -eq 1 ] && [ "$ROOT" != "$FILE_ROOT" ]; then
+  echo "NOTE  measuring an OVERRIDDEN root: --root $ROOT (constants file root: $FILE_ROOT)"
+fi
 
 if [ ! -d "$ROOT" ]; then
   echo "scratch_guard: mission root does not exist: $ROOT" >&2
@@ -92,7 +186,44 @@ if [ ! -d "$ROOT" ]; then
 fi
 
 # --- 1. mission-root usage ---------------------------------------------------
-DU_LINE="$(du -sb "$ROOT" 2>/dev/null)" || { echo "scratch_guard: du -sb failed on $ROOT" >&2; exit 3; }
+# `du -sb` exits non-zero when an entry disappears from under it, which happens routinely on
+# a live mission root (a shuffle renaming its .tmp, a job unlinking a scratch file). One such
+# sample used to be read as "cannot measure", so the guard exited 3 and a healthy cycle was
+# aborted - observed here as an intermittent failure of contract case D, root-caused to
+# "du -sb failed on <root>" with no other change to the tree.
+#
+# The retry does NOT soften the measurement. A non-zero du is never trusted, not even when
+# it printed a partial total: a partial total is an UNDER-count (a directory it could not
+# read is simply missing from the sum) and accepting one would let an unreadable subtree
+# hide usage from the cap. Only an exit-0 du is used. A root that keeps failing still
+# exits 3, exactly as before - contract case T holds an unreadable subdirectory, so du
+# fails on every attempt AND prints a partial total, and the guard must still refuse.
+DU_ATTEMPTS="${KTG_DU_ATTEMPTS:-3}"
+DU_RETRY_SLEEP="${KTG_DU_RETRY_SLEEP:-2}"
+case "$DU_ATTEMPTS" in ''|*[!0-9]*|0) echo "scratch_guard: KTG_DU_ATTEMPTS must be a positive integer, got '$DU_ATTEMPTS'" >&2; exit 3 ;; esac
+case "$DU_RETRY_SLEEP" in ''|*[!0-9]*) echo "scratch_guard: KTG_DU_RETRY_SLEEP must be a non-negative integer, got '$DU_RETRY_SLEEP'" >&2; exit 3 ;; esac
+DU_LINE=""
+DU_ERR=""
+DU_OK=0
+DU_N=0
+while [ "$DU_N" -lt "$DU_ATTEMPTS" ]; do
+  DU_N=$((DU_N + 1))
+  DU_ERRFILE="$(mktemp)" || { echo "scratch_guard: cannot create a temp file" >&2; exit 3; }
+  if DU_LINE="$(du -sb "$ROOT" 2>"$DU_ERRFILE")"; then DU_OK=1; fi
+  DU_ERR="$(tr '\n' ' ' < "$DU_ERRFILE" | cut -c1-300)"
+  rm -f -- "$DU_ERRFILE"
+  [ "$DU_OK" -eq 1 ] && break
+  DU_LINE=""
+  echo "scratch_guard: WARNING du -sb attempt $DU_N/$DU_ATTEMPTS on $ROOT exited non-zero; its partial total is discarded${DU_ERR:+ ($DU_ERR)}" >&2
+  if [ "$DU_N" -lt "$DU_ATTEMPTS" ]; then sleep "$DU_RETRY_SLEEP"; fi
+done
+if [ "$DU_OK" -ne 1 ]; then
+  echo "scratch_guard: du -sb failed on $ROOT after $DU_ATTEMPTS attempts${DU_ERR:+: $DU_ERR}" >&2
+  exit 3
+fi
+if [ "$DU_N" -gt 1 ]; then
+  echo "scratch_guard: NOTE du -sb succeeded on attempt $DU_N/$DU_ATTEMPTS (entries were changing under the walk)"
+fi
 USED="$(printf '%s' "$DU_LINE" | cut -f1)"
 case "$USED" in
   ''|*[!0-9]*) echo "scratch_guard: could not parse du output: '$DU_LINE'" >&2; exit 3 ;;

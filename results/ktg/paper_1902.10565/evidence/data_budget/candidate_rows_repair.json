@@ -1,0 +1,120 @@
+{
+  "note": "Candidate rows staged by the WORKER for an INDEPENDENT VALIDATOR after repairing obligation o28_data_budget_guard_repairs. Nothing here is admitted. The worker appended only error-ledger rows; per pipelines/2-work/spec.md the refuter must attempt rejection and the judge admits by running the ledger append.",
+  "packet": "arxiv-1902.10565::data_budget",
+  "obligation_repaired": "o28_data_budget_guard_repairs",
+  "repair_evidence": "results/ktg/paper_1902.10565/evidence/data_budget/repair_o28.txt",
+  "validator_record_repaired_against": "results/ktg/paper_1902.10565/evidence/data_budget/validation.md",
+
+  "candidate_claim_transitions": [
+    {
+      "paper": "arxiv-1902.10565",
+      "entry_id": "o28_data_budget_guard_repairs",
+      "kind": "obligation",
+      "statement": "Repair two defects the validator found in the data_budget guard before it is wired into the loop: (1) prune_retention.py load_budget (prune_retention.py:81-83) does not resolve the quoted ${VAR:-default} form, so `python3 prune_retention.py` without --root exits 3 on root '${KTG_SCRATCH_ROOT:-...}' and the call contract written in the scratch_guard.sh header (python3 $PRUNE --apply; python3 $PRUNE --apply --target-bytes 536870912000) never prunes - fix the parser or make the contract pass --root, and add a test; (2) KTG_SCRATCH_ROOT / --root, KTG_CYCLE_PROJECTED_BYTES and KTG_BUDGET_ENV are environment- or caller-selectable, so an empty root or a zero projection passes a 529312333000 B projection and a loose KTG_BUDGET_ENV file raises the cap to 99999999999999 B while contract case C tests only KTG_SCRATCH_HARD_BYTES - pin them in the guard or have the wrapper pass --root and --projected-bytes explicitly and assert the printed constants path equals codes/data_budget/budget.env, and add contract cases for each. Closes by a result row that lifts data-budget-guard-500gib from conditional.",
+      "status": "discharged",
+      "blocking": false,
+      "owner": "worker data_budget",
+      "node_ids": ["arxiv-1902.10565::data_budget"],
+      "dependencies": ["o04_scratch_budget", "o27_scratch_guard_reconcile_500gib", "data-budget-guard-500gib"],
+      "task_id": "data_budget",
+      "discharged_by": "results/ktg/paper_1902.10565/evidence/data_budget/repair_o28.txt",
+      "notes": "Worker repair 2026-09-04, verbatim record results/ktg/paper_1902.10565/evidence/data_budget/repair_o28.txt. WHAT WAS DONE, per defect. (1) Parser: load_budget now strips the surrounding quote BEFORE matching the shell-default form and drops an inline trailing comment after the closing quote - testing val.startswith('${') on the still-quoted string was the whole defect. It resolves ${NAME:-default} to the FILE's default branch and deliberately does not consult os.environ, so the fix cannot be used as a new environment channel. `python3 prune_retention.py` with no --root now dry-runs the mission root /scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train (contract case S1), which is exactly the call written in the scratch_guard.sh header; the header contract was left calling the pruner without --root and now matches what works. (2) Vector decisions. PINNED: budget.env and the three fixtures now hold literal values, so sourcing overwrites any exported KTG_SCRATCH_ROOT or KTG_CYCLE_PROJECTED_BYTES (cases L, P); the guard REFUSES a constants file that does not resolve inside its own directory, which closes the loose-KTG_BUDGET_ENV vector (cases N1/N2); the guard also refuses an in-tree constants file whose KTG_* assignments contain a ${...} indirection, so the file cannot be rewritten into a form that re-opens the environment channel (case O). DOCUMENTED AS CALLER CONTROL, stated in the scratch_guard.sh header and in the amended claim: --projected-bytes N (that is the guard's input; --projected-bytes 0 does make the projection 0, case M), --root DIR (a re-scoped run now prints a NOTE naming the constants file's root so it cannot pass unremarked in a cycle log, case Q), and KTG_QUOTAS_BIN (it cannot LOOSEN anything because the guard takes min(quotas.py, df -B1): a fake reporter claiming 99999.00 TB free is discarded in favour of live df and the group floor still aborts, case R). The pruner takes the same out-of-tree refusal on --budget-env / KTG_BUDGET_ENV (case S4) and ignores an exported KTG_SCRATCH_ROOT (case S3). Contract now 25/25 (11 pre-existing A-K unchanged + 12 new o28 cases + 2 cases T1/T2 for a second defect found while repairing, below). Every new negative case is paired with a positive control that takes the other branch, so none can pass without reaching its assertion. ADDITIONALLY, a second defect surfaced while running the repaired contract and is fixed in the same change: a single non-zero `du -sb` (an entry vanishing from under the walk on a live mission root) was read as 'cannot measure', so scratch_guard.sh exited 3 and would have aborted a healthy production cycle. A non-zero du is now retried (KTG_DU_ATTEMPTS, default 3, KTG_DU_RETRY_SLEEP 2 s) in both scratch_guard.sh and prune_retention.py rolling mode, and its partial total is still discarded because a partial total under-counts; a persistently unreadable root still exits 3 (cases T1/T2). NOT closed by this row, and still open: o27_scratch_guard_reconcile_500gib (the loop wrapper does not call the guard; owner loop_resume_under_walltime) and the absence of any production cycle log - which is why the amended result row below stays at conditional rather than empirical."
+    }
+  ],
+
+  "candidate_amended_result_row": {
+    "paper": "arxiv-1902.10565",
+    "result_id": "data-budget-guard-500gib",
+    "task_id": "data_budget",
+    "node_ids": ["arxiv-1902.10565::data_budget"],
+    "iteration": 7,
+    "name": "500 GiB mission-scratch guard with a group free-space floor and bounded rolling retention",
+    "working_context": {
+      "cluster": "skipjack login03 (CPU only; no GPU job was submitted for this node, its validation or this repair)",
+      "mission_root": "/scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train",
+      "units": "bytes, binary GiB (1 GiB = 2**30 B); quotas.py reports DECIMAL TB and is converted as such",
+      "regime": "pre-loop: the mission root holds venv and build only, no selfplay data exists yet; the guard has refused no production cycle and the pruner has deleted no production data",
+      "constants": {
+        "hard_cap_bytes": 536870912000,
+        "default_cycle_projection_bytes": 21474836480,
+        "effective_soft_cap_bytes": 515396075520,
+        "group_free_fail_bytes": 1099511627776,
+        "group_free_warn_bytes": 1649267441664
+      },
+      "authority": "mission.json decisions[] 2026-09-03 (human): scratch budget for selfplay data + checkpoints = 500 GiB"
+    },
+    "claim": "codes/data_budget/scratch_guard.sh refuses, with a non-zero exit, any cycle whose declared projected write would take du -sb of the measured root past 536870912000 B (exit 1) or that would start while group scratch free space, taken as min(quotas.py, df -B1), is below 1099511627776 B (exit 2). Its byte thresholds, its default per-cycle projection and its default root come only from a constants FILE that must resolve inside the guard's own directory and must hold literal values; a file elsewhere, or an in-tree file containing a ${...} indirection, is refused with exit 3. In consequence no environment variable can loosen the guard: KTG_SCRATCH_HARD_BYTES, KTG_SCRATCH_ROOT, KTG_CYCLE_PROJECTED_BYTES and KTG_BUDGET_ENV are each demonstrated inert, and KTG_QUOTAS_BIN cannot raise the measured free space because the guard takes the minimum with live df. What remains caller control, by design and stated in the guard's own header: --projected-bytes N (the caller declares the bytes its cycle will write; 0 means 0) and --root DIR (a root differing from the constants file's is announced with a NOTE line in the cycle log). A `du -sb` that exits non-zero - routine when an entry vanishes from under the walk on a live root - is retried rather than read as 'cannot measure', but its partial total is never used, because a partial total under-counts and an unreadable subtree would otherwise hide usage from the cap; a root that keeps failing still exits 3. codes/data_budget/prune_retention.py, called with no --root exactly as the guard's header contract writes it, resolves the mission root from the same constants file and bounds retention to longterm_checkpoints <= 6, rejectedmodels <= 10, selfplay <= 3 generations, scripts/dated <= 3 and shuffleddata <= 3 windows older than 2 h, sweeps orphan .tmp windows, prints its protected set before any path becomes a candidate, is dry-run unless --apply, and in --target-bytes rolling mode never drops below one shuffle window plus one selfplay generation nor removes a generation newer than the oldest retained window. Measured on login03 the mission root is 7.56e9 B, far under the cap. Everything here is measured on the guard artefacts (a 25-case fixture-driven exit-code contract in which every negative case is paired with a positive control, synthetic retention trees, pre-loop du); production behaviour is still not measured, because no wrapper calls the guard yet.",
+    "evidence_type": "empirical_measurement",
+    "evidence": "results/ktg/paper_1902.10565/evidence/data_budget/repair_o28.txt",
+    "supporting_evidence": [
+      "results/ktg/paper_1902.10565/evidence/data_budget/closing_measurement.txt",
+      "results/ktg/paper_1902.10565/evidence/data_budget/guard_exit_contract.txt",
+      "results/ktg/paper_1902.10565/evidence/data_budget/retention_synthetic_test.txt",
+      "results/ktg/paper_1902.10565/evidence/data_budget/baseline_usage.txt",
+      "results/ktg/paper_1902.10565/evidence/data_budget/compute_budget_check.txt",
+      "results/ktg/paper_1902.10565/evidence/data_budget/validation.md"
+    ],
+    "verification": {
+      "command": "bash results/ktg/paper_1902.10565/codes/data_budget/tests/run_guard_tests.sh >/dev/null && bash results/ktg/paper_1902.10565/codes/data_budget/scratch_guard.sh --quiet >/dev/null && grep -q 'KTG_SCRATCH_HARD_BYTES=536870912000' results/ktg/paper_1902.10565/codes/data_budget/budget.env && grep -q 'KTG_GROUP_FREE_FAIL_BYTES=1099511627776' results/ktg/paper_1902.10565/codes/data_budget/budget.env && grep -q 'du -sb' results/ktg/paper_1902.10565/codes/data_budget/scratch_guard.sh && grep -q 'quotas.py' results/ktg/paper_1902.10565/codes/data_budget/scratch_guard.sh && python3 results/ktg/paper_1902.10565/codes/data_budget/prune_retention.py --root /scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train >/dev/null && test $(du -sb /scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train | cut -f1) -le 536870912000",
+      "timeout_s": 900
+    },
+    "verifier_result": {
+      "verdict": "pass",
+      "detail": "Worker repair run 2026-09-04 on login03 from the az root, verbatim in evidence/data_budget/repair_o28.txt: run_guard_tests.sh '== 25 passed, 0 failed ==' exit 0; the section-2 verification command run three times back to back, exit 0 each time; the validator's own probes ADV1-ADV5 re-run against the repaired tree. The unchanged section-2 command is intentional - it is the same command the validator executed, so the repair is measured on the criterion already on record.",
+      "metric": {"name": "guard_exit_contract_cases_matched", "value": 25, "threshold": 25, "pass": true}
+    },
+    "metrics": {
+      "guard_exit_contract_cases_matched": {"value": 25, "threshold": 25, "pass": true},
+      "validator_loosening_vectors_closed": {"value": 3, "threshold": 3, "pass": true},
+      "validator_loosening_vectors_documented_as_caller_control": {"value": 3, "threshold": 3, "pass": true},
+      "du_sb_mission_root_bytes": {"value": 7566454734, "threshold": 536870912000, "pass": true}
+    },
+    "dependencies": ["arxiv-1902.10565::data_format_pos_len"],
+    "assumptions": [
+      "a05_9x9_only",
+      "a07_moves_per_game_80 (planning arithmetic only; no measured bytes/row is claimed here)",
+      "The 1 TiB group free-space floor is a design choice, not a measurement: it is 2x the mission's whole 500 GiB budget.",
+      "quotas.py reports DECIMAL TB (40.00 TB matches the 40000000000000 B pool df reports), is rounded to 0.01 TB and refreshed hourly; the guard takes min(quotas.py, df -B1). Conservative in the direction that matters: a stale-low quotas.py can only refuse spuriously, and a fast fill is caught by live df.",
+      "CONDITION (remains): the loop wrapper actually invokes scratch_guard.sh before every cycle and aborts on any non-zero exit. Nothing in this row measures that; it is o27_scratch_guard_reconcile_500gib, owned by loop_resume_under_walltime.",
+      "CONDITION (remains): the wrapper passes an HONEST --projected-bytes. The guard pins the file default against the environment but cannot audit a figure the caller declares; --projected-bytes 0 is accepted as caller control and is recorded as such.",
+      "CONDITION (remains): the guard's own directory is trusted. The allow-list makes the constants file un-swappable from outside that directory; a writer who can modify budget.env in the repo can still change the constants, which is a git-reviewed change, not an environment variable.",
+      "RETIRED BY THIS REPAIR: the validator's conditions that KTG_SCRATCH_ROOT / KTG_CYCLE_PROJECTED_BYTES / KTG_BUDGET_ENV must not be exported to other values, and that the wrapper must pass --root to prune_retention.py. Contract cases L, P, N1/N2, O, S1-S4 demonstrate each."
+    ],
+    "status": "conditional",
+    "status_rationale": "Still conditional, not empirical, and the worker does not propose otherwise: o27 is open (no wrapper calls the guard) and no production cycle log exists, so the protective content of the claim has been exercised only against fixtures and synthetic trees. o28 being discharged removes two of the validator's four listed conditions but not the two that gate the empirical upgrade.",
+    "provenance": {
+      "task_id": "data_budget",
+      "node_id": "arxiv-1902.10565::data_budget",
+      "code": [
+        "results/ktg/paper_1902.10565/codes/data_budget/budget.env",
+        "results/ktg/paper_1902.10565/codes/data_budget/scratch_guard.sh",
+        "results/ktg/paper_1902.10565/codes/data_budget/prune_retention.py",
+        "results/ktg/paper_1902.10565/codes/data_budget/tests/run_guard_tests.sh",
+        "results/ktg/paper_1902.10565/codes/data_budget/tests/fixture_legacy_shellform.env"
+      ],
+      "ref_code": "ref-code/lightvector-KataGo @ v1.18.2 = fd0723fdbc0e9d82cf269c9630af8c27c57c07c4",
+      "upstream_lines_read": [
+        "python/selfplay/cleanup_old_dirs.py:11-25",
+        "python/selfplay/shuffle.sh:105,111-113",
+        "python/train.py:573-578,1882-1889"
+      ],
+      "host": "login03",
+      "staged_by": "worker (repair candidate; supersedes the o28 conditions on row hash 5cf754db629df666f97e1e5596da536cb4eb4b35f795c31ea5feda1af7a007a6)",
+      "actor_role": "worker"
+    },
+    "open_obligations": [
+      "o04_scratch_budget conjunct (b) [BLOCKING], tracked as o27_scratch_guard_reconcile_500gib (owner loop_resume_under_walltime): codes/loop/loop.sbatch:74-75,195 and synchronous_loop_9x9.sh:190-191 still carry 200/180 GiB literals (214748364800 / 193273528320) and their own du/quotas block instead of calling scratch_guard.sh. Not touched by this repair: another worker holds codes/loop/ in the same wave.",
+      "The 20 GiB default per-cycle projection is a placeholder until measure_stage_throughput reports measured bytes/row on real 9x9 tdata.",
+      "The retention bounds 6 / 10 / 3 / 3 are design choices, not measurements.",
+      "prune_retention.py --apply has been exercised only on synthetic trees (worker's, validator's, and this repair's regression tree); it has never deleted real loop data.",
+      "Status upgrade to empirical still requires o27 discharged and at least one production cycle log showing the guard triple and exit code."
+    ],
+    "notes": "Amended after obligation o28_data_budget_guard_repairs was repaired. Changes from the row admitted by the validator at 2026-09-04T04:14:40Z: the claim now states positively what is pinned (constants file location, literal-value form, thresholds, default root, default projection) and what is caller control (--projected-bytes, --root, KTG_QUOTAS_BIN under min()); the pruner clause no longer requires --root; the metric rises from 11/11 to 25/25 contract cases; two of the validator's four conditions are retired with named contract cases; status stays conditional. Evidence: results/ktg/paper_1902.10565/evidence/data_budget/repair_o28.txt. Section 4 of that file records a SECOND defect found while repairing and root-caused from tool output: scratch_guard.sh took one sample of `du -sb`, and du exits non-zero when an entry disappears from under its walk, so a healthy cycle was aborted at exit 3 ('cannot measure') - caught as an intermittent FAIL of contract case D and, earlier, as an unexplained exit 1 of the section-2 command. Fixed by retrying a non-zero du (KTG_DU_ATTEMPTS, default 3) in both the guard and the pruner's rolling mode, while still discarding any partial total, so the measurement is not softened; cases T1/T2 pin both halves. Also hardened: run_guard_tests.sh sweeps a stale raised-cap probe file out of the guard's allow-listed directory at startup as well as on exit. The worker did NOT append this row."
+  },
+
+  "not_proposed": [
+    "No knowledge-node promotion for arxiv-1902.10565::data_budget: o04 conjunct (b) / o27 is still unmet by another node, so a solid promotion would be premature.",
+    "No result-, claim- or knowledge-ledger append was made by the worker for this repair. Only error-ledger rows were appended.",
+    "No status upgrade beyond conditional is proposed."
+  ]
+}
