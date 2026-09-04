@@ -1,7 +1,7 @@
 {
   "task_id": "production_chain_9x9",
   "paper": "arxiv-1902.10565",
-  "job_id": 299461,
+  "job_id": 301099,
   "job_name": "ktg-loop",
   "link": 1,
   "chain": {
@@ -9,18 +9,19 @@
     "link_walltime": "23:30:00",
     "chain_depth_at_submit": 0,
     "successor_policy": "sbatch --dependency=afterany issued at the top of each link body; resubmit() passes no --time, so SBATCH_TIMELIMIT=23:30:00 (propagated by --export=ALL) is what holds the new link length for every successor",
-    "total_gpu_days": "9 links x 23.5 h = 8.81 GPU-days (the 3 x 71.5 h = 8.94 the plan budgeted)"
+    "total_gpu_days": "9 links x 23.5 h = 8.81 GPU-days (the 3 x 71.5 h = 8.94 the plan budgeted)",
+    "KTG_PARTITIONS": "b300 b200,l40s -- successors try b300 first and take it only when it truly has a free GPU, else the b200,l40s set; propagated by --export=ALL (loop.sbatch:287,292)"
   },
-  "sbatch_command_line": "BASEDIR=/scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/runs/p1 KTG_MAX_CHAIN=9 KTG_MON_PS_INTERVAL=1 KTG_MON_GPU_INTERVAL=5 SBATCH_TIMELIMIT=23:30:00 sbatch --time=23:30:00 results/ktg/paper_1902.10565/codes/loop/loop.sbatch",
-  "submit_line_slurm_recorded": "sbatch --time=23:30:00 results/ktg/paper_1902.10565/codes/loop/loop.sbatch",
-  "submitted_at": "2026-09-04T10:40:24-04:00",
+  "sbatch_command_line": "BASEDIR=/scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/runs/p1 KTG_MAX_CHAIN=9 KTG_MON_PS_INTERVAL=1 KTG_MON_GPU_INTERVAL=5 SBATCH_TIMELIMIT=23:30:00 KTG_PARTITIONS=\"b300 b200,l40s\" sbatch --time=23:30:00 --partition=b200,l40s results/ktg/paper_1902.10565/codes/loop/loop.sbatch",
+  "submit_line_slurm_recorded": "sbatch --time=23:30:00 --partition=b200,l40s results/ktg/paper_1902.10565/codes/loop/loop.sbatch",
+  "submitted_at": "2026-09-04T17:18:56-04:00",
   "submitted_from": {
     "host": "login03",
     "cwd": "/weka/home/schmidt/ssci-haiyangw/az",
     "clean_shell": true
   },
   "allocation": {
-    "partition": "b200",
+    "partition": "b200,l40s (requested); link 1 scheduled onto gl111 (l40s)",
     "nodes": 1,
     "gres": "gpu:1",
     "cpus_per_task": 32,
@@ -44,15 +45,15 @@
     }
   },
   "basedir": "/scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/runs/p1",
-  "stdout_log": "/scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/logs/loop-299461.log",
-  "git_head": "272b887986d015ca432c72580df4d46addebb959",
+  "stdout_log": "/scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/logs/loop-301099.log",
+  "git_head": "2c8910764c53509dc97bb8633e9e4fcb921c901c",
   "git_head_subject": "fix(eval,ktg): bin a full search at Root visits == maxVisits, not > cheap",
   "knobs_sha256": "5ae5358791974ae12dd2e635aa38b825637faf23e1963dae1d96f146fd266d62",
   "artifact_sha256": {
     "codes/loop/knobs_9x9.env": "5ae5358791974ae12dd2e635aa38b825637faf23e1963dae1d96f146fd266d62",
-    "codes/loop/loop.sbatch": "0a03fbb230cc288f698da846d1f2619c97bc4963ead833e36b1c2c651358f389",
+    "codes/loop/loop.sbatch": "8e394116f7efdab6053ff1a058cc04c819bcc01e20f5107fceaff84f8ed51a81",
     "codes/loop/synchronous_loop_9x9.sh": "b5acb1d8ad1a313f8bd439076d0e61598d18f6c7ff7647a6eab672edad3d65f5",
-    "codes/loop/train_9x9.sh": "02bfbcb5fcb20f04f8efb16a4ac465ae286806777ddba9bdba1c5c0afc41c3f5",
+    "codes/loop/train_9x9.sh": "a040a0e49d0ef82e3fa1069f9117cbc2e4415ab932cb63ba12224c659dc58930",
     "codes/loop/export_model_for_selfplay_9x9.sh": "a1277ecb84ecaa4f5691176bdf14c192d9bb9cae2f09b36cab7079f7fb6ce694",
     "codes/eval/stage_monitor.sh": "c28ce54477c9d78494d67dbd436c64020a9963f6d8fac01b4e71fdf82a732dad",
     "codes/data_budget/scratch_guard.sh": "361ad2c06ae6995ea245036364d1265788178b5ca840e1f8a54e9f89245dad5e",
@@ -77,11 +78,13 @@
   },
   "queue_at_submit": {
     "state": "PENDING",
-    "reason": "Priority",
-    "priority": 18181,
-    "squeue_start_estimate": "2026-09-05T13:44:02 at +60 s, then N/A at 10:45 -- the re-link did NOT move the estimate off the same block",
-    "open": "1-day requests already in the queue (278230, 299353) are pinned to the same 2026-09-05T13:44:02 block, so 23:30:00 improves backfill eligibility without guaranteeing a same-day start; escalated as data",
-    "b200_free_gpus": "2/128",
+    "reason": "Resources",
+    "priority": 18199,
+    "squeue_start_estimate": "2026-09-04T21:54:14 (TODAY, ~4.6 h out)",
+    "sched_node": "gl111",
+    "improvement": "the b200-only 23:30 job (299461) had drifted to 2026-09-06T21:57; admitting l40s moved the start ~2 days earlier",
+    "b200_free_gpus": "13/128",
+    "l40s_free_gpus": "4/48",
     "b300_free_gpus": "0/8"
   },
   "superseded": {
@@ -99,17 +102,35 @@
     "export_ramp": "exports at cycles ~5, 10, 15, 19, 22 (the trainer consumes whole shuffled files, train.py:1303-1346,:1511, and shuffle.py writes ~70k-row files); first export at cycle 5 stands; no export at cycles 6-9 is NOT a fault",
     "o42": "non-blocking: after a SIGKILLed link a successor failing pre-flight before its own stage_monitor start would run stop on stale monitor.pids; escalate before the successor starts if any link ends SIGKILLed"
   },
-  "bounded_wait": {
-    "window": "2026-09-04T10:40:24 -> 2026-09-04T11:26:32 (45 min from the resubmission)",
-    "outcome": "the link never started; sacct 299461 -X -> PENDING, Elapsed 00:00:00, Start Unknown",
-    "start_estimate_trace": [
-      "+60 s: 2026-09-05T13:44:02 (Priority)",
-      "10:45: N/A",
-      "10:58 and 11:07: 2026-09-05T15:16:07 (Priority)",
-      "11:26: N/A, priority 18213"
-    ],
-    "basedir_created": false,
-    "link_log_created": false,
-    "first_monitoring_read": "not performed -- no first cycle log exists and the job has not run"
-  }
+  "superseded_chain": [
+    {
+      "job_id": 299461,
+      "reason": "cancelled to re-submit multi-partition after both l40s blockers cleared; never allocated",
+      "sacct": "CANCELLED+ Elapsed 00:00:00 Start None End 2026-09-04T17:18:39",
+      "classification": "NOTICE, not a link end"
+    }
+  ],
+  "l40s_runnability": {
+    "settled_by": "job 300987 on gl111, evidence/env/l40s-300987.txt, commit 4db08ae",
+    "device": "NVIDIA L40S, 8.9",
+    "runtests": "exit 0",
+    "benchmark_visits_per_s": 2401.88,
+    "b200_reference_visits_per_s": 2322.17,
+    "no_kernel_image_occurrences": 0,
+    "torch": "2.11.0+cu128 cuda 12.8 cudnn 91900, forward/backward OK",
+    "binary_unchanged": "katago sha256 4d2bbed4... before and after; sm_89 ELF/PTX 0/0 -- the sm_86 cubin loads on sm_89, measured not inferred"
+  },
+  "l40s_cpu_constraint": {
+    "finding": "on l40s the CPUs bind, not the GPUs -- the 32-CPU request waits even where a GPU is idle",
+    "nodes": {
+      "gl105": "cpus_free=7 gpus_free=2",
+      "gl111": "cpus_free=6 gpus_free=2 (SchedNodeList)",
+      "gl106": "cpus_free=9 gpus_free=0",
+      "gl107": "cpus_free=4 gpus_free=0",
+      "gl112": "cpus_free=5 gpus_free=0",
+      "gl110": "cpus_free=68 gpus_free=4 but MIXED+DRAIN"
+    },
+    "action": "reported, not tuned -- KTG_CPUS_PER_TASK is a validated knob (o39; T4 worst stage 28 <= 32) and loop.sbatch exits 2 on a mismatched grant"
+  },
+  "throughput_caveat": "the 3.11 h/cycle projection and the cycles-per-link arithmetic were derived on B200 (298712, 299259); an l40s link may be slower. chain_status.sh and the section 11 abort table must not escalate on slow cycles alone, and every P8 rate must record its partition."
 }

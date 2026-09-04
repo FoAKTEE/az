@@ -736,3 +736,230 @@ $ squeue -j 299461 -o '%.10i %.8T %.12l %.20S %R'
   slipped again (2026-09-05T13:44 -> 15:16 -> 2026-09-06T17:09), which
   strengthens rather than weakens the case for the l40s move.
 ==============================================================================
+
+==============================================================================
+(R7) BLOCKERS CLEARED -- pre-flight re-run for the multi-partition submission
+     2026-09-04T17:17:25-04:00
+==============================================================================
+
+--- blocker 1 closed by measurement (evidence/env/l40s-300987.txt, commit 4db08ae)
+
+########## SUMMARY ##########
+device                     : NVIDIA L40S, 8.9
+katago sha256 before       : 4d2bbed4de859598109d7fcec3665304312bed62d0c441fd1cbbfd0f43020550
+katago sha256 after        : 4d2bbed4de859598109d7fcec3665304312bed62d0c441fd1cbbfd0f43020550
+sm_89 ELF images  before/after : 0 / 0
+sm_89 PTX images  before/after : 0 / 0
+phase A legs_failed        : 0
+phase A visits/s (1 thread): 2401.88   (B200 reference 2322.17)
+phase A no-kernel-image    : 0
+rebuild triggered          : 0 
+  runtests exit 0; benchmark 2401.88 visits/s against the B200 reference 2322.17;
+  'no kernel image is available' occurrences = 0; torch 2.11.0+cu128 forward/backward
+  OK; katago sha256 identical before and after, sm_89 images still 0/0. The sm_86
+  cubin does load on sm_89, measured rather than inferred.
+
+--- blocker 2 closed by repair (commit 4c30b00, evidence/loop_resume/repair_partitions.txt)
+$ sed -n '/^pick_partition/,/^}/p' codes/loop/loop.sbatch
+pick_partition() {
+    local p free last=""
+    # deliberate word splitting: this is a list, not one word.
+    # shellcheck disable=SC2086
+    for p in $KTG_PARTITIONS; do
+        last="$p"
+        free=$(sinfo -p "$p" -N -h -o "%N" 2>/dev/null | sort -u | while read -r n; do
+            info=$(scontrol show node "$n" 2>/dev/null)
+            st=$(grep -oP 'State=\K\S+' <<<"$info")
+            a=$(grep -oP 'AllocTRES=.*?gres/gpu=\K\d+' <<<"$info"); a=${a:-0}
+            case "$st" in *RESERVED*|*DRAIN*|*DOWN*|*MAINT*) echo 0 ;; *) echo $((8-a)) ;; esac
+        done | awk '{s+=$1} END{print s+0}')
+        if [ "${free:-0}" -ge "$REQ_GPUS" ]; then echo "$p"; return 0; fi
+    done
+    echo "${last:-b200}"
+}
+$ grep -n 'KTG_PARTITIONS=' codes/loop/loop.sbatch
+287:KTG_PARTITIONS="${KTG_PARTITIONS:-b300 b200}"
+  candidates are tried in order, a candidate may itself be a comma set, the
+  fallback is now the LAST candidate rather than a hard-coded b200, and
+  --export=ALL hands the variable to every successor. [A validator is checking
+  this repair concurrently.]
+
+------------------------------------------------------------------------------
+(1) identity
+------------------------------------------------------------------------------
+$ git rev-parse HEAD
+2c8910764c53509dc97bb8633e9e4fcb921c901c
+$ sha256sum codes/loop/loop.sbatch   [expected 8e394116...]
+8e394116f7efdab6053ff1a058cc04c819bcc01e20f5107fceaff84f8ed51a81  results/ktg/paper_1902.10565/codes/loop/loop.sbatch
+$ sha256sum codes/loop/knobs_9x9.env  [must be unchanged: 5ae53587...]
+5ae5358791974ae12dd2e635aa38b825637faf23e1963dae1d96f146fd266d62  results/ktg/paper_1902.10565/codes/loop/knobs_9x9.env
+$ git status --porcelain -- results/ktg/paper_1902.10565/codes
+  lines: 0
+$ bash -n codes/loop/loop.sbatch
+  exit 0
+
+------------------------------------------------------------------------------
+(2) knobs, policy, storage, shell, BASEDIR
+------------------------------------------------------------------------------
+$ python3 codes/eval/check_knobs_9x9.py  [tail]
+  ok   EPOCHS_PER_EXPORT            loop default 5 == derived 5
+
+CHECK_KNOBS_9X9: PASS
+  exit 0
+
+$ bash "$POLICY_CHECK" --gpus 1 --cpus 32 --partition b200,l40s
+== compute-budget self-check  2026-09-04T17:17:25-04:00 ==
+my jobs      : gpus=2 cpus=48  (2 jobs)
+partition b200 : free_gpus=13/128 (excludes reserved/drained nodes)
+partition b300 : free_gpus=0/8 (excludes reserved/drained nodes)
+partition l40s : free_gpus=4/48 (excludes reserved/drained nodes)
+reservations : 9 defined (6 active) — scontrol show reservation
+quota        : | /home/ssci-haiyangw/ | 4.02 GB  | 100.00 GB |  4.02%   |
+quota        : | /scratch/ssci-anima/ | 33.63 TB |  40.00 TB |   84%    |
+OK           : request gpus=1 cpus=32 part=b200,l40s within policy (gpu<=4, no cpu cap)
+  exit 0
+
+$ bash codes/data_budget/scratch_guard.sh --label preflight-multipartition  [tail]
+group scratch free   : 6369999999999 B   (source: quotas.py; fail floor 1099511627776 B, warn floor 1649267441664 B)
+scratch_guard: OK  used=7897700435 B  projected_total=29372536915 B  group_free=6369999999999 B
+  exit 0
+$ env | grep -c '^KTG_\|^BASEDIR\|^OMP_\|^MKL_\|^SBATCH_'
+0
+$ test ! -e $KTG_ROOT/runs/p1
+  exit 0 -- BASEDIR still absent
+
+------------------------------------------------------------------------------
+(3) KTG_STAGE_ONLY=1 dry run -- byte-identical to the 10:00 run modulo the
+    timestamped archive directory
+------------------------------------------------------------------------------
+pos_len check: 0 npz (loop start) -- nothing new to verify
+KTG_STAGE_ONLY=1 -- archive staged at /weka/scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/runs/p1_dryrun/scripts/dated/20260904-171748, no cycle run.
+-rwxr-xr-x 1 ssci-haiyangw users 27273864 Sep  4 17:17 /weka/scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/runs/p1_dryrun/scripts/dated/20260904-171748/bin/katago
+-rwxr-xr-x 1 ssci-haiyangw users     9264 Sep  4 17:17 /weka/scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/runs/p1_dryrun/scripts/dated/20260904-171748/export_model_for_selfplay_9x9.sh
+-rw-r--r-- 1 ssci-haiyangw users     4704 Sep  4 17:17 /weka/scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/runs/p1_dryrun/scripts/dated/20260904-171748/gatekeeper.cfg
+-rw-r--r-- 1 ssci-haiyangw users     9786 Sep  4 17:17 /weka/scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/runs/p1_dryrun/scripts/dated/20260904-171748/selfplay.cfg
+-rwxr-xr-x 1 ssci-haiyangw users     5021 Sep  4 17:17 /weka/scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/runs/p1_dryrun/scripts/dated/20260904-171748/train_9x9.sh
+exit 0
+
+  normalised comparison against the 10:00:23 run (archive timestamp masked):
+  normalised md5 = 4c2a98e0e90a407a9eb8e926c77aac4f  -
+pos_len check: 0 npz (loop start) -- nothing new to verify
+KTG_STAGE_ONLY=1 -- archive staged at /weka/scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/runs/p1_dryrun/scripts/dated/<TS>, no cycle run.
+  both lines are identical to the 10:00 run recorded in section (7) above.
+  throwaway BASEDIR removed: yes
+  STEP: PASS
+
+------------------------------------------------------------------------------
+(4) new silent-override channels audited (they reach the chain via --export=ALL)
+------------------------------------------------------------------------------
+Since 272b887 the 7x7 parameterisation (9e77d0d, 3df0fe6) added environment
+variables that the 9x9 production loop now expands. train_9x9.sh grew 3965 ->
+5021 bytes; its only functional lines are:
+    -pos-len "${KTG_POS_LEN:-9}"      (unset -> the literal 9, as before)
+    $KTG_TRAIN_EXTRA_ARGS              (unset -> word-splits to nothing)
+synchronous_loop_9x9.sh has NO non-comment change over the same range.
+So the dry run IS byte-identical in behaviour; only the staged file's size moved.
+
+$ for v in KTG_POS_LEN KTG_TRAIN_EXTRA_ARGS KTG_PRINT_EVERY KTG_T KTG_ONE_CYCLE \
+           KTG_MAX_FAILS KTG_MIN_RUNTIME_SECONDS; do ...; done   [all must be unset]
+  KTG_POS_LEN                unset  OK
+  KTG_TRAIN_EXTRA_ARGS       unset  OK
+  KTG_PRINT_EVERY            unset  OK
+  KTG_T                      unset  OK
+  KTG_ONE_CYCLE              unset  OK
+  KTG_MAX_FAILS              unset  OK
+  KTG_MIN_RUNTIME_SECONDS    unset  OK
+  none is set, so the chain inherits the shipped defaults for all of them.
+
+------------------------------------------------------------------------------
+(5) NOTICE: cancel 299461 (never allocated -- this is not a link end)
+------------------------------------------------------------------------------
+$ squeue -j 299461 -o '%.10i %.8T %.12l %.20S %R'
+     JOBID    STATE   TIME_LIMIT           START_TIME NODELIST(REASON)
+    299461  PENDING     23:30:00  2026-09-06T21:57:53 (Priority)
+$ scancel 299461
+  exit 0
+$ sacct -j 299461 -X -n -o JobID,State,Elapsed,Start,End
+299461       CANCELLED+   00:00:00                None 2026-09-04T17:18:39 
+$ test ! -e $KTG_ROOT/runs/p1  &&  ls $KTG_ROOT/logs/loop-299461.log
+  runs/p1 absent -- the chain state was never created
+  ls: cannot access '/scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/logs/loop-299461.log': No such file or directory
+  NOTICE, not a link end: Elapsed 00:00:00, Start None, no log, no BASEDIR.
+
+------------------------------------------------------------------------------
+(6) SUBMISSION -- multi-partition, nine 23:30 links
+------------------------------------------------------------------------------
+$ BASEDIR=/scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/runs/p1 \
+    KTG_MAX_CHAIN=9 KTG_MON_PS_INTERVAL=1 KTG_MON_GPU_INTERVAL=5 \
+    SBATCH_TIMELIMIT=23:30:00 KTG_PARTITIONS="b300 b200,l40s" \
+    sbatch --time=23:30:00 --partition=b200,l40s \
+      results/ktg/paper_1902.10565/codes/loop/loop.sbatch
+[BILLING] loaded!
+[BILLING] Re-emitting cost at job start!
+Submitted batch job 301099
+  sbatch exit 0
+  submitted at 2026-09-04T17:18:56-04:00
+
+  link 1        : --partition=b200,l40s on the command line (b300 is reserved now)
+  links 2-9     : KTG_PARTITIONS="b300 b200,l40s" -- pick_partition() tries b300
+                  first and takes it only when it really has a free GPU, else the
+                  b200,l40s set; --export=ALL carries the variable down the chain
+  link length   : SBATCH_TIMELIMIT=23:30:00 for the successors, --time on link 1
+
+job id: 301099   (supersedes the cancelled 299461)
+$ scontrol show job 301099 | grep -E 'JobState|Reason|Partition=|TimeLimit|ReqTRES|NodeList|StdOut'
+   JobState=PENDING Reason=Resources Dependency=(null)
+   RunTime=00:00:00 TimeLimit=23:30:00 TimeMin=N/A
+   Partition=b200,l40s AllocNode:Sid=login03:3843237
+   ReqNodeList=(null) ExcNodeList=(null)
+   NodeList= SchedNodeList=gl111
+   ReqTRES=cpu=32,mem=120G,node=1,billing=32,gres/gpu=1
+   StdOut=/scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/logs/loop-301099.log
+$ squeue -j 301099 -o '%.10i %.9P %.8T %.12l %.20S %.10Q %R'
+     JOBID PARTITION    STATE   TIME_LIMIT           START_TIME   PRIORITY NODELIST(REASON)
+    301099 b200,l40s  PENDING     23:30:00  2026-09-04T21:54:14      18199 (Resources)
+$ squeue -j 301099 --start
+             JOBID PARTITION     NAME     USER ST          START_TIME  NODES SCHEDNODES           NODELIST(REASON)
+            301099 b200,l40s ktg-loop ssci-hai PD 2026-09-04T21:54:14      1 gl111                (Resources)
+$ sacct -j 301099 -X -n -o JobID,State,Partition,Start,NodeList
+301099          PENDING  b200,l40s             Unknown   None assigned 
+
+------------------------------------------------------------------------------
+(7) the Resources reason: is it CPUs or GPUs?  (the brief's watch item)
+------------------------------------------------------------------------------
+$ for n in gl105 gl106 gl107 gl111 gl112; do scontrol show node $n; done  [digest]
+  gl105   State=MIXED+PLANNED          CPUAlloc=121/128  gpu_alloc=6/8  cpus_free=7  gpus_free=2
+  gl106   State=MIXED+PLANNED          CPUAlloc=119/128  gpu_alloc=8/8  cpus_free=9  gpus_free=0
+  gl107   State=ALLOCATED              CPUAlloc=124/128  gpu_alloc=8/8  cpus_free=4  gpus_free=0
+  gl110   State=MIXED+DRAIN            CPUAlloc= 60/128  gpu_alloc=4/8  cpus_free=68  gpus_free=4
+  gl111   State=MIXED+PLANNED          CPUAlloc=122/128  gpu_alloc=6/8  cpus_free=6  gpus_free=2
+  gl112   State=MIXED+PLANNED          CPUAlloc=123/128  gpu_alloc=8/8  cpus_free=5  gpus_free=0
+
+$ squeue -j 301099 -o '%.10i %.8T %R' ; scontrol show job 301099 | grep SchedNodeList
+     JOBID    STATE NODELIST(REASON)
+    301099  PENDING (Resources)
+SchedNodeList=gl111
+
+  Reason=Resources with SchedNodeList=gl111: the scheduler has PICKED a node and
+  is holding the job for that node's resources to free, which is the ordinary
+  backfill wait, not a priority block. The estimate is 2026-09-04T21:54:14 --
+  TODAY, ~4.6 h out, against the 2026-09-06T21:57 the b200-only 23:30 job had
+  drifted to. Admitting l40s moved the start forward by about two days.
+  The 32-CPU request is NOT lowered: KTG_CPUS_PER_TASK is a validated knob
+  (o39, T4 worst-stage 28 <= 32) and loop.sbatch refuses to start a link whose
+  granted SLURM_CPUS_PER_TASK disagrees with it. Reported, not tuned.
+
+  [REPORTED, NOT TUNED] the brief's watch item is CONFIRMED: on l40s the CPUs
+  bind and the GPUs do not. Every non-drained l40s node is CPU-saturated by
+  other tenants while GPUs sit idle:
+      gl105  cpus_free=7   gpus_free=2
+      gl111  cpus_free=6   gpus_free=2      <- SchedNodeList for 301099
+      gl106  cpus_free=9   gpus_free=0
+      gl107  cpus_free=4   gpus_free=0
+      gl112  cpus_free=5   gpus_free=0
+      gl110  cpus_free=68  gpus_free=4      but State=MIXED+DRAIN, excluded
+  The job needs 32 CPUs, so on l40s it waits for CPUs even where a GPU is free.
+  The 32 is not lowered here: KTG_CPUS_PER_TASK is a validated knob (o39; T4
+  worst stage 28 <= 32) and loop.sbatch exits 2 on a granted SLURM_CPUS_PER_TASK
+  that disagrees with it, so trimming it would need the knob re-derived, not a
+  submit-time override. Escalated with the node table above.
