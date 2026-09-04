@@ -1,0 +1,917 @@
+================================================================================
+Validator's independent offline harness for the o26/o27/o08 repair -- run, verbatim
+(login03, no Slurm job, no GPU; sbatch/scancel/sinfo/sacct/scontrol/squeue/nvidia-smi are the validator's own PATH shims)
+================================================================================
+########## environment
+host    : login03     bash: GNU bash, version 5.1.8(1)-release (x86_64-redhat-linux-gnu)
+date    : 2026-09-04T00:52:07-04:00     az HEAD: deb3d19
+SIM     : /scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/runtime/validate_repair (printed as $SIM)
+shims   : nvidia-smi sacct sbatch scancel scontrol sinfo squeue   (validator's own)
+slurm   : 
+--- sha256 of the files under test (working tree at run time)
+4485f6eabe1f9b9448b4aad0cae464bc6be3510a0e41d19d4ecbed23c1fa3542  results/ktg/paper_1902.10565/codes/loop/loop.sbatch
+20a7f5b3bdda65290f9628a3c88da6029418377212932eaf6e1b1abfa7de6832  results/ktg/paper_1902.10565/codes/loop/synchronous_loop_9x9.sh
+e616f260a05eab452189694bf1dd0dd8ffcf010b449376045f7a74559ca12ada  results/ktg/paper_1902.10565/codes/loop/export_model_for_selfplay_9x9.sh
+361ad2c06ae6995ea245036364d1265788178b5ca840e1f8a54e9f89245dad5e  results/ktg/paper_1902.10565/codes/data_budget/scratch_guard.sh
+6f38681ea6befc64f1e0f0c4faced2ddd1d774ac7f445595997d07e4abf81f62  results/ktg/paper_1902.10565/codes/data_budget/budget.env
+32d270401c1924f779dd5538388397d056b5b198b7b971f332224721d7806398  results/ktg/paper_1902.10565/codes/data_budget/prune_retention.py
+a5d58dad54f76c948c3051969fda6eedccb650cbf392f2cba0f417373f00ed41  results/ktg/paper_1902.10565/codes/data_budget/tests/fixture_tinycap.env
+21af074644666f517fa1f77a30dcc55926d675594585da5e4ac3c1879a3cd4c6  results/ktg/paper_1902.10565/codes/data_budget/tests/fixture_failfloor.env
+4a100f1814abff78275cd419ea6035818a7fcafaa2cacd2d310d2d2f5980315d  results/ktg/paper_1902.10565/evidence/loop_resume/repair_o26_o27.txt
+
+########## static: bash -n, literal greps
+bash -n loop.sbatch exit=0
+bash -n synchronous_loop_9x9.sh exit=0
+bash -n export_model_for_selfplay_9x9.sh exit=0
+--- worker's pattern: 214748364800|193273528320|536870912000|1099511627776|du -sb "|/apps/helpers/quotas.py over codes/loop/
+grep exit=1
+--- validator's broader pattern: the four literals | du -sb | quotas\.py | export_model\.py over codes/loop/
+$AZ/results/ktg/paper_1902.10565/codes/loop/synchronous_loop_9x9.sh:223:    # data_budget's guard. It prints the du -sb / df -B1 / quotas.py triple that
+grep exit=0
+--- any executable du / df / quotas call left in codes/loop/ (non-comment lines)
+grep exit=0
+--- o08: grep -rn 'export_model\.py' over all of codes/
+grep exit=1
+--- writers of .failcount in loop.sbatch
+104:[ -f "$FAILCOUNT_FILE" ] || echo 0 > "$FAILCOUNT_FILE"
+172:        echo 0 > "$FAILCOUNT_FILE"
+189:    echo "$failcount" > "$FAILCOUNT_FILE"
+
+########## Scenario A: crash loop, 3 links (breaker arithmetic, post-trip link)
+----- link: A1   (KTG_BUDGET_ENV=<unset>)
+=== loop.sbatch job 1001 on login03 ===
+=== BASEDIR=$SIM/ktg/loop  MODELKIND=b7c96h3tfrs  TRAININGNAME=t9 ===
+=== chain depth 1/200, failcount 0/3 ===
+=== compute-budget pre-flight for the successor (gpus=1 cpus=24 part=b200) ===
+=== successor queued: 700001 (partition b200, dependency afterany:1001) ===
+=== sourcing $SIM/ktg/env.sh ===
+=== startup sweep ===
+=== startup retention prune ===
+== prune_retention <ts> APPLY ==
+constants : $SIM/codes/data_budget/budget.env
+root      : /scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train
+basedir   : $SIM/ktg/loop
+=== scratch guard (thresholds from codes/data_budget/budget.env) ===
+== scratch_guard <ts> [chain link 1 pre-flight] ==
+constants            : /weka/home/schmidt/ssci-haiyangw/az/results/ktg/paper_1902.10565/codes/data_budget/budget.env
+root                 : /scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train
+du -sb               : 7567126037	/scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train
+df -B1               : wekafs1/scratchssci 40000000000000 37553998245888 2446001754112 94% /weka/scratch/schmidt
+projected write      : 21474836480 B
+projected root total : 29041962517 B   (hard cap 536870912000 B = 500 GiB)
+group scratch free   : 2370000000000 B   (source: quotas.py; fail floor 1099511627776 B, warn floor 1649267441664 B)
+scratch_guard: OK  used=7567126037 B  projected_total=29041962517 B  group_free=2370000000000 B
+=== starting the loop: $SIM/codes/loop/synchronous_loop_9x9.sh ktg9 $SIM/ktg/loop t9 b7c96h3tfrs 1 ===
+FAKE LOOP ran: ktg9 $SIM/ktg/loop t9 b7c96h3tfrs 1
+=== loop exited rc=1 after 5s ===
+=== fast failure: 5s < 600s -- counting it twice ===
+=== failure rc=1 -- failcount now 2/3 ===
+=== chain continues, 1 attempt(s) left before the breaker ===
+wrapper exit=1  .failcount=2  .chain_depth=1  breaker_tripped=no  STOP=no
+----- link: A2   (KTG_BUDGET_ENV=<unset>)
+=== loop.sbatch job 1002 on login03 ===
+=== BASEDIR=$SIM/ktg/loop  MODELKIND=b7c96h3tfrs  TRAININGNAME=t9 ===
+=== chain depth 2/200, failcount 2/3 ===
+=== compute-budget pre-flight for the successor (gpus=1 cpus=24 part=b200) ===
+=== successor queued: 700002 (partition b200, dependency afterany:1002) ===
+=== sourcing $SIM/ktg/env.sh ===
+=== startup sweep ===
+=== startup retention prune ===
+== prune_retention <ts> APPLY ==
+constants : $SIM/codes/data_budget/budget.env
+root      : /scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train
+basedir   : $SIM/ktg/loop
+=== scratch guard (thresholds from codes/data_budget/budget.env) ===
+== scratch_guard <ts> [chain link 2 pre-flight] ==
+constants            : /weka/home/schmidt/ssci-haiyangw/az/results/ktg/paper_1902.10565/codes/data_budget/budget.env
+root                 : /scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train
+du -sb               : 7567126190	/scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train
+df -B1               : wekafs1/scratchssci 40000000000000 37553768251392 2446231748608 94% /weka/scratch/schmidt
+projected write      : 21474836480 B
+projected root total : 29041962670 B   (hard cap 536870912000 B = 500 GiB)
+group scratch free   : 2370000000000 B   (source: quotas.py; fail floor 1099511627776 B, warn floor 1649267441664 B)
+scratch_guard: OK  used=7567126190 B  projected_total=29041962670 B  group_free=2370000000000 B
+=== starting the loop: $SIM/codes/loop/synchronous_loop_9x9.sh ktg9 $SIM/ktg/loop t9 b7c96h3tfrs 1 ===
+FAKE LOOP ran: ktg9 $SIM/ktg/loop t9 b7c96h3tfrs 1
+=== loop exited rc=1 after 5s ===
+=== fast failure: 5s < 600s -- counting it twice ===
+=== failure rc=1 -- failcount now 4/3 ===
+=== circuit breaker tripped after 4 consecutive failures (last ran 5s) ===
+=== cancelling queued successor 700002 (circuit breaker tripped) ===
+wrapper exit=1  .failcount=4  .chain_depth=2  breaker_tripped=yes  STOP=no
+----- link: A3   (KTG_BUDGET_ENV=<unset>)
+=== loop.sbatch job 1003 on login03 ===
+=== BASEDIR=$SIM/ktg/loop  MODELKIND=b7c96h3tfrs  TRAININGNAME=t9 ===
+=== chain depth 3/200, failcount 4/3 ===
+=== circuit breaker: failcount 4 >= 3 -- not resubmitting ===
+=== breaker already tripped (failcount 4/3) -- this link exits without running the loop ===
+=== to restart the chain: fix the cause, then rm $SIM/ktg/loop/.failcount $SIM/ktg/loop/.breaker_tripped ===
+=== exit 0 before the loop started -- failcount left at 4 ===
+wrapper exit=0  .failcount=4  .chain_depth=3  breaker_tripped=yes  STOP=no
+--- scheduler shim log
+SBATCH[700001] --parsable --partition=b200 --dependency=afterany:1001 $AZ/results/ktg/paper_1902.10565/codes/loop/loop.sbatch
+SBATCH[700002] --parsable --partition=b200 --dependency=afterany:1002 $AZ/results/ktg/paper_1902.10565/codes/loop/loop.sbatch
+SCANCEL 700002
+
+########## Scenario B: env.sh missing, 2 links
+----- link: B1   (KTG_BUDGET_ENV=<unset>)
+=== loop.sbatch job 2001 on login03 ===
+=== BASEDIR=$SIM/ktg/loop  MODELKIND=b7c96h3tfrs  TRAININGNAME=t9 ===
+=== chain depth 1/200, failcount 0/3 ===
+=== compute-budget pre-flight for the successor (gpus=1 cpus=24 part=b200) ===
+=== successor queued: 700001 (partition b200, dependency afterany:2001) ===
+=== missing or unreadable $SIM/ktg/env.sh -- pre-flight failure ===
+=== PRE-FLIGHT FAILURE rc=2 after 1s -- the loop never started ===
+=== fast failure: 1s < 600s -- counting it twice ===
+=== failure rc=2 -- failcount now 2/3 ===
+=== cancelling queued successor 700001 (pre-flight failure -- the successor would repeat it) ===
+wrapper exit=2  .failcount=2  .chain_depth=1  breaker_tripped=no  STOP=no
+----- link: B2   (KTG_BUDGET_ENV=<unset>)
+=== loop.sbatch job 2002 on login03 ===
+=== BASEDIR=$SIM/ktg/loop  MODELKIND=b7c96h3tfrs  TRAININGNAME=t9 ===
+=== chain depth 2/200, failcount 2/3 ===
+=== compute-budget pre-flight for the successor (gpus=1 cpus=24 part=b200) ===
+=== successor queued: 700002 (partition b200, dependency afterany:2002) ===
+=== missing or unreadable $SIM/ktg/env.sh -- pre-flight failure ===
+=== PRE-FLIGHT FAILURE rc=2 after 1s -- the loop never started ===
+=== fast failure: 1s < 600s -- counting it twice ===
+=== failure rc=2 -- failcount now 4/3 ===
+=== circuit breaker tripped after 4 consecutive failures (last ran 1s) ===
+=== cancelling queued successor 700002 (circuit breaker tripped) ===
+wrapper exit=2  .failcount=4  .chain_depth=2  breaker_tripped=yes  STOP=no
+--- scheduler shim log
+SBATCH[700001] --parsable --partition=b200 --dependency=afterany:2001 $AZ/results/ktg/paper_1902.10565/codes/loop/loop.sbatch
+SCANCEL 700001
+SBATCH[700002] --parsable --partition=b200 --dependency=afterany:2002 $AZ/results/ktg/paper_1902.10565/codes/loop/loop.sbatch
+SCANCEL 700002
+
+########## Scenario B2: explicit env.sh checks deleted -> raw set -u abort reaches the trap
+----- link: B2a   (KTG_BUDGET_ENV=<unset>)
+=== loop.sbatch job 2101 on login03 ===
+=== BASEDIR=$SIM/ktg/loop  MODELKIND=b7c96h3tfrs  TRAININGNAME=t9 ===
+=== chain depth 1/200, failcount 0/3 ===
+=== compute-budget pre-flight for the successor (gpus=1 cpus=24 part=b200) ===
+=== successor queued: 700001 (partition b200, dependency afterany:2101) ===
+=== sourcing $SIM/ktg/env.sh ===
+$SIM/loop_nochecks.sbatch: line 299: $SIM/ktg/env.sh: No such file or directory
+=== startup sweep ===
+=== startup retention prune ===
+== prune_retention <ts> APPLY ==
+constants : $SIM/codes/data_budget/budget.env
+root      : /scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train
+basedir   : $SIM/ktg/loop
+=== scratch guard (thresholds from codes/data_budget/budget.env) ===
+== scratch_guard <ts> [chain link 1 pre-flight] ==
+constants            : /weka/home/schmidt/ssci-haiyangw/az/results/ktg/paper_1902.10565/codes/data_budget/budget.env
+root                 : /scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train
+du -sb               : 7567129550	/scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train
+df -B1               : wekafs1/scratchssci 40000000000000 37553587621888 2446412378112 94% /weka/scratch/schmidt
+projected write      : 21474836480 B
+projected root total : 29041966030 B   (hard cap 536870912000 B = 500 GiB)
+group scratch free   : 2370000000000 B   (source: quotas.py; fail floor 1099511627776 B, warn floor 1649267441664 B)
+scratch_guard: OK  used=7567129550 B  projected_total=29041966030 B  group_free=2370000000000 B
+$SIM/loop_nochecks.sbatch: line 383: KATAGO_SRC: unbound variable
+=== PRE-FLIGHT FAILURE rc=1 after 5s -- the loop never started ===
+=== fast failure: 5s < 600s -- counting it twice ===
+=== failure rc=1 -- failcount now 2/3 ===
+=== cancelling queued successor 700001 (pre-flight failure -- the successor would repeat it) ===
+wrapper exit=1  .failcount=2  .chain_depth=1  breaker_tripped=no  STOP=no
+--- scheduler shim log
+SBATCH[700001] --parsable --partition=b200 --dependency=afterany:2101 $SIM/loop_nochecks.sbatch
+SCANCEL 700001
+
+########## Scenario C: LOOP_SH missing, 2 links
+----- link: C1   (KTG_BUDGET_ENV=<unset>)
+=== loop.sbatch job 3001 on login03 ===
+=== BASEDIR=$SIM/ktg/loop  MODELKIND=b7c96h3tfrs  TRAININGNAME=t9 ===
+=== chain depth 1/200, failcount 0/3 ===
+=== compute-budget pre-flight for the successor (gpus=1 cpus=24 part=b200) ===
+=== successor queued: 700001 (partition b200, dependency afterany:3001) ===
+=== sourcing $SIM/ktg/env.sh ===
+=== startup sweep ===
+=== startup retention prune ===
+== prune_retention <ts> APPLY ==
+constants : $SIM/codes/data_budget/budget.env
+root      : /scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train
+basedir   : $SIM/ktg/loop
+=== scratch guard (thresholds from codes/data_budget/budget.env) ===
+== scratch_guard <ts> [chain link 1 pre-flight] ==
+constants            : /weka/home/schmidt/ssci-haiyangw/az/results/ktg/paper_1902.10565/codes/data_budget/budget.env
+root                 : /scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train
+du -sb               : 7567129417	/scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train
+df -B1               : wekafs1/scratchssci 40000000000000 37553354645504 2446645354496 94% /weka/scratch/schmidt
+projected write      : 21474836480 B
+projected root total : 29041965897 B   (hard cap 536870912000 B = 500 GiB)
+group scratch free   : 2370000000000 B   (source: quotas.py; fail floor 1099511627776 B, warn floor 1649267441664 B)
+scratch_guard: OK  used=7567129417 B  projected_total=29041965897 B  group_free=2370000000000 B
+=== missing $SIM/codes/loop/synchronous_loop_9x9.sh ===
+=== PRE-FLIGHT FAILURE rc=2 after 5s -- the loop never started ===
+=== fast failure: 5s < 600s -- counting it twice ===
+=== failure rc=2 -- failcount now 2/3 ===
+=== cancelling queued successor 700001 (pre-flight failure -- the successor would repeat it) ===
+wrapper exit=2  .failcount=2  .chain_depth=1  breaker_tripped=no  STOP=no
+----- link: C2   (KTG_BUDGET_ENV=<unset>)
+=== loop.sbatch job 3002 on login03 ===
+=== BASEDIR=$SIM/ktg/loop  MODELKIND=b7c96h3tfrs  TRAININGNAME=t9 ===
+=== chain depth 2/200, failcount 2/3 ===
+=== compute-budget pre-flight for the successor (gpus=1 cpus=24 part=b200) ===
+=== successor queued: 700002 (partition b200, dependency afterany:3002) ===
+=== sourcing $SIM/ktg/env.sh ===
+=== startup sweep ===
+=== startup retention prune ===
+== prune_retention <ts> APPLY ==
+constants : $SIM/codes/data_budget/budget.env
+root      : /scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train
+basedir   : $SIM/ktg/loop
+=== scratch guard (thresholds from codes/data_budget/budget.env) ===
+== scratch_guard <ts> [chain link 2 pre-flight] ==
+constants            : /weka/home/schmidt/ssci-haiyangw/az/results/ktg/paper_1902.10565/codes/data_budget/budget.env
+root                 : /scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train
+scratch_guard: WARNING du -sb attempt 1/3 on /scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train exited non-zero; its partial total is discarded (du: cannot read directory '/scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/runtime/guard_tests.Jx01FV/duroot/locked': Permission denied )
+scratch_guard: NOTE du -sb succeeded on attempt 2/3 (entries were changing under the walk)
+du -sb               : 7567126493	/scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train
+df -B1               : wekafs1/scratchssci 40000000000000 37554055352320 2445944647680 94% /weka/scratch/schmidt
+projected write      : 21474836480 B
+projected root total : 29041962973 B   (hard cap 536870912000 B = 500 GiB)
+group scratch free   : 2370000000000 B   (source: quotas.py; fail floor 1099511627776 B, warn floor 1649267441664 B)
+scratch_guard: OK  used=7567126493 B  projected_total=29041962973 B  group_free=2370000000000 B
+=== missing $SIM/codes/loop/synchronous_loop_9x9.sh ===
+=== PRE-FLIGHT FAILURE rc=2 after 10s -- the loop never started ===
+=== fast failure: 10s < 600s -- counting it twice ===
+=== failure rc=2 -- failcount now 4/3 ===
+=== circuit breaker tripped after 4 consecutive failures (last ran 10s) ===
+=== cancelling queued successor 700002 (circuit breaker tripped) ===
+wrapper exit=2  .failcount=4  .chain_depth=2  breaker_tripped=yes  STOP=no
+--- scheduler shim log
+SBATCH[700001] --parsable --partition=b200 --dependency=afterany:3001 $AZ/results/ktg/paper_1902.10565/codes/loop/loop.sbatch
+SCANCEL 700001
+SBATCH[700002] --parsable --partition=b200 --dependency=afterany:3002 $AZ/results/ktg/paper_1902.10565/codes/loop/loop.sbatch
+SCANCEL 700002
+
+########## Scenario D: guard exit 1 via the in-tree fixture tests/fixture_tinycap.env (allow-listed by the guard: same directory subtree)
+----- link: D1   (KTG_BUDGET_ENV=/home/schmidt/ssci-haiyangw/az/results/ktg/paper_1902.10565/codes/data_budget/tests/fixture_tinycap.env)
+=== loop.sbatch job 4001 on login03 ===
+=== BASEDIR=$SIM/ktg/loop  MODELKIND=b7c96h3tfrs  TRAININGNAME=t9 ===
+=== chain depth 1/200, failcount 0/3 ===
+=== compute-budget pre-flight for the successor (gpus=1 cpus=24 part=b200) ===
+=== successor queued: 700001 (partition b200, dependency afterany:4001) ===
+=== sourcing $SIM/ktg/env.sh ===
+=== startup sweep ===
+=== startup retention prune ===
+== prune_retention <ts> APPLY ==
+constants : /home/schmidt/ssci-haiyangw/az/results/ktg/paper_1902.10565/codes/data_budget/tests/fixture_tinycap.env
+root      : /scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train
+basedir   : $SIM/ktg/loop
+=== scratch guard (thresholds from codes/data_budget/budget.env) ===
+== scratch_guard <ts> [chain link 1 pre-flight] ==
+constants            : /home/schmidt/ssci-haiyangw/az/results/ktg/paper_1902.10565/codes/data_budget/tests/fixture_tinycap.env
+root                 : /scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train
+du -sb               : 7567126046	/scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train
+df -B1               : wekafs1/scratchssci 40000000000000 37553863213056 2446136786944 94% /weka/scratch/schmidt
+projected write      : 21474836480 B
+projected root total : 29041962526 B   (hard cap 1000000 B = 500 GiB)
+group scratch free   : 2370000000000 B   (source: quotas.py; fail floor 1099511627776 B, warn floor 1649267441664 B)
+VIOLATION: projected mission-root usage 29041962526 B exceeds the mission-root budget (hard cap 1000000 B).
+           current 7567126046 B + projected 21474836480 B. Run prune_retention.py --apply --target-bytes 1000000 before retrying.
+=== scratch_guard exit 1: projected mission-root usage would cross the hard cap -- stopping the chain ===
+=== deliberate chain stop (rc=3 after 5s) -- failcount left at 0 ===
+=== cancelling queued successor 700001 (storage guard stopped the chain) ===
+wrapper exit=3  .failcount=0  .chain_depth=1  breaker_tripped=no  STOP=yes
+--- scheduler shim log
+SBATCH[700001] --parsable --partition=b200 --dependency=afterany:4001 $AZ/results/ktg/paper_1902.10565/codes/loop/loop.sbatch
+SCANCEL 700001
+
+########## Scenario E: guard exit 2 via the in-tree fixture tests/fixture_failfloor.env
+----- link: E1   (KTG_BUDGET_ENV=/home/schmidt/ssci-haiyangw/az/results/ktg/paper_1902.10565/codes/data_budget/tests/fixture_failfloor.env)
+=== loop.sbatch job 5001 on login03 ===
+=== BASEDIR=$SIM/ktg/loop  MODELKIND=b7c96h3tfrs  TRAININGNAME=t9 ===
+=== chain depth 1/200, failcount 0/3 ===
+=== compute-budget pre-flight for the successor (gpus=1 cpus=24 part=b200) ===
+=== successor queued: 700001 (partition b200, dependency afterany:5001) ===
+=== sourcing $SIM/ktg/env.sh ===
+=== startup sweep ===
+=== startup retention prune ===
+== prune_retention <ts> APPLY ==
+constants : /home/schmidt/ssci-haiyangw/az/results/ktg/paper_1902.10565/codes/data_budget/tests/fixture_failfloor.env
+root      : /scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train
+basedir   : $SIM/ktg/loop
+=== scratch guard (thresholds from codes/data_budget/budget.env) ===
+== scratch_guard <ts> [chain link 1 pre-flight] ==
+constants            : /home/schmidt/ssci-haiyangw/az/results/ktg/paper_1902.10565/codes/data_budget/tests/fixture_failfloor.env
+root                 : /scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train
+du -sb               : 7567126050	/scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train
+df -B1               : wekafs1/scratchssci 40000000000000 37553678602240 2446321397760 94% /weka/scratch/schmidt
+projected write      : 21474836480 B
+projected root total : 29041962530 B   (hard cap 536870912000 B = 500 GiB)
+group scratch free   : 2370000000000 B   (source: quotas.py; fail floor 9999999999999999 B, warn floor 1649267441664 B)
+VIOLATION: group scratch free space 2370000000000 B is below the 9999999999999999 B safety floor.
+           The pool is shared by the whole group; do not start a cycle. Escalate.
+=== scratch_guard exit 2: group scratch free space below the safety floor -- stopping the chain ===
+=== deliberate chain stop (rc=3 after 5s) -- failcount left at 0 ===
+=== cancelling queued successor 700001 (storage guard stopped the chain) ===
+wrapper exit=3  .failcount=0  .chain_depth=1  breaker_tripped=no  STOP=yes
+--- scheduler shim log
+SBATCH[700001] --parsable --partition=b200 --dependency=afterany:5001 $AZ/results/ktg/paper_1902.10565/codes/loop/loop.sbatch
+SCANCEL 700001
+
+########## Scenario F: guard exit 3 (out-of-tree constants file, refused)
+----- link: F1   (KTG_BUDGET_ENV=/scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/runtime/validate_repair/loose.env)
+=== loop.sbatch job 6001 on login03 ===
+=== BASEDIR=$SIM/ktg/loop  MODELKIND=b7c96h3tfrs  TRAININGNAME=t9 ===
+=== chain depth 1/200, failcount 0/3 ===
+=== compute-budget pre-flight for the successor (gpus=1 cpus=24 part=b200) ===
+=== successor queued: 700001 (partition b200, dependency afterany:6001) ===
+=== sourcing $SIM/ktg/env.sh ===
+=== startup sweep ===
+=== startup retention prune ===
+prune_retention: refusing an out-of-tree constants file: $SIM/loose.env
+                 only files under /weka/home/schmidt/ssci-haiyangw/az/results/ktg/paper_1902.10565/codes/data_budget/ may set the retention bounds and the mission root.
+=== prune_retention.py exited non-zero -- the scratch guard below decides whether a cycle may start ===
+=== scratch guard (thresholds from codes/data_budget/budget.env) ===
+scratch_guard: refusing an out-of-tree constants file: $SIM/loose.env
+               only files under /weka/home/schmidt/ssci-haiyangw/az/results/ktg/paper_1902.10565/codes/data_budget/ may set the byte thresholds.
+=== scratch_guard exit 3: the guard could not measure -- treating as a failure ===
+=== PRE-FLIGHT FAILURE rc=2 after 1s -- the loop never started ===
+=== fast failure: 1s < 600s -- counting it twice ===
+=== failure rc=2 -- failcount now 2/3 ===
+=== cancelling queued successor 700001 (pre-flight failure -- the successor would repeat it) ===
+wrapper exit=2  .failcount=2  .chain_depth=1  breaker_tripped=no  STOP=no
+--- scheduler shim log
+SBATCH[700001] --parsable --partition=b200 --dependency=afterany:6001 $AZ/results/ktg/paper_1902.10565/codes/loop/loop.sbatch
+SCANCEL 700001
+
+########## Scenario G: a cycle that ran and exited 0 resets .failcount
+----- link: G1   (KTG_BUDGET_ENV=<unset>)
+=== loop.sbatch job 7001 on login03 ===
+=== BASEDIR=$SIM/ktg/loop  MODELKIND=b7c96h3tfrs  TRAININGNAME=t9 ===
+=== chain depth 1/200, failcount 0/3 ===
+=== compute-budget pre-flight for the successor (gpus=1 cpus=24 part=b200) ===
+=== successor queued: 700001 (partition b200, dependency afterany:7001) ===
+=== sourcing $SIM/ktg/env.sh ===
+=== startup sweep ===
+=== startup retention prune ===
+== prune_retention <ts> APPLY ==
+constants : $SIM/codes/data_budget/budget.env
+root      : /scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train
+basedir   : $SIM/ktg/loop
+=== scratch guard (thresholds from codes/data_budget/budget.env) ===
+== scratch_guard <ts> [chain link 1 pre-flight] ==
+constants            : /weka/home/schmidt/ssci-haiyangw/az/results/ktg/paper_1902.10565/codes/data_budget/budget.env
+root                 : /scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train
+du -sb               : 7567126075	/scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train
+df -B1               : wekafs1/scratchssci 40000000000000 37553457319936 2446542680064 94% /weka/scratch/schmidt
+projected write      : 21474836480 B
+projected root total : 29041962555 B   (hard cap 536870912000 B = 500 GiB)
+group scratch free   : 2370000000000 B   (source: quotas.py; fail floor 1099511627776 B, warn floor 1649267441664 B)
+scratch_guard: OK  used=7567126075 B  projected_total=29041962555 B  group_free=2370000000000 B
+=== starting the loop: $SIM/codes/loop/synchronous_loop_9x9.sh ktg9 $SIM/ktg/loop t9 b7c96h3tfrs 1 ===
+FAKE LOOP ran: ktg9 $SIM/ktg/loop t9 b7c96h3tfrs 1
+=== loop exited rc=1 after 5s ===
+=== fast failure: 5s < 600s -- counting it twice ===
+=== failure rc=1 -- failcount now 2/3 ===
+=== chain continues, 1 attempt(s) left before the breaker ===
+wrapper exit=1  .failcount=2  .chain_depth=1  breaker_tripped=no  STOP=no
+----- link: G2   (KTG_BUDGET_ENV=<unset>)
+=== loop.sbatch job 7002 on login03 ===
+=== BASEDIR=$SIM/ktg/loop  MODELKIND=b7c96h3tfrs  TRAININGNAME=t9 ===
+=== chain depth 2/200, failcount 2/3 ===
+=== compute-budget pre-flight for the successor (gpus=1 cpus=24 part=b200) ===
+=== successor queued: 700002 (partition b200, dependency afterany:7002) ===
+=== sourcing $SIM/ktg/env.sh ===
+=== startup sweep ===
+=== startup retention prune ===
+== prune_retention <ts> APPLY ==
+constants : $SIM/codes/data_budget/budget.env
+root      : /scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train
+basedir   : $SIM/ktg/loop
+=== scratch guard (thresholds from codes/data_budget/budget.env) ===
+== scratch_guard <ts> [chain link 2 pre-flight] ==
+constants            : /weka/home/schmidt/ssci-haiyangw/az/results/ktg/paper_1902.10565/codes/data_budget/budget.env
+root                 : /scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train
+du -sb               : 7567126228	/scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train
+df -B1               : wekafs1/scratchssci 40000000000000 37553470799872 2446529200128 94% /weka/scratch/schmidt
+projected write      : 21474836480 B
+projected root total : 29041962708 B   (hard cap 536870912000 B = 500 GiB)
+group scratch free   : 2370000000000 B   (source: quotas.py; fail floor 1099511627776 B, warn floor 1649267441664 B)
+scratch_guard: OK  used=7567126228 B  projected_total=29041962708 B  group_free=2370000000000 B
+=== starting the loop: $SIM/codes/loop/synchronous_loop_9x9.sh ktg9 $SIM/ktg/loop t9 b7c96h3tfrs 1 ===
+FAKE LOOP ran: ktg9 $SIM/ktg/loop t9 b7c96h3tfrs 1
+=== loop exited rc=0 after 5s ===
+=== clean exit -- failcount reset to 0 ===
+wrapper exit=0  .failcount=0  .chain_depth=2  breaker_tripped=no  STOP=no
+--- scheduler shim log
+SBATCH[700001] --parsable --partition=b200 --dependency=afterany:7001 $AZ/results/ktg/paper_1902.10565/codes/loop/loop.sbatch
+SBATCH[700002] --parsable --partition=b200 --dependency=afterany:7002 $AZ/results/ktg/paper_1902.10565/codes/loop/loop.sbatch
+
+########## Scenario H: STOP at entry does not reset a non-zero .failcount
+----- link: H1   (KTG_BUDGET_ENV=<unset>)
+=== loop.sbatch job 8001 on login03 ===
+=== BASEDIR=$SIM/ktg/loop  MODELKIND=b7c96h3tfrs  TRAININGNAME=t9 ===
+=== chain depth 1/200, failcount 0/3 ===
+=== compute-budget pre-flight for the successor (gpus=1 cpus=24 part=b200) ===
+=== successor queued: 700001 (partition b200, dependency afterany:8001) ===
+=== sourcing $SIM/ktg/env.sh ===
+=== startup sweep ===
+=== startup retention prune ===
+== prune_retention <ts> APPLY ==
+constants : $SIM/codes/data_budget/budget.env
+root      : /scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train
+basedir   : $SIM/ktg/loop
+=== scratch guard (thresholds from codes/data_budget/budget.env) ===
+== scratch_guard <ts> [chain link 1 pre-flight] ==
+constants            : /weka/home/schmidt/ssci-haiyangw/az/results/ktg/paper_1902.10565/codes/data_budget/budget.env
+root                 : /scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train
+du -sb               : 7567126075	/scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train
+df -B1               : wekafs1/scratchssci 40000000000000 37552237776896 2447762223104 94% /weka/scratch/schmidt
+projected write      : 21474836480 B
+projected root total : 29041962555 B   (hard cap 536870912000 B = 500 GiB)
+group scratch free   : 2370000000000 B   (source: quotas.py; fail floor 1099511627776 B, warn floor 1649267441664 B)
+scratch_guard: OK  used=7567126075 B  projected_total=29041962555 B  group_free=2370000000000 B
+=== starting the loop: $SIM/codes/loop/synchronous_loop_9x9.sh ktg9 $SIM/ktg/loop t9 b7c96h3tfrs 1 ===
+FAKE LOOP ran: ktg9 $SIM/ktg/loop t9 b7c96h3tfrs 1
+=== loop exited rc=1 after 5s ===
+=== fast failure: 5s < 600s -- counting it twice ===
+=== failure rc=1 -- failcount now 2/3 ===
+=== chain continues, 1 attempt(s) left before the breaker ===
+wrapper exit=1  .failcount=2  .chain_depth=1  breaker_tripped=no  STOP=no
+----- link: H2   (KTG_BUDGET_ENV=<unset>)
+=== loop.sbatch job 8002 on login03 ===
+=== BASEDIR=$SIM/ktg/loop  MODELKIND=b7c96h3tfrs  TRAININGNAME=t9 ===
+=== chain depth 2/200, failcount 2/3 ===
+=== STOP present -- not resubmitting ===
+=== STOP present at entry -- nothing to do ===
+=== exit 0 before the loop started -- failcount left at 2 ===
+wrapper exit=0  .failcount=2  .chain_depth=2  breaker_tripped=no  STOP=yes
+--- scheduler shim log
+SBATCH[700001] --parsable --partition=b200 --dependency=afterany:8001 $AZ/results/ktg/paper_1902.10565/codes/loop/loop.sbatch
+
+########## Scenario J: trap firing -- subshell exits after the trap, explicit double finalize (probe copy)
+----- link: J1   (KTG_BUDGET_ENV=<unset>)
+=== loop.sbatch job 8101 on login03 ===
+=== BASEDIR=$SIM/ktg/loop  MODELKIND=b7c96h3tfrs  TRAININGNAME=t9 ===
+=== chain depth 1/200, failcount 0/3 ===
+=== compute-budget pre-flight for the successor (gpus=1 cpus=24 part=b200) ===
+=== successor queued: 700001 (partition b200, dependency afterany:8101) ===
+=== TRAPPROBE subshells done ===
+=== sourcing $SIM/ktg/env.sh ===
+=== startup sweep ===
+=== startup retention prune ===
+== prune_retention <ts> APPLY ==
+constants : $SIM/codes/data_budget/budget.env
+root      : /scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train
+basedir   : $SIM/ktg/loop
+=== scratch guard (thresholds from codes/data_budget/budget.env) ===
+== scratch_guard <ts> [chain link 1 pre-flight] ==
+constants            : /weka/home/schmidt/ssci-haiyangw/az/results/ktg/paper_1902.10565/codes/data_budget/budget.env
+root                 : /scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train
+du -sb               : 7567126151	/scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train
+df -B1               : wekafs1/scratchssci 40000000000000 37552073158656 2447926841344 94% /weka/scratch/schmidt
+projected write      : 21474836480 B
+projected root total : 29041962631 B   (hard cap 536870912000 B = 500 GiB)
+group scratch free   : 2370000000000 B   (source: quotas.py; fail floor 1099511627776 B, warn floor 1649267441664 B)
+scratch_guard: OK  used=7567126151 B  projected_total=29041962631 B  group_free=2370000000000 B
+=== starting the loop: $SIM/codes/loop/synchronous_loop_9x9.sh ktg9 $SIM/ktg/loop t9 b7c96h3tfrs 1 ===
+FAKE LOOP ran: ktg9 $SIM/ktg/loop t9 b7c96h3tfrs 1
+=== loop exited rc=1 after 5s ===
+=== fast failure: 5s < 600s -- counting it twice ===
+=== failure rc=1 -- failcount now 2/3 ===
+=== chain continues, 1 attempt(s) left before the breaker ===
+=== TRAPPROBE explicit double finalize done ===
+wrapper exit=1  .failcount=2  .chain_depth=1  breaker_tripped=no  STOP=no
+--- scheduler shim log
+SBATCH[700001] --parsable --partition=b200 --dependency=afterany:8101 $SIM/loop_trapprobe.sbatch
+finalize accounting lines in J1: 1
+
+########## Scenario K: scheduler termination -- SIGTERM as Slurm sends it at the time limit (KillWait 30 s)
+########## KTG_MIN_RUNTIME_SECONDS=1 so the fast-failure penalty is out of the picture (a real link runs ~3 days)
+----- link: K1   (SIGTERM, mode=pgrp)
+=== loop.sbatch job 9001 on login03 ===
+=== BASEDIR=$SIM/ktg/loop  MODELKIND=b7c96h3tfrs  TRAININGNAME=t9 ===
+=== chain depth 1/200, failcount 0/3 ===
+=== compute-budget pre-flight for the successor (gpus=1 cpus=24 part=b200) ===
+=== successor queued: 700001 (partition b200, dependency afterany:9001) ===
+=== sourcing $SIM/ktg/env.sh ===
+=== startup sweep ===
+=== startup retention prune ===
+== prune_retention <ts> APPLY ==
+constants : $SIM/codes/data_budget/budget.env
+root      : /scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train
+basedir   : $SIM/ktg/loop
+=== scratch guard (thresholds from codes/data_budget/budget.env) ===
+== scratch_guard <ts> [chain link 1 pre-flight] ==
+constants            : /weka/home/schmidt/ssci-haiyangw/az/results/ktg/paper_1902.10565/codes/data_budget/budget.env
+root                 : /scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train
+du -sb               : 7567129362	/scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train
+df -B1               : wekafs1/scratchssci 40000000000000 37551893594112 2448106405888 94% /weka/scratch/schmidt
+projected write      : 21474836480 B
+projected root total : 29041965842 B   (hard cap 536870912000 B = 500 GiB)
+group scratch free   : 2370000000000 B   (source: quotas.py; fail floor 1099511627776 B, warn floor 1649267441664 B)
+scratch_guard: OK  used=7567129362 B  projected_total=29041965842 B  group_free=2370000000000 B
+=== starting the loop: $SIM/codes/loop/synchronous_loop_9x9.sh ktg9 $SIM/ktg/loop t9 b7c96h3tfrs 1 ===
+FAKE LOOP ran: ktg9 $SIM/ktg/loop t9 b7c96h3tfrs 1
+Terminated
+=== clean exit -- failcount reset to 0 ===
+wrapper exit=143  .failcount=0  .chain_depth=1  breaker_tripped=no  STOP=no
+----- link: K2   (SIGTERM, mode=pgrp)
+=== loop.sbatch job 9002 on login03 ===
+=== BASEDIR=$SIM/ktg/loop  MODELKIND=b7c96h3tfrs  TRAININGNAME=t9 ===
+=== chain depth 2/200, failcount 0/3 ===
+=== compute-budget pre-flight for the successor (gpus=1 cpus=24 part=b200) ===
+=== successor queued: 700002 (partition b200, dependency afterany:9002) ===
+=== sourcing $SIM/ktg/env.sh ===
+=== startup sweep ===
+=== startup retention prune ===
+== prune_retention <ts> APPLY ==
+constants : $SIM/codes/data_budget/budget.env
+root      : /scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train
+basedir   : $SIM/ktg/loop
+=== scratch guard (thresholds from codes/data_budget/budget.env) ===
+== scratch_guard <ts> [chain link 2 pre-flight] ==
+constants            : /weka/home/schmidt/ssci-haiyangw/az/results/ktg/paper_1902.10565/codes/data_budget/budget.env
+root                 : /scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train
+scratch_guard: WARNING du -sb attempt 1/3 on /scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train exited non-zero; its partial total is discarded (du: cannot read directory '/scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/runtime/guard_tests.JEOoEA/duroot/locked': Permission denied )
+scratch_guard: NOTE du -sb succeeded on attempt 2/3 (entries were changing under the walk)
+du -sb               : 7567126526	/scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train
+df -B1               : wekafs1/scratchssci 40000000000000 37551604629504 2448395370496 94% /weka/scratch/schmidt
+projected write      : 21474836480 B
+projected root total : 29041963006 B   (hard cap 536870912000 B = 500 GiB)
+group scratch free   : 2370000000000 B   (source: quotas.py; fail floor 1099511627776 B, warn floor 1649267441664 B)
+scratch_guard: OK  used=7567126526 B  projected_total=29041963006 B  group_free=2370000000000 B
+=== starting the loop: $SIM/codes/loop/synchronous_loop_9x9.sh ktg9 $SIM/ktg/loop t9 b7c96h3tfrs 1 ===
+FAKE LOOP ran: ktg9 $SIM/ktg/loop t9 b7c96h3tfrs 1
+Terminated
+=== clean exit -- failcount reset to 0 ===
+wrapper exit=143  .failcount=0  .chain_depth=2  breaker_tripped=no  STOP=no
+----- link: K3   (SIGTERM, mode=pgrp)
+=== loop.sbatch job 9003 on login03 ===
+=== BASEDIR=$SIM/ktg/loop  MODELKIND=b7c96h3tfrs  TRAININGNAME=t9 ===
+=== chain depth 3/200, failcount 0/3 ===
+=== compute-budget pre-flight for the successor (gpus=1 cpus=24 part=b200) ===
+=== successor queued: 700003 (partition b200, dependency afterany:9003) ===
+=== sourcing $SIM/ktg/env.sh ===
+=== startup sweep ===
+=== startup retention prune ===
+== prune_retention <ts> APPLY ==
+constants : $SIM/codes/data_budget/budget.env
+root      : /scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train
+basedir   : $SIM/ktg/loop
+=== scratch guard (thresholds from codes/data_budget/budget.env) ===
+== scratch_guard <ts> [chain link 3 pre-flight] ==
+constants            : /weka/home/schmidt/ssci-haiyangw/az/results/ktg/paper_1902.10565/codes/data_budget/budget.env
+root                 : /scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train
+du -sb               : 7567126391	/scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train
+df -B1               : wekafs1/scratchssci 40000000000000 37551833194496 2448166805504 94% /weka/scratch/schmidt
+projected write      : 21474836480 B
+projected root total : 29041962871 B   (hard cap 536870912000 B = 500 GiB)
+group scratch free   : 2370000000000 B   (source: quotas.py; fail floor 1099511627776 B, warn floor 1649267441664 B)
+scratch_guard: OK  used=7567126391 B  projected_total=29041962871 B  group_free=2370000000000 B
+=== starting the loop: $SIM/codes/loop/synchronous_loop_9x9.sh ktg9 $SIM/ktg/loop t9 b7c96h3tfrs 1 ===
+FAKE LOOP ran: ktg9 $SIM/ktg/loop t9 b7c96h3tfrs 1
+Terminated
+=== clean exit -- failcount reset to 0 ===
+wrapper exit=143  .failcount=0  .chain_depth=3  breaker_tripped=no  STOP=no
+--- scheduler shim log
+SBATCH[700001] --parsable --partition=b200 --dependency=afterany:9001 $AZ/results/ktg/paper_1902.10565/codes/loop/loop.sbatch
+SBATCH[700002] --parsable --partition=b200 --dependency=afterany:9002 $AZ/results/ktg/paper_1902.10565/codes/loop/loop.sbatch
+SBATCH[700003] --parsable --partition=b200 --dependency=afterany:9003 $AZ/results/ktg/paper_1902.10565/codes/loop/loop.sbatch
+
+----- K4/K5: the two deterministic orderings of the same SIGTERM
+----- link: K4   (SIGTERM, mode=child-first)
+<harness>: line 117: kill: (1364757) - No such process
+=== loop.sbatch job 9004 on login03 ===
+=== BASEDIR=$SIM/ktg/loop  MODELKIND=b7c96h3tfrs  TRAININGNAME=t9 ===
+=== chain depth 1/200, failcount 0/3 ===
+=== compute-budget pre-flight for the successor (gpus=1 cpus=24 part=b200) ===
+=== successor queued: 700001 (partition b200, dependency afterany:9004) ===
+=== sourcing $SIM/ktg/env.sh ===
+=== startup sweep ===
+=== startup retention prune ===
+== prune_retention <ts> APPLY ==
+constants : $SIM/codes/data_budget/budget.env
+root      : /scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train
+basedir   : $SIM/ktg/loop
+=== scratch guard (thresholds from codes/data_budget/budget.env) ===
+== scratch_guard <ts> [chain link 1 pre-flight] ==
+constants            : /weka/home/schmidt/ssci-haiyangw/az/results/ktg/paper_1902.10565/codes/data_budget/budget.env
+root                 : /scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train
+du -sb               : 7567126085	/scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train
+df -B1               : wekafs1/scratchssci 40000000000000 37552208740352 2447791259648 94% /weka/scratch/schmidt
+projected write      : 21474836480 B
+projected root total : 29041962565 B   (hard cap 536870912000 B = 500 GiB)
+group scratch free   : 2370000000000 B   (source: quotas.py; fail floor 1099511627776 B, warn floor 1649267441664 B)
+scratch_guard: OK  used=7567126085 B  projected_total=29041962565 B  group_free=2370000000000 B
+=== starting the loop: $SIM/codes/loop/synchronous_loop_9x9.sh ktg9 $SIM/ktg/loop t9 b7c96h3tfrs 1 ===
+FAKE LOOP ran: ktg9 $SIM/ktg/loop t9 b7c96h3tfrs 1
+Terminated
+=== loop exited rc=143 after 6s ===
+=== failure rc=143 -- failcount now 1/3 ===
+=== chain continues, 2 attempt(s) left before the breaker ===
+wrapper exit=143  .failcount=1  .chain_depth=1  breaker_tripped=no  STOP=no
+--- scheduler shim log
+SBATCH[700001] --parsable --partition=b200 --dependency=afterany:9004 $AZ/results/ktg/paper_1902.10565/codes/loop/loop.sbatch
+----- link: K5   (SIGTERM, mode=bash-only)
+=== loop.sbatch job 9005 on login03 ===
+=== BASEDIR=$SIM/ktg/loop  MODELKIND=b7c96h3tfrs  TRAININGNAME=t9 ===
+=== chain depth 1/200, failcount 0/3 ===
+=== compute-budget pre-flight for the successor (gpus=1 cpus=24 part=b200) ===
+=== successor queued: 700001 (partition b200, dependency afterany:9005) ===
+=== sourcing $SIM/ktg/env.sh ===
+=== startup sweep ===
+=== startup retention prune ===
+== prune_retention <ts> APPLY ==
+constants : $SIM/codes/data_budget/budget.env
+root      : /scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train
+basedir   : $SIM/ktg/loop
+=== scratch guard (thresholds from codes/data_budget/budget.env) ===
+== scratch_guard <ts> [chain link 1 pre-flight] ==
+constants            : /weka/home/schmidt/ssci-haiyangw/az/results/ktg/paper_1902.10565/codes/data_budget/budget.env
+root                 : /scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train
+du -sb               : 7567126085	/scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train
+df -B1               : wekafs1/scratchssci 40000000000000 37551995457536 2448004542464 94% /weka/scratch/schmidt
+projected write      : 21474836480 B
+projected root total : 29041962565 B   (hard cap 536870912000 B = 500 GiB)
+group scratch free   : 2370000000000 B   (source: quotas.py; fail floor 1099511627776 B, warn floor 1649267441664 B)
+scratch_guard: OK  used=7567126085 B  projected_total=29041962565 B  group_free=2370000000000 B
+=== starting the loop: $SIM/codes/loop/synchronous_loop_9x9.sh ktg9 $SIM/ktg/loop t9 b7c96h3tfrs 1 ===
+FAKE LOOP ran: ktg9 $SIM/ktg/loop t9 b7c96h3tfrs 1
+=== clean exit -- failcount reset to 0 ===
+wrapper exit=143  .failcount=0  .chain_depth=1  breaker_tripped=no  STOP=no
+--- scheduler shim log
+SBATCH[700001] --parsable --partition=b200 --dependency=afterany:9005 $AZ/results/ktg/paper_1902.10565/codes/loop/loop.sbatch
+
+########## Scenario L: loop exits 3 for a reason other than the storage guard (no STOP written)
+----- link: L1   (KTG_BUDGET_ENV=<unset>)
+=== loop.sbatch job 9101 on login03 ===
+=== BASEDIR=$SIM/ktg/loop  MODELKIND=b7c96h3tfrs  TRAININGNAME=t9 ===
+=== chain depth 1/200, failcount 0/3 ===
+=== compute-budget pre-flight for the successor (gpus=1 cpus=24 part=b200) ===
+=== successor queued: 700001 (partition b200, dependency afterany:9101) ===
+=== sourcing $SIM/ktg/env.sh ===
+=== startup sweep ===
+=== startup retention prune ===
+== prune_retention <ts> APPLY ==
+constants : $SIM/codes/data_budget/budget.env
+root      : /scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train
+basedir   : $SIM/ktg/loop
+=== scratch guard (thresholds from codes/data_budget/budget.env) ===
+== scratch_guard <ts> [chain link 1 pre-flight] ==
+constants            : /weka/home/schmidt/ssci-haiyangw/az/results/ktg/paper_1902.10565/codes/data_budget/budget.env
+root                 : /scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train
+du -sb               : 7567126075	/scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train
+df -B1               : wekafs1/scratchssci 40000000000000 37551815991296 2448184008704 94% /weka/scratch/schmidt
+projected write      : 21474836480 B
+projected root total : 29041962555 B   (hard cap 536870912000 B = 500 GiB)
+group scratch free   : 2370000000000 B   (source: quotas.py; fail floor 1099511627776 B, warn floor 1649267441664 B)
+scratch_guard: OK  used=7567126075 B  projected_total=29041962555 B  group_free=2370000000000 B
+=== starting the loop: $SIM/codes/loop/synchronous_loop_9x9.sh ktg9 $SIM/ktg/loop t9 b7c96h3tfrs 1 ===
+FAKE LOOP ran: ktg9 $SIM/ktg/loop t9 b7c96h3tfrs 1
+=== loop exited rc=3 after 5s ===
+=== the loop stopped on the storage guard -- treating as a deliberate chain stop ===
+=== deliberate chain stop (rc=3 after 5s) -- failcount left at 0 ===
+=== cancelling queued successor 700001 (storage guard stopped the chain) ===
+wrapper exit=3  .failcount=0  .chain_depth=1  breaker_tripped=no  STOP=no
+--- scheduler shim log
+SBATCH[700001] --parsable --partition=b200 --dependency=afterany:9101 $AZ/results/ktg/paper_1902.10565/codes/loop/loop.sbatch
+SCANCEL 700001
+
+########## closing checks -- clean environment, real PATH, no shims
+sbatch resolves to: /opt/mprov/cloack/slurm/current/bin/sbatch
+--- task file section 2 closing check, verbatim
+== compute-budget self-check  2026-09-04T00:54:02-04:00 ==
+my jobs      : gpus=0 cpus=0  (0 jobs)
+partition b200 : free_gpus=3/128 (excludes reserved/drained nodes)
+partition b300 : free_gpus=0/8 (excludes reserved/drained nodes)
+reservations : 8 defined (6 active) — scontrol show reservation
+quota        : | /home/ssci-haiyangw/ | 3.40 GB  | 100.00 GB |  3.40%   |
+quota        : | /scratch/ssci-anima/ | 37.63 TB |  40.00 TB |   94%    |
+OK           : request gpus=1 cpus=24 part=b200 within policy (gpu<=4, no cpu cap)
+SECTION2_EXIT=0
+grep -c afterany=6 failcount=22 cpp/build/katago=5 cpp/katago"=0
+
+########## cleanup
+ls: cannot access '/scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/runtime/validate_repair': No such file or directory
+cleanup exit=2
+
+================================================================================
+harness source, verbatim
+================================================================================
+#!/bin/bash
+# Validator's independent offline harness for the o26 / o27 / o08 repair of
+# results/ktg/paper_1902.10565/codes/loop/loop.sbatch.
+# Login node, CPU only, no Slurm job, no GPU. Scheduler binaries are PATH shims
+# written here, not the worker's. The real mission.json, the real compute-policy
+# check.sh and the real codes/data_budget/{scratch_guard.sh,prune_retention.py,
+# budget.env} (working tree, hashes printed) are used unmodified.
+set -u
+
+AZ=/home/schmidt/ssci-haiyangw/az
+SIM=/scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/runtime/validate_repair
+DB="$AZ/results/ktg/paper_1902.10565/codes/data_budget"
+LOOPDIR="$AZ/results/ktg/paper_1902.10565/codes/loop"
+REAL_SBATCH="$LOOPDIR/loop.sbatch"
+
+rm -rf "$SIM"
+mkdir -p "$SIM/bin" "$SIM/ktg/loop" "$SIM/ktg/logs" "$SIM/codes/loop" "$SIM/src"
+
+# ---------------------------------------------------------------- shims (mine)
+cat > "$SIM/bin/sbatch" <<'EOF'
+#!/bin/bash
+n=$(cat "$VAL_JOBCTR" 2>/dev/null || echo 700000); n=$((n+1)); echo "$n" > "$VAL_JOBCTR"
+echo "SBATCH[$n] $*" >> "$VAL_SHIMLOG"
+echo "$n"
+EOF
+cat > "$SIM/bin/scancel" <<'EOF'
+#!/bin/bash
+echo "SCANCEL $*" >> "$VAL_SHIMLOG"
+EOF
+for c in sinfo sacct scontrol squeue nvidia-smi; do
+  printf '#!/bin/bash\nexit 0\n' > "$SIM/bin/$c"
+done
+chmod +x "$SIM"/bin/*
+export VAL_SHIMLOG="$SIM/shim.log" VAL_JOBCTR="$SIM/jobctr"
+ORIG_PATH="$PATH"
+export PATH="$SIM/bin:$PATH"
+
+# ---------------------------------------------------------------- sim mission root
+ln -s "$DB" "$SIM/codes/data_budget"
+printf 'export KATAGO_SRC=%s\nexport KATAGO_BIN=%s/katago\n' "$SIM/src" "$SIM/src" > "$SIM/ktg/env.sh"
+
+# copy 1: explicit env.sh checks removed (raw set -u abort must reach the trap)
+python3 - "$REAL_SBATCH" "$SIM/loop_nochecks.sbatch" <<'PYEOF'
+import sys
+src, dst = sys.argv[1], sys.argv[2]
+t = open(src).read()
+for block in (
+    'if [ ! -r "$KTG_ROOT/env.sh" ]; then\n    say "missing or unreadable $KTG_ROOT/env.sh -- pre-flight failure"\n    exit 2\nfi\n',
+    'if [ -z "${KATAGO_SRC:-}" ]; then\n    say "env.sh did not export KATAGO_SRC -- pre-flight failure"\n    exit 2\nfi\n',
+):
+    assert block in t, block
+    t = t.replace(block, '')
+open(dst, 'w').write(t)
+PYEOF
+# copy 2: subshell exits + explicit double finalize inserted, to probe trap firing
+python3 - "$REAL_SBATCH" "$SIM/loop_trapprobe.sbatch" <<'PYEOF'
+import sys
+src, dst = sys.argv[1], sys.argv[2]
+t = open(src).read()
+anchor = "trap 'finalize $?' EXIT\n"
+assert t.count(anchor) == 1
+t = t.replace(anchor, anchor + '( exit 7 ); _x=$(exit 4); ( sleep 0 ) & wait\nsay "TRAPPROBE subshells done"\n')
+tail = 'exit "$RC"\n'
+assert t.endswith(tail)
+t = t[:-len(tail)] + 'finalize "$RC"; finalize "$RC"\nsay "TRAPPROBE explicit double finalize done"\n' + tail
+open(dst, 'w').write(t)
+PYEOF
+
+fake_loop() {   # $1 = body
+  printf '#!/bin/bash\necho "FAKE LOOP ran: $*"\n%s\n' "$1" > "$SIM/codes/loop/synchronous_loop_9x9.sh"
+  chmod +x "$SIM/codes/loop/synchronous_loop_9x9.sh"
+}
+
+export AZ_ROOT="$AZ"
+export KTG_ROOT="$SIM/ktg"
+export KTG_CODES="$SIM/codes"
+export BASEDIR="$SIM/ktg/loop"
+export KTG_LOOP_SBATCH="$REAL_SBATCH"
+
+reset_state() {
+  rm -f "$BASEDIR/.failcount" "$BASEDIR/.chain_depth" "$BASEDIR/.breaker_tripped" "$BASEDIR/STOP"
+  : > "$VAL_SHIMLOG"; echo 700000 > "$VAL_JOBCTR"
+}
+state() {
+  printf '.failcount=%s  .chain_depth=%s  breaker_tripped=%s  STOP=%s' \
+    "$(cat "$BASEDIR/.failcount" 2>/dev/null || echo '<absent>')" \
+    "$(cat "$BASEDIR/.chain_depth" 2>/dev/null || echo '<absent>')" \
+    "$([ -e "$BASEDIR/.breaker_tripped" ] && echo yes || echo no)" \
+    "$([ -e "$BASEDIR/STOP" ] && echo yes || echo no)"
+}
+filt() {   # strip timestamps / sim path / guard tables so the record is readable
+  sed -e "s#$SIM#\$SIM#g" -e 's/=== \[[^]]*\] /=== /' \
+      -e 's/^== scratch_guard [0-9T:+-]* /== scratch_guard <ts> /' \
+      -e 's/^== prune_retention [0-9T:+-]* /== prune_retention <ts> /' \
+      -e '/^quotas.py /d' -e '/^   PROTECT /d' -e '/^-- protected set/d' -e '/^-- deletion plan/d' -e '/(nothing to remove)/d' -e '/^-- removed 0 paths/d' \
+      -e '/^== compute-budget self-check/,/^OK  *: request/d' "$1"
+}
+link() {   # $1 label, $2 fake job id, $3 script (optional)
+  local script="${3:-$REAL_SBATCH}" rc
+  echo "----- link: $1   (KTG_BUDGET_ENV=${KTG_BUDGET_ENV:-<unset>})"
+  SLURM_JOB_ID="$2" bash "$script" > "$SIM/out.txt" 2>&1
+  rc=$?
+  filt "$SIM/out.txt"
+  echo "wrapper exit=$rc  $(state)"
+}
+# Slurm-like termination: run the link in its own process group, wait until the loop
+# has started, then signal.  $3 = target: pgrp | child-first | bash-only
+siglink() {
+  local label="$1" jid="$2" mode="$3" pid rc i
+  echo "----- link: $label   (SIGTERM, mode=$mode)"
+  SLURM_JOB_ID="$jid" setsid bash "$REAL_SBATCH" > "$SIM/out.txt" 2>&1 &
+  pid=$!
+  for i in $(seq 1 60); do grep -q 'starting the loop' "$SIM/out.txt" 2>/dev/null && break; sleep 0.5; done
+  sleep 1
+  case "$mode" in
+    pgrp)        kill -TERM -- "-$pid" ;;
+    child-first) pkill -TERM -P "$pid"; sleep 0.5; kill -TERM "$pid" ;;
+    bash-only)   kill -TERM "$pid" ;;
+  esac
+  wait "$pid"; rc=$?
+  pkill -TERM -f "$SIM/codes/loop/synchronous_loop_9x9.sh" 2>/dev/null
+  filt "$SIM/out.txt"
+  echo "wrapper exit=$rc  $(state)"
+}
+shimlog() {
+  echo "--- scheduler shim log"
+  if [ -s "$VAL_SHIMLOG" ]; then sed -e "s#$SIM#\$SIM#g" -e "s#$AZ#\$AZ#g" "$VAL_SHIMLOG"; else echo "(no sbatch, no scancel)"; fi
+}
+
+echo "########## environment"
+echo "host    : $(hostname)     bash: $(bash --version | head -1)"
+echo "date    : $(date -Is)     az HEAD: $(cd "$AZ" && git rev-parse --short HEAD)"
+echo "SIM     : $SIM (printed as \$SIM)"
+echo "shims   : $(ls "$SIM/bin" | tr '\n' ' ')  (validator's own)"
+echo "slurm   : $(scontrol show config 2>/dev/null | grep -E 'KillWait' | tr -s ' ' || true)"
+echo "--- sha256 of the files under test (working tree at run time)"
+(cd "$AZ" && sha256sum results/ktg/paper_1902.10565/codes/loop/loop.sbatch results/ktg/paper_1902.10565/codes/loop/synchronous_loop_9x9.sh results/ktg/paper_1902.10565/codes/loop/export_model_for_selfplay_9x9.sh results/ktg/paper_1902.10565/codes/data_budget/scratch_guard.sh results/ktg/paper_1902.10565/codes/data_budget/budget.env results/ktg/paper_1902.10565/codes/data_budget/prune_retention.py results/ktg/paper_1902.10565/codes/data_budget/tests/fixture_tinycap.env results/ktg/paper_1902.10565/codes/data_budget/tests/fixture_failfloor.env results/ktg/paper_1902.10565/evidence/loop_resume/repair_o26_o27.txt)
+echo
+
+echo "########## static: bash -n, literal greps"
+for f in loop.sbatch synchronous_loop_9x9.sh export_model_for_selfplay_9x9.sh; do bash -n "$LOOPDIR/$f"; echo "bash -n $f exit=$?"; done
+echo "--- worker's pattern: 214748364800|193273528320|536870912000|1099511627776|du -sb \"|/apps/helpers/quotas.py over codes/loop/"
+grep -rn -E '214748364800|193273528320|536870912000|1099511627776|du -sb "|/apps/helpers/quotas.py' "$LOOPDIR/"; echo "grep exit=$?"
+echo "--- validator's broader pattern: the four literals | du -sb | quotas\\.py | export_model\\.py over codes/loop/"
+grep -rn -E '214748364800|193273528320|536870912000|1099511627776|du -sb|quotas\.py|export_model\.py' "$LOOPDIR/" | sed "s#$AZ#\$AZ#"; echo "grep exit=$?"
+echo "--- any executable du / df / quotas call left in codes/loop/ (non-comment lines)"
+grep -rn -E '^[^#]*\b(du|df) -|^[^#]*quotas\.py' "$LOOPDIR/" | sed "s#$AZ#\$AZ#"; echo "grep exit=$?"
+echo "--- o08: grep -rn 'export_model\\.py' over all of codes/"
+grep -rn 'export_model\.py' "$AZ/results/ktg/paper_1902.10565/codes/"; echo "grep exit=$?"
+echo "--- writers of .failcount in loop.sbatch"
+grep -n -E '> *"\$FAILCOUNT_FILE"' "$LOOPDIR/loop.sbatch"
+echo
+
+echo "########## Scenario A: crash loop, 3 links (breaker arithmetic, post-trip link)"
+reset_state; fake_loop 'exit 1'
+link A1 1001; link A2 1002; link A3 1003; shimlog; echo
+
+echo "########## Scenario B: env.sh missing, 2 links"
+reset_state; fake_loop 'exit 1'; mv "$SIM/ktg/env.sh" "$SIM/ktg/env.sh.hidden"
+link B1 2001; link B2 2002; shimlog; mv "$SIM/ktg/env.sh.hidden" "$SIM/ktg/env.sh"; echo
+
+echo "########## Scenario B2: explicit env.sh checks deleted -> raw set -u abort reaches the trap"
+reset_state; fake_loop 'exit 1'; mv "$SIM/ktg/env.sh" "$SIM/ktg/env.sh.hidden"
+KTG_LOOP_SBATCH="$SIM/loop_nochecks.sbatch" link B2a 2101 "$SIM/loop_nochecks.sbatch"; shimlog
+mv "$SIM/ktg/env.sh.hidden" "$SIM/ktg/env.sh"; echo
+
+echo "########## Scenario C: LOOP_SH missing, 2 links"
+reset_state; fake_loop 'exit 1'; mv "$SIM/codes/loop/synchronous_loop_9x9.sh" "$SIM/codes/loop/hidden.sh"
+link C1 3001; link C2 3002; shimlog; mv "$SIM/codes/loop/hidden.sh" "$SIM/codes/loop/synchronous_loop_9x9.sh"; echo
+
+echo "########## Scenario D: guard exit 1 via the in-tree fixture tests/fixture_tinycap.env (allow-listed by the guard: same directory subtree)"
+reset_state; fake_loop 'exit 0'; export KTG_BUDGET_ENV="$DB/tests/fixture_tinycap.env"
+link D1 4001; unset KTG_BUDGET_ENV; shimlog; echo
+
+echo "########## Scenario E: guard exit 2 via the in-tree fixture tests/fixture_failfloor.env"
+reset_state; fake_loop 'exit 0'; export KTG_BUDGET_ENV="$DB/tests/fixture_failfloor.env"
+link E1 5001; unset KTG_BUDGET_ENV; shimlog; echo
+
+echo "########## Scenario F: guard exit 3 (out-of-tree constants file, refused)"
+reset_state; fake_loop 'exit 0'; export KTG_BUDGET_ENV="$SIM/loose.env"; printf 'KTG_SCRATCH_HARD_BYTES=99999999999999\n' > "$SIM/loose.env"
+link F1 6001; unset KTG_BUDGET_ENV; shimlog; echo
+
+echo "########## Scenario G: a cycle that ran and exited 0 resets .failcount"
+reset_state; fake_loop 'exit 1'; link G1 7001; fake_loop 'exit 0'; link G2 7002; shimlog; echo
+
+echo "########## Scenario H: STOP at entry does not reset a non-zero .failcount"
+reset_state; fake_loop 'exit 1'; link H1 8001; touch "$BASEDIR/STOP"; link H2 8002; shimlog; rm -f "$BASEDIR/STOP"; echo
+
+echo "########## Scenario J: trap firing -- subshell exits after the trap, explicit double finalize (probe copy)"
+reset_state; fake_loop 'exit 1'
+KTG_LOOP_SBATCH="$SIM/loop_trapprobe.sbatch" link J1 8101 "$SIM/loop_trapprobe.sbatch"; shimlog
+echo "finalize accounting lines in J1: $(grep -c -E 'failure rc=|clean exit|PRE-FLIGHT' "$SIM/out.txt")"; echo
+
+echo "########## Scenario K: scheduler termination -- SIGTERM as Slurm sends it at the time limit (KillWait 30 s)"
+echo "########## KTG_MIN_RUNTIME_SECONDS=1 so the fast-failure penalty is out of the picture (a real link runs ~3 days)"
+export KTG_MIN_RUNTIME_SECONDS=1
+reset_state; fake_loop 'sleep 40; exit 0'
+siglink K1 9001 pgrp; siglink K2 9002 pgrp; siglink K3 9003 pgrp; shimlog; echo
+echo "----- K4/K5: the two deterministic orderings of the same SIGTERM"
+reset_state; siglink K4 9004 child-first; shimlog
+reset_state; siglink K5 9005 bash-only; shimlog
+unset KTG_MIN_RUNTIME_SECONDS; echo
+
+echo "########## Scenario L: loop exits 3 for a reason other than the storage guard (no STOP written)"
+reset_state; fake_loop 'exit 3'; link L1 9101; shimlog; echo
+
+echo "########## closing checks -- clean environment, real PATH, no shims"
+(
+  export PATH="$ORIG_PATH"
+  unset KTG_ROOT KTG_CODES BASEDIR KTG_LOOP_SBATCH KTG_BUDGET_ENV AZ_ROOT VAL_SHIMLOG VAL_JOBCTR
+  cd "$AZ" || exit 1
+  echo "sbatch resolves to: $(command -v sbatch)"
+  echo "--- task file section 2 closing check, verbatim"
+  bash -n results/ktg/paper_1902.10565/codes/loop/loop.sbatch && grep -q afterany results/ktg/paper_1902.10565/codes/loop/loop.sbatch && grep -q failcount results/ktg/paper_1902.10565/codes/loop/loop.sbatch && grep -q 'cpp/build/katago' results/ktg/paper_1902.10565/codes/loop/synchronous_loop_9x9.sh && ! grep -q 'cpp/katago"' results/ktg/paper_1902.10565/codes/loop/synchronous_loop_9x9.sh && bash "$(python3 -c 'import json;print(json.load(open("mission.json"))["compute"]["policyCheck"])')" --gpus 1 --cpus 24 --partition b200
+  echo "SECTION2_EXIT=$?"
+  echo "grep -c afterany=$(grep -c afterany results/ktg/paper_1902.10565/codes/loop/loop.sbatch) failcount=$(grep -c failcount results/ktg/paper_1902.10565/codes/loop/loop.sbatch) cpp/build/katago=$(grep -c 'cpp/build/katago' results/ktg/paper_1902.10565/codes/loop/synchronous_loop_9x9.sh) cpp/katago\"=$(grep -c 'cpp/katago"' results/ktg/paper_1902.10565/codes/loop/synchronous_loop_9x9.sh)"
+)
+echo
+echo "########## cleanup"
+rm -rf "$SIM"; ls -d "$SIM" 2>&1; echo "cleanup exit=$?"

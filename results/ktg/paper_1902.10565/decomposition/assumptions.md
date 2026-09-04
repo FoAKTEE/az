@@ -2,7 +2,7 @@
 
 # Assumptions — paper_arxiv-1902.10565
 
-11 entries; 10 active, 1 retired.
+12 entries; 11 active, 1 retired.
 
 | entry_id | statement | scope | status | reduction_obligation | node_ids |
 |---|---|---|---|---|---|
@@ -17,3 +17,4 @@
 | a09_code_first | The v1.18.2 code mirror is the source of truth for every node, claim and plan; arXiv:1902.10565 is background cited only where the code still implements its idea (human redirect, 2026-09-03). | source priority | active | — | arxiv-1902.10565::playout_cap_randomization |
 | a10_random_bootstrap_ok | Cycle-1 self-play with the built-in random net (empty models/) is an acceptable bootstrap; the first exported candidate is gated against that random baseline (USEGATING = 1) and becomes the frozen first net if it wins; random-play rows are capped at min_rows by the shuffler (shuffle.py:1077) so they cannot flood the window. | bootstrap | active | — | arxiv-1902.10565::synchronous_loop_smoke; arxiv-1902.10565::gatekeeper_stage; arxiv-1902.10565::bootstrap_accepted_model |
 | a11_cpu_policy_summed | The 20 % CPU policy (24 of 124 schedulable CPUs) applies to the SUM over the user's concurrent jobs (the compute-budget check.sh sums squeue -u $USER), so the mission runs exactly one compute job at a time; concurrent evaluation jobs wait for the loop job or for the human's answer (o22). | compute policy | retired | — | arxiv-1902.10565::loop_resume_under_walltime; arxiv-1902.10565::match_latest_against_first |
+| a12_single_chain_per_basedir | Exactly one resubmit chain runs against a given BASEDIR at any time. The chain state files (.failcount, .chain_depth, .breaker_tripped, STOP) and the per-BASEDIR retention pruning (scripts/dated archives, shuffleddata, selfplay generations via codes/data_budget/prune_retention.py --basedir) are not protected by a lock, so two concurrent chains on one BASEDIR would prune each other's archives and share one breaker count. | operations | active | — | arxiv-1902.10565::loop_resume_under_walltime; arxiv-1902.10565::data_budget |
