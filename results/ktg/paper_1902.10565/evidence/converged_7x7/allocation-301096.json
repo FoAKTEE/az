@@ -1,0 +1,13 @@
+{
+ "slurm_job_id": "301096",
+ "node": "gb207",
+ "partition": "b200",
+ "gpu_name": "NVIDIA B200",
+ "gpu_compute_cap": "10.0",
+ "cpus_per_task": 16,
+ "mem_mb": 98304,
+ "gpus": 1,
+ "walltime_s": 18900,
+ "reserve_s": 2100,
+ "started_utc": "2026-09-04T21:14:37Z"
+}

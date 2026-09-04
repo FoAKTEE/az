@@ -89,7 +89,7 @@ codes/loop/synchronous_loop_9x9.sh  UNCHANGED (its knobs and configs were alread
 - **Files:** the eight above. **Test:** `check_board_param.sh` → `CHECK_BOARD_PARAM: PASS`, 11/11.
 ### Phase 2 — the allocation
 - 1 GPU, 16 CPUs, 96 G, `--time=06:00:00`, `--partition=b200,l40s` (L40S admitted: `evidence/env/l40s-300987.txt` `L40S PROBE RESULT: PASS`, engine runs natively on sm_89 at 2401.88 visits/s).
-- **Test:** cycle 1 completes and `metrics_train.json` gains ≥ 1 row.
+- **Test:** cycle 1 completes and `metrics_train.json` gains ≥ 1 row. **PASSED** — job 301096, gb207, cycle 1 exit 0 in ≈ 5 min, 46 rows.
 ### Phase 3 — cycles to the deadline, then the match, then the summary
 - **Test:** the six criteria of § 2.
 
@@ -139,8 +139,12 @@ codes/loop/synchronous_loop_9x9.sh  UNCHANGED (its knobs and configs were alread
 ## 12. Current State
 
 - `[SOLID]` the parameterisation and the patch: `evidence/converged_7x7/check_board_param.txt`, `CHECK_BOARD_PARAM: PASS`, 11/11 checks executed.
-- `[PRELIMINARY]` the run itself — submitted, not yet terminal.
-- `[OPEN]` every criterion of § 2 until `summary-<jobid>.json` exists. Closing evidence: that file plus `metrics_train-<jobid>.json`.
+- `[SOLID]` **rows/game at 7×7 = 19.73** (11 838 rows over 600 games, cycle 1 of job 301096) — the ~19 prior from area scaling was right; games/cycle re-derived to 305 by the job itself (`evidence/converged_7x7/rows_per_game-301096.json`).
+- `[SOLID]` **the dense loss log exists** — 46 rows in cycle 1 alone, one per 8 batches, where the 9×9 smoke's file had 0. The blocking defect § 3 names is closed.
+- `[PRELIMINARY]` **the loop learns.** Cycle 1, job 301096 on gb207: `p0loss` 3.9209 → **3.4905**, already below the uniform baseline 3.9120; `vloss` 1.2977 → **0.9239**; top-1 policy accuracy `pacc1` 0.027 → 0.095; one candidate exported (`t7-s11808-d11838`, frozen as the match baseline). Cycle wall time ≈ 5 min. S1, S3 and S6 are met; S2, S4, S5 are still open.
+- `[PRELIMINARY]` **one cycle trains ~11 800 samples, not the 5 000 § 10 derives.** With `-no-repeat-files` an instance's single epoch consumes the whole *fresh* window rather than `samples-per-epoch` rows, so cycle 1 trained 11 808 samples over its 11 838 new rows. From cycle 2 the window gains ~6 000 fresh rows per cycle (305 games × 19.73), so ~6 000 samples/cycle. Consequence for reading the summary: **`per_cycle_losses` buckets the log by 5 000 samples, which is NOT 1:1 with cycles.** The authoritative series is `loss_rows` / `metrics_train-<jobid>.json`; plot `p0loss` against `nsamp`.
+- `[OPEN]` S2 (`min p0loss < 2.5`), S4 (≥ 2 acceptances), S5 (positive match score) until `summary-301096.json` is final. Closing evidence: that file plus `metrics_train-301096.json`.
+- `[OPEN]` the logged `p0loss` is an **exponential moving average** (`metrics_logging.py:10-25`, decay 0.999 per batch ⇒ ~1 000-batch memory), so it LAGS the instantaneous loss by roughly two cycles. Every threshold in § 2 and § 11 is therefore conservative: the true loss is below the plotted curve, never above it. Cycle 1's own numbers already clear abort rule A2 (3.4905 < 3.5 at 11 776 samples), so A2 cannot fire spuriously on the lag.
 
 ## 13. Forbidden Actions
 

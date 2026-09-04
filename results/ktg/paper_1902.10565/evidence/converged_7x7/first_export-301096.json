@@ -1,0 +1,7 @@
+{
+ "name": "t7-s11808-d11838",
+ "path_at_freeze": "/scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/runs/t7/modelstobetested/t7-s11808-d11838/model.bin.gz",
+ "sha256": "854474db88940ca8c56cd323f0ea28b23b3f93748aa64ce4ebe5bd0f3f6b695e",
+ "frozen_utc": "2026-09-04T21:16:40Z",
+ "slurm_job_id": "301096"
+}

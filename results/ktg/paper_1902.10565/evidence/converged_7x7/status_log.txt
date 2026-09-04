@@ -1,0 +1,2 @@
+2026-09-04T21:14:38Z job=301096 node=gb207 part=b200 [start] summary not written yet
+2026-09-04T21:16:41Z job=301096 node=gb207 part=b200 [cycle1] cycles=1 samples=11776.0 loss_rows=46 p0loss=3.490458(min 3.490458) vloss=0.923949(min 0.923949) exports=1 accepted=0 rejected=0
