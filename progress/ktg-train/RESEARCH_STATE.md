@@ -74,29 +74,27 @@ remain open (`o02` pos_len-9 propagation, `o03` thread re-measurement at 32).
 12. `r_smoke_c10_bytes_per_game` — **refuted as written**.
 13. `r_cycle_knobs_9x9_derived` — conditional, admitted; narrowed on export ramp; o39/o40/o41 open.
 
-## Next Work Steps — wave-3 production-chain frontier
+## Next Work Steps — wave-3 frontier (ledger-computed 2026-09-04: READY = `data_budget`, `verify_preemption_resume`, `loop_failure_circuit_breaker`; `selfplay_stage` waits on exactly those three)
 
-- `[BLOCKING] o39_cpus_per_task_wiring` — wire `loop.sbatch`'s `--cpus-per-task`/`REQ_CPUS` from 24 to the
-  derived 32 (owner `loop_resume_under_walltime`; `derive_cycle_knobs_9x9`'s task file forbids it touching
-  that file). Closes when the compute-budget check passes at `--cpus 32` and one real-net cycle re-measures
-  `nlwp_max` ≤ 32 (shared closing conjunct with `o03`).
-- `[BLOCKING] o02` (pos_len-9 propagation into `shuffle_stage`), `o03` (thread re-measurement at 32),
-  `o25_chain_breaker_executed_proof` (Slurm-state-backed proof the breaker trips under a real TIMEOUT/
-  CANCELLED/FAILED) — all open, none touched this wave.
-- `[OPEN] o40_export_ramp_first_candidate_cycle5` (non-blocking but should land before the first chain
-  launch to avoid mis-set human expectations) — correct `derive_knobs.py`'s `window_by_cycle` model (still
-  assumes real-net rows from cycle 2) and the 4 prose sites naming "cycle 13".
-- `[OPEN] o38_full_frac_discriminator_reused_tree` (non-blocking, CPU-only) — switch the full-search
-  discriminator to `Root visits == maxVisits`, re-bin the surviving 60-game run, re-propose the band.
-- `[OPEN] o33/o36` (`loop_resume_under_walltime` residuals, non-blocking) — `crash-triage` still says
-  `pivot_structural` for this task (unchanged since iteration 2); `o39`'s repair on the same file should be
-  the vehicle since a `refactor`-only row remains blocked.
-- **Once o39/o02/o03/o25 close**: launch the first real production chain at the derived knobs →
-  `verify_preemption_resume` (c08) exercised for real → P1 five stages running → `bootstrap_accepted_model`
-  at cycle ≥5 → `measure_stage_throughput` (replaces the tiny-probe throughput inputs knobs currently rest
-  on) → `count_gatekeeper_acceptances`, `match_latest_against_first` → `eval_improvement` → `scale_*`.
-- `[OPEN] non-blocking`: `o05`,`o11`,`o12`,`o15`,`o20`,`o21`,`o29`,`o32`,`o33`,`o36`,`o38`,`o40`,`o41`.
-  `[FUTURE]`: `async_multi_gpu_layout`, nbt family.
+- `[BLOCKING]` **`tasks/wave3_prelaunch_repairs`** (CPU, one worker, one commit per repair): R1 o39 (`loop.sbatch`
+  declares 32 CPUs read from `knobs_9x9.env`, asserted at pre-flight), R6 stage monitor wired into every link (needed
+  for o03/c09), R5 o02 wiring DECIDED — wire `check_pos_len_npz.py` before every shuffle; R2 o40 (ramp model: first
+  export at cycle 5, exactly-one ≈ 16), R3 o41 (a missing measured key raises), R4 o38 (re-bin at `== maxVisits` →
+  0.2516 in band, promotes `playout_cap_randomization`). R1/R5/R6 gate the launch; R2–R4 before cycle 5 is read.
+- **`tasks/production_chain_9x9`** — the launch: `BASEDIR=$KTG_ROOT/runs/p1 KTG_MAX_CHAIN=3 sbatch codes/loop/loop.sbatch`
+  (1 GPU, 32 CPUs, 2-23:30:00 per link, 3 links ≈ 9 GPU-days; the 12 ledger closing checks already name `runs/p1`).
+  Settles P1–P12: the five stage nodes, `bootstrap_accepted_model`, `data_budget` (cycle-1 guard log → c11 empirical),
+  `measure_stage_throughput` (c09), `verify_preemption_resume` + the walltime half of o25 (sacct `TIMEOUT` + successor
+  at links 1→2, 2→3; mid-export half by a CPU kill test), o03/o39(c) (`nlwp_max` ≤ 32), o40(c) (first export cycle
+  == 5), `count_gatekeeper_acceptances` (c13 ≥ 1 by cycle 20), then ONE match job (c14, 400 games) → `eval_improvement`.
+  Expectations: first export ≈ 4–5 h in (bound 15.5 h), first gate ≈ 5–6 h (bound 18.6 h), link end 71.5 h. Abort →
+  escalate with data, never tune: breaker/STOP, no export by cycle 8, no acceptance by cycle 20, `nlwp` > 32, bucket
+  starvation ≥ 3 cycles. The human decides scale-up at the end of link 3 from the § 10 decision table.
+- `[OPEN]` o25's breaker-trip-under-sbatch conjunct proposed `[FUTURE]` (walltime half executed by the chain); o33/o36
+  non-blocking, R1 is their structural vehicle; `root_explore_and_target_pruning` / `score_utility_search` stay partial
+  (optional CPU follow-up on the surviving 60-game `logSearchInfo` log).
+- `[OPEN] non-blocking`: `o05`,`o11`,`o12`,`o15`,`o20`,`o21`,`o29`,`o32`,`o33`,`o36`. `[FUTURE]`: `async_multi_gpu_layout`,
+  nbt family, o25 trip-under-sbatch.
 
 ## GPU queue / decisions needed from the human
 
