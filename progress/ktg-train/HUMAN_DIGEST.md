@@ -34,8 +34,11 @@ records before the loop's own cleanup deletes most of them.
 
 ## What is live / blocked / open
 
-- **Live, healthy, unattended**: the 9x9 chain, now on link 2 of 9. A separately-authorized 7x7 test run
-  continues toward its measured-plateau stop, unchanged in mechanism this wave.
+- **Live, healthy, unattended**: the 9x9 chain, now on link 2 of 9. **The separate 7x7 test run is no
+  longer live** — you stopped it on 2026-09-05 to redirect effort to the GUI; it ended with a flattening
+  loss curve (88 cycles, policy loss down to 1.26, value loss down to 0.52, 76 of 87 candidates accepted)
+  but never formally reached the plateau rule, and its closing strength match was waived by your stop, so
+  no playing-strength claim is being made from it.
 - **Nothing is blocked.**
 - **One monitoring gap, not yet a fault**: the data-decline drift check's longer-range leg cannot compute
   this read because its input history gets partly deleted by routine cleanup (see decision below).
