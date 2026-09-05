@@ -1,0 +1,76 @@
+epoch_granularity.txt -- node arxiv-1902.10565::scale_data_window, obligation o47.
+READ-ONLY measurement of what one training EPOCH actually consumes in production,
+job 301099 link 1. Nothing under runs/p1 was written.
+Taken 2026-09-05T05:5x-04:00 by the scale_data_window worker.
+
+$ ls -la $BASEDIR/shuffleddata/20260905-055426/train/
+total 51996
+drwxr-xr-x 1 ssci-haiyangw users        0 Sep  5 05:54 .
+drwxr-xr-x 1 ssci-haiyangw users        0 Sep  5 05:54 ..
+-rw-r--r-- 1 ssci-haiyangw users       19 Sep  5 05:54 data0_0.json
+-rw-r--r-- 1 ssci-haiyangw users 26668332 Sep  5 05:54 data0_0.npz
+-rw-r--r-- 1 ssci-haiyangw users       19 Sep  5 05:54 data1_0.json
+-rw-r--r-- 1 ssci-haiyangw users 26566617 Sep  5 05:54 data1_0.npz
+
+$ cat $BASEDIR/shuffleddata/20260905-055426/train/data{0_0,1_0}.json
+{"num_rows": 60136}
+{"num_rows": 59864}
+  -> 60136 + 59864 = 120000 rows = SHUFFLE_KEEPROWS exactly, in TWO output files.
+     shuffle.sh:48 -approx-rows-per-out-file 70000 and shuffle.py:406-412
+     num_buckets = max(round(120000/70000),1) = 2, num_out_files_per_bucket = 1.
+
+$ grep -c 'BEGINNING NEXT EPOCH' $KTG_ROOT/logs/loop-301099.log
+175
+$ grep -c 'Not enough data files to fill a subepoch' ...
+62
+$ grep -c 'SAVING MODEL FOR EXPORT' ...
+22
+
+$ sed -n '53220,53325p' loop-301099.log | grep -E 'BEGINNING NEXT EPOCH|Global step|Consuming|Not enough data files|Export cycle counter'
+Consuming 20000 rows from train bucket (100000 -> 80000)
+BEGINNING NEXT EPOCH 0
+Global step: 6557440 samples
+Export cycle counter = 0
+Export cycle counter = 1
+Consuming 20000 rows from train bucket (80000 -> 60000)
+BEGINNING NEXT EPOCH 1
+Global step: 6617216 samples
+Export cycle counter = 1
+Export cycle counter = 2
+Consuming 20000 rows from train bucket (60000 -> 40000)
+BEGINNING NEXT EPOCH 2
+Global step: 6677248 samples
+Export cycle counter = 2
+Not enough data files to fill a subepoch! Quitting.
+
+  -> per cycle: the train bucket is debited 3 x 20000 (100000 -> 40000), but only TWO
+     epochs complete, each advancing global_step_samples by
+       6557440 -> 6617216 = 59776 samples = 467 batches
+       6617216 -> 6677248 = 60032 samples = 469 batches
+     i.e. ONE WHOLE OUTPUT FILE per epoch, not the nominal E = 20000 = 156 batches.
+     train.py:1306-1345 get_files_for_subepoch takes whole files and its
+     probabilistic skip at :1332 requires batches_to_use_so_far > 0, which a first
+     file of 467 batches never allows; the third epoch starts, finds no unused file
+     (-no-repeat-files, training_data_generator.py:35) and exits 0 (:1487-1489).
+     Consequences: samples/cycle = SHUFFLE_KEEPROWS = 120000; the export counter
+     advances 2 per cycle so a candidate exports every EPOCHS_PER_EXPORT/2 = 2.5
+     cycles (measured 22 exports in 62 cycles = 2.82, the ramp included); and
+     metrics_train.json gets floor(467/100) = 4 lines per epoch regardless of E.
+
+$ grep -n 'Global step: .* samples' ... | tail -12
+50349:Global step: 6257664 samples
+50385:Global step: 6317824 samples
+51396:Global step: 6317824 samples
+51433:Global step: 6377728 samples
+51470:Global step: 6437632 samples
+52131:Global step: 6437632 samples
+52167:Global step: 6497536 samples
+52206:Global step: 6557440 samples
+53236:Global step: 6557440 samples
+53272:Global step: 6617216 samples
+53309:Global step: 6677248 samples
+53971:Global step: 6677248 samples
+
+TOTALS: train_samples_total 6257664 at the read-5 snapshot (models/t9-s6257664
+-d1299077/metadata.json); 174 epochs started, 62 of them aborted on the subepoch
+check, so 112 completed epochs.
