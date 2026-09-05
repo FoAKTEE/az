@@ -1,0 +1,34 @@
+{
+ "checkpoints": {
+  "checkpoint.ckpt": {
+   "bytes": 10026887,
+   "export_cycle_counter": 0,
+   "global_step_samples": 2329632,
+   "running_metrics_means": {
+    "loss": 28.87417161640444,
+    "p0loss": 1.299552344031825,
+    "smloss": 0.05226322581549776,
+    "vloss": 0.5440694128793784
+   },
+   "running_metrics_nsamp": 2329632.0,
+   "running_metrics_terms": 56,
+   "total_num_data_rows": 307580
+  },
+  "checkpoint_prev0.ckpt": {
+   "bytes": 10026887,
+   "export_cycle_counter": 0,
+   "global_step_samples": 2299648,
+   "running_metrics_means": {
+    "loss": 28.891663736083604,
+    "p0loss": 1.3060897570777732,
+    "smloss": 0.051414976701766764,
+    "vloss": 0.5462365623609157
+   },
+   "running_metrics_nsamp": 2299648.0,
+   "running_metrics_terms": 56,
+   "total_num_data_rows": 304442
+  }
+ },
+ "slurm_job_id": "301096",
+ "traindir": "/scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/runs/t7/train/t7"
+}
