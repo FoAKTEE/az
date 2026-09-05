@@ -1,0 +1,13 @@
+Job ID: 301096
+Cluster: skipjack
+User/Group: ssci-haiyangw/users
+Partition: b200
+Account: ssci-anima
+State: CANCELLED (exit code 0:0)
+Nodes: 1
+Cores per node: 16
+CPU Utilized: 03:28:07
+CPU Efficiency: 6.87% of 2-02:29:04 core-walltime
+Job Wall-clock time: 03:09:19
+Memory Utilized: 14.80 GB
+Memory Efficiency: 15.41% of 96.00 GB

@@ -1,14 +1,18 @@
 {
- "_README": "CANDIDATE result rows for node arxiv-1902.10565::converged_test_7x7, job 301096. NOT APPENDED to any ledger by this worker -- the brief for this node authorises error- and knowledge-ledger rows only, and forbids result/claim appends. These are drafts for whoever closes the node: fill in the fields marked TERMINAL_* from evidence/converged_7x7/summary-301096.json once job 301096 is terminal, then hand them to the refuter/judge. Row 1 is settled by cycle-1 measurement and is safe to append as it stands; row 2 is the convergence claim and must not be appended before the match result exists.",
- "job": "301096",
- "generated_utc": "2026-09-04T21:19:18Z",
+ "_README": "CANDIDATE result rows for node arxiv-1902.10565::converged_test_7x7. NOT APPENDED to any ledger by this worker -- the brief authorises error- and knowledge-ledger rows only and forbids result/claim appends. These are drafts for whoever closes the node, and they are now FINAL in the sense that no further measurement is coming: the run was stopped by human decision on 2026-09-05 (scancel 301186 301096) and the closing match was waived by the same decision.",
+ "run_status": "STOPPED BY HUMAN DECISION 2026-09-05; not a plateau, not an abort",
+ "jobs": {
+  "training": "301096 (CANCELLED by user after 03:09:19 on gb207)",
+  "continuation": "301186 (CANCELLED while PENDING on its dependency, never started)"
+ },
+ "generated_utc": "2026-09-05T00:26:10Z",
  "candidate_rows": [
   {
-   "_status_at_draft": "settled by cycle 1; independent of how the rest of the run goes",
+   "_status": "SETTLED -- safe to append as it stands",
    "paper": "arxiv-1902.10565",
    "result_id": "ktg_7x7_rows_per_game",
    "name": "Training rows per self-play game at 7x7",
-   "working_context": "KataGo v1.18.2 selfplay, model kind b7c96h3tfrs, codes/cfg/selfplay_7x7.cfg (dataBoardLen 7, bSizes 7, maxVisits 100, cheapSearchVisits 25, 12 game threads), bootstrap random net, 1 B200 GPU on gb207, job 301096 cycle 1.",
+   "working_context": "KataGo v1.18.2 selfplay, b7c96h3tfrs, codes/cfg/selfplay_7x7.cfg (dataBoardLen 7, bSizes 7, maxVisits 100, cheapSearchVisits 25, 12 game threads), bootstrap random net, 1 B200 on gb207, job 301096 cycle 1.",
    "claim": "A 7x7 self-play game under this mission's fast-search config writes 19.73 training rows on average (11838 rows over 600 games), which is the 9x9 measurement of 31.7-32.0 rows/game scaled by board area (32 * 49/81 = 19.4) to within 2 %.",
    "evidence_type": "empirical measurement",
    "evidence": "results/ktg/paper_1902.10565/evidence/converged_7x7/rows_per_game-301096.json",
@@ -17,24 +21,24 @@
     "arxiv-1902.10565::converged_test_7x7"
    ],
    "assumptions": [
-    "rows are counted as the sum of binaryInputNCHWPacked.shape[0] over the cycle's npz, games as non-empty lines of the .sgfs (cpp/program/selfplaymanager.cpp:377-378) -- the same two instruments the 9x9 measurement used",
-    "the bootstrap random net plays; the 9x9 smoke measured essentially the same rate for a real net (31.95) as for the random one (31.675), so the number is not expected to move much"
+    "rows = sum of binaryInputNCHWPacked.shape[0] over the cycle's npz; games = non-empty .sgfs lines (cpp/program/selfplaymanager.cpp:377-378) -- the two instruments the 9x9 measurement used",
+    "measured on the bootstrap random net; the 9x9 smoke found essentially the same rate for a real net (31.95) as for the random one (31.675)"
    ],
    "status": "empirical",
-   "provenance": "job 301096 on gb207, 2026-09-04; measured by the job itself, not by hand",
+   "provenance": "job 301096 on gb207, 2026-09-04; measured by the job itself",
    "open_obligations": [
-    "[OPEN] not re-measured with a TRAINED net at 7x7; cycle 2+ data in the same BASEDIR would settle it"
+    "[OPEN] not re-measured with a trained net at 7x7, though 88 cycles of data now exist in runs/t7 and would settle it without any new compute"
    ]
   },
   {
-   "_status_at_draft": "NOT SETTLED -- do not append before job 301096 is terminal",
+   "_status": "PARTIAL -- five of six criteria settled; S5 WAIVED BY HUMAN DECISION, so this row must NOT be appended as a 'checked' or unqualified result",
    "paper": "arxiv-1902.10565",
    "result_id": "ktg_7x7_converged_test",
-   "name": "A 7x7 self-play loop converges inside one short single-GPU allocation",
-   "working_context": "KataGo v1.18.2, b7c96h3tfrs, 7x7, one 1-GPU 5 h 15 min allocation on gb207 (B200). Knobs: tasks/converged_test_7x7/implementation.md section 10. Loss-print interval 8 batches via KTG_PRINT_EVERY (codes/env/train-print-every.diff); LR at upstream's own from-scratch multiplier via -lr-scale-auto.",
-   "claim": "TERMINAL_CLAIM -- state it from summary-301096.json: policy loss fell from FIRST to MIN against the uniform baseline ln(50) = 3.9120 with target < 2.5; value loss fell from FIRST to MIN; the gatekeeper accepted TERMINAL_ACCEPTANCES successive candidates; and the latest accepted net scored TERMINAL_SCORE (TERMINAL_W-TERMINAL_L-TERMINAL_D, Elo TERMINAL_ELO) against the run's first exported net t7-s11808-d11838 over 200 balanced-colour games at 100 fixed visits.",
+   "name": "A 7x7 self-play loop learns, measured over 88 cycles on one GPU",
+   "working_context": "KataGo v1.18.2, b7c96h3tfrs, 7x7, one B200 (gb207), 3 h 09 m, 88 cycles, 2449536 training samples. Knobs: tasks/converged_test_7x7/implementation.md section 10. Loss-print interval 8 batches via KTG_PRINT_EVERY; LR via -lr-scale-auto.",
+   "claim": "Over 88 self-play/train/gate cycles the policy loss fell from 3.9209 to a minimum of 1.2641 -- from the uniform-policy baseline ln(50) = 3.9120 to well below the 2.5 target -- the value loss fell from 1.2977 to a minimum of 0.5249, and the gatekeeper accepted 77 of 88 successive candidates (11 rejected). The fixed-visit match against the first exported net (S5) was NOT RUN: it was waived by human decision when the run was stopped, so no strength claim in games is advanced here -- only the training behaviour and the gate's own 88 decisions.",
    "evidence_type": "numerical simulation",
-   "evidence": "results/ktg/paper_1902.10565/evidence/converged_7x7/summary-301096.json",
+   "evidence": "results/ktg/paper_1902.10565/evidence/converged_7x7/summary-t7.json",
    "dependencies": [
     "arxiv-1902.10565::converged_test_7x7",
     "arxiv-1902.10565::env_build",
@@ -43,16 +47,17 @@
     "arxiv-1902.10565::gating_rule"
    ],
    "assumptions": [
-    "assumption a05_9x9_only is deliberately stepped outside: this is a 7x7 test run and advances NO 9x9 claim. It is evidence that the LOOP learns, not that the 9x9 configuration does",
-    "the logged p0loss/vloss are exponential moving averages with decay 0.999 per batch (python/katago/train/metrics_logging.py:10-25), i.e. about a 1000-batch memory, so the reported values LAG the instantaneous loss and every threshold is conservative",
-    "the match is a paired comparison at a single fixed visit count (100); it says nothing about relative strength at other visit counts",
-    "one run, one seed -- no repetition, so the score's uncertainty is the Wilson interval on a single 200-game sample and nothing more"
+    "a05_9x9_only is deliberately stepped outside: this is a 7x7 test run and advances NO 9x9 claim. It is evidence that the LOOP learns, not that the 9x9 configuration does",
+    "p0loss and vloss are exponential moving averages, decay 0.999 per batch (python/katago/train/metrics_logging.py:10-25), so the reported values lag the instantaneous loss and every threshold crossed is crossed conservatively",
+    "the 88 gate decisions are self-play matches at 100 visits against the previous accepted net -- they measure relative improvement per cycle, NOT absolute strength, and they are not independent of the training data",
+    "one run, one seed, no repetition"
    ],
-   "status": "TERMINAL_STATUS -- empirical if every criterion of section 2 is met, otherwise conditional or refuted, stated from the summary and never rounded up",
-   "provenance": "job 301096 on gb207, 2026-09-04/05",
+   "status": "empirical for the training-behaviour conjuncts (S1-S4, S6); the strength conjunct S5 is UNCHECKED and was waived, so the row cannot be promoted to a convergence claim as it stands",
+   "provenance": "job 301096 on gb207, 2026-09-04/05; stopped by human decision",
    "open_obligations": [
-    "[OPEN] fill TERMINAL_* from summary-301096.json once sacct shows the job terminal",
-    "[OPEN] a refuter has not seen this; the brief for this node forbids the worker from appending result or claim rows, so admission is somebody else's step"
+    "[UNCHECKED] S5, the fixed-visit match of t7-s2449568-d319559 (latest accepted) against t7-s11808-d11838 (first export), 200 balanced-colour games at 100 visits. WAIVED BY HUMAN DECISION 2026-09-05. Both nets are on disk under runs/t7 and the measurement costs one ~10-20 min 1-GPU job with no retraining, so this is recoverable at will; it is not a lost measurement",
+    "[OPEN] summary-t7.json reports converged: false BY CONSTRUCTION, because the converged flag requires a positive match score. Do not read that false as a negative result about learning -- read it as S5 not having been measured",
+    "[OPEN] a refuter has not seen this; the worker is forbidden from appending result or claim rows"
    ]
   }
  ]

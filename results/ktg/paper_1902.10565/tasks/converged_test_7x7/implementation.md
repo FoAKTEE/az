@@ -176,15 +176,39 @@ codes/loop/synchronous_loop_9x9.sh  UNCHANGED (its knobs and configs were alread
 | the 9×9 chain is disturbed | staged config or `-pos-len` changes | verifier C1/C2/C4/C6/C7/C9 — all pass with the variables unset |
 | scratch fills | `scratch_guard.sh` exit 1/2 | the loop already brakes on it; run adds ≤ ~2 GiB |
 
-## 12. Current State
+## 12. Current State — FINAL (run stopped by human decision, 2026-09-05)
 
-- `[SOLID]` the parameterisation and the patch: `evidence/converged_7x7/check_board_param.txt`, `CHECK_BOARD_PARAM: PASS`, 11/11 checks executed.
-- `[SOLID]` **rows/game at 7×7 = 19.73** (11 838 rows over 600 games, cycle 1 of job 301096) — the ~19 prior from area scaling was right; games/cycle re-derived to 305 by the job itself (`evidence/converged_7x7/rows_per_game-301096.json`).
-- `[SOLID]` **the dense loss log exists** — 46 rows in cycle 1 alone, one per 8 batches, where the 9×9 smoke's file had 0. The blocking defect § 3 names is closed.
-- `[PRELIMINARY]` **the loop learns.** Cycle 1, job 301096 on gb207: `p0loss` 3.9209 → **3.4905**, already below the uniform baseline 3.9120; `vloss` 1.2977 → **0.9239**; top-1 policy accuracy `pacc1` 0.027 → 0.095; one candidate exported (`t7-s11808-d11838`, frozen as the match baseline). Cycle wall time ≈ 5 min. S1, S3 and S6 are met; S2, S4, S5 are still open.
-- `[PRELIMINARY]` **one cycle trains ~11 800 samples, not the 5 000 § 10 derives.** With `-no-repeat-files` an instance's single epoch consumes the whole *fresh* window rather than `samples-per-epoch` rows, so cycle 1 trained 11 808 samples over its 11 838 new rows. From cycle 2 the window gains ~6 000 fresh rows per cycle (305 games × 19.73), so ~6 000 samples/cycle. Consequence for reading the summary: **`per_cycle_losses` buckets the log by 5 000 samples, which is NOT 1:1 with cycles.** The authoritative series is `loss_rows` / `metrics_train-<jobid>.json`; plot `p0loss` against `nsamp`.
-- `[OPEN]` S2 (`min p0loss < 2.5`), S4 (≥ 2 acceptances), S5 (positive match score) until `summary-301096.json` is final. Closing evidence: that file plus `metrics_train-301096.json`.
-- `[OPEN]` the logged `p0loss` is an **exponential moving average** (`metrics_logging.py:10-25`, decay 0.999 per batch ⇒ ~1 000-batch memory), so it LAGS the instantaneous loss by roughly two cycles. Every threshold in § 2 and § 11 is therefore conservative: the true loss is below the plotted curve, never above it. Cycle 1's own numbers already clear abort rule A2 (3.4905 < 3.5 at 11 776 samples), so A2 cannot fire spuriously on the lag.
+The run was **stopped by human decision** on 2026-09-05 (`scancel 301186 301096`), with
+the instruction not to resubmit and not to run the closing match. This section is the
+final state; no further measurement is coming unless S5 is deliberately recovered.
+
+**Not a plateau and not an abort.** Every automatic stop the design provides is absent:
+no `$BASEDIR/PLATEAU`, no `$BASEDIR/ABORT`, no `STOP` file, no abort-rule line in the job
+log, and no `plateau_log.txt` at all (the evaluator ships in `t7_continue.sbatch`, which
+never executed — `301186` was cancelled while still PENDING on its dependency, 00:00:00
+elapsed). Nothing in the run asked it to end.
+
+**The run was still improving when it was stopped.** The last of 88 gate decisions was
+`Candidate won match, score 40.000 to 4.000 in 44 games` — an acceptance by the widest
+margin of the whole run.
+
+| Criterion | Threshold | Measured | Verdict |
+|---|---|---|---|
+| S1 policy below uniform | `< ln(50) = 3.9120` | min p0loss **1.2641** (from 3.9209) | **MET** |
+| S2 policy below target | `< 2.5` | min p0loss **1.2641** | **MET** |
+| S3 value loss fell | `min < first` | 1.2977 → min **0.5249** | **MET** |
+| S4 acceptances | `>= 2` | **77** accepted, 11 rejected, 88 gate decisions | **MET** |
+| S5 fixed-visit match | Wilson 95 % lower bound `> 0.5` | **NOT RUN — waived by human decision** | **WAIVED** |
+| S6 dense loss log | `>= 20` rows | **9 554** rows (the 9×9 smoke had **0**) | **MET** |
+
+- `[SOLID]` the parameterisation and the patch: `evidence/converged_7x7/check_board_param.txt`, `CHECK_BOARD_PARAM: PASS`, 11/11.
+- `[SOLID]` **rows/game at 7×7 = 19.73** (11 838 / 600) — the area-scaled prior (32 × 49/81 = 19.4) held to 2 %.
+- `[SOLID]` **the dense loss log exists** — 9 554 rows, one per 8 batches. The blocking defect § 3 names is closed.
+- `[SOLID]` **the loop learns.** 88 cycles, 2 449 536 samples, 3 h 09 m on one B200: p0loss 3.9209 → 1.2641, vloss 1.2977 → 0.5249, 77 of 88 candidates accepted. First export `t7-s11808-d11838`, latest accepted `t7-s2449568-d319559`.
+- `[PRELIMINARY]` **one cycle trains ~11 800 samples at first, not the 5 000 § 10 derives** — with `-no-repeat-files` an epoch consumes the whole *fresh* window. So `per_cycle_losses` in the summary buckets by 5 000 samples and is **not** 1:1 with cycles; plot `loss_rows` / `metrics_train-t7.json` as `p0loss` vs `nsamp`.
+- `[UNCHECKED]` **S5.** Both nets are on disk under `runs/t7`; the measurement is one ~10–20 min 1-GPU job with **no retraining**, so it is recoverable at will rather than lost. `summary-t7.json` reports `converged: false` **by construction** because that flag requires a positive match score — that `false` means "S5 not measured", not "the loop did not learn".
+- `[OPEN]` the logged `p0loss`/`vloss` are EMAs (decay 0.999, ~1000-batch memory) and lag the instantaneous loss, so every threshold above was crossed conservatively.
+- `[OPEN]` sizing for any successor run: `seff 301096` gives CPU efficiency **6.87 %** of 16 cores and **14.80 GB** of 96 GB used — both requests were generous; the cycle is sequential and only self-play is thread-hungry.
 
 ## 13. Forbidden Actions
 

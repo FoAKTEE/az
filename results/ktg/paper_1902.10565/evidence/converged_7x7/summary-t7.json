@@ -1,5 +1,5 @@
 {
- "abort": null,
+ "abort": "none -- the run was STOPPED BY HUMAN DECISION on 2026-09-05 (scancel 301186 301096); no abort rule and no plateau fired",
  "accepted": [
   {
    "data_rows": 11838,
@@ -532,6 +532,13 @@
    "has_model_bin": true,
    "name": "t7-s2419584-d316410",
    "samples": 2419584
+  },
+  {
+   "data_rows": 319559,
+   "dir": "/scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/runs/t7/models/t7-s2449568-d319559",
+   "has_model_bin": true,
+   "name": "t7-s2449568-d319559",
+   "samples": 2449568
   }
  ],
  "allocation": {
@@ -551,7 +558,7 @@
  "board": 7,
  "converged": false,
  "criteria": {
-  "acceptances": 76,
+  "acceptances": 77,
   "acceptances_met": true,
   "acceptances_target": 2,
   "policy_below_target": true,
@@ -1175,7 +1182,7 @@
   },
   {
    "data_rows": 319559,
-   "dir": "/scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/runs/t7/modelstobetested/t7-s2449568-d319559",
+   "dir": "/scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/runs/t7/models/t7-s2449568-d319559",
    "has_model_bin": true,
    "name": "t7-s2449568-d319559",
    "samples": 2449568
@@ -1530,6 +1537,10 @@
   {
    "file": "stdout.txt",
    "line": "Candidate won match, score 40.500 to 12.500 in 53 games, accepting candidate t7-s2419584-d316410"
+  },
+  {
+   "file": "stdout.txt",
+   "line": "Candidate won match, score 40.000 to 4.000 in 44 games, accepting candidate t7-s2449568-d319559"
   }
  ],
  "loss_log": {
@@ -56568,15 +56579,7 @@
  "loss_rows_truncated": true,
  "match": null,
  "node_id": "arxiv-1902.10565::converged_test_7x7",
- "pending_gate": [
-  {
-   "data_rows": 319559,
-   "dir": "/scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/runs/t7/modelstobetested/t7-s2449568-d319559",
-   "has_model_bin": true,
-   "name": "t7-s2449568-d319559",
-   "samples": 2449568
-  }
- ],
+ "pending_gate": [],
  "per_cycle_losses": [
   {
    "cycle": 1,
