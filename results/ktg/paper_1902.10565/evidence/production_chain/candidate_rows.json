@@ -15,6 +15,22 @@
       "from": "worker, production_chain_9x9, read 3",
       "subject": "R16 (b) threshold is calibrated on one link and wants review",
       "detail": "the authorised restatement of R16 shipped with NODATA_NO_EXPORT_RUN=6 in chain_status.sh. The proposed value was 3, but the healthy link-1 ramp reaches a run of 4 (exports at cycles 5,10,15,17,20,22 leave gaps of 4 at cycles 6-9 and 11-14) and the validator's own predicted ramp 5,10,15,19,22 has the same maximum gap, so 3 fires on a good chain. 6 is one clear step above the observed and predicted maximum. Calibrated on ONE link; it is a monitoring parameter of the reader, not a knob of the run."
+    },
+    {
+      "date": "2026-09-05",
+      "from": "worker, production_chain_9x9, read 4",
+      "subject": "T1 violated in production; NUM_GAMES_PER_CYCLE is the knob, decision belongs to scale_data_window",
+      "finding": "rows/game real = 22.174 aggregate over 36040 real-net games and 18.525 marginal over the last 8000, against the T1 requirement rows_per_cycle >= 1.2*E = 24000. Aggregate margin -7.61 %, marginal -22.81 %; at the marginal rate a cycle yields 1475 FEWER new rows than one epoch draws.",
+      "mechanism_measured": "the derivation's r = 32.300 was a 20-game probe on a barely-trained net. In production moves/game fell 130.8 -> ~81 between the first and third accepted net and has been flat at 80-82 since (a one-time learning transition), while rows-per-move drifts 0.252 -> 0.227 against the ~0.25 that cheapSearchProb 0.75 implies. Resignation is refuted as a cause: RE[...+R] is 0.0 % in every net directory.",
+      "not_yet_harmful": "the bucket is not starving ('not enough new data rows, terminating' still 1, longest run 1 vs the R14 threshold 3); MAX_TRAIN_PER_DATA 8 leaves reuse headroom and the loop keeps exporting and accepting 13/13.",
+      "options": "G >= 1296 restores T1 (>= 1.2*E); G >= 1080 restores rows_per_cycle >= E; or accept a lower freshness ratio explicitly and record it as a narrowing of T1. NOT applied -- a knob move is out of this packet's scope (section 13) and the P8 row says the knob check's FAIL is recorded for scale_data_window, never tuned here.",
+      "decision_owner": "coordinator + validator, node scale_data_window"
+    },
+    {
+      "date": "2026-09-05",
+      "from": "worker, production_chain_9x9, read 4",
+      "subject": "check_knobs_9x9.py cannot evaluate production throughput -- it expects the smoke's phase layout",
+      "detail": "the P8-prescribed re-run `check_knobs_9x9.py --throughput <production throughput.json> --rows-file <rows_per_game.txt>` exits 1 with \"missing the measured key(s) per_phase_stage['cycle2/gatekeeper'].elapsed_s\". Under the admitted export ramp cycle 2 has NO gatekeeper stage (the first gate is at cycle 6), while the checker expects the smoke layout in which cycle 2 did gate. The exit 1 is 'cannot evaluate', not 'T1 refuted'; o41 is behaving as designed by refusing to substitute a constant. Until the checker tolerates a ramp whose gate starts at cycle 6, the P8 knob re-run cannot be satisfied on production data and the T1 arithmetic has to be done directly from the measured r, as it was at this read."
     }
   ]
 }
