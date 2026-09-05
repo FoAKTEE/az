@@ -47,9 +47,28 @@ sys.path.insert(0, HERE)
 
 import extract_games as EX  # noqa: E402
 
-N = EX.BOARD_SIZE
-NP = N * N
+N = 0
+NP = 0
+NEIGH = []
 PASS = -1
+
+
+def set_board_size(n):
+    """Point the reference logic at an n x n board."""
+    global N, NP, NEIGH
+    N, NP, NEIGH = n, n * n, []
+    for y in range(n):
+        for x in range(n):
+            a = []
+            if x > 0:
+                a.append(y * n + x - 1)
+            if x < n - 1:
+                a.append(y * n + x + 1)
+            if y > 0:
+                a.append((y - 1) * n + x)
+            if y < n - 1:
+                a.append((y + 1) * n + x)
+            NEIGH.append(a)
 
 DEFAULT_GAMES = os.path.join(EX.DEFAULT_OUT, "games.json")
 NODE_CANDIDATES = [
@@ -57,20 +76,6 @@ NODE_CANDIDATES = [
     "/weka/home/schmidt/ssci-haiyangw/.vscode-server/bin/"
     "7e7950df89d055b5a378379db9ee14290772148a/node",
 ]
-
-NEIGH = []
-for _y in range(N):
-    for _x in range(N):
-        _a = []
-        if _x > 0:
-            _a.append(_y * N + _x - 1)
-        if _x < N - 1:
-            _a.append(_y * N + _x + 1)
-        if _y > 0:
-            _a.append((_y - 1) * N + _x)
-        if _y < N - 1:
-            _a.append((_y + 1) * N + _x)
-        NEIGH.append(_a)
 
 
 # --------------------------------------------------------------- reference board logic
@@ -88,7 +93,7 @@ def sgf_to_point(s):
 def point_name(p):
     if p == PASS:
         return "pass"
-    return "ABCDEFGHJKLMNOPQRST"[p % N] + str(N - p // N)
+    return "ABCDEFGHJKLMNOPQRSTUVWXYZ"[p % N] + str(N - p // N)
 
 
 def group_liberties(stones, p):
@@ -225,7 +230,8 @@ def load_bundle(path):
 
 def moves_of(bundle, row):
     """The stored moves as two-character SGF coordinates ("--" for a pass)."""
-    return EX.split_moves(row[8], bundle.get("move_encoding", "sgf2"))
+    return EX.split_moves(row[8], bundle.get("move_encoding", "sgf2"),
+                          bundle.get("board_size", 7))
 
 
 def points_of(bundle, row):
@@ -253,9 +259,10 @@ def source_move_sequence(line):
     return "".join(out)
 
 
-def iter_source_lines(run_dir):
+def iter_source_lines(run_dir, quiet_seconds):
     """Yield the SGF lines in exactly the order the extractor accepted them."""
-    for _source, _net, path, size, _mtime in EX.snapshot_files(run_dir):
+    files, _hot = EX.snapshot_files(run_dir, quiet_seconds)
+    for _source, _net, path, size, _mtime in files:
         for raw in EX.stream_lines(path, size):
             line = raw.decode("utf-8", "replace").strip()
             if not line.endswith(")"):
@@ -283,21 +290,21 @@ def find_node(explicit):
 
 # --------------------------------------------------------------------------- test A
 
-def test_round_trip(bundle, run_dir, sample_n, rng):
+def test_round_trip(bundle, run_dir, sample_n, rng, quiet_seconds):
     print("A  round trip: re-serialise %d random games and compare with the source SGF" % sample_n)
     rows = bundle["games"]
     want = sorted(rng.sample(range(len(rows)), min(sample_n, len(rows))))
     wanted = set(want)
     checked = 0
     failures = []
-    for gi, line in enumerate(iter_source_lines(run_dir)):
+    for gi, line in enumerate(iter_source_lines(run_dir, quiet_seconds)):
         if gi not in wanted:
             continue
         row = rows[gi]
         got = serialise(bundle, gi, row)
         expect = source_move_sequence(line)
         hash_in_line = EX.HASH_RE.search(line)
-        if hash_in_line and hash_in_line.group(1) != row[9]:
+        if hash_in_line and hash_in_line.group(1)[:len(row[9])] != row[9]:
             failures.append("game %d: hash mismatch %s != %s" % (gi, hash_in_line.group(1), row[9]))
         if got != expect:
             failures.append("game %d: move sequence differs\n   record %s\n   source %s"
@@ -420,15 +427,17 @@ def build_fixture(bundle, sample_n, rng):
             "capB": st["capB"],
             "capW": st["capW"],
         })
-    return {"schema": 1,
+    return {"schema": 2,
             "generated_utc": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
             "source_snapshot_utc": bundle.get("snapshot_utc"),
+            "board_size": bundle.get("board_size", 7),
             "cases": cases}
 
 
 NODE_DRIVER = """
 var GO = require(%s);
 var fixture = require(%s);
+GO.init(fixture.board_size || 7);
 var pass = 0, fail = 0, first = [];
 for (var i = 0; i < fixture.cases.length; i++) {
   var c = fixture.cases[i];
@@ -446,6 +455,7 @@ for (var i = 0; i < fixture.cases.length; i++) {
     }
   }
 }
+console.log("   board               " + GO.N + "x" + GO.N);
 console.log("   cases               " + fixture.cases.length);
 console.log("   agree               " + pass);
 console.log("   disagree            " + fail);
@@ -466,6 +476,16 @@ def test_cross_check(bundle, viewer_path, fixture_path, sample_n, rng, node_path
           % (fixture_path, size, len(fixture["cases"])))
     print("   viewer ?selftest    paste this file in place of the __SELFTEST__ placeholder")
 
+    core = extract_core(viewer_path)
+    m = re.search(r'var ALPHABET = "([^"]*)";', core)
+    same = bool(m) and m.group(1) == EX.MOVE_ALPHABET
+    print("   packing alphabet    %d chars, page and extractor %s"
+          % (len(m.group(1)) if m else 0, "agree" if same else "DIFFER"))
+    if not same:
+        print("   RESULT              FAIL")
+        print("")
+        return False
+
     node = find_node(node_path)
     if not node:
         print("   node                not found -- browser-side check SKIPPED")
@@ -473,7 +493,6 @@ def test_cross_check(bundle, viewer_path, fixture_path, sample_n, rng, node_path
         print("")
         return True
 
-    core = extract_core(viewer_path)
     tmp = tempfile.mkdtemp(prefix="s7core")
     core_js = os.path.join(tmp, "go_core.js")
     drv_js = os.path.join(tmp, "drive.js")
@@ -591,8 +610,12 @@ check((el("listInner").innerHTML.match(/class="grow"/g) || []).length > 0,
 check((el("listInner").innerHTML.match(/class="grow"/g) || []).length < 40,
       "game list rendered every row instead of a window");
 check(el("grid").innerHTML.indexOf("gridline") >= 0, "board grid was not drawn");
-check((el("labels").innerHTML.match(/class="coord"/g) || []).length === 14,
-      "board is missing coordinate labels");
+check((el("labels").innerHTML.match(/class="coord"/g) || []).length === expect.n * 2,
+      "expected " + (expect.n * 2) + " coordinate labels, drew " +
+      (el("labels").innerHTML.match(/class="coord"/g) || []).length);
+check((el("grid").innerHTML.match(/class="star"/g) || []).length === expect.stars,
+      "expected " + expect.stars + " star points, drew " +
+      (el("grid").innerHTML.match(/class="star"/g) || []).length);
 check(el("recordhead").innerHTML.indexOf("spark") >= 0,
       "the winrate sparkline is missing on a gatekeeper game");
 check(el("metarow").innerHTML.indexOf("Komi") >= 0, "the header is missing its fields");
@@ -645,6 +668,8 @@ try {
   fails.push("?selftest threw: " + e);
 }
 
+console.log("   board               " + expect.n + "x" + expect.n +
+            ", " + expect.stars + " star points, " + (expect.n * 2) + " coordinate labels");
 console.log("   opening game        #" + expect.gi + "  " + expect.black + " vs " + expect.white);
 console.log("   positions walked    " + expect.positions.length);
 console.log("   list rows drawn     " +
@@ -702,8 +727,10 @@ def opening_expectations(bundle):
                 cap[2 if colour == 1 else 1] += self_lost
         positions.append([stones.count(1), stones.count(2), cap[1], cap[2]])
         colour = 2 if colour == 1 else 1
+    n = bundle.get("board_size", 7)
+    stars = 1 if n < 9 and n % 2 else (5 if n % 2 else 4)
     nets = bundle["nets"]
-    return {"gi": gi,
+    return {"gi": gi, "n": n, "stars": stars,
             "shown": "{:,}".format(len(rows)),
             "black": nets[row[1]]["name"],
             "white": nets[row[2]]["name"],
@@ -747,21 +774,41 @@ def main(argv=None):
     ap.add_argument("--viewer", default=os.path.join(HERE, "viewer.html"))
     ap.add_argument("--fixture", default=os.path.join(EX.DEFAULT_OUT, "selftest_fixture.json"))
     ap.add_argument("--round-trip", type=int, default=50)
+    ap.add_argument("--quiet-seconds", type=int, default=EX.DEFAULT_QUIET_SECONDS,
+                    help="must match the value the bundle was extracted with, so the "
+                         "round trip walks the same files in the same order")
+    ap.add_argument("--fixture-only", action="store_true",
+                    help="only write selftest_fixture.json, run no tests")
     ap.add_argument("--cross-check", type=int, default=200)
     ap.add_argument("--seed", type=int, default=20260905)
     ap.add_argument("--node", default=None)
     args = ap.parse_args(argv)
 
     bundle = load_bundle(args.games)
+    set_board_size(bundle.get("board_size", 7))
+
+    if args.fixture_only:
+        fixture = build_fixture(bundle, args.cross_check, random.Random(args.seed + 1))
+        with open(args.fixture, "w") as fh:
+            json.dump(fixture, fh, separators=(",", ":"))
+            fh.write("\n")
+        print("fixture %s (%d cases, %dx%d)"
+              % (args.fixture, len(fixture["cases"]), N, N))
+        return 0
+
     print("games.json  %s" % args.games)
+    print("label       %s" % bundle.get("label"))
     print("snapshot    %s" % bundle.get("snapshot_utc"))
-    print("games       %d   nets %d   encoding %s"
-          % (len(bundle["games"]), len(bundle["nets"]), bundle.get("move_encoding")))
+    print("board       %dx%d" % (N, N))
+    print("games       %d   nets %d   encoding %s   hash %d chars"
+          % (len(bundle["games"]), len(bundle["nets"]), bundle.get("move_encoding"),
+             bundle.get("hash_chars", 32)))
     print("seed        %d" % args.seed)
     print("")
 
     ok = True
-    ok &= test_round_trip(bundle, args.run_dir, args.round_trip, random.Random(args.seed))
+    ok &= test_round_trip(bundle, args.run_dir, args.round_trip, random.Random(args.seed),
+                          args.quiet_seconds)
     ok &= test_replay_all(bundle)
     ok &= test_cross_check(bundle, args.viewer, args.fixture, args.cross_check,
                            random.Random(args.seed + 1), args.node)

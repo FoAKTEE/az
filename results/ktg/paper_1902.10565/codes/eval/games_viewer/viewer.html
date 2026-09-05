@@ -1,4 +1,4 @@
-<title>Seven-by-Seven Games</title>
+<title>Self-Play Board Records</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Serif:wght@500;600&display=swap">
@@ -574,7 +574,7 @@ select { font-family: var(--mono); font-size: 12px; }
 #board .wood      { fill: url(#gwood); }
 #board .gridline  { stroke: var(--wood-line); stroke-linecap: square; }
 #board .star      { fill: var(--wood-line); }
-#board .coord     { fill: var(--wood-text); fill-opacity: .78; font-family: var(--mono); font-size: 34px; }
+#board .coord     { fill: var(--wood-text); fill-opacity: .78; font-family: var(--mono); }
 #board .stone-b   { fill: url(#gb); stroke: rgba(0,0,0,.45); stroke-width: 1.5; }
 #board .stone-w   { fill: url(#gw); stroke: var(--stone-w-rim); stroke-width: 2; }
 #board .num-b     { fill: var(--num-on-b); }
@@ -613,7 +613,7 @@ select { font-family: var(--mono); font-size: 12px; }
 
 <div id="app">
   <header class="topbar">
-    <h1>Seven-by-Seven Games</h1>
+    <h1 id="headline">Self-play board records</h1>
     <div class="sub" id="snapline">&nbsp;</div>
     <div class="spacer"></div>
     <button class="ghost" id="themebtn" type="button" title="Light, dark, or follow the system">Theme: system</button>
@@ -656,7 +656,7 @@ select { font-family: var(--mono); font-size: 12px; }
         </div>
         <div>
           <label class="flabel" for="hashq">Game hash</label>
-          <input type="text" id="hashq" placeholder="paste a hash or a prefix" spellcheck="false" autocomplete="off">
+          <input type="text" id="hashq" placeholder="paste a game hash" spellcheck="false" autocomplete="off">
         </div>
       </div>
 
@@ -708,7 +708,7 @@ select { font-family: var(--mono); font-size: 12px; }
               <stop class="s1" offset="100%"/>
             </linearGradient>
           </defs>
-          <rect class="wood" x="0" y="0" width="772" height="772" rx="8"/>
+          <rect class="wood" id="woodrect" x="0" y="0" width="772" height="772" rx="8"/>
           <g id="grid"></g>
           <g id="labels"></g>
           <g id="stones"></g>
@@ -780,14 +780,18 @@ const GAMES = __GAMES__;
 
 /* --- go-core:begin --- pure board logic, no DOM; mirrored in test_games_viewer.py */
 var GO = (function () {
-  var N = 7;
-  var NP = N * N;
+  var N = 0, NP = 0, NEIGH = [];
   var PASS = -1;
-  var ALPHABET = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmn";
-  var COLS = "ABCDEFGHJKLMNOPQRST";
+  /* the same 86 characters the extractor packs moves with */
+  var ALPHABET = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz!#$%()*+,-.:;=?@[]^{|}~'";
+  /* column letters, I skipped, the way players name points */
+  var COLS = "ABCDEFGHJKLMNOPQRSTUVWXYZ";
 
-  var NEIGH = (function () {
-    var t = [];
+  /* Set the board size. Everything below reads N, so this must run first. */
+  function init(n) {
+    N = n;
+    NP = n * n;
+    NEIGH = [];
     for (var y = 0; y < N; y++) {
       for (var x = 0; x < N; x++) {
         var a = [];
@@ -795,11 +799,11 @@ var GO = (function () {
         if (x < N - 1) a.push(y * N + x + 1);
         if (y > 0) a.push((y - 1) * N + x);
         if (y < N - 1) a.push((y + 1) * N + x);
-        t.push(a);
+        NEIGH.push(a);
       }
     }
-    return t;
-  })();
+    return api;
+  }
 
   /* "dd" -> point index; "--" -> PASS */
   function sgfToPoint(s) {
@@ -834,6 +838,20 @@ var GO = (function () {
   function pointName(p) {
     if (p === PASS) return "pass";
     return COLS.charAt(p % N) + String(N - Math.floor(p / N));
+  }
+
+  /* Star points: the corner handicap points, the centre on an odd board, and the side
+     points only from 19x19 up. A 7x7 board keeps the centre alone. */
+  function starPoints() {
+    var mid = (N - 1) / 2;
+    if (N < 9) return N % 2 ? [[mid, mid]] : [];
+    var e = N >= 13 ? 3 : 2, f = N - 1 - e;
+    var pts = [[e, e], [f, e], [e, f], [f, f]];
+    if (N % 2) {
+      pts.push([mid, mid]);
+      if (N >= 19) pts.push([e, mid], [f, mid], [mid, e], [mid, f]);
+    }
+    return pts;
   }
 
   /* Count liberties of the group containing p, collecting the group into `group`. */
@@ -882,7 +900,8 @@ var GO = (function () {
   }
 
   function emptyState() {
-    return { stones: new Int8Array(NP), num: new Int16Array(NP), capB: 0, capW: 0, last: PASS, colour: 1 };
+    return { stones: new Int8Array(NP), num: new Int16Array(NP), capB: 0, capW: 0,
+             last: PASS, colour: 1 };
   }
 
   function copyState(s) {
@@ -930,10 +949,18 @@ var GO = (function () {
     return s;
   }
 
-  return { N: N, NP: NP, PASS: PASS, ALPHABET: ALPHABET, NEIGH: NEIGH,
-           sgfToPoint: sgfToPoint, pointToSgf: pointToSgf, decodeMoves: decodeMoves,
-           pointName: pointName, groupLiberties: groupLiberties, playStone: playStone,
-           replay: replay, boardString: boardString };
+  var api = {
+    init: init,
+    get N() { return N; },
+    get NP() { return NP; },
+    PASS: PASS,
+    ALPHABET: ALPHABET,
+    sgfToPoint: sgfToPoint, pointToSgf: pointToSgf, decodeMoves: decodeMoves,
+    pointName: pointName, starPoints: starPoints,
+    groupLiberties: groupLiberties, playStone: playStone,
+    replay: replay, boardString: boardString
+  };
+  return api;
 })();
 if (typeof module !== "undefined" && module.exports) module.exports = GO;
 /* --- go-core:end --- */
@@ -962,6 +989,7 @@ if (typeof module !== "undefined" && module.exports) module.exports = GO;
     app.hidden = true;
     out.hidden = false;
     var lines = [];
+    GO.init((SELFTEST && SELFTEST.board_size) || (GAMES && GAMES.board_size) || 7);
     if (!SELFTEST || !SELFTEST.cases || !SELFTEST.cases.length) {
       lines.push("selftest: no fixture embedded.");
       lines.push("Run test_games_viewer.py to generate selftest_fixture.json and paste it");
@@ -988,6 +1016,7 @@ if (typeof module !== "undefined" && module.exports) module.exports = GO;
         }
       }
       lines.push("selftest  browser replay vs the reference replay");
+      lines.push("board     " + GO.N + "x" + GO.N);
       lines.push("fixture   " + (SELFTEST.generated_utc || "unknown") +
                  "   cases " + SELFTEST.cases.length);
       lines.push("");
@@ -1026,6 +1055,10 @@ if (typeof module !== "undefined" && module.exports) module.exports = GO;
 
   /* ------------------------------------------------------------ data */
 
+  var BOARD = GAMES.board_size || 7;
+  GO.init(BOARD);
+  var HASH_CHARS = GAMES.hash_chars || 32;
+
   var ROWS = GAMES.games || [];
   var NETS = GAMES.nets || [];
   var RESULTS = GAMES.results || [];
@@ -1038,13 +1071,24 @@ if (typeof module !== "undefined" && module.exports) module.exports = GO;
   var F = { SRC: 0, BLACK: 1, WHITE: 2, KOMI: 3, RESULT: 4, HA: 5, GTYPE: 6, NMOVES: 7, MOVES: 8, HASH: 9 };
 
   function netOf(i) { return NETS[i] || { name: "?", cycle: 0, samples: 0, rows: 0 }; }
+  /* "t9-s879232-d455105" -> "s879232", enough to tell two nets apart in a list row */
+  function shortNet(n) {
+    var m = /-s(\d+)-/.exec(n.name);
+    return m ? "s" + m[1] : n.name;
+  }
   function cycleOf(i) { return netOf(i).cycle; }
   function fmtInt(n) { return String(n).replace(/\B(?=(\d{3})+(?!\d))/g, ","); }
 
-  $("snapline").textContent =
-    fmtInt(ROWS.length) + " games  ·  " + NETS.length + " nets  ·  " +
-    GAMES.board_size + "×" + GAMES.board_size + "  ·  snapshot " +
-    (GAMES.snapshot_utc || "unknown");
+  var runInfo = GAMES.run || {};
+  var runBits = [];
+  if (runInfo.cycles_completed !== null && runInfo.cycles_completed !== undefined) {
+    runBits.push("cycle " + (runInfo.current_cycle || runInfo.cycles_completed));
+  }
+  runBits.push(fmtInt(ROWS.length) + " games");
+  runBits.push(NETS.length + " nets");
+  runBits.push("snapshot " + (GAMES.snapshot_utc || "unknown"));
+  $("headline").textContent = GAMES.label || (BOARD + "×" + BOARD + " games");
+  $("snapline").textContent = runBits.join("  ·  ");
 
   /* ------------------------------------------------------------ filters */
 
@@ -1066,7 +1110,8 @@ if (typeof module !== "undefined" && module.exports) module.exports = GO;
   })();
 
   function recompute() {
-    var q = filter.hash.trim().toUpperCase();
+    var q = filter.hash.trim().toUpperCase().replace(/[^0-9A-F]/g, "");
+    var qq = q.slice(0, HASH_CHARS);
     var out = [];
     for (var i = 0; i < ROWS.length; i++) {
       var g = ROWS[i];
@@ -1076,7 +1121,7 @@ if (typeof module !== "undefined" && module.exports) module.exports = GO;
       if (filter.gtype !== "" && g[F.GTYPE] !== +filter.gtype) continue;
       if (filter.min !== null && g[F.NMOVES] < filter.min) continue;
       if (filter.max !== null && g[F.NMOVES] > filter.max) continue;
-      if (q && g[F.HASH].indexOf(q) !== 0) continue;
+      if (qq && g[F.HASH].indexOf(qq) !== 0) continue;
       out.push(i);
     }
     view = out;
@@ -1132,15 +1177,17 @@ if (typeof module !== "undefined" && module.exports) module.exports = GO;
     var g = ROWS[gi];
     var res = RESULTS[g[F.RESULT]];
     var src = SOURCES[g[F.SRC]];
-    var cyB = cycleOf(g[F.BLACK]), cyW = cycleOf(g[F.WHITE]);
-    var pairing = cyB === cyW ? ("cycle " + cyB) : ("c" + cyB + " vs c" + cyW);
+    var nB = netOf(g[F.BLACK]), nW = netOf(g[F.WHITE]);
+    var pairing = nB === nW
+      ? ("c" + nB.cycle + "  " + nB.name)
+      : ("c" + nB.cycle + " " + shortNet(nB) + "  vs  c" + nW.cycle + " " + shortNet(nW));
     var gt = GTYPES[g[F.GTYPE]] || "";
     return '<div class="grow" data-i="' + gi + '" role="option" aria-selected="' +
       (gi === current) + '" style="top:' + top + 'px">' +
       '<span class="src-chip ' + (g[F.SRC] === 1 ? "g" : "s") + '">' + (g[F.SRC] === 1 ? "G" : "S") + "</span>" +
       '<span class="g-main">' +
         '<span class="g-l1"><span class="g-id">#' + gi + "</span>  " + pairing + "</span>" +
-        '<span class="g-l2">' + g[F.HASH].slice(0, 10) + "  ·  " + g[F.NMOVES] + " mv" +
+        '<span class="g-l2">' + g[F.HASH] + "  ·  " + g[F.NMOVES] + " mv" +
           (gt && gt !== "normal" ? "  ·  " + gt : "") + "</span>" +
       "</span>" +
       '<span class="badge ' + res[1] + '">' + res[0] + "</span>" +
@@ -1186,34 +1233,58 @@ if (typeof module !== "undefined" && module.exports) module.exports = GO;
 
   /* ------------------------------------------------------------ board rendering */
 
-  var SVG_NS = "http://www.w3.org/2000/svg";
-  var M = 86, C = 100, R = 46;
+  /* One grid step is always 100 user units, so the whole drawing simply scales: a
+     bigger board yields a bigger viewBox and the browser fits it to the same box on
+     screen. Everything below is therefore expressed as a fraction of that step. */
+  var C = 100;                       /* grid step            */
+  var M = 0.86 * C;                  /* wooden margin        */
+  var R = 0.46 * C;                  /* stone radius         */
+  var STAR_R = 0.07 * C;             /* star point radius    */
+  var COORD_SIZE = 0.34 * C;         /* coordinate label     */
   var N = GO.N;
+  var EXTENT = M * 2 + (N - 1) * C;
 
   function px(i) { return M + i * C; }
 
-  (function drawGrid() {
-    var grid = $("grid"), labels = $("labels"), i;
-    var parts = [];
+  /* Font size for the number written on a stone: as large as fits inside it. */
+  function numSize(n) {
+    var digits = n < 10 ? 1 : (n < 100 ? 2 : (n < 1000 ? 3 : 4));
+    return [0.52, 0.44, 0.34, 0.27][digits - 1] * C;
+  }
+
+  (function setupBoard() {
+    var svg = $("board");
+    svg.setAttribute("viewBox", "0 0 " + EXTENT + " " + EXTENT);
+    var wood = $("woodrect");
+    wood.setAttribute("width", EXTENT);
+    wood.setAttribute("height", EXTENT);
+    svg.setAttribute("aria-label", N + " by " + N + " board position");
+
+    var parts = [], i;
     for (i = 0; i < N; i++) {
-      var edge = (i === 0 || i === N - 1) ? 4.2 : 2.6;
+      var edge = (i === 0 || i === N - 1) ? 0.042 * C : 0.026 * C;
       parts.push('<line class="gridline" x1="' + px(0) + '" y1="' + px(i) + '" x2="' + px(N - 1) +
                  '" y2="' + px(i) + '" stroke-width="' + edge + '"/>');
       parts.push('<line class="gridline" x1="' + px(i) + '" y1="' + px(0) + '" x2="' + px(i) +
                  '" y2="' + px(N - 1) + '" stroke-width="' + edge + '"/>');
     }
-    var mid = (N - 1) / 2;
-    parts.push('<circle class="star" cx="' + px(mid) + '" cy="' + px(mid) + '" r="7"/>');
-    grid.innerHTML = parts.join("");
+    var stars = GO.starPoints();
+    for (i = 0; i < stars.length; i++) {
+      parts.push('<circle class="star" cx="' + px(stars[i][0]) + '" cy="' + px(stars[i][1]) +
+                 '" r="' + STAR_R + '"/>');
+    }
+    $("grid").innerHTML = parts.join("");
 
     var lab = [];
     for (i = 0; i < N; i++) {
-      lab.push('<text class="coord" x="' + px(i) + '" y="' + (px(N - 1) + 54) +
-               '" text-anchor="middle">' + "ABCDEFGHJKLMNOPQRST".charAt(i) + "</text>");
-      lab.push('<text class="coord" x="' + (px(0) - 46) + '" y="' + px(i) +
-               '" dy=".35em" text-anchor="middle">' + (N - i) + "</text>");
+      lab.push('<text class="coord" x="' + px(i) + '" y="' + (px(N - 1) + 0.54 * C) +
+               '" text-anchor="middle" font-size="' + COORD_SIZE + '">' +
+               "ABCDEFGHJKLMNOPQRSTUVWXYZ".charAt(i) + "</text>");
+      lab.push('<text class="coord" x="' + (px(0) - 0.46 * C) + '" y="' + px(i) +
+               '" dy=".35em" text-anchor="middle" font-size="' + COORD_SIZE + '">' +
+               (N - i) + "</text>");
     }
-    labels.innerHTML = lab.join("");
+    $("labels").innerHTML = lab.join("");
   })();
 
   function drawStones(state, showAll, lastN, moveNo) {
@@ -1228,10 +1299,9 @@ if (typeof module !== "undefined" && module.exports) module.exports = GO;
                  '" cx="' + x + '" cy="' + y + '" r="' + R + '"/>');
       num = state.num[p];
       if (num > 0 && (showAll || num > moveNo - lastN)) {
-        var size = num < 100 ? 44 : (num < 1000 ? 34 : 27);
         parts.push('<text class="num ' + (colour === 1 ? "num-b" : "num-w") + '" x="' + x +
-                   '" y="' + y + '" dy=".35em" text-anchor="middle" font-size="' + size + '">' +
-                   num + "</text>");
+                   '" y="' + y + '" dy=".35em" text-anchor="middle" font-size="' +
+                   numSize(num) + '">' + num + "</text>");
       }
     }
     if (state.last !== GO.PASS && state.last >= 0 && state.stones[state.last]) {
@@ -1303,10 +1373,10 @@ if (typeof module !== "undefined" && module.exports) module.exports = GO;
       ["Type", GTYPES[G[F.GTYPE]] || "?"]
     ];
     if (G[F.HA]) fields.push(["Handicap", G[F.HA]]);
-    fields.push(["Game hash", G[F.HASH]]);
+    fields.push(["Hash", G[F.HASH]]);
     var html = [];
     for (var i = 0; i < fields.length; i++) {
-      var cls = fields[i][0] === "Game hash" ? "field hash" : "field";
+      var cls = fields[i][0] === "Hash" ? "field hash" : "field";
       html.push('<span class="' + cls + '"><span class="k">' + fields[i][0] +
                 '</span><span class="v">' + fields[i][1] + "</span></span>");
     }

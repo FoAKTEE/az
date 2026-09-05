@@ -1,0 +1,200 @@
+== 9x9 production-chain game viewer build ==
+host    login03
+date    2026-09-05T04:28:26Z
+python  Python 3.9.21
+
+$ squeue -u $USER | grep ktg-loop        # the chain is live; the snapshot skips hot files
+            305318 b200,l40s ktg-loop ssci-hai PD       0:00      1 (Dependency)
+            301099      l40s ktg-loop ssci-hai  R    5:36:13      1 gl111
+
+-------------------------------------------------------------------------------
+single re-runnable build command, to repeat at every monitoring read:
+
+    cd results/ktg/paper_1902.10565/codes/eval/games_viewer
+    python3 build_viewer.py --preset p1          # 9x9, writes viewer_built_9x9.html
+    python3 build_viewer.py --preset p1 --test   # the same, plus tests A-D
+-------------------------------------------------------------------------------
+
+$ python3 build_viewer.py --preset p1 --test
+label                   9×9 production chain · link 1 · job 301099
+board size              9x9
+snapshot_utc            2026-09-05T04:28:26Z
+files snapshotted       35 (120.1 MiB on disk); 1 skipped as written within 120s
+run                     job 301099, link 1/9, cycle 28 in progress, 27 complete
+games parsed            27918  (selfplay 27000, gatekeeper 918)
+lines skipped           0 incomplete/unparsable, 0 not 9x9
+distinct nets           9
+distinct results        466
+game types              asym 229, cleanuptraining 487, fork 1808, normal 25394
+setup-stone games       487   white-to-move-first 222   handicap 251
+moves total / mean      2763417 / 98.98
+winner B/W/draw/unk     14235 / 12851 / 832 / 0
+move encoding           packed1   hash kept 8 chars
+games.json              3824827 bytes (3.65 MiB)  /scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/runtime/games_viewer/p1/games.json
+games_analysis.json     252767 bytes (0.24 MiB)  /scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/runtime/games_viewer/p1/games_analysis.json
+games_stats.json        /scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/runtime/games_viewer/p1/games_stats.json
+total bundle            4077594 bytes (3.89 MiB), target 6.00 MiB -> within target
+growth                  146056 bytes (0.139 MiB) per 1000 games
+                        86,950 more games before a 16 MB page
+games.json  /scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/runtime/games_viewer/p1/games.json
+label       9×9 production chain · link 1 · job 301099
+snapshot    2026-09-05T04:28:26Z
+board       9x9
+games       27918   nets 9   encoding packed1   hash 8 chars
+seed        20260905
+
+A  round trip: re-serialise 50 random games and compare with the source SGF
+   games compared      50
+   mismatches          0
+   RESULT              PASS
+
+B  replay: every game through the reference capture rule
+   games replayed      27918 in 22.8 s
+   invariant breaks    0   (stone counts never negative; on board + captured == played + setup)
+   games with captures 27307   stones captured in total 723883
+   decisive RE[] games 27086
+   final board agrees with the RE[] winner:
+     area score - komi    22698 / 27086  = 83.8%
+     stones on board      21375 / 27086  = 78.9%
+   (reported, not asserted: the run randomises between territory and area
+    scoring with several taxes, and games end on passes, so the replayed
+    board is not expected to reproduce every scored result)
+   RESULT              PASS
+
+C  cross-check: the viewer's board logic against the reference, same games
+   fixture written     /scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/runtime/games_viewer/p1/selftest_fixture.json (63735 bytes, 212 cases)
+   viewer ?selftest    paste this file in place of the __SELFTEST__ placeholder
+   packing alphabet    86 chars, page and extractor agree
+   engine              /weka/home/schmidt/ssci-haiyangw/.vscode-server/bin/7e7950df89d055b5a378379db9ee14290772148a/node (v24.15.0)
+   board               9x9
+   cases               212
+   agree               212
+   disagree            0
+   RESULT              PASS
+
+D  headless run: the viewer's own script, walked move by move
+   board               9x9, 5 star points, 18 coordinate labels
+   opening game        #27917  t9-s2361984-d694199 vs t9-s2062208-d654393
+   positions walked    76
+   list rows drawn     10 of 27,918
+   ?selftest output    pass  212 | fail  0 | RESULT PASS  every case agrees on the final board and both capture counts.
+   mismatches          0
+   RESULT              PASS
+
+OVERALL     PASS
+$ /usr/bin/python3 /weka/home/schmidt/ssci-haiyangw/az/results/ktg/paper_1902.10565/codes/eval/games_viewer/extract_games.py --run-dir /scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/runs/p1 --out-dir /scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/runtime/games_viewer/p1 --label '9×9 production chain · link {link} · job {job}' --quiet-seconds 120 --target-mib 6.0 --loop-log /scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/logs/loop-301099.log
+$ /usr/bin/python3 /weka/home/schmidt/ssci-haiyangw/az/results/ktg/paper_1902.10565/codes/eval/games_viewer/test_games_viewer.py --games /scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/runtime/games_viewer/p1/games.json --run-dir /scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/runs/p1 --fixture /scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/runtime/games_viewer/p1/selftest_fixture.json --cross-check 200 --quiet-seconds 120
+
+page                    /scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/runtime/games_viewer/viewer_built_9x9.html
+page size               4192797 bytes (4.00 MiB) of the 16 MB limit
+title                   Nine-by-Nine Games
+
+rebuild with            python3 build_viewer.py --preset p1
+
+-------------------------------------------------------------------------------
+7x7 regression: the same code, unchanged, on the finished 7x7 run
+-------------------------------------------------------------------------------
+
+$ python3 build_viewer.py --preset t7 --test
+label                   7×7 converged run · job 301096 · finished
+board size              7x7
+snapshot_utc            2026-09-05T04:29:10Z
+files snapshotted       177 (68.6 MiB on disk); 0 skipped as written within 120s
+games parsed            33327  (selfplay 27440, gatekeeper 5887)
+lines skipped           0 incomplete/unparsable, 0 not 7x7
+distinct nets           89
+distinct results        324
+game types              asym 238, cleanuptraining 534, fork 1649, normal 30906
+setup-stone games       515   white-to-move-first 264   handicap 143
+moves total / mean      1556705 / 46.71
+winner B/W/draw/unk     15171 / 13944 / 4209 / 3
+move encoding           packed1   hash kept 8 chars
+games.json              2838301 bytes (2.71 MiB)  /scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/runtime/games_viewer/t7/games.json
+games_analysis.json     818767 bytes (0.78 MiB)  /scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/runtime/games_viewer/t7/games_analysis.json
+games_stats.json        /scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/runtime/games_viewer/t7/games_stats.json
+total bundle            3657068 bytes (3.49 MiB), target 4.00 MiB -> within target
+growth                  109733 bytes (0.105 MiB) per 1000 games
+                        119,564 more games before a 16 MB page
+games.json  /scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/runtime/games_viewer/t7/games.json
+label       7×7 converged run · job 301096 · finished
+snapshot    2026-09-05T04:29:10Z
+board       7x7
+games       33327   nets 89   encoding packed1   hash 8 chars
+seed        20260905
+
+A  round trip: re-serialise 50 random games and compare with the source SGF
+   games compared      50
+   mismatches          0
+   RESULT              PASS
+
+B  replay: every game through the reference capture rule
+   games replayed      33327 in 9.4 s
+   invariant breaks    0   (stone counts never negative; on board + captured == played + setup)
+   games with captures 27885   stones captured in total 282312
+   decisive RE[] games 29115
+   final board agrees with the RE[] winner:
+     area score - komi    21209 / 29115  = 72.8%
+     stones on board      20490 / 29115  = 70.4%
+   (reported, not asserted: the run randomises between territory and area
+    scoring with several taxes, and games end on passes, so the replayed
+    board is not expected to reproduce every scored result)
+   RESULT              PASS
+
+C  cross-check: the viewer's board logic against the reference, same games
+   fixture written     /scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/runtime/games_viewer/t7/selftest_fixture.json (44704 bytes, 212 cases)
+   viewer ?selftest    paste this file in place of the __SELFTEST__ placeholder
+   packing alphabet    86 chars, page and extractor agree
+   engine              /weka/home/schmidt/ssci-haiyangw/.vscode-server/bin/7e7950df89d055b5a378379db9ee14290772148a/node (v24.15.0)
+   board               7x7
+   cases               212
+   agree               212
+   disagree            0
+   RESULT              PASS
+
+D  headless run: the viewer's own script, walked move by move
+   board               7x7, 1 star points, 14 coordinate labels
+   opening game        #33326  t7-s2419584-d316410 vs t7-s2449568-d319559
+   positions walked    43
+   list rows drawn     10 of 33,327
+   ?selftest output    pass  212 | fail  0 | RESULT PASS  every case agrees on the final board and both capture counts.
+   mismatches          0
+   RESULT              PASS
+
+OVERALL     PASS
+$ /usr/bin/python3 /weka/home/schmidt/ssci-haiyangw/az/results/ktg/paper_1902.10565/codes/eval/games_viewer/extract_games.py --run-dir /scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/runs/t7 --out-dir /scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/runtime/games_viewer/t7 --label '7×7 converged run · job 301096 · finished' --quiet-seconds 120 --target-mib 4.0
+$ /usr/bin/python3 /weka/home/schmidt/ssci-haiyangw/az/results/ktg/paper_1902.10565/codes/eval/games_viewer/test_games_viewer.py --games /scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/runtime/games_viewer/t7/games.json --run-dir /scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/runs/t7 --fixture /scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/runtime/games_viewer/t7/selftest_fixture.json --cross-check 200 --quiet-seconds 120
+
+page                    /scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/runtime/games_viewer/viewer_built_7x7.html
+page size               3753242 bytes (3.58 MiB) of the 16 MB limit
+title                   Seven-by-Seven Games
+
+rebuild with            python3 build_viewer.py --preset t7
+
+$ built pages: title, size, and any placeholder left unfilled
+viewer_built_9x9.html  <title>Nine-by-Nine Games</title>  4192797 bytes  placeholders left: 0
+viewer_built_7x7.html  <title>Seven-by-Seven Games</title>  3753242 bytes  placeholders left: 0
+
+$ per-cycle game counts and run position (9x9)
+loop job 301099, chain link 1/9, cycle 28 in progress, 27 complete
+files read 35, 1 left out as written within 120 s
+
+     net                         games as black as white
+c0   random                       5135     5068     5067
+c1   t9-s143744-d157367           5258     5128     5130
+c2   t9-s448640-d329040           5245     5123     5122
+c3   t9-s879232-d455105           2235     2118     2117
+c4   t9-s1166208-d498733          3217     3109     3108
+c5   t9-s1462912-d557426          2210     2105     2105
+c6   t9-s1762560-d595534          3210     3105     3105
+c7   t9-s2062208-d654393          2215     2106     2109
+c8   t9-s2361984-d694199           111       56       55
+
+games/source   {'gatekeeper': 918, 'selfplay': 27000}
+games/winner   {'B': 14235, 'W': 12851, 'draw': 832, 'unknown': 0}
+games/gtype    {'asym': 229, 'cleanuptraining': 487, 'fork': 1808, 'normal': 25394}
+mean length    98.983 moves
+
+growth         146056 bytes per 1000 games (bundle); 137002 bytes per 1000 (games.json only)
+a 16 MiB page therefore holds about 114,526 games in total
+27,918 of those are already used; 86,161 games of headroom left
+at 1034 games per completed cycle that is about 83 more cycles
