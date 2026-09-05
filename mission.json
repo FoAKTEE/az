@@ -130,6 +130,17 @@
         "node derive_cycle_knobs_9x9 (re-derivation)",
         "node scale_data_window"
       ]
+    },
+    {
+      "date": "2026-09-05",
+      "by": "human",
+      "decision": "link 2 onward runs knob option C: NUM_GAMES_PER_CYCLE 1800, NUM_TRAIN_SAMPLES_PER_EPOCH 16000 (SWA 8000, per-cycle cap 80000); supersedes the 1500/20000 set before any cycle ran at it",
+      "affects": [
+        "codes/loop/knobs_9x9.env",
+        "o47",
+        "scale_data_window",
+        "derive_cycle_knobs_9x9"
+      ]
     }
   ]
 }
