@@ -3,11 +3,17 @@ basedir = /scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/runs/p1
 games = one line of a .sgfs file (cpp/program/selfplaymanager.cpp:377-378)
 rows  = sum of npz binaryInputNCHWPacked.shape[0] over tdata
 
-rows_per_game_real   = 19.563711770393365   (1537786 rows / 78604 games)
+rows_per_game_real   = 18.97193483172791   (1914420 rows / 100908 games)
 rows_per_game_random = 31.4734   (157367 rows / 5000 games)
 
 per selfplay net directory (name = the net that played, 'random' = bootstrap):
   random                       real_net=False games=5000   rows=157367   rows/game=31.4734
+  t9-s10153472-d1839727        real_net=True  games=3000   rows=50992    rows/game=16.997333333333334
+  t9-s10453248-d1890719        real_net=True  games=2000   rows=33429    rows/game=16.7145
+  t9-s10752896-d1924148        real_net=True  games=3000   rows=51272    rows/game=17.090666666666667
+  t9-s11052672-d1975420        real_net=True  games=2000   rows=33473    rows/game=16.7365
+  t9-s11352064-d2008893        real_net=True  games=3000   rows=50780    rows/game=16.926666666666666
+  t9-s11651712-d2059673        real_net=True  games=908    rows=12114    rows/game=13.341409691629956
   t9-s1166208-d498733          real_net=True  games=3000   rows=58693    rows/game=19.564333333333334
   t9-s143744-d157367           real_net=True  games=5000   rows=171673   rows/game=34.3346
   t9-s1462912-d557426          real_net=True  games=2000   rows=38108    rows/game=19.054
@@ -37,4 +43,7 @@ per selfplay net directory (name = the net that played, 'random' = bootstrap):
   t9-s8355456-d1585867         real_net=True  games=3000   rows=49871    rows/game=16.623666666666665
   t9-s8655232-d1635738         real_net=True  games=2000   rows=33507    rows/game=16.7535
   t9-s879232-d455105           real_net=True  games=2000   rows=43628    rows/game=21.814
-  t9-s8954752-d1669245         real_net=True  games=1604   rows=25908    rows/game=16.15211970074813
+  t9-s8954752-d1669245         real_net=True  games=3000   rows=50820    rows/game=16.94
+  t9-s9254144-d1720065         real_net=True  games=2000   rows=33552    rows/game=16.776
+  t9-s9553792-d1753617         real_net=True  games=3000   rows=51356    rows/game=17.118666666666666
+  t9-s9853696-d1804973         real_net=True  games=2000   rows=34754    rows/game=17.377
