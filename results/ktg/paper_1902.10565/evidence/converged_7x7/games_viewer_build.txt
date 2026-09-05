@@ -1,0 +1,94 @@
+== 7x7 game viewer build ==
+host    login03
+date    2026-09-05T00:42:30Z
+python  Python 3.9.21
+
+$ squeue -u $USER | grep -c t7      # the 7x7 run must be finished before the snapshot
+0
+$ find runs/t7/{selfplay,gatekeepersgf} -name '*.sgfs' | wc -l
+177
+$ newest .sgfs mtime, then now      # far apart => nothing is still writing
+1788567828.0918216800
+1788568951
+
+$ python3 extract_games.py
+snapshot_utc            2026-09-05T00:42:31Z
+files snapshotted       177 (68.6 MiB on disk)
+games parsed            33327  (selfplay 27440, gatekeeper 5887)
+lines skipped           0 incomplete/unparsable, 0 not 7x7
+distinct nets           89
+distinct results        324
+game types              asym 238, cleanuptraining 534, fork 1649, normal 30906
+setup-stone games       515   white-to-move-first 264   handicap 143
+moves total / mean      1556705 / 46.71
+winner B/W/draw/unk     15171 / 13944 / 4209 / 3
+move encoding           sgf2
+games.json              5194576 bytes (4.95 MiB)  /scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/runtime/games_viewer/games.json
+games_analysis.json     818767 bytes (0.78 MiB)  /scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/runtime/games_viewer/games_analysis.json
+games_stats.json        /scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/runtime/games_viewer/games_stats.json
+total bundle            6013343 bytes (5.73 MiB), target 4.00 MiB -> OVER TARGET
+
+NOTE games.json alone is over the target and holds no analysis arrays: the
+     per-move gatekeeper analysis is in the separate optional file above, so
+     the viewer can be built from games.json only.
+     --pack-moves halves the move payload if the target must be met.
+
+$ ls -l /scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/runtime/games_viewer/
+total 5952
+-rw-r--r-- 1 ssci-haiyangw users 5194576 Sep  4 20:42 games.json
+-rw-r--r-- 1 ssci-haiyangw users  818767 Sep  4 20:42 games_analysis.json
+-rw-r--r-- 1 ssci-haiyangw users   16077 Sep  4 20:42 games_stats.json
+-rw-r--r-- 1 ssci-haiyangw users   59292 Sep  4 20:42 selftest_fixture.json
+
+$ python3 test_games_viewer.py
+games.json  /scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/runtime/games_viewer/games.json
+snapshot    2026-09-05T00:42:31Z
+games       33327   nets 89   encoding sgf2
+seed        20260905
+
+A  round trip: re-serialise 50 random games and compare with the source SGF
+   games compared      50
+   mismatches          0
+   RESULT              PASS
+
+B  replay: every game through the reference capture rule
+   games replayed      33327 in 9.0 s
+   invariant breaks    0   (stone counts never negative; on board + captured == played + setup)
+   games with captures 27885   stones captured in total 282312
+   decisive RE[] games 29115
+   final board agrees with the RE[] winner:
+     area score - komi    21209 / 29115  = 72.8%
+     stones on board      20490 / 29115  = 70.4%
+   (reported, not asserted: the run randomises between territory and area
+    scoring with several taxes, and games end on passes, so the replayed
+    board is not expected to reproduce every scored result)
+   RESULT              PASS
+
+C  cross-check: the viewer's board logic against the reference, same games
+   fixture written     /scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/runtime/games_viewer/selftest_fixture.json (59292 bytes, 212 cases)
+   viewer ?selftest    paste this file in place of the __SELFTEST__ placeholder
+   engine              /weka/home/schmidt/ssci-haiyangw/.vscode-server/bin/7e7950df89d055b5a378379db9ee14290772148a/node (v24.15.0)
+   cases               212
+   agree               212
+   disagree            0
+   RESULT              PASS
+
+D  headless run: the viewer's own script, walked move by move
+   opening game        #33326  t7-s2419584-d316410 vs t7-s2449568-d319559
+   positions walked    43
+   list rows drawn     10 of 33,327
+   ?selftest output    pass  212 | fail  0 | RESULT PASS  every case agrees on the final board and both capture counts.
+   mismatches          0
+   RESULT              PASS
+
+OVERALL     PASS
+
+$ grep -o '__[A-Z]*__' viewer.html | sort | uniq -c    # injection points, one each
+      1 __ANALYSIS__
+      1 __GAMES__
+      1 __SELFTEST__
+$ wc -c viewer.html extract_games.py test_games_viewer.py
+48634 viewer.html
+19881 extract_games.py
+29539 test_games_viewer.py
+98054 total

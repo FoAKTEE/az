@@ -1,0 +1,1447 @@
+<title>Seven-by-Seven Games</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Serif:wght@500;600&display=swap">
+
+<style>
+:root {
+  color-scheme: light;
+  --bg:        #E8ECF0;
+  --panel:     #FDFEFF;
+  --panel-2:   #F1F4F7;
+  --ink:       #141D25;
+  --ink-2:     #3C4B58;
+  --muted:     #64757F;
+  --line:      #CDD7DE;
+  --line-soft: #E1E8ED;
+  --accent:    #1C6C86;
+  --accent-ink:#FFFFFF;
+  --accent-bg: #DCEBF0;
+  --mark:      #C33B2E;
+  --wood:      #DCB35C;
+  --wood-dark: #C79B44;
+  --wood-line: #6B4A15;
+  --wood-text: #503608;
+  --stone-b1:  #5C5C5C;
+  --stone-b2:  #0A0A0B;
+  --stone-w1:  #FFFFFF;
+  --stone-w2:  #DAD3C4;
+  --stone-w-rim:#8C8477;
+  --num-on-b:  #F6F6F4;
+  --num-on-w:  #1A1A18;
+  --shadow:    0 1px 2px rgba(16,32,44,.06), 0 6px 18px rgba(16,32,44,.07);
+  --radius:    10px;
+  --mono: "IBM Plex Mono", ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  --sans: "IBM Plex Sans", system-ui, -apple-system, "Segoe UI", Helvetica, Arial, sans-serif;
+  --serif: "IBM Plex Serif", Georgia, "Times New Roman", serif;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    color-scheme: dark;
+    --bg:        #0D1218;
+    --panel:     #161F27;
+    --panel-2:   #1D2831;
+    --ink:       #E3EAF0;
+    --ink-2:     #B7C4CE;
+    --muted:     #8598A5;
+    --line:      #2A3742;
+    --line-soft: #202B34;
+    --accent:    #4FA6C4;
+    --accent-ink:#07161C;
+    --accent-bg: #16323C;
+    --mark:      #E4675A;
+    --wood:      #B48A45;
+    --wood-dark: #9C763A;
+    --wood-line: #3B2708;
+    --wood-text: #2E1F06;
+    --stone-b1:  #4E4E4E;
+    --stone-b2:  #070708;
+    --stone-w1:  #F7F4EC;
+    --stone-w2:  #CBC3B2;
+    --stone-w-rim:#6E675C;
+    --shadow:    0 1px 2px rgba(0,0,0,.35), 0 6px 20px rgba(0,0,0,.35);
+  }
+}
+
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --bg:        #0D1218;
+  --panel:     #161F27;
+  --panel-2:   #1D2831;
+  --ink:       #E3EAF0;
+  --ink-2:     #B7C4CE;
+  --muted:     #8598A5;
+  --line:      #2A3742;
+  --line-soft: #202B34;
+  --accent:    #4FA6C4;
+  --accent-ink:#07161C;
+  --accent-bg: #16323C;
+  --mark:      #E4675A;
+  --wood:      #B48A45;
+  --wood-dark: #9C763A;
+  --wood-line: #3B2708;
+  --wood-text: #2E1F06;
+  --stone-b1:  #4E4E4E;
+  --stone-b2:  #070708;
+  --stone-w1:  #F7F4EC;
+  --stone-w2:  #CBC3B2;
+  --stone-w-rim:#6E675C;
+  --shadow:    0 1px 2px rgba(0,0,0,.35), 0 6px 20px rgba(0,0,0,.35);
+}
+
+* { box-sizing: border-box; }
+
+html, body { height: 100%; }
+
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--ink);
+  font-family: var(--sans);
+  font-size: 14px;
+  line-height: 1.45;
+  overflow: hidden;
+}
+
+button, select, input { font: inherit; color: inherit; }
+
+:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+
+.num { font-variant-numeric: tabular-nums; font-family: var(--mono); }
+
+/* ---------------------------------------------------------------- shell */
+
+#app {
+  height: 100%;
+  display: grid;
+  grid-template-rows: auto 1fr;
+  overflow: hidden;
+}
+
+.topbar {
+  display: flex;
+  align-items: baseline;
+  gap: 16px;
+  padding: 10px 18px;
+  background: var(--panel);
+  border-bottom: 1px solid var(--line);
+}
+
+.topbar h1 {
+  font-family: var(--serif);
+  font-size: 17px;
+  font-weight: 600;
+  letter-spacing: .1px;
+  margin: 0;
+  white-space: nowrap;
+}
+
+.topbar .sub {
+  font-family: var(--mono);
+  font-size: 11.5px;
+  color: var(--muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.topbar .spacer { flex: 1 1 auto; }
+
+.ghost {
+  background: transparent;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  padding: 3px 10px;
+  font-size: 12px;
+  color: var(--ink-2);
+  cursor: pointer;
+  white-space: nowrap;
+}
+.ghost:hover { background: var(--panel-2); border-color: var(--accent); }
+
+.shell {
+  display: grid;
+  grid-template-columns: 322px minmax(0, 1fr) 300px;
+  gap: 1px;
+  background: var(--line);
+  overflow: hidden;
+  min-height: 0;
+}
+
+.rail, .stage {
+  background: var(--bg);
+  min-width: 0;
+  min-height: 0;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+/* ---------------------------------------------------------------- filters */
+
+.filters {
+  padding: 12px 14px 10px;
+  background: var(--panel);
+  border-bottom: 1px solid var(--line);
+  display: grid;
+  gap: 9px;
+}
+
+.flabel {
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: .09em;
+  text-transform: uppercase;
+  color: var(--muted);
+  margin-bottom: 3px;
+  display: block;
+}
+
+.seg {
+  display: flex;
+  border: 1px solid var(--line);
+  border-radius: 7px;
+  overflow: hidden;
+}
+.seg button {
+  flex: 1 1 0;
+  background: var(--panel);
+  border: 0;
+  border-right: 1px solid var(--line);
+  padding: 5px 2px;
+  font-size: 12px;
+  color: var(--ink-2);
+  cursor: pointer;
+}
+.seg button:last-child { border-right: 0; }
+.seg button:hover { background: var(--panel-2); }
+.seg button[aria-pressed="true"] {
+  background: var(--accent);
+  color: var(--accent-ink);
+  font-weight: 600;
+}
+
+select, input[type="text"], input[type="number"] {
+  width: 100%;
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 7px;
+  padding: 5px 8px;
+  font-size: 12.5px;
+}
+input[type="text"], input[type="number"] { font-family: var(--mono); }
+select { font-family: var(--mono); font-size: 12px; }
+
+.len-row { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+
+.countline {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 7px 14px;
+  background: var(--panel-2);
+  border-bottom: 1px solid var(--line);
+  font-size: 12px;
+  color: var(--muted);
+}
+.countline strong {
+  font-family: var(--mono);
+  font-variant-numeric: tabular-nums;
+  color: var(--ink);
+  font-weight: 600;
+}
+
+/* ---------------------------------------------------------------- game list */
+
+.list {
+  flex: 1 1 auto;
+  overflow-y: auto;
+  overflow-x: hidden;
+  position: relative;
+  background: var(--panel);
+}
+.list-inner { position: relative; width: 100%; }
+
+.grow {
+  position: absolute;
+  left: 0;
+  right: 0;
+  height: 52px;
+  padding: 6px 12px 6px 10px;
+  border-bottom: 1px solid var(--line-soft);
+  border-left: 3px solid transparent;
+  display: grid;
+  grid-template-columns: 18px minmax(0, 1fr) auto;
+  gap: 8px;
+  align-items: center;
+  cursor: pointer;
+  background: var(--panel);
+}
+.grow:hover { background: var(--panel-2); }
+.grow[aria-selected="true"] {
+  background: var(--accent-bg);
+  border-left-color: var(--accent);
+}
+
+.src-chip {
+  width: 18px; height: 18px;
+  border-radius: 5px;
+  display: grid; place-items: center;
+  font-family: var(--mono);
+  font-size: 10px;
+  font-weight: 600;
+  border: 1px solid var(--line);
+  color: var(--muted);
+  background: var(--panel-2);
+}
+.src-chip.g { border-color: var(--accent); color: var(--accent); }
+
+.g-main { min-width: 0; }
+.g-l1 {
+  font-family: var(--mono);
+  font-size: 12px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  color: var(--ink);
+}
+.g-l2 {
+  font-family: var(--mono);
+  font-size: 10.5px;
+  color: var(--muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.g-id { color: var(--muted); }
+
+.badge {
+  font-family: var(--mono);
+  font-size: 11px;
+  font-weight: 600;
+  padding: 2px 7px;
+  border-radius: 5px;
+  border: 1px solid transparent;
+  white-space: nowrap;
+}
+.badge.B { background: #1B1B1B; color: #F4F4F2; }
+.badge.W { background: var(--stone-w1); color: #1A1A18; border-color: var(--stone-w-rim); }
+.badge.draw { background: var(--panel-2); color: var(--muted); border-color: var(--line); }
+.badge.unknown { background: transparent; color: var(--muted); border-color: var(--line); border-style: dashed; }
+
+.empty {
+  padding: 26px 16px;
+  color: var(--muted);
+  font-size: 12.5px;
+  text-align: center;
+}
+
+/* ---------------------------------------------------------------- stage */
+
+.stage { align-items: stretch; }
+
+.gamehead {
+  padding: 11px 18px 9px;
+  background: var(--panel);
+  border-bottom: 1px solid var(--line);
+}
+
+.players {
+  display: grid;
+  grid-template-columns: minmax(0,1fr) auto minmax(0,1fr);
+  gap: 12px;
+  align-items: center;
+}
+.player { min-width: 0; display: flex; align-items: center; gap: 8px; }
+.player.white { justify-content: flex-end; text-align: right; }
+.player .stone-dot {
+  width: 15px; height: 15px; border-radius: 50%;
+  flex: 0 0 auto;
+}
+.player.black .stone-dot { background: radial-gradient(circle at 34% 30%, var(--stone-b1), var(--stone-b2) 72%); }
+.player.white .stone-dot { background: radial-gradient(circle at 34% 30%, var(--stone-w1), var(--stone-w2) 78%); border: 1px solid var(--stone-w-rim); }
+.player .names { min-width: 0; }
+.player .pname {
+  font-family: var(--serif);
+  font-size: 14.5px;
+  font-weight: 600;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.player .pmeta {
+  font-family: var(--mono);
+  font-size: 10.5px;
+  color: var(--muted);
+}
+.versus {
+  font-family: var(--serif);
+  font-style: italic;
+  color: var(--muted);
+  font-size: 12.5px;
+}
+
+.metarow {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 20px;
+  margin-top: 9px;
+}
+.field { display: flex; flex-direction: column; }
+.field .k {
+  font-size: 9.5px;
+  letter-spacing: .09em;
+  text-transform: uppercase;
+  color: var(--muted);
+  font-weight: 600;
+}
+.field .v {
+  font-family: var(--mono);
+  font-size: 12.5px;
+  font-variant-numeric: tabular-nums;
+  color: var(--ink);
+}
+.field.hash .v { font-size: 11px; color: var(--ink-2); word-break: break-all; }
+
+.boardwrap {
+  flex: 1 1 auto;
+  min-height: 0;
+  display: grid;
+  place-items: center;
+  padding: 14px;
+  overflow: auto;
+}
+#board {
+  width: min(100%, 62vh, 560px);
+  height: auto;
+  display: block;
+  border-radius: 6px;
+  box-shadow: var(--shadow);
+}
+
+.controls {
+  background: var(--panel);
+  border-top: 1px solid var(--line);
+  padding: 9px 18px 11px;
+  display: grid;
+  gap: 8px;
+}
+.ctl-row { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+
+.nav { display: flex; gap: 4px; }
+.nav button {
+  width: 34px; height: 30px;
+  border: 1px solid var(--line);
+  background: var(--panel);
+  border-radius: 7px;
+  cursor: pointer;
+  color: var(--ink-2);
+  font-size: 13px;
+  line-height: 1;
+}
+.nav button:hover:not(:disabled) { background: var(--accent-bg); border-color: var(--accent); color: var(--accent); }
+.nav button:disabled { opacity: .38; cursor: default; }
+
+#slider { flex: 1 1 160px; min-width: 120px; accent-color: var(--accent); }
+
+.movecount {
+  font-family: var(--mono);
+  font-variant-numeric: tabular-nums;
+  font-size: 12.5px;
+  color: var(--ink);
+  white-space: nowrap;
+}
+.movecount .of { color: var(--muted); }
+
+.caps {
+  display: flex; gap: 12px;
+  font-family: var(--mono);
+  font-size: 11.5px;
+  color: var(--ink-2);
+  font-variant-numeric: tabular-nums;
+}
+.caps span::before {
+  content: "";
+  display: inline-block;
+  width: 9px; height: 9px;
+  border-radius: 50%;
+  margin-right: 5px;
+  vertical-align: baseline;
+}
+.caps .cb::before { background: var(--stone-b2); }
+.caps .cw::before { background: var(--stone-w1); border: 1px solid var(--stone-w-rim); }
+
+.numctl { display: flex; align-items: center; gap: 7px; font-size: 12px; color: var(--ink-2); }
+.numctl label { display: flex; align-items: center; gap: 5px; cursor: pointer; }
+.numctl select { width: auto; padding: 2px 6px; }
+.numctl input[type="checkbox"] { accent-color: var(--accent); }
+
+/* ---------------------------------------------------------------- record rail */
+
+.rail-right { background: var(--panel); }
+
+.recordhead {
+  padding: 10px 14px 8px;
+  border-bottom: 1px solid var(--line);
+}
+.spark { width: 100%; height: 48px; display: block; }
+.sparknote {
+  font-size: 10.5px;
+  color: var(--muted);
+  font-family: var(--mono);
+  margin-top: 4px;
+  display: flex;
+  justify-content: space-between;
+}
+.no-analysis {
+  font-size: 11.5px;
+  color: var(--muted);
+  line-height: 1.4;
+}
+
+.moves {
+  flex: 1 1 auto;
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding: 2px 0 24px;
+}
+.mv {
+  display: grid;
+  grid-template-columns: 34px 14px 1fr auto;
+  gap: 7px;
+  align-items: center;
+  padding: 2px 12px;
+  font-family: var(--mono);
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+  cursor: pointer;
+  border-left: 3px solid transparent;
+}
+.mv:hover { background: var(--panel-2); }
+.mv[aria-current="true"] {
+  background: var(--accent-bg);
+  border-left-color: var(--mark);
+  color: var(--ink);
+  font-weight: 600;
+}
+.mv .n { color: var(--muted); text-align: right; }
+.mv[aria-current="true"] .n { color: var(--ink-2); }
+.mv .c {
+  width: 11px; height: 11px; border-radius: 50%;
+}
+.mv .c.b { background: radial-gradient(circle at 34% 30%, var(--stone-b1), var(--stone-b2) 72%); }
+.mv .c.w { background: radial-gradient(circle at 34% 30%, var(--stone-w1), var(--stone-w2) 78%); box-shadow: inset 0 0 0 1px var(--stone-w-rim); }
+.mv .pt { letter-spacing: .02em; }
+.mv .pt.pass { color: var(--muted); font-style: italic; }
+.mv .an { color: var(--muted); font-size: 11px; white-space: nowrap; }
+.mv[aria-current="true"] .an { color: var(--ink-2); }
+
+.railhead {
+  padding: 9px 14px 7px;
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: .09em;
+  text-transform: uppercase;
+  color: var(--muted);
+  border-bottom: 1px solid var(--line-soft);
+}
+
+/* ---------------------------------------------------------------- selftest */
+
+#selftest {
+  margin: 0;
+  padding: 24px;
+  height: 100%;
+  overflow: auto;
+  background: var(--bg);
+  color: var(--ink);
+  font-family: var(--mono);
+  font-size: 12.5px;
+  line-height: 1.5;
+  white-space: pre-wrap;
+}
+
+/* ---------------------------------------------------------------- svg paint
+   SVG presentation attributes do not resolve var(), so every colour the board and
+   the sparkline use is set here as a CSS property instead. */
+
+#board .wood      { fill: url(#gwood); }
+#board .gridline  { stroke: var(--wood-line); stroke-linecap: square; }
+#board .star      { fill: var(--wood-line); }
+#board .coord     { fill: var(--wood-text); fill-opacity: .78; font-family: var(--mono); font-size: 34px; }
+#board .stone-b   { fill: url(#gb); stroke: rgba(0,0,0,.45); stroke-width: 1.5; }
+#board .stone-w   { fill: url(#gw); stroke: var(--stone-w-rim); stroke-width: 2; }
+#board .num-b     { fill: var(--num-on-b); }
+#board .num-w     { fill: var(--num-on-w); }
+#board .num       { font-family: var(--mono); font-weight: 500; }
+#board .lastmark  { fill: none; stroke: var(--mark); stroke-width: 5; }
+#gb .s0 { stop-color: var(--stone-b1); }
+#gb .s1 { stop-color: var(--stone-b2); }
+#gw .s0 { stop-color: var(--stone-w1); }
+#gw .s1 { stop-color: var(--stone-w2); }
+#gwood .s0 { stop-color: var(--wood); }
+#gwood .s1 { stop-color: var(--wood-dark); }
+
+.spark .base   { stroke: var(--line); stroke-width: 1; }
+.spark .fill   { fill: var(--accent); fill-opacity: .13; }
+.spark .trace  { fill: none; stroke: var(--accent); stroke-width: 1.6; stroke-linejoin: round; }
+.spark .cursor { stroke: var(--mark); stroke-width: 1; stroke-opacity: .7; }
+.spark .dot    { fill: var(--mark); }
+
+[hidden] { display: none !important; }
+
+@media (prefers-reduced-motion: reduce) {
+  * { transition: none !important; animation: none !important; }
+}
+
+@media (max-width: 1080px) {
+  body { overflow: auto; }
+  #app { height: auto; min-height: 100%; }
+  .shell { grid-template-columns: minmax(0, 1fr); }
+  .rail, .stage { overflow: visible; }
+  .list { height: 340px; }
+  .moves { height: 320px; }
+  #board { width: min(100%, 460px); }
+}
+</style>
+
+<div id="app">
+  <header class="topbar">
+    <h1>Seven-by-Seven Games</h1>
+    <div class="sub" id="snapline">&nbsp;</div>
+    <div class="spacer"></div>
+    <button class="ghost" id="themebtn" type="button" title="Light, dark, or follow the system">Theme: system</button>
+  </header>
+
+  <main class="shell">
+    <aside class="rail rail-left">
+      <div class="filters">
+        <div>
+          <span class="flabel">Source</span>
+          <div class="seg" id="srcseg" role="group" aria-label="Source">
+            <button type="button" data-v="" aria-pressed="true">All</button>
+            <button type="button" data-v="0" aria-pressed="false">Self-play</button>
+            <button type="button" data-v="1" aria-pressed="false">Gatekeeper</button>
+          </div>
+        </div>
+        <div>
+          <span class="flabel">Result</span>
+          <div class="seg" id="resseg" role="group" aria-label="Result">
+            <button type="button" data-v="" aria-pressed="true">All</button>
+            <button type="button" data-v="B" aria-pressed="false">Black</button>
+            <button type="button" data-v="W" aria-pressed="false">White</button>
+            <button type="button" data-v="draw" aria-pressed="false">Draw</button>
+          </div>
+        </div>
+        <div>
+          <label class="flabel" for="netsel">Net / cycle</label>
+          <select id="netsel"></select>
+        </div>
+        <div>
+          <label class="flabel" for="typesel">Game type</label>
+          <select id="typesel"></select>
+        </div>
+        <div>
+          <span class="flabel">Game length</span>
+          <div class="len-row">
+            <input type="number" id="minlen" min="0" step="1" placeholder="min" aria-label="Minimum moves">
+            <input type="number" id="maxlen" min="0" step="1" placeholder="max" aria-label="Maximum moves">
+          </div>
+        </div>
+        <div>
+          <label class="flabel" for="hashq">Game hash</label>
+          <input type="text" id="hashq" placeholder="paste a hash or a prefix" spellcheck="false" autocomplete="off">
+        </div>
+      </div>
+
+      <div class="countline">
+        <span><strong id="shown">0</strong> of <strong id="total">0</strong> games</span>
+        <button class="ghost" id="resetbtn" type="button">Reset</button>
+      </div>
+
+      <div class="list" id="list" tabindex="0" role="listbox" aria-label="Game list">
+        <div class="list-inner" id="listInner"></div>
+      </div>
+    </aside>
+
+    <section class="stage">
+      <div class="gamehead">
+        <div class="players">
+          <div class="player black">
+            <span class="stone-dot"></span>
+            <span class="names">
+              <span class="pname" id="pbname">&mdash;</span>
+              <span class="pmeta" id="pbmeta"></span>
+            </span>
+          </div>
+          <div class="versus">vs</div>
+          <div class="player white">
+            <span class="names">
+              <span class="pname" id="pwname">&mdash;</span>
+              <span class="pmeta" id="pwmeta"></span>
+            </span>
+            <span class="stone-dot"></span>
+          </div>
+        </div>
+        <div class="metarow" id="metarow"></div>
+      </div>
+
+      <div class="boardwrap">
+        <svg id="board" viewBox="0 0 772 772" role="img" aria-label="Board position">
+          <defs>
+            <radialGradient id="gb" cx="34%" cy="29%" r="72%">
+              <stop class="s0" offset="0%"/>
+              <stop class="s1" offset="100%"/>
+            </radialGradient>
+            <radialGradient id="gw" cx="34%" cy="29%" r="78%">
+              <stop class="s0" offset="0%"/>
+              <stop class="s1" offset="100%"/>
+            </radialGradient>
+            <linearGradient id="gwood" x1="0" y1="0" x2="1" y2="1">
+              <stop class="s0" offset="0%"/>
+              <stop class="s1" offset="100%"/>
+            </linearGradient>
+          </defs>
+          <rect class="wood" x="0" y="0" width="772" height="772" rx="8"/>
+          <g id="grid"></g>
+          <g id="labels"></g>
+          <g id="stones"></g>
+        </svg>
+      </div>
+
+      <div class="controls">
+        <div class="ctl-row">
+          <div class="nav">
+            <button type="button" id="first" title="First position (Home)" aria-label="First position">&#9198;</button>
+            <button type="button" id="prev" title="Previous move (left arrow)" aria-label="Previous move">&#9664;</button>
+            <button type="button" id="next" title="Next move (right arrow)" aria-label="Next move">&#9654;</button>
+            <button type="button" id="last" title="Last position (End)" aria-label="Last position">&#9197;</button>
+          </div>
+          <input type="range" id="slider" min="0" max="0" value="0" aria-label="Move">
+          <span class="movecount"><span id="curmove">0</span><span class="of"> / <span id="nmoves">0</span></span></span>
+        </div>
+        <div class="ctl-row">
+          <div class="caps">
+            <span class="cb">Black captured <span id="capb">0</span></span>
+            <span class="cw">White captured <span id="capw">0</span></span>
+          </div>
+          <div class="spacer" style="flex:1 1 auto"></div>
+          <div class="numctl">
+            <label><input type="checkbox" id="allnums"> Show all numbers</label>
+            <label for="lastn">last</label>
+            <select id="lastn" aria-label="Number of recent moves to number">
+              <option value="1">1</option>
+              <option value="5" selected>5</option>
+              <option value="10">10</option>
+              <option value="20">20</option>
+            </select>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <aside class="rail rail-right">
+      <div class="recordhead" id="recordhead"></div>
+      <div class="railhead">Move record</div>
+      <div class="moves" id="movelist"></div>
+    </aside>
+  </main>
+</div>
+
+<pre id="selftest" hidden></pre>
+
+<!--
+  Three placeholder tokens are filled in before this page is published.  Each is an
+  underscored capitalised word; they are not spelled out here so that a substitution
+  pass cannot accidentally rewrite this note.
+
+    GAMES     the whole of games.json, inline, in the script block below.  Required.
+    ANALYSIS  games_analysis.json, which gives gatekeeper games their per-move winrate
+              and visit counts.  Optional: left untouched, the winrate panel simply says
+              the analysis is not loaded.
+    SELFTEST  selftest_fixture.json from test_games_viewer.py.  Optional: it is read
+              only by the ?selftest mode, which replays each fixture game in the browser
+              and prints how many agree with the reference replay.
+
+  The two optional ones sit in JSON script tags, which browsers do not execute, so the
+  page still works with the placeholders untouched.
+-->
+<script type="application/json" id="analysis-data">__ANALYSIS__</script>
+<script type="application/json" id="selftest-data">__SELFTEST__</script>
+
+<script>
+const GAMES = __GAMES__;
+
+/* --- go-core:begin --- pure board logic, no DOM; mirrored in test_games_viewer.py */
+var GO = (function () {
+  var N = 7;
+  var NP = N * N;
+  var PASS = -1;
+  var ALPHABET = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmn";
+  var COLS = "ABCDEFGHJKLMNOPQRST";
+
+  var NEIGH = (function () {
+    var t = [];
+    for (var y = 0; y < N; y++) {
+      for (var x = 0; x < N; x++) {
+        var a = [];
+        if (x > 0) a.push(y * N + x - 1);
+        if (x < N - 1) a.push(y * N + x + 1);
+        if (y > 0) a.push((y - 1) * N + x);
+        if (y < N - 1) a.push((y + 1) * N + x);
+        t.push(a);
+      }
+    }
+    return t;
+  })();
+
+  /* "dd" -> point index; "--" -> PASS */
+  function sgfToPoint(s) {
+    if (!s || s.charAt(0) === "-") return PASS;
+    var x = s.charCodeAt(0) - 97;
+    var y = s.charCodeAt(1) - 97;
+    if (x < 0 || x >= N || y < 0 || y >= N) return PASS;
+    return y * N + x;
+  }
+
+  function pointToSgf(p) {
+    if (p === PASS) return "--";
+    return String.fromCharCode(97 + (p % N)) + String.fromCharCode(97 + Math.floor(p / N));
+  }
+
+  /* Decode a stored move string into an array of point indices. */
+  function decodeMoves(text, encoding) {
+    var out = [], i;
+    if (!text) return out;
+    if (encoding === "packed1") {
+      for (i = 0; i < text.length; i++) {
+        var c = ALPHABET.indexOf(text.charAt(i));
+        out.push(c === NP ? PASS : c);
+      }
+    } else {
+      for (i = 0; i + 1 < text.length; i += 2) out.push(sgfToPoint(text.substr(i, 2)));
+    }
+    return out;
+  }
+
+  /* Board coordinate as a player would say it: column letter (I skipped), row from the bottom. */
+  function pointName(p) {
+    if (p === PASS) return "pass";
+    return COLS.charAt(p % N) + String(N - Math.floor(p / N));
+  }
+
+  /* Count liberties of the group containing p, collecting the group into `group`. */
+  function groupLiberties(stones, p, group, seen) {
+    var colour = stones[p];
+    var stack = [p], libs = 0, i;
+    group.length = 0;
+    for (i = 0; i < NP; i++) seen[i] = 0;
+    seen[p] = 1;
+    while (stack.length) {
+      var q = stack.pop();
+      group.push(q);
+      var nb = NEIGH[q];
+      for (i = 0; i < nb.length; i++) {
+        var n = nb[i];
+        if (stones[n] === 0) libs++;
+        else if (stones[n] === colour && !seen[n]) { seen[n] = 1; stack.push(n); }
+      }
+    }
+    return libs;
+  }
+
+  /* Play one stone. Opponent groups without liberties come off first; the moving group
+     comes off after that if it still has none (suicide, allowed by some rule strings). */
+  function playStone(st, p, colour, moveNo, scratch) {
+    var opp = colour === 1 ? 2 : 1;
+    var group = scratch.group, seen = scratch.seen;
+    st.stones[p] = colour;
+    st.num[p] = moveNo;
+    var taken = 0, i, k;
+    var nb = NEIGH[p];
+    for (i = 0; i < nb.length; i++) {
+      var n = nb[i];
+      if (st.stones[n] === opp && groupLiberties(st.stones, n, group, seen) === 0) {
+        for (k = 0; k < group.length; k++) { st.stones[group[k]] = 0; st.num[group[k]] = 0; }
+        taken += group.length;
+      }
+    }
+    if (colour === 1) st.capB += taken; else st.capW += taken;
+    if (groupLiberties(st.stones, p, group, seen) === 0) {
+      var self = group.length;
+      for (k = 0; k < group.length; k++) { st.stones[group[k]] = 0; st.num[group[k]] = 0; }
+      if (opp === 1) st.capB += self; else st.capW += self;
+    }
+    return taken;
+  }
+
+  function emptyState() {
+    return { stones: new Int8Array(NP), num: new Int16Array(NP), capB: 0, capW: 0, last: PASS, colour: 1 };
+  }
+
+  function copyState(s) {
+    return { stones: Int8Array.from(s.stones), num: Int16Array.from(s.num),
+             capB: s.capB, capW: s.capW, last: s.last, colour: s.colour };
+  }
+
+  /* Replay a whole game. Returns one state per position, index 0 being the opening
+     position (setup stones already placed, no move played yet). */
+  function replay(moves, setup) {
+    var scratch = { group: [], seen: new Uint8Array(NP) };
+    var st = emptyState();
+    var first = (setup && setup.first === "W") ? 2 : 1;
+    var i, p;
+    if (setup && setup.ab) {
+      for (i = 0; i + 1 < setup.ab.length; i += 2) {
+        p = sgfToPoint(setup.ab.substr(i, 2));
+        if (p !== PASS) st.stones[p] = 1;
+      }
+    }
+    if (setup && setup.aw) {
+      for (i = 0; i + 1 < setup.aw.length; i += 2) {
+        p = sgfToPoint(setup.aw.substr(i, 2));
+        if (p !== PASS) st.stones[p] = 2;
+      }
+    }
+    st.colour = first;
+    var states = [st];
+    var colour = first;
+    for (i = 0; i < moves.length; i++) {
+      var nxt = copyState(states[i]);
+      nxt.colour = colour;
+      nxt.last = moves[i];
+      if (moves[i] !== PASS) playStone(nxt, moves[i], colour, i + 1, scratch);
+      states.push(nxt);
+      colour = colour === 1 ? 2 : 1;
+    }
+    return states;
+  }
+
+  /* "..b.w..." style dump of a position, row-major from the top row. */
+  function boardString(state) {
+    var s = "", i;
+    for (i = 0; i < NP; i++) s += state.stones[i] === 1 ? "b" : (state.stones[i] === 2 ? "w" : ".");
+    return s;
+  }
+
+  return { N: N, NP: NP, PASS: PASS, ALPHABET: ALPHABET, NEIGH: NEIGH,
+           sgfToPoint: sgfToPoint, pointToSgf: pointToSgf, decodeMoves: decodeMoves,
+           pointName: pointName, groupLiberties: groupLiberties, playStone: playStone,
+           replay: replay, boardString: boardString };
+})();
+if (typeof module !== "undefined" && module.exports) module.exports = GO;
+/* --- go-core:end --- */
+
+(function () {
+  "use strict";
+
+  var $ = function (id) { return document.getElementById(id); };
+
+  function readJsonTag(id) {
+    var el = $(id);
+    if (!el) return null;
+    var txt = (el.textContent || "").trim();
+    if (!txt || txt.charAt(0) === "_") return null;   /* placeholder left in place */
+    try { return JSON.parse(txt); } catch (e) { return null; }
+  }
+
+  var ANALYSIS = readJsonTag("analysis-data");
+  var SELFTEST = readJsonTag("selftest-data");
+
+  /* ------------------------------------------------------------ self-test mode */
+
+  if (/(^|[?&])selftest\b/.test(location.search)) {
+    var out = $("selftest");
+    var app = $("app");
+    app.hidden = true;
+    out.hidden = false;
+    var lines = [];
+    if (!SELFTEST || !SELFTEST.cases || !SELFTEST.cases.length) {
+      lines.push("selftest: no fixture embedded.");
+      lines.push("Run test_games_viewer.py to generate selftest_fixture.json and paste it");
+      lines.push('in place of the placeholder in <script id="selftest-data">.');
+    } else {
+      var pass = 0, fail = 0, failLines = [];
+      for (var i = 0; i < SELFTEST.cases.length; i++) {
+        var c = SELFTEST.cases[i];
+        var states = GO.replay(GO.decodeMoves(c.moves, c.enc || "sgf2"),
+                               { ab: c.ab || "", aw: c.aw || "", first: c.first || "B" });
+        var fin = states[states.length - 1];
+        var got = GO.boardString(fin);
+        var ok = got === c.final && fin.capB === c.capB && fin.capW === c.capW;
+        if (ok) pass++;
+        else {
+          fail++;
+          if (failLines.length < 12) {
+            failLines.push("  case " + i + " hash " + c.h);
+            failLines.push("    board expected " + c.final);
+            failLines.push("    board observed " + got);
+            failLines.push("    captures expected B" + c.capB + "/W" + c.capW +
+                           "  observed B" + fin.capB + "/W" + fin.capW);
+          }
+        }
+      }
+      lines.push("selftest  browser replay vs the reference replay");
+      lines.push("fixture   " + (SELFTEST.generated_utc || "unknown") +
+                 "   cases " + SELFTEST.cases.length);
+      lines.push("");
+      lines.push("pass  " + pass);
+      lines.push("fail  " + fail);
+      lines.push("");
+      lines.push(fail === 0 ? "RESULT PASS  every case agrees on the final board and both capture counts."
+                            : "RESULT FAIL");
+      if (failLines.length) lines.push("", failLines.join("\n"));
+    }
+    out.textContent = lines.join("\n");
+    return;
+  }
+
+  /* ------------------------------------------------------------ theme */
+
+  var THEMES = ["system", "light", "dark"];
+  var themeIdx = 0;
+  try {
+    var saved = localStorage.getItem("s7-theme");
+    if (saved && THEMES.indexOf(saved) >= 0) themeIdx = THEMES.indexOf(saved);
+  } catch (e) { /* storage may be unavailable */ }
+
+  function applyTheme() {
+    var mode = THEMES[themeIdx];
+    if (mode === "system") document.documentElement.removeAttribute("data-theme");
+    else document.documentElement.setAttribute("data-theme", mode);
+    $("themebtn").textContent = "Theme: " + mode;
+    try { localStorage.setItem("s7-theme", mode); } catch (e) { /* ignore */ }
+  }
+  $("themebtn").addEventListener("click", function () {
+    themeIdx = (themeIdx + 1) % THEMES.length;
+    applyTheme();
+  });
+  applyTheme();
+
+  /* ------------------------------------------------------------ data */
+
+  var ROWS = GAMES.games || [];
+  var NETS = GAMES.nets || [];
+  var RESULTS = GAMES.results || [];
+  var GTYPES = GAMES.gtypes || [];
+  var SOURCES = GAMES.sources || ["selfplay", "gatekeeper"];
+  var EXTRA = GAMES.extra || {};
+  var ENC = GAMES.move_encoding || "sgf2";
+  var SRC_LABEL = { selfplay: "self-play", gatekeeper: "gatekeeper" };
+
+  var F = { SRC: 0, BLACK: 1, WHITE: 2, KOMI: 3, RESULT: 4, HA: 5, GTYPE: 6, NMOVES: 7, MOVES: 8, HASH: 9 };
+
+  function netOf(i) { return NETS[i] || { name: "?", cycle: 0, samples: 0, rows: 0 }; }
+  function cycleOf(i) { return netOf(i).cycle; }
+  function fmtInt(n) { return String(n).replace(/\B(?=(\d{3})+(?!\d))/g, ","); }
+
+  $("snapline").textContent =
+    fmtInt(ROWS.length) + " games  ·  " + NETS.length + " nets  ·  " +
+    GAMES.board_size + "×" + GAMES.board_size + "  ·  snapshot " +
+    (GAMES.snapshot_utc || "unknown");
+
+  /* ------------------------------------------------------------ filters */
+
+  var filter = { src: "", res: "", net: "", gtype: "", min: null, max: null, hash: "" };
+  var view = [];
+
+  (function fillSelects() {
+    var sel = $("netsel");
+    var opts = ['<option value="">Any net</option>'];
+    var order = NETS.slice().sort(function (a, b) { return a.cycle - b.cycle; });
+    for (var i = 0; i < order.length; i++) {
+      opts.push('<option value="' + order[i].i + '">c' + order[i].cycle + "  " + order[i].name + "</option>");
+    }
+    sel.innerHTML = opts.join("");
+
+    var t = ['<option value="">Any type</option>'];
+    for (var k = 0; k < GTYPES.length; k++) t.push('<option value="' + k + '">' + GTYPES[k] + "</option>");
+    $("typesel").innerHTML = t.join("");
+  })();
+
+  function recompute() {
+    var q = filter.hash.trim().toUpperCase();
+    var out = [];
+    for (var i = 0; i < ROWS.length; i++) {
+      var g = ROWS[i];
+      if (filter.src !== "" && g[F.SRC] !== +filter.src) continue;
+      if (filter.res !== "" && RESULTS[g[F.RESULT]][1] !== filter.res) continue;
+      if (filter.net !== "" && g[F.BLACK] !== +filter.net && g[F.WHITE] !== +filter.net) continue;
+      if (filter.gtype !== "" && g[F.GTYPE] !== +filter.gtype) continue;
+      if (filter.min !== null && g[F.NMOVES] < filter.min) continue;
+      if (filter.max !== null && g[F.NMOVES] > filter.max) continue;
+      if (q && g[F.HASH].indexOf(q) !== 0) continue;
+      out.push(i);
+    }
+    view = out;
+    $("shown").textContent = fmtInt(view.length);
+    $("total").textContent = fmtInt(ROWS.length);
+    renderList(true);
+    if (view.length && view.indexOf(current) < 0) select(view[0], true);
+    else renderList();
+  }
+
+  function bindSeg(id, key) {
+    $(id).addEventListener("click", function (ev) {
+      var b = ev.target.closest("button");
+      if (!b) return;
+      var all = this.querySelectorAll("button");
+      for (var i = 0; i < all.length; i++) all[i].setAttribute("aria-pressed", String(all[i] === b));
+      filter[key] = b.getAttribute("data-v");
+      recompute();
+    });
+  }
+  bindSeg("srcseg", "src");
+  bindSeg("resseg", "res");
+
+  $("netsel").addEventListener("change", function () { filter.net = this.value; recompute(); });
+  $("typesel").addEventListener("change", function () { filter.gtype = this.value; recompute(); });
+  $("minlen").addEventListener("input", function () {
+    filter.min = this.value === "" ? null : +this.value; recompute();
+  });
+  $("maxlen").addEventListener("input", function () {
+    filter.max = this.value === "" ? null : +this.value; recompute();
+  });
+  $("hashq").addEventListener("input", function () { filter.hash = this.value; recompute(); });
+  $("resetbtn").addEventListener("click", function () {
+    filter = { src: "", res: "", net: "", gtype: "", min: null, max: null, hash: "" };
+    $("netsel").value = ""; $("typesel").value = "";
+    $("minlen").value = ""; $("maxlen").value = ""; $("hashq").value = "";
+    var segs = ["srcseg", "resseg"];
+    for (var s = 0; s < segs.length; s++) {
+      var bs = $(segs[s]).querySelectorAll("button");
+      for (var i = 0; i < bs.length; i++) bs[i].setAttribute("aria-pressed", String(i === 0));
+    }
+    recompute();
+  });
+
+  /* ------------------------------------------------------------ virtualised list */
+
+  var ROW_H = 52;
+  var listEl = $("list");
+  var innerEl = $("listInner");
+  var pendingFrame = 0;
+
+  function rowHtml(gi, top) {
+    var g = ROWS[gi];
+    var res = RESULTS[g[F.RESULT]];
+    var src = SOURCES[g[F.SRC]];
+    var cyB = cycleOf(g[F.BLACK]), cyW = cycleOf(g[F.WHITE]);
+    var pairing = cyB === cyW ? ("cycle " + cyB) : ("c" + cyB + " vs c" + cyW);
+    var gt = GTYPES[g[F.GTYPE]] || "";
+    return '<div class="grow" data-i="' + gi + '" role="option" aria-selected="' +
+      (gi === current) + '" style="top:' + top + 'px">' +
+      '<span class="src-chip ' + (g[F.SRC] === 1 ? "g" : "s") + '">' + (g[F.SRC] === 1 ? "G" : "S") + "</span>" +
+      '<span class="g-main">' +
+        '<span class="g-l1"><span class="g-id">#' + gi + "</span>  " + pairing + "</span>" +
+        '<span class="g-l2">' + g[F.HASH].slice(0, 10) + "  ·  " + g[F.NMOVES] + " mv" +
+          (gt && gt !== "normal" ? "  ·  " + gt : "") + "</span>" +
+      "</span>" +
+      '<span class="badge ' + res[1] + '">' + res[0] + "</span>" +
+      "</div>";
+  }
+
+  function renderList(resize) {
+    if (resize) innerEl.style.height = (view.length * ROW_H) + "px";
+    if (!view.length) {
+      innerEl.innerHTML = '<div class="empty">No game matches these filters.</div>';
+      return;
+    }
+    var top = listEl.scrollTop;
+    var h = listEl.clientHeight || 400;
+    var firstRow = Math.max(0, Math.floor(top / ROW_H) - 3);
+    var lastRow = Math.min(view.length, Math.ceil((top + h) / ROW_H) + 3);
+    var html = [];
+    for (var r = firstRow; r < lastRow; r++) html.push(rowHtml(view[r], r * ROW_H));
+    innerEl.innerHTML = html.join("");
+  }
+
+  listEl.addEventListener("scroll", function () {
+    if (pendingFrame) return;
+    pendingFrame = requestAnimationFrame(function () { pendingFrame = 0; renderList(); });
+  });
+  window.addEventListener("resize", function () { renderList(); });
+
+  innerEl.addEventListener("click", function (ev) {
+    var row = ev.target.closest(".grow");
+    if (row) select(+row.getAttribute("data-i"));
+  });
+
+  function scrollRowIntoView(gi) {
+    var r = view.indexOf(gi);
+    if (r < 0) return;
+    var top = r * ROW_H;
+    var h = listEl.clientHeight || 400;
+    if (top < listEl.scrollTop || top + ROW_H > listEl.scrollTop + h) {
+      listEl.scrollTop = Math.max(0, top - h / 2 + ROW_H / 2);
+    }
+    renderList();
+  }
+
+  /* ------------------------------------------------------------ board rendering */
+
+  var SVG_NS = "http://www.w3.org/2000/svg";
+  var M = 86, C = 100, R = 46;
+  var N = GO.N;
+
+  function px(i) { return M + i * C; }
+
+  (function drawGrid() {
+    var grid = $("grid"), labels = $("labels"), i;
+    var parts = [];
+    for (i = 0; i < N; i++) {
+      var edge = (i === 0 || i === N - 1) ? 4.2 : 2.6;
+      parts.push('<line class="gridline" x1="' + px(0) + '" y1="' + px(i) + '" x2="' + px(N - 1) +
+                 '" y2="' + px(i) + '" stroke-width="' + edge + '"/>');
+      parts.push('<line class="gridline" x1="' + px(i) + '" y1="' + px(0) + '" x2="' + px(i) +
+                 '" y2="' + px(N - 1) + '" stroke-width="' + edge + '"/>');
+    }
+    var mid = (N - 1) / 2;
+    parts.push('<circle class="star" cx="' + px(mid) + '" cy="' + px(mid) + '" r="7"/>');
+    grid.innerHTML = parts.join("");
+
+    var lab = [];
+    for (i = 0; i < N; i++) {
+      lab.push('<text class="coord" x="' + px(i) + '" y="' + (px(N - 1) + 54) +
+               '" text-anchor="middle">' + "ABCDEFGHJKLMNOPQRST".charAt(i) + "</text>");
+      lab.push('<text class="coord" x="' + (px(0) - 46) + '" y="' + px(i) +
+               '" dy=".35em" text-anchor="middle">' + (N - i) + "</text>");
+    }
+    labels.innerHTML = lab.join("");
+  })();
+
+  function drawStones(state, showAll, lastN, moveNo) {
+    var g = $("stones");
+    var parts = [];
+    var p, x, y, num, colour;
+    for (p = 0; p < GO.NP; p++) {
+      colour = state.stones[p];
+      if (!colour) continue;
+      x = px(p % N); y = px(Math.floor(p / N));
+      parts.push('<circle class="' + (colour === 1 ? "stone-b" : "stone-w") +
+                 '" cx="' + x + '" cy="' + y + '" r="' + R + '"/>');
+      num = state.num[p];
+      if (num > 0 && (showAll || num > moveNo - lastN)) {
+        var size = num < 100 ? 44 : (num < 1000 ? 34 : 27);
+        parts.push('<text class="num ' + (colour === 1 ? "num-b" : "num-w") + '" x="' + x +
+                   '" y="' + y + '" dy=".35em" text-anchor="middle" font-size="' + size + '">' +
+                   num + "</text>");
+      }
+    }
+    if (state.last !== GO.PASS && state.last >= 0 && state.stones[state.last]) {
+      x = px(state.last % N); y = px(Math.floor(state.last / N));
+      parts.push('<circle class="lastmark" cx="' + x + '" cy="' + y + '" r="' + R + '"/>');
+    }
+    g.innerHTML = parts.join("");
+  }
+
+  /* ------------------------------------------------------------ current game */
+
+  var current = -1;
+  var G = null;          /* the selected row */
+  var moves = [];
+  var states = [];
+  var at = 0;            /* how many moves are played */
+  var wr = null, visits = null;
+
+  function analysisFor(gi) {
+    if (!ANALYSIS || !ANALYSIS.wr) return null;
+    var a = ANALYSIS.wr[String(gi)];
+    return a ? a : null;
+  }
+
+  function visitsFor(gi) {
+    if (!ANALYSIS || !ANALYSIS.visits) return null;
+    var v = ANALYSIS.visits[String(gi)];
+    return (v === undefined || v === null) ? null : v;
+  }
+
+  function visitAt(i) {
+    if (visits === null) return null;
+    if (typeof visits === "number") return visits;
+    return visits[i] === undefined ? null : visits[i];
+  }
+
+  function select(gi, quiet) {
+    if (gi === undefined || gi < 0 || gi >= ROWS.length) return;
+    current = gi;
+    G = ROWS[gi];
+    var ex = EXTRA[String(gi)] || {};
+    moves = GO.decodeMoves(G[F.MOVES], ENC);
+    states = GO.replay(moves, { ab: ex.ab || "", aw: ex.aw || "", first: ex.first || "B" });
+    wr = analysisFor(gi);
+    visits = visitsFor(gi);
+    at = moves.length;
+    $("slider").max = String(moves.length);
+    renderHeader();
+    renderMoveList();
+    renderRecordHead();
+    goTo(at);
+    if (!quiet) renderList();
+    else scrollRowIntoView(gi);
+  }
+
+  function renderHeader() {
+    var bn = netOf(G[F.BLACK]), wn = netOf(G[F.WHITE]);
+    $("pbname").textContent = bn.name;
+    $("pwname").textContent = wn.name;
+    $("pbmeta").textContent = "cycle " + bn.cycle + (bn.samples ? "  ·  " + fmtInt(bn.samples) + " samples" : "");
+    $("pwmeta").textContent = "cycle " + wn.cycle + (wn.samples ? "  ·  " + fmtInt(wn.samples) + " samples" : "");
+
+    var res = RESULTS[G[F.RESULT]];
+    var fields = [
+      ["Komi", G[F.KOMI]],
+      ["Result", res[0]],
+      ["Moves", G[F.NMOVES]],
+      ["Source", SRC_LABEL[SOURCES[G[F.SRC]]] || SOURCES[G[F.SRC]]],
+      ["Type", GTYPES[G[F.GTYPE]] || "?"]
+    ];
+    if (G[F.HA]) fields.push(["Handicap", G[F.HA]]);
+    fields.push(["Game hash", G[F.HASH]]);
+    var html = [];
+    for (var i = 0; i < fields.length; i++) {
+      var cls = fields[i][0] === "Game hash" ? "field hash" : "field";
+      html.push('<span class="' + cls + '"><span class="k">' + fields[i][0] +
+                '</span><span class="v">' + fields[i][1] + "</span></span>");
+    }
+    $("metarow").innerHTML = html.join("");
+  }
+
+  function renderRecordHead() {
+    var head = $("recordhead");
+    if (!wr || !wr.length) {
+      head.innerHTML = '<div class="no-analysis">Search analysis is stored for gatekeeper games only. ' +
+                       "Pick a gatekeeper game to see the winrate trace and visit counts.</div>";
+      return;
+    }
+    head.innerHTML = '<svg class="spark" id="spark" viewBox="0 0 300 100" preserveAspectRatio="none" ' +
+                     'role="img" aria-label="Black winrate through the game"></svg>' +
+                     '<div class="sparknote"><span>black winrate</span><span id="sparkval"></span></div>';
+    drawSpark();
+  }
+
+  function drawSpark() {
+    var svg = $("spark");
+    if (!svg || !wr || !wr.length) return;
+    var n = wr.length;
+    var pts = [], area = [], i, x, y, v;
+    for (i = 0; i < n; i++) {
+      v = wr[i] < 0 ? 50 : wr[i];
+      x = n === 1 ? 150 : (i / (n - 1)) * 300;
+      y = 100 - v;
+      pts.push(x.toFixed(1) + "," + y.toFixed(1));
+      area.push(x.toFixed(1) + "," + y.toFixed(1));
+    }
+    var d = "M0,100 L" + area.join(" L") + " L300,100 Z";
+    var cur = Math.min(Math.max(at - 1, 0), n - 1);
+    var cx = n === 1 ? 150 : (cur / (n - 1)) * 300;
+    var cy = 100 - (wr[cur] < 0 ? 50 : wr[cur]);
+    svg.innerHTML =
+      '<line class="base" x1="0" y1="50" x2="300" y2="50" vector-effect="non-scaling-stroke"/>' +
+      '<path class="fill" d="' + d + '"/>' +
+      '<polyline class="trace" points="' + pts.join(" ") + '" vector-effect="non-scaling-stroke"/>' +
+      '<line class="cursor" x1="' + cx.toFixed(1) + '" y1="0" x2="' + cx.toFixed(1) + '" y2="100" ' +
+      'vector-effect="non-scaling-stroke"/>' +
+      '<circle class="dot" cx="' + cx.toFixed(1) + '" cy="' + cy.toFixed(1) + '" r="2.6" ' +
+      'vector-effect="non-scaling-stroke"/>';
+    var val = $("sparkval");
+    if (val) val.textContent = (wr[cur] < 0 ? "—" : wr[cur] + "%") + " at move " + (cur + 1);
+  }
+
+  function renderMoveList() {
+    var list = $("movelist");
+    if (!moves.length) { list.innerHTML = '<div class="empty">This record holds no moves.</div>'; return; }
+    var firstW = (EXTRA[String(current)] || {}).first === "W";
+    var html = [];
+    for (var i = 0; i < moves.length; i++) {
+      var black = (i % 2 === 0) !== firstW;
+      var p = moves[i];
+      var name = GO.pointName(p);
+      var an = "";
+      if (wr && wr[i] !== undefined) {
+        var v = visitAt(i);
+        an = (wr[i] < 0 ? "—" : wr[i] + "%") + (v ? "  v" + v : "");
+      }
+      html.push('<div class="mv" data-n="' + (i + 1) + '" aria-current="false">' +
+        '<span class="n">' + (i + 1) + "</span>" +
+        '<span class="c ' + (black ? "b" : "w") + '"></span>' +
+        '<span class="pt' + (p === GO.PASS ? " pass" : "") + '">' + name + "</span>" +
+        '<span class="an">' + an + "</span></div>");
+    }
+    list.innerHTML = html.join("");
+  }
+
+  $("movelist").addEventListener("click", function (ev) {
+    var row = ev.target.closest(".mv");
+    if (row) goTo(+row.getAttribute("data-n"));
+  });
+
+  function goTo(n) {
+    at = Math.max(0, Math.min(moves.length, n));
+    var st = states[at];
+    var lastN = +$("lastn").value;
+    drawStones(st, $("allnums").checked, lastN, at);
+    $("slider").value = String(at);
+    $("curmove").textContent = at;
+    $("nmoves").textContent = moves.length;
+    $("capb").textContent = st.capB;
+    $("capw").textContent = st.capW;
+    $("first").disabled = $("prev").disabled = (at === 0);
+    $("last").disabled = $("next").disabled = (at === moves.length);
+
+    var rows = $("movelist").children;
+    for (var i = 0; i < rows.length; i++) {
+      rows[i].setAttribute("aria-current", String(i === at - 1));
+    }
+    if (at > 0 && rows[at - 1]) {
+      var row = rows[at - 1];
+      var box = $("movelist");
+      if (row.offsetTop < box.scrollTop || row.offsetTop + row.offsetHeight > box.scrollTop + box.clientHeight) {
+        box.scrollTop = row.offsetTop - box.clientHeight / 2;
+      }
+    }
+    drawSpark();
+  }
+
+  $("first").addEventListener("click", function () { goTo(0); });
+  $("prev").addEventListener("click", function () { goTo(at - 1); });
+  $("next").addEventListener("click", function () { goTo(at + 1); });
+  $("last").addEventListener("click", function () { goTo(moves.length); });
+  $("slider").addEventListener("input", function () { goTo(+this.value); });
+  $("allnums").addEventListener("change", function () { goTo(at); });
+  $("lastn").addEventListener("change", function () { goTo(at); });
+
+  document.addEventListener("keydown", function (ev) {
+    var t = ev.target;
+    if (t && (t.tagName === "INPUT" || t.tagName === "SELECT" || t.tagName === "TEXTAREA")) return;
+    if (ev.metaKey || ev.ctrlKey || ev.altKey) return;
+    if (ev.key === "ArrowLeft") { goTo(at - 1); ev.preventDefault(); }
+    else if (ev.key === "ArrowRight") { goTo(at + 1); ev.preventDefault(); }
+    else if (ev.key === "Home") { goTo(0); ev.preventDefault(); }
+    else if (ev.key === "End") { goTo(moves.length); ev.preventDefault(); }
+    else if (ev.key === "ArrowUp" || ev.key === "ArrowDown") {
+      var r = view.indexOf(current);
+      if (r < 0) return;
+      var nr = r + (ev.key === "ArrowDown" ? 1 : -1);
+      if (nr >= 0 && nr < view.length) { select(view[nr], true); ev.preventDefault(); }
+    }
+  });
+
+  /* ------------------------------------------------------------ start */
+
+  recompute();
+
+  var opening = -1;
+  for (var i = ROWS.length - 1; i >= 0; i--) {
+    if (ROWS[i][F.SRC] === 1) { opening = i; break; }
+  }
+  if (opening < 0) opening = ROWS.length - 1;
+  if (opening >= 0) select(opening, true);
+})();
+</script>
