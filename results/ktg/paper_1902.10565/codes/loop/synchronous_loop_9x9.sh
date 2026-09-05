@@ -55,6 +55,16 @@ set -eu -o pipefail
 #                                       (obligation o02)
 #  12  new, top of the while body        codes/eval/stage_monitor.sh phase cycleN, when
 #                                       loop.sbatch's monitor is running (o03, c06)
+#  13  new, before the staging section   a TERM trap: the scheduler's SIGTERM, forwarded
+#                                       here by loop.sbatch, abandons the cycle in flight
+#                                       and exits 143 instead of walking on to the next
+#                                       stage (obligation o50), and a `tee` that survives
+#                                       that signal so the engine's own shutdown lines
+#                                       reach the log
+#  14  new, after selfplay each cycle    codes/data_budget/archive_sgf.sh, guarded by
+#                                       KTG_ARCHIVE_SGF, which is 0 in the committed knob
+#                                       file: at 0 no process is spawned and nothing on
+#                                       disk changes
 #
 # The script keeps upstream's GITROOTDIR="$(git rev-parse --show-toplevel)" (:35)
 # and the git show/diff calls (:84-86), so it MUST be run from inside the scratch
@@ -101,6 +111,79 @@ then
     echo "USEGATING must be 1 for this mission (node gating_rule); got '$USEGATING'." >&2
     exit 2
 fi
+
+# --- CHANGE 13 (obligation o50): SIGTERM abandons the cycle at 143 ------------
+# codes/loop/loop.sbatch runs this script in the BACKGROUND and in its own
+# process group, and forwards the scheduler's SIGTERM to that GROUP. So the
+# katago a cycle is inside receives the signal directly and leaves through its
+# own handler -- "Exited cleanly after signal", cpp/command/selfplay.cpp:26-32
+# and :396-397 -- returning status 0. Without the trap below that clean 0 reads
+# as a finished stage and the loop walks straight on to shuffle and train, inside
+# the KillWait window and with a half-played cycle's data.
+#
+# bash defers a trap until the foreground command it is waiting on returns, so
+# this handler runs in the first gap BETWEEN two stages -- which is exactly where
+# a cut cycle must be abandoned, and why the group signal above (not a signal to
+# this bash alone) is what makes the deferral short.
+#
+# It exits 143 = 128 + SIGTERM(15), the status loop.sbatch's KTG_RC_SIGTERM
+# classifies as a scheduler termination: the cut cycle does NOT bump
+# $BASEDIR/.cycles_completed (CHANGE 10 is never reached), .failcount is left
+# alone and the queued afterany successor -- the resume -- is kept.
+loop_child_pids() {
+    # every descendant of this script, this script itself excluded
+    local frontier="$$" nxt acc="" p kid
+    while [ -n "$frontier" ]
+    do
+        nxt=""
+        for p in $frontier
+        do
+            [ "$p" = "$$" ] || acc="$acc $p"
+            for kid in $(ps -o pid= --ppid "$p" 2>/dev/null)
+            do
+                nxt="$nxt $kid"
+            done
+        done
+        frontier="$nxt"
+    done
+    printf '%s\n' "$acc"
+}
+on_loop_term() {
+    set +x
+    local p
+    echo "synchronous_loop_9x9: SIGTERM received -- abandoning the cycle in flight, exiting 143"
+    # Best effort, and never fatal: anything this script started that outlived
+    # its stage (a `tee` still holding the pipe, a straggler under one of the
+    # subshells). loop.sbatch's process-group signal has normally reached all of
+    # them already; this covers the case where only this bash was signalled.
+    for p in $(loop_child_pids)
+    do
+        kill -TERM "$p" 2>/dev/null || true
+    done
+    exit 143
+}
+trap on_loop_term TERM
+
+# CHANGE 13 (b): a `tee` that outlives the forwarded SIGTERM.
+# The signal reaches this script's whole PROCESS GROUP, which is what lets the
+# engine see it at all -- and that group holds the `tee` of every stage pipeline
+# too. tee's default action for TERM is to die immediately, and measured in the
+# o50 harness that costs two things at once: everything tee had buffered is
+# thrown away (the stage's stdout.txt came out EMPTY, and `Started N games ...
+# Exited cleanly after signal` with it), and the engine is left writing into a
+# closed pipe, so it dies of SIGPIPE in the middle of its own shutdown instead
+# of reaching `Exited cleanly after signal` (cpp/command/selfplay.cpp:396-397).
+#
+# `trap '' TERM` then `exec tee` is the fix: an IGNORED disposition -- unlike a
+# handler -- survives the exec, so the real tee ignores TERM and stays until the
+# engine closes the pipe. It cannot hold the teardown open: tee ends at EOF, and
+# loop.sbatch SIGKILLs the whole group if anything in it outlives
+# KTG_TERM_GRACE_SECONDS. Output and exit status are byte-identical to `tee -a`
+# on every path where no signal arrives.
+tee_through_term() {
+    trap '' TERM
+    exec tee -a "$@"
+}
 
 BASEDIR="$(realpath "$BASEDIRRAW")"
 GITROOTDIR="$(git rev-parse --show-toplevel)"
@@ -191,6 +274,17 @@ SCRATCH_GUARD="${KTG_SCRATCH_GUARD:-$KTG_CODES/data_budget/scratch_guard.sh}"
 # phase labels) and the KTG_STAGE_ONLY dry run are unaffected, and it is never fatal.
 STAGE_MONITOR="${KTG_STAGE_MONITOR:-$KTG_CODES/eval/stage_monitor.sh}"
 MONITOR_DIR="${KTG_MONITOR_DIR:-$BASEDIR/monitor}"
+
+# CHANGE 14 (node data_budget): the SGF archive step, DISABLED BY DEFAULT. The
+# switch is KTG_ARCHIVE_SGF, committed at 0 in codes/loop/knobs_9x9.env, and the
+# call below is inside `if [ "${KTG_ARCHIVE_SGF:-0}" = "1" ]`, so at 0 nothing is
+# spawned, no directory is made and this loop's byte behaviour is unchanged.
+# loop.sbatch runs the same archiver once per LINK, immediately before the
+# retention prune -- the only place a selfplay generation is ever deleted -- and
+# this per-cycle call is defence in depth for a link that ends before its
+# successor's prune, plus a manual prune run mid-link. Hard links, so it costs no
+# blocks while the generation lives. Never fatal.
+ARCHIVE_SGF="${KTG_ARCHIVE_SGF_SH:-$KTG_CODES/data_budget/archive_sgf.sh}"
 
 # CHANGE 11 (obligation o02): the pre-shuffle pos_len guard. python/katago/train/
 # data_processing_pytorch.py:91 asserts the board size only at TRAIN time, i.e. after a
@@ -374,10 +468,24 @@ do
     set -x
 
     echo "Gatekeeper"
-    time ./bin/katago gatekeeper -rejected-models-dir "$BASEDIR"/rejectedmodels -accepted-models-dir "$BASEDIR"/models/ -sgf-output-dir "$BASEDIR"/gatekeepersgf/ -test-models-dir "$BASEDIR"/modelstobetested/ -config "$DATED_ARCHIVE"/gatekeeper.cfg -quit-if-no-nets-to-test | tee -a "$BASEDIR"/gatekeepersgf/stdout.txt
+    time ./bin/katago gatekeeper -rejected-models-dir "$BASEDIR"/rejectedmodels -accepted-models-dir "$BASEDIR"/models/ -sgf-output-dir "$BASEDIR"/gatekeepersgf/ -test-models-dir "$BASEDIR"/modelstobetested/ -config "$DATED_ARCHIVE"/gatekeeper.cfg -quit-if-no-nets-to-test | tee_through_term "$BASEDIR"/gatekeepersgf/stdout.txt
 
     echo "Selfplay"
-    time ./bin/katago selfplay -max-games-total "$NUM_GAMES_PER_CYCLE" -output-dir "$BASEDIR"/selfplay -models-dir "$BASEDIR"/models -config "$DATED_ARCHIVE"/selfplay.cfg | tee -a "$BASEDIR"/selfplay/stdout.txt
+    time ./bin/katago selfplay -max-games-total "$NUM_GAMES_PER_CYCLE" -output-dir "$BASEDIR"/selfplay -models-dir "$BASEDIR"/models -config "$DATED_ARCHIVE"/selfplay.cfg | tee_through_term "$BASEDIR"/selfplay/stdout.txt
+
+    # CHANGE 14: archive this cycle's game records, when the archive is switched on.
+    if [ "${KTG_ARCHIVE_SGF:-0}" = "1" ]
+    then
+        set +x
+        if [ -f "$ARCHIVE_SGF" ]
+        then
+            bash "$ARCHIVE_SGF" "$BASEDIR" --label "cycle $CYCLE_INDEX post-selfplay" --quiet \
+                || echo "archive_sgf.sh exited non-zero after cycle $CYCLE_INDEX -- the cycle continues"
+        else
+            echo "KTG_ARCHIVE_SGF=1 but $ARCHIVE_SGF is missing -- this cycle's sgfs are NOT archived"
+        fi
+        set -x
+    fi
 
     # CHANGE 11, second call: the rows this cycle's selfplay just wrote, before they can
     # enter a shuffle window. -e is in force, but the guard is called through `if !` so the
@@ -395,7 +503,7 @@ do
     (
         # Skip validate since peeling off 5% of data is actually a bit too chunky and discrete when running at a small scale, and validation data
         # doesn't actually add much to debugging a fast-changing RL training.
-        time SKIP_VALIDATE=1 ./shuffle.sh "$BASEDIR" "$SCRATCHDIR" "$NUM_THREADS_FOR_SHUFFLING" -min-rows "$SHUFFLE_MINROWS" -keep-target-rows "$SHUFFLE_KEEPROWS" -taper-window-scale "$TAPER_WINDOW_SCALE" | tee -a "$BASEDIR"/logs/outshuffle.txt
+        time SKIP_VALIDATE=1 ./shuffle.sh "$BASEDIR" "$SCRATCHDIR" "$NUM_THREADS_FOR_SHUFFLING" -min-rows "$SHUFFLE_MINROWS" -keep-target-rows "$SHUFFLE_KEEPROWS" -taper-window-scale "$TAPER_WINDOW_SCALE" | tee_through_term "$BASEDIR"/logs/outshuffle.txt
     )
 
     echo "Train"
@@ -407,7 +515,7 @@ do
     # CHANGE 5: ./export_model_for_selfplay_9x9.sh in place of upstream :113
     # (mv before rm, plus a captured exporter exit code). Obligations o09, o15.
     (
-        time ./export_model_for_selfplay_9x9.sh "$NAMEPREFIX" "$BASEDIR" "$USEGATING" | tee -a "$BASEDIR"/logs/outexport.txt
+        time ./export_model_for_selfplay_9x9.sh "$NAMEPREFIX" "$BASEDIR" "$USEGATING" | tee_through_term "$BASEDIR"/logs/outexport.txt
     )
 
     # CHANGE 10 (obligation o33): progress marker. All five stages of this cycle

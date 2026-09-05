@@ -1,0 +1,1 @@
+O50_TERM_FORWARDING_VERIFIED: loop launched in its own process group and reaped; SIGTERM forwarded to that group; katago exits via 'Exited cleanly after signal'; loop exits 143; finalize runs, failcount untouched, successor kept; no SIGKILL needed (harness 47/47)

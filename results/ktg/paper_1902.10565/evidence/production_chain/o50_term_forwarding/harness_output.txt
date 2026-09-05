@@ -1,0 +1,123 @@
+host: login03  date: 2026-09-05T19:51:26-04:00
+az HEAD: cc06834   bash: 5.1.8(1)-release
+under test:
+    2cce49a9d0732f8a883337e0c754dc87fe6c4ed133d4112336fde55d1e636f3d  /home/schmidt/ssci-haiyangw/az/results/ktg/paper_1902.10565/codes/loop/loop.sbatch
+    57306e0d27802033b9c28de222afe00aadadfd9a485e03b2ad463b4382ea161b  /home/schmidt/ssci-haiyangw/az/results/ktg/paper_1902.10565/codes/loop/synchronous_loop_9x9.sh
+scheduler shims on PATH (nothing reaches the real scheduler):
+    nvidia-smi
+    sbatch
+    scancel
+    scontrol
+    sinfo
+    squeue
+
+########## A: one clean cycle (KTG_ONE_CYCLE=1) -- the unchanged path, loop exits 0
+  === [2026-09-05T19:51:27-04:00] successor queued: 900001 (partition b200, dependency afterany:800001) ===
+  === [2026-09-05T19:51:27-04:00] starting the loop: /home/schmidt/ssci-haiyangw/az/results/ktg/paper_1902.10565/codes/loop/synchronous_loop_9x9.sh ktg9 /scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/work/o50_o51/sandbox/root/loop t9 b7c96h3tfrs 1 ===
+  === [2026-09-05T19:51:28-04:00] loop pid 3075009 in its own process group 3075009 (this wrapper is in 3074784) -- a SIGTERM to this wrapper is forwarded to that group, which is what reaches katago ===
+  cycle 1 complete -- 1 cycle(s) recorded in /weka/scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/work/o50_o51/sandbox/root/loop/.cycles_completed
+  === [2026-09-05T19:51:30-04:00] loop exited rc=0 after 4s ===
+  === [2026-09-05T19:51:34-04:00] clean exit -- failcount reset to 0 ===
+  wrapper exit status: 0
+    ok    A1 wrapper exits 0
+    ok    A2 loop exited rc=0
+    ok    A3 clean exit -> failcount reset to 0
+    ok    A4 .failcount == 0
+    ok    A5 one cycle recorded
+    ok    A6 loop got its own process group
+    ok    A7 no TERM was involved
+    ok    A8 no SIGKILL escalation
+
+########## B: SIGTERM to the WRAPPER ONLY, mid-selfplay (the walltime path)
+  kill -TERM 3075494   at 2026-09-05T19:51:40-04:00   (the wrapper pid ONLY, not its group)
+  wrapper exit status: 143
+  51:=== [2026-09-05T19:51:40-04:00] SIGTERM received -- scheduler termination (walltime or scancel); the queued successor is the resume path ===
+  52:=== [2026-09-05T19:51:40-04:00] forwarding SIGTERM to the loop (grace 15s, then SIGKILL; the site's KillWait is 30 s) ===
+  53:Exited cleanly after signal
+  57:synchronous_loop_9x9: SIGTERM received -- abandoning the cycle in flight, exiting 143
+  58:=== [2026-09-05T19:51:40-04:00] SIGTERM -> loop process group -3075663 (pid 3075663) ===
+  63:=== [2026-09-05T19:51:41-04:00] loop exited rc=143 after 6s ===
+  64:stage_monitor: stopped; 1 ps samples, 1 gpu samples
+  65:=== [2026-09-05T19:51:45-04:00] scheduler termination at walltime after 6s (SIGTERM to this wrapper) -- successor continues, failcount left at 0 ===
+  kill epoch 1788652299 ; trap epoch 1788652300 ; delta 1s
+    ok    B1 the TERM trap fired at all
+    ok    B2 the trap fired within 2 s
+    ok    B3 the signal was forwarded to the loop process group
+    ok    B4 the stub katago saw the TERM
+    ok    B4b the stage stdout.txt kept the engine's shutdown lines
+    ok    B5 the loop abandoned the cycle at 143
+    ok    B6 the wrapper reaped rc=143
+    ok    B7 finalize ran (monitor stopped)
+    ok    B8 classified as scheduler termination
+    ok    B9 failcount left alone
+    ok    B10 .failcount still 0
+    ok    B11 the queued successor was NOT cancelled
+    ok    B12 a successor WAS queued
+    ok    B13 NO SIGKILL was needed
+    ok    B14 wrapper exit status 143
+    ok    B15 the cut cycle did not bump .cycles_completed
+
+########## C: SIGTERM with an engine that IGNORES it -- the bounded SIGKILL escalation
+  51:=== [2026-09-05T19:51:50-04:00] SIGTERM received -- scheduler termination (walltime or scancel); the queued successor is the resume path ===
+  52:=== [2026-09-05T19:51:50-04:00] forwarding SIGTERM to the loop (grace 3s, then SIGKILL; the site's KillWait is 30 s) ===
+  53:=== [2026-09-05T19:51:50-04:00] SIGTERM -> loop process group -3076331 (pid 3076331) ===
+  64:=== [2026-09-05T19:51:53-04:00] the loop is still running 3s after the forwarded SIGTERM -- escalating to SIGKILL so finalize still runs inside KillWait ===
+  65:=== [2026-09-05T19:51:53-04:00] SIGKILL -> loop process group -3076331 (pid 3076331) ===
+  67:=== [2026-09-05T19:51:53-04:00] loop exited rc=137 after 7s ===
+  69:=== [2026-09-05T19:51:57-04:00] scheduler termination at walltime after 7s (SIGTERM to this wrapper) -- successor continues, failcount left at 0 ===
+  wrapper exit status: 137 ; wall from kill to wrapper exit: 7s
+    ok    C1 escalated to SIGKILL
+    ok    C2 SIGKILL went to the loop group
+    ok    C3 the loop was reaped as 137
+    ok    C4 still classified as scheduler termination
+    ok    C5 finalize ran
+    ok    C6 the whole teardown fitted in KillWait (30 s)
+    ok    C7 the queued successor was NOT cancelled
+    ok    C8 the stub never logged a clean signal exit
+
+########## D: the loop FAILS (no signal) -- the unchanged failure accounting
+  53:=== [2026-09-05T19:52:01-04:00] loop exited rc=1 after 3s ===
+  55:=== [2026-09-05T19:52:05-04:00] failure rc=1 -- failcount now 1/3 ===
+  56:=== [2026-09-05T19:52:05-04:00] chain continues, 2 attempt(s) left before the breaker ===
+  wrapper exit status: 1
+    ok    D1 loop exited rc=1
+    ok    D2 counted as a failure
+    ok    D3 no scheduler-termination claim
+    ok    D4 wrapper exit status 1
+
+########## E: SIGTERM that arrives AFTER the loop already failed (o33 (b) must still win)
+  53:=== [2026-09-05T19:52:09-04:00] loop exited rc=1 after 3s ===
+  55:=== [2026-09-05T19:52:13-04:00] SIGTERM received -- scheduler termination (walltime or scancel); the queued successor is the resume path ===
+  58:=== [2026-09-05T19:52:13-04:00] the loop had already exited rc=1 when the SIGTERM arrived -- counting the failure, not the signal ===
+  59:=== [2026-09-05T19:52:13-04:00] failure rc=1 -- failcount now 1/3 ===
+  wrapper exit status: 1
+    ok    E1 the signal was seen after the status
+    ok    E2 the failure was counted, not waved through
+    ok    E3 no scheduler-termination claim
+
+########## F: the storage guard stops the chain (CHAIN_STOP) -- unchanged
+  22:=== [2026-09-05T19:52:15-04:00] scratch_guard exit 1: projected mission-root usage would cross the hard cap -- stopping the chain ===
+  24:=== [2026-09-05T19:52:19-04:00] deliberate chain stop (rc=3 after 1s) -- failcount left at 0 ===
+  25:=== [2026-09-05T19:52:19-04:00] cancelling queued successor 900001 (storage guard stopped the chain) ===
+  wrapper exit status: 3 ; shim log:
+    SHIM sinfo -p b300 -N -h -o %N
+    SHIM sinfo -p b200 -N -h -o %N
+    SHIM sbatch --parsable --partition=b200 --dependency=afterany:800006 /home/schmidt/ssci-haiyangw/az/results/ktg/paper_1902.10565/codes/loop/loop.sbatch
+    SHIM scancel 900001
+    ok    F1 deliberate chain stop
+    ok    F2 the successor WAS cancelled
+    ok    F3 wrapper exit status 3
+
+########## G: SIGTERM during the pre-flight, before the loop starts (o33 (a)) -- unchanged
+  22:=== [2026-09-05T19:52:28-04:00] SIGTERM received -- scheduler termination (walltime or scancel); the queued successor is the resume path ===
+  23:=== [2026-09-05T19:52:28-04:00] SIGTERM already received during the pre-flight -- not starting the loop; the queued successor is the resume path ===
+  25:=== [2026-09-05T19:52:33-04:00] scheduler termination at walltime after 8s (SIGTERM to this wrapper) -- successor continues, failcount left at 0 ===
+  wrapper exit status: 143
+    ok    G1 the pre-flight TERM was seen
+    ok    G2 the loop was never started
+    ok    G3 classified as scheduler termination
+    ok    G4 the successor was NOT cancelled
+    ok    G5 wrapper exit status 143
+
+########## RESULT
+o50 harness: 47 passed, 0 failed

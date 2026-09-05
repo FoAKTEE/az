@@ -1,0 +1,13 @@
+plain-tee pipelines in leg A: 4
+--- leg A: wrapper exit 143
+    engine clean-exit line in the LINK LOG      : 0
+    engine clean-exit line in selfplay/stdout.txt: 0
+    bytes tee wrote to selfplay/stdout.txt       : 51
+    bash reported a killed child ('Terminated')  : 1
+    loop abandoned the cycle at 143             : 1
+--- leg B: wrapper exit 143
+    engine clean-exit line in the LINK LOG      : 1
+    engine clean-exit line in selfplay/stdout.txt: 1
+    bytes tee wrote to selfplay/stdout.txt       : 104
+    bash reported a killed child ('Terminated')  : 0
+    loop abandoned the cycle at 143             : 1

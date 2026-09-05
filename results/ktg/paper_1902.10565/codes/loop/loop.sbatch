@@ -35,7 +35,11 @@
 #              runs the EXIT trap on that path, so the wrapper must tell that
 #              end apart from a clean cycle and from a failure: it is neither,
 #              the count is left alone and the queued successor -- the resume
-#              itself -- is kept (obligation o31)
+#              itself -- is kept (obligation o31). The loop is launched in the
+#              BACKGROUND, in its own process group, and the trap FORWARDS the
+#              signal to that group before it lets the wrapper finalize
+#              (obligation o50) -- see the on_term block for why a foreground
+#              loop made the trap unreachable on the walltime path
 #   breaker    $BASEDIR/.failcount, three non-zero exits IN A ROW stop the
 #              chain. "In a row" is measured in completed cycles, not in links:
 #              the count is cleared by a link that exited 0 and by any link that
@@ -75,6 +79,12 @@ LOOP_SH="$KTG_CODES/loop/synchronous_loop_9x9.sh"
 #   prune_retention.py --apply  bounded rolling retention, run once at startup
 SCRATCH_GUARD="${KTG_SCRATCH_GUARD:-$KTG_CODES/data_budget/scratch_guard.sh}"
 PRUNE_RETENTION="${KTG_PRUNE_RETENTION:-$KTG_CODES/data_budget/prune_retention.py}"
+# The SGF archive step, DISABLED BY DEFAULT (KTG_ARCHIVE_SGF=0 in
+# codes/loop/knobs_9x9.env, which the knob section below sources). It is called at
+# exactly one place -- immediately before the retention prune, the only point in
+# the chain where a selfplay generation is ever deleted -- and only when the knob
+# is 1, so at 0 no process is spawned and nothing on disk changes.
+ARCHIVE_SGF="${KTG_ARCHIVE_SGF_SH:-$KTG_CODES/data_budget/archive_sgf.sh}"
 
 # The stage sampler (node synchronous_loop_smoke's instrument, codes/eval/stage_monitor.sh).
 # The smoke job carried it in smoke_loop.sbatch and this wrapper had none, so a production
@@ -137,6 +147,18 @@ KTG_RC_SCRATCH_STOP=3
 # the time limit.
 KTG_RC_SIGTERM=143
 
+# obligation o50. Seconds the forwarded SIGTERM is given to bring the loop down
+# before this wrapper escalates to SIGKILL on the loop's process group. It is
+# bounded by the site's KillWait (30 s on skipjack, `scontrol show config`):
+# slurmstepd SIGKILLs the whole step KillWait seconds after its own SIGTERM, and
+# finalize() -- which stops the sampler and writes the counter -- must run inside
+# what is left. 15 s leaves 15 s for that, and the loop's own TERM trap
+# (synchronous_loop_9x9.sh CHANGE 13) normally exits in well under 1 s.
+# An operator knob for the same reason the three above are, and protected the
+# same way: a knob FILE that sets it is refused, so a retune cannot ride in on
+# the knob set of a running chain.
+KTG_TERM_GRACE_SECONDS="${KTG_TERM_GRACE_SECONDS:-15}"
+
 # Loop arguments: NAMEPREFIX BASEDIR TRAININGNAME MODELKIND USEGATING
 # (order fixed by python/selfplay/synchronous_loop.sh:12-32). USEGATING stays 1.
 NAMEPREFIX="${KTG_NAMEPREFIX:-ktg9}"
@@ -175,13 +197,13 @@ KNOBS_SHA=""
 # REQ_CPUS stays empty and every guard below treats it as an unresolved knob set.
 KNOBS_STRAY=0
 if [ -r "$KNOBS_ENV" ]; then
-    KNOBS_STRAY=$(grep -c -E '^[[:space:]]*(KTG_MAX_FAILS|KTG_MAX_CHAIN|KTG_MIN_RUNTIME_SECONDS)=' "$KNOBS_ENV" 2>/dev/null || true)
+    KNOBS_STRAY=$(grep -c -E '^[[:space:]]*(KTG_MAX_FAILS|KTG_MAX_CHAIN|KTG_MIN_RUNTIME_SECONDS|KTG_TERM_GRACE_SECONDS)=' "$KNOBS_ENV" 2>/dev/null || true)
     case "$KNOBS_STRAY" in ''|*[!0-9]*) KNOBS_STRAY=0 ;; esac
 fi
 if [ ! -r "$KNOBS_ENV" ]; then
     say "loop knobs $KNOBS_ENV missing or unreadable -- REQ_CPUS unresolved"
 elif [ "$KNOBS_STRAY" -ne 0 ]; then
-    say "loop knobs $KNOBS_ENV sets $KNOBS_STRAY classification knob(s) (KTG_MAX_FAILS/KTG_MAX_CHAIN/KTG_MIN_RUNTIME_SECONDS) -- not sourced, REQ_CPUS unresolved"
+    say "loop knobs $KNOBS_ENV sets $KNOBS_STRAY classification knob(s) (KTG_MAX_FAILS/KTG_MAX_CHAIN/KTG_MIN_RUNTIME_SECONDS/KTG_TERM_GRACE_SECONDS) -- not sourced, REQ_CPUS unresolved"
 else
     KNOBS_SHA=$(sha256sum "$KNOBS_ENV" 2>/dev/null | cut -c1-16)
     set -a
@@ -313,35 +335,120 @@ LOOP_RC=0         # the loop's own exit status, valid only once LOOP_RC_SET=1
 LOOP_RC_SET=0     # 1 once that status has been recorded
 TERM_AFTER_LOOP_RC=0  # 1 if a SIGTERM was first seen AFTER that recording
 FINALIZED=0
+# obligation o50. The loop runs in the BACKGROUND, in its own process group, so
+# the trap can reach it; these are declared here, with the rest of the trap's
+# state, because on_term is installed long before the launch and must never see
+# an unset variable.
+LOOP_PID=""       # pid of the backgrounded loop, "" until it is launched
+LOOP_PGID=""      # its process group id, "" when it could not be given one
+SELF_PGID=$(ps -o pgid= -p $$ 2>/dev/null | tr -d ' ')   # never signal this one
+TERM_TICK=0       # incremented by on_term; how the reaper tells an interrupted
+                  # `wait` from a `wait` that returned the loop's own status
+TERM_DEADLINE=0   # epoch second after which the forwarded TERM is escalated
 
-# The scheduler's SIGTERM is the chain's NORMAL end: slurmstepd signals the whole
-# step at --time and sends SIGKILL KillWait seconds later, and scancel takes the
-# same route. Trapping it does two things.
+# The scheduler's SIGTERM is the chain's NORMAL end: slurmstepd signals the step
+# at --time and sends SIGKILL KillWait seconds later, and scancel takes the same
+# route. Trapping it does three things.
 #   1. It records WHY the link ended, which finalize cannot otherwise tell: bash
 #      runs the EXIT trap on SIGTERM, so without this flag the same end shows up
 #      as a clean cycle (the reset that would wipe a real failure count) or as a
 #      failure (three of them scancel a perfectly healthy chain).
-#   2. It keeps this wrapper alive past the signal, so finalize still runs. Bash
-#      defers a trap handler until the foreground command it is waiting on
-#      returns, so the wrapper outlives the loop by construction -- the loop does
-#      NOT need its own process group, and giving it one would only hide it from
-#      the group signal while slurmstepd's cgroup tracking reaches it anyway.
+#   2. It keeps this wrapper alive past the signal, so finalize still runs.
+#   3. It FORWARDS the signal to the loop (obligation o50).
+#
+# (3) is not belt and braces, it is the only thing that makes (1) and (2) reachable
+# while a cycle is running. This wrapper used to run `bash "$LOOP_SH" ...` in the
+# FOREGROUND, and bash defers a trap handler until the foreground command it is
+# waiting on returns, so on the walltime path on_term could not run until the loop
+# itself had ended -- and the loop only ends when the scheduler SIGKILLs it. That
+# is exactly what link 1 measured (job 301099): Slurm's notice at 18:22:24.034, the
+# batch step gone at 18:22:53 with `CANCELLED 0:9` at KillWait+0, katago still
+# logging `Started ... games` at its unchanged 3 s cadence through the whole 29 s
+# and never `Exited cleanly after signal` (cpp/command/selfplay.cpp:26-32,396-397),
+# nothing written by finalize. So the loop is now launched in the background and in
+# its own process group, and the handler signals THAT GROUP: one killpg reaches the
+# loop's bash, the katago the cycle is inside, its `tee`, and the trainer at once.
+# Signalling the loop's bash alone would not do -- it has the same deferral problem
+# one level down, so its own TERM trap could not run until katago had finished all
+# NUM_GAMES_PER_CYCLE games.
+#
 # SIGKILL runs no handler at all (KillWait expiry, cgroup OOM, node failure):
 # nothing is written and the queued successor simply runs. That residue is
 # obligation o25's, and it is why the successor is queued before anything else.
+
+# Every descendant of $1, deepest last, this wrapper itself excluded. Used only on
+# the fallback path below (no separate process group), where a killpg would signal
+# the wrapper too. `ps --ppid` is one exec per level and the tree is three deep.
+loop_descendants() {
+    local frontier="${1:-}" nxt acc="" p kid
+    while [ -n "$frontier" ]; do
+        nxt=""
+        for p in $frontier; do
+            acc="$acc $p"
+            for kid in $(ps -o pid= --ppid "$p" 2>/dev/null); do
+                nxt="$nxt $kid"
+            done
+        done
+        frontier="$nxt"
+    done
+    printf '%s\n' "$acc"
+}
+
+# Send $1 to the loop and everything it started. Never to this wrapper's own group.
+signal_loop_tree() {
+    local sig="${1:-TERM}" p n=0
+    [ -n "$LOOP_PID" ] || return 0
+    # Never signal a pid or a pgid this wrapper no longer owns. Once the loop's
+    # status has been reaped the pid is free for the kernel to reuse, and a
+    # killpg on a RECYCLED group id would hit somebody else's processes. Both
+    # tests are needed: LOOP_RC_SET is the definitive one (the status is in hand,
+    # so there is nothing left to signal), `kill -0` covers the window before it.
+    if [ "$LOOP_RC_SET" -eq 1 ] || ! kill -0 "$LOOP_PID" 2>/dev/null; then
+        say "SIG$sig not sent: the loop (pid $LOOP_PID) has already ended"
+        return 0
+    fi
+    # The group path is taken ONLY when the loop is its own group LEADER, i.e.
+    # pgid == pid, which is exactly what the `set -m` launch produces. That test
+    # alone makes it impossible to name this wrapper's own group by accident: the
+    # wrapper's pgid is a pid that existed before the loop was forked and can
+    # never equal the loop's pid, whatever `ps` reported for SELF_PGID.
+    if [ -n "$LOOP_PGID" ] && [ "$LOOP_PGID" = "$LOOP_PID" ]; then
+        if kill -"$sig" -- "-$LOOP_PGID" 2>/dev/null; then
+            say "SIG$sig -> loop process group -$LOOP_PGID (pid $LOOP_PID)"
+            return 0
+        fi
+        # ESRCH: the whole group is already gone. Nothing to do and nothing wrong.
+        say "SIG$sig -> loop process group -$LOOP_PGID: no such process group (already ended)"
+        return 0
+    fi
+    # Fallback: job control was unavailable, so the loop shares THIS wrapper's
+    # process group and a killpg would signal the wrapper (and slurmstepd's other
+    # children) as well. Walk the tree instead.
+    for p in $(loop_descendants "$LOOP_PID"); do
+        [ "$p" = "$$" ] && continue
+        kill -"$sig" "$p" 2>/dev/null && n=$(( n + 1 ))
+    done
+    say "SIG$sig -> $n process(es) of the loop tree rooted at $LOOP_PID (no separate process group)"
+}
+
 on_term() {
     SCHED_TERM=1
-    # obligation o33 (b): remember WHEN the signal was seen relative to the
-    # loop's own exit status. bash defers a trap handler until the foreground
-    # command it is waiting on returns, so on the walltime path this handler runs
-    # after the loop dies but BEFORE the status is recorded below -- LOOP_RC_SET
-    # is still 0 and the link is the scheduler termination it looks like. A
-    # signal that arrives later, with a failure already in hand, must not wave
-    # that failure through, and this flag is how finalize tells the two apart.
+    TERM_TICK=$(( TERM_TICK + 1 ))
+    # obligation o33 (b): remember WHEN the signal was seen relative to the loop's
+    # own exit status. With the loop in the background this handler runs the
+    # instant the signal lands, so on the walltime path LOOP_RC_SET is still 0 and
+    # the link is the scheduler termination it looks like. A signal that arrives
+    # later, with a failure already in hand, must not wave that failure through,
+    # and this flag is how finalize tells the two apart.
     if [ "$LOOP_RC_SET" -eq 1 ]; then
         TERM_AFTER_LOOP_RC=1
     fi
     say "SIGTERM received -- scheduler termination (walltime or scancel); the queued successor is the resume path"
+    if [ "$LOOP_STARTED" -eq 1 ] && [ -n "$LOOP_PID" ]; then
+        TERM_DEADLINE=$(( $(date +%s) + KTG_TERM_GRACE_SECONDS ))
+        say "forwarding SIGTERM to the loop (grace ${KTG_TERM_GRACE_SECONDS}s, then SIGKILL; the site's KillWait is 30 s)"
+        signal_loop_tree TERM
+    fi
 }
 trap on_term TERM
 
@@ -681,7 +788,7 @@ nvidia-smi --query-gpu=index,name,memory.total --format=csv,noheader || true
 #       computed at. A cfg edited to a larger numGameThreads invalidates the
 #       32 without changing anything this wrapper can see.
 if [ "$KNOBS_STRAY" -ne 0 ]; then
-    say "$KNOBS_ENV sets $KNOBS_STRAY classification knob(s) (KTG_MAX_FAILS/KTG_MAX_CHAIN/KTG_MIN_RUNTIME_SECONDS) -- pre-flight failure"
+    say "$KNOBS_ENV sets $KNOBS_STRAY classification knob(s) (KTG_MAX_FAILS/KTG_MAX_CHAIN/KTG_MIN_RUNTIME_SECONDS/KTG_TERM_GRACE_SECONDS) -- pre-flight failure"
     exit 2
 fi
 if [ "$REQ_CPUS_RESOLVED" -ne 1 ]; then
@@ -746,6 +853,21 @@ if [ ! -f "$PRUNE_RETENTION" ]; then
     say "missing $PRUNE_RETENTION (node data_budget) -- pre-flight failure"
     exit 2
 fi
+# obligation: the SGF archive, off by default. Retention deletes a selfplay
+# generation whole and the game records go with it, so if the archive is ever
+# switched on it has to run BEFORE the pruner, not after. Never fatal: an archive
+# step that fails must not stop a chain link, and the pruner and the guard below
+# still decide whether a cycle may start.
+if [ "${KTG_ARCHIVE_SGF:-0}" = "1" ]; then
+    if [ -f "$ARCHIVE_SGF" ]; then
+        say "KTG_ARCHIVE_SGF=1 -- archiving selfplay sgfs before the retention prune"
+        bash "$ARCHIVE_SGF" "$BASEDIR" --label "chain link $chaindepth pre-prune" \
+            || say "archive_sgf.sh exited non-zero -- continuing; the prune below runs either way"
+    else
+        say "KTG_ARCHIVE_SGF=1 but $ARCHIVE_SGF is missing -- NOT archiving; the prune below will delete pruned generations' sgfs"
+    fi
+fi
+
 say "startup retention prune"
 # No --root: the pruner reads the pinned mission root from budget.env, exactly as
 # the guard does (scratch_guard.sh header, obligation o28). Passing a root from
@@ -817,8 +939,57 @@ fi
 
 say "starting the loop: $LOOP_SH $NAMEPREFIX $BASEDIR $TRAININGNAME $MODELKIND $USEGATING"
 LOOP_STARTED=1
-bash "$LOOP_SH" "$NAMEPREFIX" "$BASEDIR" "$TRAININGNAME" "$MODELKIND" "$USEGATING"
-RC=$?
+# obligation o50. The loop is launched in the BACKGROUND, not in the foreground:
+# bash defers a trap handler until the foreground command it is waiting on
+# returns, so a foreground loop makes on_term -- and therefore finalize --
+# unreachable on the walltime path, which is what link 1 measured (see the
+# on_term block). `set -m` is what gives a background job a process group of its
+# own, with pgid == the job's pid; a non-interactive shell has job control off,
+# and then the child stays in this wrapper's group, where `kill -- -PID` cannot
+# name it and a killpg would signal the wrapper too. It is switched off again
+# immediately: it is needed for the fork, not after it, and leaving it on would
+# add job-control notifications to the link log.
+set -m 2>/dev/null || true
+bash "$LOOP_SH" "$NAMEPREFIX" "$BASEDIR" "$TRAININGNAME" "$MODELKIND" "$USEGATING" &
+LOOP_PID=$!
+set +m 2>/dev/null || true
+LOOP_PGID=$(ps -o pgid= -p "$LOOP_PID" 2>/dev/null | tr -d ' ')
+case "$LOOP_PGID" in ''|*[!0-9]*) LOOP_PGID="" ;; esac
+if [ -n "$LOOP_PGID" ] && [ "$LOOP_PGID" = "$LOOP_PID" ]; then
+    say "loop pid $LOOP_PID in its own process group $LOOP_PGID (this wrapper is in $SELF_PGID) -- a SIGTERM to this wrapper is forwarded to that group, which is what reaches katago"
+else
+    say "WARNING: the loop (pid $LOOP_PID) has no process group of its own (wrapper group ${SELF_PGID:-unknown}) -- a forwarded SIGTERM walks its process tree instead, one kill per descendant"
+fi
+
+# `wait` is INTERRUPTED by a trapped signal: bash returns 128+n immediately,
+# runs the handler, and does NOT reap the child -- so the loop's own status has
+# to be collected in a loop. TERM_TICK is the discriminator, not the returned
+# status and not `kill -0`: both are ambiguous exactly when the loop's own
+# status IS 143, which on this path is the likely one.
+RC=0
+while :; do
+    _tick_before="$TERM_TICK"
+    wait "$LOOP_PID"
+    RC=$?
+    if [ "$TERM_TICK" -eq "$_tick_before" ]; then
+        # No handler ran during that wait, so it returned the loop's own status.
+        break
+    fi
+    # A SIGTERM was handled and forwarded. Give it the grace it was promised and
+    # never block past it: finalize -- the sampler stop, .failcount, the kept
+    # successor -- must run inside the site's KillWait (30 s). The poll is 1 s,
+    # so a second signal is deferred by at most that.
+    [ "$TERM_DEADLINE" -ne 0 ] || TERM_DEADLINE=$(( $(date +%s) + KTG_TERM_GRACE_SECONDS ))
+    while kill -0 "$LOOP_PID" 2>/dev/null; do
+        if [ "$(date +%s)" -ge "$TERM_DEADLINE" ]; then
+            say "the loop is still running ${KTG_TERM_GRACE_SECONDS}s after the forwarded SIGTERM -- escalating to SIGKILL so finalize still runs inside KillWait"
+            signal_loop_tree KILL
+            TERM_DEADLINE=0
+            break
+        fi
+        sleep 1
+    done
+done
 # obligation o33 (b): record the loop's own status the instant it is known, so a
 # SIGTERM arriving after this point cannot be mistaken for the cause of the end.
 LOOP_RC="$RC"
