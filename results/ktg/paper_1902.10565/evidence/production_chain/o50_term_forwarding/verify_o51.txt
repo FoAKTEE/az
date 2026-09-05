@@ -1,0 +1,2 @@
+RECORDS=46 GAPS=1 TAIL_RUN=8
+O51_ROWS_HISTORY_VERIFIED: the append-only record carries the pruned nets, names its one gap, never fits across it, and check_knobs_9x9 reads it and PASSes

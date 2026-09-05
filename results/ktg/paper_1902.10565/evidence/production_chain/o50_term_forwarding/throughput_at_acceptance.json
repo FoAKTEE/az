@@ -1,0 +1,402 @@
+{
+ "basedir": "/scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/runs/p1",
+ "basedir_bytes": 1738156414,
+ "bytes_per_row_on_disk": 297.01,
+ "chain_depth": 2,
+ "cpus_per_task": null,
+ "cycles_completed": 162,
+ "foreign_pids_excluded": [],
+ "gatekeeper_games_total": 9996,
+ "gatekeeper_sz_other": 0,
+ "generated_at": "2026-09-05T19:29:38.577223-04:00",
+ "gpu_file": "/scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/runs/p1/monitor/gpu_samples-305318.csv",
+ "gpu_samples_unattributed": 22,
+ "gpu_util_max_pct": 94,
+ "gpu_util_mean_pct": 59.75,
+ "gpu_util_mean_pct_per_phase_stage": {
+  "cycle1/selfplay": {
+   "samples": 130,
+   "util_mean_pct": 62.58
+  },
+  "cycle1/shuffle": {
+   "samples": 2,
+   "util_mean_pct": 0.0
+  },
+  "cycle1/train": {
+   "samples": 10,
+   "util_mean_pct": 36.7
+  },
+  "cycle2/selfplay": {
+   "samples": 120,
+   "util_mean_pct": 66.92
+  },
+  "cycle2/shuffle": {
+   "samples": 1,
+   "util_mean_pct": 0.0
+  },
+  "cycle2/train": {
+   "samples": 10,
+   "util_mean_pct": 34.4
+  },
+  "cycle3/selfplay": {
+   "samples": 128,
+   "util_mean_pct": 63.66
+  },
+  "cycle3/shuffle": {
+   "samples": 1,
+   "util_mean_pct": 0.0
+  },
+  "cycle3/train": {
+   "samples": 11,
+   "util_mean_pct": 32.18
+  },
+  "cycle4/gatekeeper": {
+   "samples": 12,
+   "util_mean_pct": 64.92
+  },
+  "cycle4/selfplay": {
+   "samples": 129,
+   "util_mean_pct": 64.19
+  },
+  "cycle4/shuffle": {
+   "samples": 2,
+   "util_mean_pct": 0.0
+  },
+  "cycle4/train": {
+   "samples": 11,
+   "util_mean_pct": 33.64
+  },
+  "cycle5/selfplay": {
+   "samples": 130,
+   "util_mean_pct": 64.1
+  },
+  "cycle5/shuffle": {
+   "samples": 2,
+   "util_mean_pct": 0.0
+  },
+  "cycle5/train": {
+   "samples": 11,
+   "util_mean_pct": 33.0
+  },
+  "cycle6/gatekeeper": {
+   "samples": 11,
+   "util_mean_pct": 66.45
+  },
+  "cycle6/selfplay": {
+   "samples": 46,
+   "util_mean_pct": 63.15
+  }
+ },
+ "gpu_util_mean_pct_per_stage": {
+  "gatekeeper": {
+   "samples": 23,
+   "util_mean_pct": 65.65
+  },
+  "selfplay": {
+   "samples": 683,
+   "util_mean_pct": 64.18
+  },
+  "shuffle": {
+   "samples": 8,
+   "util_mean_pct": 0.0
+  },
+  "train": {
+   "samples": 53,
+   "util_mean_pct": 33.92
+  }
+ },
+ "gpu_util_samples": 789,
+ "nlwp_max_per_phase_stage": {
+  "cycle1/selfplay": 24,
+  "cycle1/shuffle": 4,
+  "cycle1/train": 13,
+  "cycle2/selfplay": 24,
+  "cycle2/shuffle": 4,
+  "cycle2/train": 13,
+  "cycle3/selfplay": 24,
+  "cycle3/shuffle": 4,
+  "cycle3/train": 13,
+  "cycle4/gatekeeper": 24,
+  "cycle4/selfplay": 24,
+  "cycle4/shuffle": 4,
+  "cycle4/train": 13,
+  "cycle5/selfplay": 24,
+  "cycle5/shuffle": 4,
+  "cycle5/train": 13,
+  "cycle6/gatekeeper": 24,
+  "cycle6/selfplay": 24
+ },
+ "nlwp_max_per_stage": {
+  "gatekeeper": 24,
+  "selfplay": 24,
+  "shuffle": 4,
+  "train": 13
+ },
+ "note": "[PRELIMINARY] measured over /scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/runs/p1; a rate is a rate only over the cycles listed in projected_cycle_h_basis_cycles, and only the cycles whose selfplay directory is not 'random' are real-net",
+ "peak_rss_kb_per_stage": {
+  "gatekeeper": 2328132,
+  "selfplay": 4224764,
+  "shuffle": 433628,
+  "train": 3439896
+ },
+ "peak_vram_mib": 2989,
+ "per_cycle_wall_s": {
+  "cycle1": 728.1,
+  "cycle2": 677.62,
+  "cycle3": 721.49,
+  "cycle4": 782.2,
+  "cycle5": 728.4,
+  "cycle6": 287.52
+ },
+ "per_net": {
+  "t9-s15847040-d2653436": {
+   "games": 2000,
+   "npz_files": 4,
+   "npz_problems": [],
+   "real_net": true,
+   "rows": 33894,
+   "rows_per_game": 16.947,
+   "sz9": 2000,
+   "sz_other": 0,
+   "tdata_bytes": 10071205
+  },
+  "t9-s16146944-d2687330": {
+   "games": 5000,
+   "npz_files": 11,
+   "npz_problems": [],
+   "real_net": true,
+   "rows": 83635,
+   "rows_per_game": 16.727,
+   "sz9": 5000,
+   "sz_other": 0,
+   "tdata_bytes": 24857681
+  },
+  "t9-s16746112-d2770965": {
+   "games": 3000,
+   "npz_files": 9,
+   "npz_problems": [],
+   "real_net": true,
+   "rows": 51020,
+   "rows_per_game": 17.006666666666668,
+   "sz9": 3000,
+   "sz_other": 0,
+   "tdata_bytes": 15067078
+  },
+  "t9-s17045760-d2821985": {
+   "games": 2000,
+   "npz_files": 6,
+   "npz_problems": [],
+   "real_net": true,
+   "rows": 33981,
+   "rows_per_game": 16.9905,
+   "sz9": 2000,
+   "sz_other": 0,
+   "tdata_bytes": 10048280
+  },
+  "t9-s17345664-d2855966": {
+   "games": 3000,
+   "npz_files": 7,
+   "npz_problems": [],
+   "real_net": true,
+   "rows": 50883,
+   "rows_per_game": 16.961,
+   "sz9": 3000,
+   "sz_other": 0,
+   "tdata_bytes": 15093631
+  },
+  "t9-s17645440-d2906849": {
+   "games": 2000,
+   "npz_files": 6,
+   "npz_problems": [],
+   "real_net": true,
+   "rows": 33497,
+   "rows_per_game": 16.7485,
+   "sz9": 2000,
+   "sz_other": 0,
+   "tdata_bytes": 9972849
+  },
+  "t9-s17945216-d2940346": {
+   "games": 6243,
+   "npz_files": 13,
+   "npz_problems": [],
+   "real_net": true,
+   "rows": 94787,
+   "rows_per_game": 15.182924875860964,
+   "sz9": 6243,
+   "sz_other": 0,
+   "tdata_bytes": 28181957
+  },
+  "t9-s18225024-d381697": {
+   "games": 3600,
+   "npz_files": 8,
+   "npz_problems": [],
+   "real_net": true,
+   "rows": 61632,
+   "rows_per_game": 17.12,
+   "sz9": 3600,
+   "sz_other": 0,
+   "tdata_bytes": 18382129
+  },
+  "t9-s18522368-d443329": {
+   "games": 634,
+   "npz_files": 1,
+   "npz_problems": [],
+   "real_net": true,
+   "rows": 3293,
+   "rows_per_game": 5.194006309148265,
+   "sz9": 634,
+   "sz_other": 0,
+   "tdata_bytes": 975253
+  }
+ },
+ "per_phase_stage": {
+  "cycle1/selfplay": {
+   "elapsed_s": 656.52,
+   "nlwp_max": 24,
+   "rss_kb_max": 4224764,
+   "samples": 616
+  },
+  "cycle1/shuffle": {
+   "elapsed_s": 7.46,
+   "nlwp_max": 4,
+   "rss_kb_max": 393212,
+   "samples": 48
+  },
+  "cycle1/train": {
+   "elapsed_s": 51.31,
+   "nlwp_max": 13,
+   "rss_kb_max": 3379540,
+   "samples": 49
+  },
+  "cycle2/selfplay": {
+   "elapsed_s": 606.02,
+   "nlwp_max": 24,
+   "rss_kb_max": 4224760,
+   "samples": 569
+  },
+  "cycle2/shuffle": {
+   "elapsed_s": 7.46,
+   "nlwp_max": 4,
+   "rss_kb_max": 391032,
+   "samples": 48
+  },
+  "cycle2/train": {
+   "elapsed_s": 51.34,
+   "nlwp_max": 13,
+   "rss_kb_max": 3395940,
+   "samples": 49
+  },
+  "cycle3/selfplay": {
+   "elapsed_s": 644.4,
+   "nlwp_max": 24,
+   "rss_kb_max": 4219732,
+   "samples": 604
+  },
+  "cycle3/shuffle": {
+   "elapsed_s": 8.56,
+   "nlwp_max": 4,
+   "rss_kb_max": 433628,
+   "samples": 49
+  },
+  "cycle3/train": {
+   "elapsed_s": 55.72,
+   "nlwp_max": 13,
+   "rss_kb_max": 3417160,
+   "samples": 53
+  },
+  "cycle4/gatekeeper": {
+   "elapsed_s": 58.91,
+   "nlwp_max": 24,
+   "rss_kb_max": 2328132,
+   "samples": 56
+  },
+  "cycle4/selfplay": {
+   "elapsed_s": 648.58,
+   "nlwp_max": 24,
+   "rss_kb_max": 4220364,
+   "samples": 608
+  },
+  "cycle4/shuffle": {
+   "elapsed_s": 8.56,
+   "nlwp_max": 4,
+   "rss_kb_max": 392252,
+   "samples": 57
+  },
+  "cycle4/train": {
+   "elapsed_s": 53.35,
+   "nlwp_max": 13,
+   "rss_kb_max": 3439896,
+   "samples": 51
+  },
+  "cycle5/selfplay": {
+   "elapsed_s": 652.57,
+   "nlwp_max": 24,
+   "rss_kb_max": 4218720,
+   "samples": 612
+  },
+  "cycle5/shuffle": {
+   "elapsed_s": 8.53,
+   "nlwp_max": 4,
+   "rss_kb_max": 402900,
+   "samples": 57
+  },
+  "cycle5/train": {
+   "elapsed_s": 55.58,
+   "nlwp_max": 13,
+   "rss_kb_max": 3438472,
+   "samples": 53
+  },
+  "cycle6/gatekeeper": {
+   "elapsed_s": 53.54,
+   "nlwp_max": 24,
+   "rss_kb_max": 2306236,
+   "samples": 51
+  },
+  "cycle6/selfplay": {
+   "elapsed_s": 232.92,
+   "nlwp_max": 24,
+   "rss_kb_max": 3822236,
+   "samples": 219
+  }
+ },
+ "probe_search": {
+  "full_frac": null,
+  "full_frac_rule": null,
+  "games": 0,
+  "rows": 0
+ },
+ "projected_cycle_h": 0.2173,
+ "projected_cycle_h_basis": "every measured cycle that carries all four stages",
+ "projected_cycle_h_basis_cycles": [
+  "cycle4"
+ ],
+ "projected_cycle_h_max": 0.2173,
+ "ps_file": "/scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/runs/p1/monitor/ps_samples-305318.tsv",
+ "ps_samples": 3849,
+ "ps_scope": "descendants of the job script (ppid-filtered sampler)",
+ "random_games": 0,
+ "random_rows": 0,
+ "real_games": 27477,
+ "real_rows": 446622,
+ "row_bytes_uncompressed": 2145,
+ "rows_per_game": 16.254394584561634,
+ "rows_per_game_random": null,
+ "rows_per_game_real": 16.254394584561634,
+ "selfplay_games_per_hour": 28746.6,
+ "selfplay_games_per_hour_real_net": 28746.6,
+ "selfplay_games_total": 27477,
+ "selfplay_rows_per_hour": 467257.9,
+ "selfplay_rows_total": 446622,
+ "selfplay_sz_other": 0,
+ "shuffleddata_bytes": 753523059,
+ "stage_elapsed_s": {
+  "gatekeeper": 112.45,
+  "selfplay": 3441.01,
+  "shuffle": 40.57,
+  "train": 267.3
+ },
+ "tdata_bytes_on_disk": 132650063,
+ "train_samples_per_second": 69294.306,
+ "train_samples_source": "/scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/runs/p1/models/t9-s18522368-d443329/metadata.json",
+ "train_samples_total": 18522368
+}

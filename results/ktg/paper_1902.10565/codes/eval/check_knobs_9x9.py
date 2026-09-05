@@ -71,6 +71,7 @@ PAPER = os.path.dirname(os.path.dirname(HERE))             # .../paper_1902.1056
 sys.path.insert(0, HERE)
 
 import derive_knobs as dk  # noqa: E402
+import rows_history as RH  # noqa: E402
 
 KNOBS_ENV = os.path.join(PAPER, "codes", "loop", "knobs_9x9.env")
 LOOP_SH = os.path.join(PAPER, "codes", "loop", "synchronous_loop_9x9.sh")
@@ -273,6 +274,61 @@ def marginal_rows_per_game(tput, k_nets, trend_nets, horizon_nets):
     return r, games, r_lo, table, prov_r, prov_lo
 
 
+def marginal_from_history(recs, k_nets, trend_nets, horizon_nets):
+    """(r, n_games, r_lo, table, prov_r, prov_lo, notes) from the o51 record.
+
+    Same arithmetic as marginal_rows_per_game, over the APPEND-ONLY per-net record
+    instead of the live tree's `per_net` table -- which is the point of o51: the
+    tree carries only what node data_budget's retention pass has not yet deleted
+    (6 complete directories at the link-1 -> link-2 boundary, against the nine the
+    trend leg of o48 asks for), while the record carries every net that was ever
+    observed complete.
+
+    NOTHING IS FITTED ACROSS A GAP.  A window is taken from the contiguous run
+    that ENDS at the newest record (rows_history.fit_window); when the requested
+    window is longer than that run, it is NARROWED and the gap that stopped it is
+    named, loudly, in the returned notes.  Silently fitting across the 13-net gap
+    this run already has would put the x axis of the least-squares fit at odds
+    with the data: the validator's own gap-spanning fit came out at -0.0017
+    rows/game per accepted net against the -0.1742 the contiguous read-6 window
+    measured.
+    """
+    notes = []
+    if not recs:
+        raise SystemExit("check_knobs_9x9: the rows/game history holds no complete "
+                         "real-net record, so no marginal rows/game can be formed "
+                         "from it (obligation o41: nothing is substituted).")
+    tail, marg_note = RH.fit_window(recs, k_nets)
+    if marg_note:
+        notes.append("MARGINAL WINDOW: %s" % marg_note)
+    fit, fit_note = RH.fit_window(recs, trend_nets)
+    if fit_note:
+        notes.append("TREND FIT: %s" % fit_note)
+    if len(fit) < 2:
+        raise SystemExit(
+            "check_knobs_9x9: the rows/game trend leg cannot be computed. The "
+            "contiguous run ending at the newest record is %d record(s) long and a "
+            "least-squares slope needs at least two. %s Re-seed the history "
+            "(codes/eval/seed_rows_history.py) or read again before the next "
+            "retention pass; nothing is substituted (obligation o41, o48's slope "
+            "leg, o51)." % (len(fit), " ".join(notes)))
+    rows, games, r = RH.aggregate(tail)
+    slope = RH.least_squares_slope(fit)
+    r_lo = r + horizon_nets * slope if slope < 0 else r
+    prov_r = ("aggregate over the last %d COMPLETE real-net record(s) of the o51 "
+              "history (%s): %d rows / %d games"
+              % (len(tail), ", ".join(x["net"] for x in tail), rows, games))
+    prov_lo = ("%.4f carried %d accepted nets forward at the least-squares slope of "
+               "rows/game over the last %d CONTIGUOUS complete record(s), %+.4f "
+               "rows/game per accepted net (NOT the sampling formula: over %d games "
+               "its 90 %% term is %.2f %%, while the binding uncertainty is drift as "
+               "the net trains)"
+               % (r, horizon_nets, len(fit), slope, games, 100.0 / games ** 0.5))
+    table = [(x["net"], x["games"], x["rows"], x["rows"] / float(x["games"]),
+              x.get("prev_net")) for x in recs]
+    return r, games, r_lo, table, prov_r, prov_lo, notes
+
+
 def pick(names):
     for n in names:
         p = os.path.join(EVID, n)
@@ -298,7 +354,13 @@ def main(argv=None):
     ap.add_argument("--throughput", default=None,
                     help="throughput JSON to read instead of the frozen smoke copies")
     ap.add_argument("--rows-file", default=None,
-                    help="rows_per_game text to read instead of the frozen smoke copy")
+                    help="rows_per_game text to read instead of the frozen smoke copy, "
+                         "OR the append-only per-net record written by "
+                         "throughput_report.py --history-out (a .jsonl; obligation "
+                         "o51). With a history the marginal and the trend fit come "
+                         "from the RECORD, which keeps nets the retention pass has "
+                         "deleted from the tree, and no window is ever fitted across "
+                         "a gap in it.")
     ap.add_argument("--audit", default=None,
                     help="audit JSON the gatekeeper game count is read from")
     ap.add_argument("--knobs", default=None,
@@ -393,17 +455,61 @@ def main(argv=None):
           % (shuffle_phase, shuffle_s, n_cycle_selfplay))
     print("")
 
-    with open(rows_file) as f:
-        rows_blob = f.read()
+    rows_is_history = RH.is_history_file(rows_file)
+    hist_recs = []
+    if rows_is_history:
+        hist_recs = RH.ordered(RH.read_history(rows_file))
+        h_rows, h_games, h_r = RH.aggregate(hist_recs)
+        rows_blob = ("rows_per_game_real   = %s   (%d rows / %d games over %d complete "
+                     "real-net record(s) of %s)\n"
+                     % (h_r, h_rows, h_games, len(hist_recs),
+                        os.path.basename(rows_file)))
+        print("ROWS/GAME SOURCE: the append-only per-net record %s -- %d complete "
+              "real-net record(s), %d gap(s) (obligation o51)"
+              % (os.path.relpath(rows_file, os.path.dirname(PAPER)), len(hist_recs),
+                 sum(1 for _x, _y, ok in RH.adjacency(hist_recs) if not ok)))
+        for x, y, ok in RH.adjacency(hist_recs):
+            if not ok:
+                print("  GAP  %s" % RH.describe_gap(x, y))
+        print("")
+    else:
+        with open(rows_file) as f:
+            rows_blob = f.read()
 
     # Rebuild derive_knobs' argument namespace from the knob file, not from flags.
     p = dk.build_parser()
     args = p.parse_args([])
     args.rows_per_game = rows_blob
-    args.rows_per_game_random = rows_blob
+    # Only when the source actually carries a RANDOM-net measurement. A production
+    # rows source stops carrying one the moment the bootstrap directory is pruned
+    # (the live table has had `random` gone since the link-1 -> link-2 boundary, and
+    # the o51 record never holds it: it is not an accepted net). Handing the blob
+    # over regardless made derive_knobs.finish() exit with
+    # "could not read rows_per_game_random from ..." instead of taking its own
+    # documented fallback r0 = r, so the production invocation in the header of
+    # codes/loop/knobs_9x9.env aborted before a single tolerance was evaluated.
+    args.rows_per_game_random = (rows_blob if "rows_per_game_random" in rows_blob
+                                 else None)
     args.source_label = os.path.relpath(tput_file, os.path.dirname(PAPER))
 
-    if a.marginal_nets:
+    hist_notes = []
+    if a.marginal_nets and rows_is_history:
+        r_marg, n_marg, r_lo, table, prov_r, prov_lo, hist_notes = \
+            marginal_from_history(hist_recs, a.marginal_nets, a.trend_nets,
+                                  a.horizon_nets)
+        print("ROWS/GAME BY ACCEPTED NET (the o51 per-net record; every complete "
+              "real-net directory ever observed, pruned or not)")
+        for name, g, rws, rg, prev in table:
+            print("  %-30s games %6d  rows %8d  rows/game %7.3f   prev %s"
+                  % (name, g, rws, rg, prev if prev else "UNKNOWN -- gap before this net"))
+        for note in hist_notes:
+            print("  ** %s" % note)
+        print("  marginal r    = %.4f   %s" % (r_marg, prov_r))
+        print("  lower bound   = %.4f   %s" % (r_lo, prov_lo))
+        print("  whole-run aggregate over the record = %.4f (NOT used: it averages in "
+              "the early long-game nets)" % RH.aggregate(hist_recs)[2])
+        print("")
+    elif a.marginal_nets:
         r_marg, n_marg, r_lo, table, prov_r, prov_lo = marginal_rows_per_game(
             tput_json, a.marginal_nets, a.trend_nets, a.horizon_nets)
         print("ROWS/GAME BY SELFPLAY NET DIRECTORY (throughput JSON per_net; the last row "
@@ -566,6 +672,13 @@ def main(argv=None):
     print("CHECK_KNOBS_9X9: %s" % ("PASS" if not fails else "FAIL %s" % sorted(set(fails))))
     if a.json:
         d["tolerance_failures"] = sorted(set(fails))
+        if rows_is_history:
+            d["rows_history"] = {
+                "file": rows_file, "complete_records": len(hist_recs),
+                "gaps": [RH.describe_gap(x, y)
+                         for x, y, ok in RH.adjacency(hist_recs) if not ok],
+                "window_notes": hist_notes,
+            }
         with open(a.json, "w") as f:
             json.dump(d, f, indent=1, sort_keys=True)
     return 0 if not fails else 1

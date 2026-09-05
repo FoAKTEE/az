@@ -35,6 +35,18 @@ OUTPUTS
     --out FILE        the throughput JSON (default: stdout only)
     --rows-out FILE   rows_per_game text in the form derive_knobs.parse_rows_per_game
                       reads (default: rows_per_game.txt beside --out)
+    --history-out F   the APPEND-ONLY per-net rows/game record (default:
+                      rows_per_game_history.jsonl beside --out; --no-history turns
+                      it off).  Obligation o51: --out and --rows-out are both
+                      REGENERATED from the live tree, and node data_budget's
+                      retention pass deletes selfplay generations at every link
+                      start, so a net that is pruned disappears from both -- 12
+                      accepted nets were already lost that way at the link-1 ->
+                      link-2 boundary, which is what made o48's nine-net slope leg
+                      uncomputable.  This file is written FIRST, before anything
+                      can prune the directory it describes, one line per COMPLETE
+                      real-net directory, and is never rewritten.  It is what
+                      check_knobs_9x9.py --rows-file reads for the trend fit.
 
 ASSERTIONS (each exits non-zero, and each is a P-row of the task file)
     --assert-nlwp-le N            P1 / o03 / o39 (c): nlwp_max per stage <= N
@@ -58,9 +70,11 @@ import glob
 import json
 import os
 import sys
+import time
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import audit_smoke as A  # noqa: E402
+import rows_history as H  # noqa: E402
 
 STAGES = ("gatekeeper", "selfplay", "shuffle", "train")
 
@@ -444,6 +458,11 @@ def main(argv=None):
                     help="probe_search json whose games/rows count as real-net")
     ap.add_argument("--out", default=None)
     ap.add_argument("--rows-out", default=None)
+    ap.add_argument("--history-out", default=None,
+                    help="append-only per-net rows/game record (o51); default is "
+                         "rows_per_game_history.jsonl beside --out")
+    ap.add_argument("--no-history", action="store_true",
+                    help="do not append to the per-net rows/game record")
     ap.add_argument("--note", default=None)
     ap.add_argument("--real-net-from", type=int, default=None,
                     help="first cycle to treat as real-net for projected_cycle_h")
@@ -468,6 +487,21 @@ def main(argv=None):
     if rows_out:
         os.makedirs(os.path.dirname(os.path.abspath(rows_out)), exist_ok=True)
         write_rows_file(rows_out, thr)
+
+    # ---- o51: the append-only per-net record, written before anything can prune ----
+    hist_out = a.history_out or (
+        os.path.join(os.path.dirname(os.path.abspath(a.out)),
+                     "rows_per_game_history.jsonl") if a.out else None)
+    hist_added = hist_skipped = 0
+    hist_newest = None
+    if hist_out and not a.no_history:
+        recs, hist_newest = H.records_from_per_net(
+            thr["per_net"], basedir=thr["basedir"],
+            link_job=(os.environ.get("SLURM_JOB_ID") or a.job),
+            recorded_at=time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
+            source="throughput_report.py")
+        added, skipped = H.append_records(hist_out, recs)
+        hist_added, hist_skipped = len(added), len(skipped)
 
     if not a.quiet:
         print("throughput_report -- node arxiv-1902.10565::measure_stage_throughput")
@@ -508,6 +542,16 @@ def main(argv=None):
             print("wrote %s" % a.out)
         if rows_out:
             print("wrote %s" % rows_out)
+        if hist_out and not a.no_history:
+            merged = H.ordered(H.read_history(hist_out))
+            gaps = [(x, y) for x, y, ok in H.adjacency(merged) if not ok]
+            print("rows/game history  : %s  (+%d new, %d already present, %d complete "
+                  "real-net record(s), %d gap(s); newest %s is still being written and "
+                  "is NOT recorded)"
+                  % (hist_out, hist_added, hist_skipped, len(merged), len(gaps),
+                     hist_newest))
+            for x, y in gaps:
+                print("                     GAP %s" % H.describe_gap(x, y))
 
     # ---- assertions ----------------------------------------------------------
     fails = []

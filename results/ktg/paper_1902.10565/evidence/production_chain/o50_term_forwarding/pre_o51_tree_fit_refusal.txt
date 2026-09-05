@@ -1,0 +1,35 @@
+# The state obligation o51 was opened for, reproduced against the codes/ tree AT HEAD
+# (cc06834, extracted read-only with 'git archive' into $W/head_repo), using the same
+# acceptance throughput file and HEAD's own committed rows_per_game.txt.
+# Login node, read-only, no Slurm job, no scheduler call.
+
+### (a) o48's trend leg cannot be formed from the live tree at all
+$ python3 codes/eval/check_knobs_9x9.py --knobs codes/loop/knobs_9x9.env \
+      --throughput <acceptance throughput> --rows-file evidence/production_chain/rows_per_game.txt \
+      --marginal-nets 3 --trend-nets 9 --horizon-nets 10       # at HEAD
+
+check_knobs_9x9: --trend-nets 9 exceeds the 8 COMPLETE real-net directories the file carries (the newest, t9-s18522368-d443329, is still being written).
+exit status: 1
+
+### (b) with a window the tree CAN form, the same command aborts before a single tolerance
+$ ... --marginal-nets 3 --trend-nets 3 --horizon-nets 10                # at HEAD
+
+could not read rows_per_game_random from 'rows_per_game -- node arxiv-1902.10565::measure_stage_throughput; claim c10\nbasedir = /scratch/schmidt/ssci-anima/ssci-h'
+exit status: 1
+
+### (c) why (b) happens: the committed rows_per_game.txt carries no rows_per_game_random line
+$ grep -c rows_per_game_random evidence/production_chain/rows_per_game.txt
+0
+    (link 1's bootstrap directory was pruned, so the regenerated table stopped carrying one)
+
+### (d) the same invocation against the WORKING TREE, reading the o51 record
+$ python3 codes/eval/check_knobs_9x9.py --knobs codes/loop/knobs_9x9.env \
+      --throughput <acceptance throughput> --rows-file evidence/production_chain/rows_per_game_history.jsonl \
+      --marginal-nets 3 --trend-nets 9 --horizon-nets 10
+ROWS/GAME SOURCE: the append-only per-net record paper_1902.10565/evidence/production_chain/rows_per_game_history.jsonl -- 46 complete real-net record(s), 1 gap(s) (obligation o51)
+  GAP  t9-s11352064-d2008893 (accepted net 37) -> t9-s15847040-d2653436 (accepted net 51): 13 accepted net(s) in between have no complete record
+  ** TREND FIT: REFUSED to fit across a gap: t9-s11352064-d2008893 (accepted net 37) -> t9-s15847040-d2653436 (accepted net 51): 13 accepted net(s) in between have no complete record. The window is narrowed to the 8 record(s) of the contiguous run ending at t9-s18225024-d381697, instead of the 9 asked for.
+  marginal r    = 16.0361   aggregate over the last 3 COMPLETE real-net record(s) of the o51 history (t9-s17645440-d2906849, t9-s17945216-d2940346, t9-s18225024-d381697): 189916 rows / 11843 games
+  lower bound   = 15.1655   16.0361 carried 10 accepted nets forward at the least-squares slope of rows/game over the last 8 CONTIGUOUS complete record(s), -0.0871 rows/game per accepted net (NOT the sampling formula: over 11843 games its 90 % term is 0.92 %, while the binding uncertainty is drift as the net trains)
+CHECK_KNOBS_9X9: PASS
+exit status: 0
