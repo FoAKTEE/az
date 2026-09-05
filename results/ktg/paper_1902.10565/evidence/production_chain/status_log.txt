@@ -3082,3 +3082,170 @@ CHAIN / BOUNDARY
     successor 305318: PENDING, Reason=Dependency, partition b200,l40s,
     TimeLimit 23:30:00 -- correctly queued on afterany:301099.
     chain_status verdict: OK -- no section-11 escalate condition present.
+
+################################################################################
+# SECTION-C LINK BOUNDARY READ -- 2026-09-05T18:30 -- link 1 -> link 2
+################################################################################
+
+C1. LINK 1 ENDED BY SIGKILL, NOT THE GRACEFUL SIGTERM PATH
+    sacct
+      301099        ktg-loop l40s  TIMEOUT    23:30:11  ...18:22:24  ExitCode 0:0
+      301099.batch  batch          CANCELLED  23:30:40  ...18:22:53  ExitCode 0:9
+      301099.extern extern         COMPLETED  23:30:40                        0:0
+      305318        ktg-loop l40s  RUNNING    since 2026-09-05T18:23:21 on gl111
+      314831        ktg-loop b200,l40s PENDING  Dependency=afterany:305318
+
+    ExitCode 0:9 on the batch step is signal 9. The classification lines the
+    wrapper writes on the graceful path are ALL ABSENT from link 1's log:
+      'SIGTERM received -- scheduler termination'      0   (P9 wants >= 1)
+      'scheduler termination at walltime'              0   (P9 wants == 1)
+      'cancelling queued successor'                    0   (P9 wants == 0)  OK
+      'loop exited rc=' / 'clean exit' / any finalize   0
+    The last wrapper line in link 1's log is its own startup line from
+    2026-09-04T18:52:25. Slurm logged
+      *** JOB 301099 ON gl111 CANCELLED AT 2026-09-05T18:22:24 DUE TO TIME LIMIT ***
+    and selfplay kept printing 'Started N games' for another 29 s, to 18:22:53,
+    after which everything stopped at once. So the TERM trap never ran and
+    finalize() never ran.
+
+    THIS IS THE DOCUMENTED RESIDUE, NOT A NEW DEFECT. loop.sbatch's own header
+    states it: "SIGKILL runs no handler at all (KillWait expiry, cgroup OOM,
+    node failure): nothing is written and the queued successor simply runs. That
+    residue is obligation o25's, and it is why the successor is queued before
+    anything else." The design's answer to this path is exactly what happened.
+
+    CONSEQUENCE FOR P9: the CLASSIFICATION half of P9 is NOT demonstrated on this
+    boundary -- the two conjuncts that require the wrapper's own log lines both
+    read 0. P9's mid-train conjunct is also not settled here: the kill landed in
+    SELFPLAY of link 1's cycle 158, not in train. The RESUME half is demonstrated
+    in full (C5). o31/o33 r1 therefore remain open on this boundary; two more
+    boundaries are available in the chain and a graceful SIGTERM at either would
+    settle them.
+
+C2. WHICH STAGE THE KILL LANDED IN
+    selfplay of link 1's cycle 158, at 860 of that cycle's games. The cycle was
+    incomplete, so .cycles_completed correctly stayed at 157 and the partial
+    cycle's data simply extends the same net directory that link 2 continues
+    writing into.
+
+C3. STATE FILES -- COUNTER CARRIED, NO BRAKES SET
+    .cycles_completed 157 at the boundary, 158 after link 2's first cycle
+    .chain_depth      2   (of KTG_MAX_CHAIN 9)
+    .failcount        0   -- correct, though NOT proved by the classification
+                             path this time, since finalize never ran to write it
+    STOP              absent
+    .breaker_tripped  absent
+
+C4. LINK 2 CARRIES THE NEW KNOBS
+    === [2026-09-05T18:23:21-04:00] loop knobs .../knobs_9x9.env
+        (sha256 ba7f1bf7e1bc166d) KTG_CPUS_PER_TASK=32 KTG_NUM_GAME_THREADS=18 ===
+    === [2026-09-05T18:23:21-04:00] chain depth 2/9, failcount 0/3,
+        cycles completed so far 157 ===
+    The sha is neither 3504a8ea... (the 1500 staging) nor 5ae53587... (link 1's
+    original), i.e. option C is the knob set in force from link 2.
+
+C5. P9 RESUME CONJUNCTS -- ALL PASS
+    'Initializing new model!' in link 2            0    (must be 0)
+    'No preexisting checkpoint found' in link 2    0    (must be 0)
+    shuffleddata/*.tmp left                        0
+    orphan torchmodels_toexport/*.exported         0
+    models/ (accepted nets)                       58    intact across the boundary
+    rejectedmodels/                                2
+    modelstobetested/                              0    nothing stranded at the gate
+    the run resumed from t9-s17945216-d2940346, the net link 1 was playing when
+    it was killed. No re-initialisation, no checkpoint loss, no stranded work.
+
+C6. THE SUCCESSOR-ID DEFECT PERSISTS (first reported at read 1, still unfixed)
+    link 2 logs at 18:23:23
+      'sbatch did not return a job id -- chain not extended: [BILLING] loaded!'
+    while scontrol shows the successor was created and correctly wired:
+      JobId=314831 JobName=ktg-loop JobState=PENDING
+      Dependency=afterany:305318(unfulfilled) TimeLimit=23:30:00
+      Partition=b200,l40s
+    Same cause as before: resubmit() captures 2>&1 and the site's BILLING banner
+    on stderr defeats the ^[0-9]+$ test. Chain continuity is unaffected.
+
+C7. o42 -- THE PRECONDITION OCCURRED, THE HAZARD DID NOT
+    o42 is: after a SIGKILLed link, a successor that fails its pre-flight BEFORE
+    starting its own stage_monitor would run 'stop' on stale monitor.pids. Link 1
+    was SIGKILLed, so the precondition was met. Link 2's pre-flight PASSED (it
+    reached 'starting the loop') and it started its own monitor cleanly --
+    monitor.pids, monitor.rootpid and monitor.run are all rewritten at 18:23 and
+    ps_samples-305318.tsv / gpu_samples-305318.csv are being written. So the
+    hazard did not materialise. I was asked to report a SIGKILL before the
+    successor starts; the successor started at 18:23:21 and this read is 18:30,
+    so that was not possible -- recording it now instead.
+
+LINK 2, CYCLE 1 -- THE CONDITION THAT LIFTS THE CONDITIONAL RESULT
+    games        katago selfplay -max-games-total 1800   <- 1800 IN EFFECT
+                 newest net dir t9-s17945216-d2940346, 2763 sgf lines
+                 (link 1's 860 partial + link 2's 1800, one directory),
+                 0 lines without SZ[9]
+    shuffle      'Final input rows to shuffle: 109.4K'
+    THE EPOCH IS A WHOLE FILE, NOT E. The train step's own log:
+        This subepoch, using files: [.../20260905-183427/train/data0_0.npz]
+        Finished training subepoch!
+        Beginning training subepoch!
+        This subepoch, using files: [.../20260905-183427/train/data1_0.npz]
+        Finished training subepoch!
+        Not enough data files to fill a subepoch! Quitting.
+      and the two files measure
+        data0_0.npz   54390 rows
+        data1_0.npz   55052 rows
+        TOTAL        109442 rows trained in the cycle
+      against NUM_TRAIN_SAMPLES_PER_EPOCH = 16000. One whole ~55k-row file per
+      subepoch, two subepochs, then a clean exit_code=0. E did NOT set the epoch
+      size; SHUFFLE_KEEPROWS did, split round(120000/70000) = 2 ways. This is the
+      whole-file finding executed in production, and it is the condition the
+      conditional result was waiting on.
+      E remains operative only through the export EMA horizon,
+      8 * NUM_TRAIN_SAMPLES_PER_SWA = 8 * 8000 = 64000. No claim is made beyond that.
+    cycle wall   link 2 started 18:23:21, cycle 1 complete 18:36:07 -> ~12.7 min
+                 (0.212 h), against option C's projected 0.39 h and link 1's
+                 measured 0.1608 h at G=1000 with 1.8x less selfplay.
+
+o48 BLOCK AT THE FIRST LINK-2 READ
+    marginal r (3-net, COMPLETE dirs only) = 16.9087
+        t9-s17045760-d2821985, t9-s17345664-d2855966, t9-s17645440-d2906849
+        118361 rows / 7000 games
+        trigger <= 13.0  -> DOES NOT FIRE, 3.9087 above
+    refit slope and r_lo   NOT COMPUTABLE AT THIS READ, and the reason is
+        structural rather than a tooling bug: the trend leg needs 9 complete
+        real-net directories and only 6 survive. The retention pruner
+        (codes/data_budget/prune_retention.py, run at every link start) has
+        removed link 1's older selfplay directories -- 7 remain in total, of which
+        the newest, t9-s17945216-d2940346, is the one the RUNNING cycle is still
+        writing (its 12.79 rows/game is an artefact of rows lagging games, not a
+        measurement, and it is excluded above).
+        [OPEN, for the coordinator] o48's r_lo leg will keep being uncomputable
+        on a long chain for exactly this reason: retention prunes the history the
+        9-net fit needs. Either the fit window has to come from a record that
+        survives pruning (rows_per_game.txt is regenerated, so it does not), or
+        the r_lo leg has to be dropped in favour of the marginal test, which is
+        the one that has decided every read so far.
+        For reference, read 8's r_lo was 16.7922, 5.0592 above the 11.733 trigger.
+    rho at the knob link 2 is actually running, G=1800
+        rho = SHUFFLE_KEEPROWS/(G*r) = 120000/30435.7 = 3.943
+        T1  = 30435.7 vs 1.2*E = 19200 -> +58.52 %
+        link 1's rho at G=1000 was 7.084, 89 % of the MAX_TRAIN_PER_DATA cap of
+        8; option C has halved it, as intended.
+
+THE FIRST GATE REJECTIONS HAVE OCCURRED (predicted at read 8)
+    Candidate lost match, score  92.500 to 100.500 in 193 games,
+        rejecting candidate t9-s14348544-d2433175
+    Candidate lost match, score  96.500 to 100.500 in 197 games,
+        rejecting candidate t9-s16446720-d2737483
+    58 accepted, 2 rejected over link 1. Both rejections are narrow, which is the
+    gate working at converged strength, not a fault. P7/c13 remain satisfied 58x.
+
+RATES NOT REPORTED THIS READ, AND WHY
+    throughput_report.py scopes its stage timings to the newest monitor files,
+    which at this read cover only ~13 minutes of link 2. It therefore printed
+    selfplay 99044.8 games/h and train 349741 samples/s -- both are the whole
+    run's cumulative counts divided by link 2's tiny elapsed stage time, i.e.
+    artefacts, not measurements. They are deliberately NOT recorded as P8 rates.
+    The next scheduled read, with a few complete link-2 cycles behind it, is the
+    first that can state link-2 rates honestly.
+    nlwp_max from link 2's own samples so far: selfplay 24, shuffle 4, train 13,
+    cap 32 -- unchanged, and the gatekeeper stage has not yet been sampled in
+    link 2.

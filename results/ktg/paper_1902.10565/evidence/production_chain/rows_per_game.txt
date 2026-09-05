@@ -3,47 +3,13 @@ basedir = /scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/runs/p1
 games = one line of a .sgfs file (cpp/program/selfplaymanager.cpp:377-378)
 rows  = sum of npz binaryInputNCHWPacked.shape[0] over tdata
 
-rows_per_game_real   = 18.97193483172791   (1914420 rows / 100908 games)
-rows_per_game_random = 31.4734   (157367 rows / 5000 games)
+rows_per_game_real   = 16.294708167280433   (323010 rows / 19823 games)
 
 per selfplay net directory (name = the net that played, 'random' = bootstrap):
-  random                       real_net=False games=5000   rows=157367   rows/game=31.4734
-  t9-s10153472-d1839727        real_net=True  games=3000   rows=50992    rows/game=16.997333333333334
-  t9-s10453248-d1890719        real_net=True  games=2000   rows=33429    rows/game=16.7145
-  t9-s10752896-d1924148        real_net=True  games=3000   rows=51272    rows/game=17.090666666666667
-  t9-s11052672-d1975420        real_net=True  games=2000   rows=33473    rows/game=16.7365
-  t9-s11352064-d2008893        real_net=True  games=3000   rows=50780    rows/game=16.926666666666666
-  t9-s11651712-d2059673        real_net=True  games=908    rows=12114    rows/game=13.341409691629956
-  t9-s1166208-d498733          real_net=True  games=3000   rows=58693    rows/game=19.564333333333334
-  t9-s143744-d157367           real_net=True  games=5000   rows=171673   rows/game=34.3346
-  t9-s1462912-d557426          real_net=True  games=2000   rows=38108    rows/game=19.054
-  t9-s1762560-d595534          real_net=True  games=3000   rows=58859    rows/game=19.619666666666667
-  t9-s2062208-d654393          real_net=True  games=2000   rows=39806    rows/game=19.903
-  t9-s2361984-d694199          real_net=True  games=3000   rows=57867    rows/game=19.289
-  t9-s2661376-d752066          real_net=True  games=2000   rows=38227    rows/game=19.1135
-  t9-s2961408-d790293          real_net=True  games=3000   rows=56212    rows/game=18.737333333333332
-  t9-s3260800-d846505          real_net=True  games=2000   rows=36934    rows/game=18.467
-  t9-s3560832-d883439          real_net=True  games=3000   rows=55053    rows/game=18.351
-  t9-s3860608-d938492          real_net=True  games=2000   rows=36763    rows/game=18.3815
-  t9-s4160128-d975255          real_net=True  games=3000   rows=54928    rows/game=18.309333333333335
-  t9-s4460160-d1030183         real_net=True  games=2000   rows=36667    rows/game=18.3335
-  t9-s448640-d329040           real_net=True  games=5000   rows=126065   rows/game=25.213
-  t9-s4759680-d1066850         real_net=True  games=3000   rows=54210    rows/game=18.07
-  t9-s5059328-d1121060         real_net=True  games=2000   rows=36229    rows/game=18.1145
-  t9-s5359104-d1157289         real_net=True  games=3000   rows=54045    rows/game=18.015
-  t9-s5658624-d1211334         real_net=True  games=2000   rows=35663    rows/game=17.8315
-  t9-s5958400-d1246997         real_net=True  games=3000   rows=52080    rows/game=17.36
-  t9-s6257664-d1299077         real_net=True  games=2000   rows=34466    rows/game=17.233
-  t9-s6557440-d1333543         real_net=True  games=3000   rows=50843    rows/game=16.947666666666667
-  t9-s6857216-d1384386         real_net=True  games=2000   rows=34075    rows/game=17.0375
-  t9-s7156736-d1418461         real_net=True  games=3000   rows=50418    rows/game=16.806
-  t9-s7456256-d1468879         real_net=True  games=2000   rows=33848    rows/game=16.924
-  t9-s7756032-d1502727         real_net=True  games=3000   rows=50132    rows/game=16.71066666666667
-  t9-s8055808-d1552859         real_net=True  games=2000   rows=33008    rows/game=16.504
-  t9-s8355456-d1585867         real_net=True  games=3000   rows=49871    rows/game=16.623666666666665
-  t9-s8655232-d1635738         real_net=True  games=2000   rows=33507    rows/game=16.7535
-  t9-s879232-d455105           real_net=True  games=2000   rows=43628    rows/game=21.814
-  t9-s8954752-d1669245         real_net=True  games=3000   rows=50820    rows/game=16.94
-  t9-s9254144-d1720065         real_net=True  games=2000   rows=33552    rows/game=16.776
-  t9-s9553792-d1753617         real_net=True  games=3000   rows=51356    rows/game=17.118666666666666
-  t9-s9853696-d1804973         real_net=True  games=2000   rows=34754    rows/game=17.377
+  t9-s15847040-d2653436        real_net=True  games=2000   rows=33894    rows/game=16.947
+  t9-s16146944-d2687330        real_net=True  games=5000   rows=83635    rows/game=16.727
+  t9-s16746112-d2770965        real_net=True  games=3000   rows=51020    rows/game=17.006666666666668
+  t9-s17045760-d2821985        real_net=True  games=2000   rows=33981    rows/game=16.9905
+  t9-s17345664-d2855966        real_net=True  games=3000   rows=50883    rows/game=16.961
+  t9-s17645440-d2906849        real_net=True  games=2000   rows=33497    rows/game=16.7485
+  t9-s17945216-d2940346        real_net=True  games=2823   rows=36100    rows/game=12.787814381863265
