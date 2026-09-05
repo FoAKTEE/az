@@ -1,0 +1,225 @@
+{
+ "_note": "CANDIDATE rows only. Written by the worker for the 2026-09-05 RE-DERIVATION of node arxiv-1902.10565::derive_cycle_knobs_9x9 from production, and recorded for node arxiv-1902.10565::scale_data_window. NOT appended -- no result, knowledge or claim row was written by this packet. An independent validator admits or refutes them. The only rows this worker appended are the two error-ledger trials row_hash 26b1ede9736b97ea49d9fff62eba1c334e8b3c820459774fa0346d20a47f788e (iteration 3, fail: the prescribed closing check refused to evaluate against the production layout) and c3c098c8170ea70ed746b4e423afe3759536610a571351dbcac6f3603a449f82 (iteration 4, pass: the repair and the re-derivation). This file AMENDS candidate_rows.json of 2026-09-04; that file is left in place unchanged as the record of what was proposed then.",
+ "node_id": "arxiv-1902.10565::derive_cycle_knobs_9x9",
+ "also_recorded_for": "arxiv-1902.10565::scale_data_window",
+ "task_id": "derive_cycle_knobs_9x9",
+ "worker_role": "worker",
+ "authority": {
+  "mission_json": "decisions[6]",
+  "date": "2026-09-05",
+  "by": "human",
+  "decision": "raise NUM_GAMES_PER_CYCLE 1000 -> 1500 for the 9x9 chain from link 2 on; measured rows/game fell to 18.5 (games shortened to ~81 moves) so 1000 games no longer covers one 20k-sample epoch (T1 violated at read 4)",
+  "worker_scope": "the human fixed the VALUE; this packet re-derives it from the measurement, re-checks every dependent inequality at that value, and records what the re-derivation leaves open. The worker did not choose 1500 and does not claim 1500 is uniquely right -- it is the ceiling of the binding inequality at the stated lower bound, 1412.0."
+ },
+ "evidence_files": [
+  "results/ktg/paper_1902.10565/evidence/derive_cycle_knobs/rederive_check.txt  (six blocks, verbatim)",
+  "results/ktg/paper_1902.10565/evidence/derive_cycle_knobs/derivation.md  (section 9)",
+  "results/ktg/paper_1902.10565/evidence/production_chain/throughput.json  (41 cycles, job 301099)",
+  "results/ktg/paper_1902.10565/evidence/production_chain/rows_per_game.txt",
+  "results/ktg/paper_1902.10565/evidence/production_chain/status_log.txt  (reads 1-4; read 4 is the escalation)"
+ ],
+ "artifacts": [
+  "results/ktg/paper_1902.10565/codes/loop/knobs_9x9.env  (NUM_GAMES_PER_CYCLE 1500 with the full derivation comment)",
+  "results/ktg/paper_1902.10565/codes/loop/synchronous_loop_9x9.sh:147  (${VAR:-default} moved 1000 -> 1500 to keep the asserted equality; byte-length neutral, applied by write-new-and-rename so the running link's open descriptor is untouched)",
+  "results/ktg/paper_1902.10565/codes/eval/check_knobs_9x9.py  (cycle-layout resolvers, marginal/trend rows-per-game, --knobs)",
+  "results/ktg/paper_1902.10565/codes/eval/derive_knobs.py  (--rows-per-game-lower / --rows-lower-source / --source-label)",
+  "results/ktg/paper_1902.10565/decomposition/DESIGN.md  (sections 2, 6, 8, 9)"
+ ],
+ "measured_inputs_read": {
+  "rows_per_game_real_marginal": "18.5249 -- 148199 rows / 8000 games over the last THREE COMPLETE real-net selfplay directories (t9-s2961408-d790293, t9-s3260800-d846505, t9-s3560832-d883439)",
+  "rows_per_game_real_aggregate": "22.1743 -- 799160 rows / 36040 real-net games, NOT used: the early long-game nets flatter it",
+  "rows_per_game_random": "31.4734 -- 157367 rows / 5000 random-net bootstrap games",
+  "rows_per_game_lower_bound": "16.9968 -- the marginal carried 10 accepted nets forward at the least-squares slope of rows/game over the nine complete post-transition directories, -0.1528 per accepted net",
+  "selfplay_real_net": "5520.0 games/h -- 36040 real-net games over the 37 cycle selfplay phases from cycle 6 (the first gate) on, 23504.35 s",
+  "selfplay_all_net": "6174.2 games/h -- NOT used: it credits the five random-bootstrap cycles, which ran 1000 games in ~85 s each",
+  "train_samples_per_second": "1964.646 -- 3860608 samples / 1965.04 s",
+  "gatekeeper": "0.59638 s per gate game -- stage_elapsed_s['gatekeeper'] 938.11 s / gatekeeper_games_total 1573, over 15 gate stages",
+  "bytes_per_row_on_disk": "366.27 -- 350347842 B / 956527 rows (the smoke's 353.8 was 3.5 % optimistic)",
+  "threads": "nlwp_max ppid-filtered over 41 cycles: gatekeeper 24, selfplay 24, train 13, shuffle 4, against the declared 32",
+  "resignations": "RE[...+R] = 0.0 % in EVERY net directory -- the game shortening is not resignation",
+  "moves_per_game": "130.8 -> ~81 between the first and third accepted net, then 80-82 for every net since (status_log.txt read-4 per-net table)"
+ },
+ "verification": {
+  "command": "python3 results/ktg/paper_1902.10565/codes/eval/check_knobs_9x9.py --throughput results/ktg/paper_1902.10565/evidence/production_chain/throughput.json --rows-file results/ktg/paper_1902.10565/evidence/production_chain/rows_per_game.txt --marginal-nets 3 --trend-nets 9 --horizon-nets 10",
+  "exit_code": 0,
+  "verdict": "CHECK_KNOBS_9X9: PASS",
+  "negative_control": "the SAME command with --knobs pointed at a G = 1000 copy of the knob file exits 1 on ['T1_freshness_rows_per_cycle_ge_1p2_E','T1_no_train_starvation'] -- so the check can still fail, and fails on exactly the tolerance the escalation computed by hand",
+  "unchanged_control": "the admitted parameter-free invocation, python3 codes/eval/check_knobs_9x9.py, exits 0 on the frozen -298712/-299259 smoke evidence with the same 11182 s = 3.11 h cycle and 23 cycles per link as the 2026-09-04 record: the repair changed no smoke-path number",
+  "o41_control": "python3 codes/eval/derive_knobs.py --self-test exits 0 on all 14 cases including the seven missing-measured-key cases -- no fallback constant was reintroduced",
+  "why_three_new_flags_do_not_reopen_the_argument_hole": "--marginal-nets/--trend-nets/--horizon-nets do not take a rows/game VALUE. They choose how many of the file's own per_net directories to aggregate and to fit; the marginal, the slope, the bound and the whole per-net table are computed from the evidence and printed. --knobs takes a knob FILE and is what makes the negative control possible without editing the file a queued chain link will source. derive_knobs.py's --rows-per-game-lower does take a number, and is the one place a caller can state something: it refuses a bound above the measurement and prints its provenance on every run."
+ },
+ "derived_knob_set": {
+  "NUM_GAMES_PER_CYCLE": "1500  (CHANGED from 1000)",
+  "NUM_THREADS_FOR_SHUFFLING": 8,
+  "NUM_TRAIN_SAMPLES_PER_EPOCH": 20000,
+  "MAX_TRAIN_PER_DATA": 8,
+  "NUM_TRAIN_SAMPLES_PER_SWA": 10000,
+  "BATCHSIZE": 128,
+  "SHUFFLE_MINROWS": 25000,
+  "MAX_TRAIN_SAMPLES_PER_CYCLE": 100000,
+  "TAPER_WINDOW_SCALE": 50000,
+  "SHUFFLE_KEEPROWS": 120000,
+  "EPOCHS_PER_EXPORT": 5,
+  "KTG_CPUS_PER_TASK": 32,
+  "KTG_NUM_GAME_THREADS": 18
+ },
+ "inequality_table": [
+  {
+   "check": "T1 freshness  G*r >= 1.2*E",
+   "at_r_18.5249": "27787.3 vs 24000  (+15.78 %)",
+   "at_r_lo_16.9968": "25495.2 vs 24000  (+6.23 %)",
+   "verdict": "ok"
+  },
+  {
+   "check": "K1 bucket gain >= 0.99*E",
+   "at_r_18.5249": "222298.5  (11.1x E)",
+   "at_r_lo_16.9968": "203961.5  (10.2x E)",
+   "verdict": "ok"
+  },
+  {
+   "check": "K2 epochs_per_export = floor(min(gain,cap_eff)/E)",
+   "at_r_18.5249": "5  (gain 222299 > cap_eff 100000)",
+   "at_r_lo_16.9968": "5",
+   "verdict": "ok, UNCHANGED"
+  },
+  {
+   "check": "K2b realised reuse <= MAX_TRAIN_PER_DATA 8",
+   "at_r_18.5249": "3.60  (was 5.40 at G = 1000)",
+   "at_r_lo_16.9968": "3.92",
+   "verdict": "ok"
+  },
+  {
+   "check": "K3 keep > cap and keep >= epochs*E",
+   "at_r_18.5249": "120000 > 100000 >= 100000",
+   "at_r_lo_16.9968": "same",
+   "verdict": "ok, r-independent"
+  },
+  {
+   "check": "K4 window holds one epoch in EVERY cycle",
+   "at_r_18.5249": "worst cycle 1: 25000 rows = 195 batches vs 156",
+   "at_r_lo_16.9968": "same",
+   "verdict": "ok"
+  },
+  {
+   "check": "K5 bootstrap G*r0_lo >= SHUFFLE_MINROWS",
+   "at_r_18.5249": "47210 >= 25000",
+   "at_r_lo_16.9968": "46542 >= 25000",
+   "verdict": "ok, and NOT consulted by link 2"
+  },
+  {
+   "check": "K6 swa = E//2",
+   "at_r_18.5249": "10000",
+   "at_r_lo_16.9968": "10000",
+   "verdict": "ok, r-independent"
+  },
+  {
+   "check": "K7 cycle wall",
+   "at_r_18.5249": "1410 s = 0.392 h, 182 cycles per 257400 s link",
+   "at_r_lo_16.9968": "same",
+   "verdict": "ok"
+  },
+  {
+   "check": "T3 storage after one full link",
+   "at_r_18.5249": "23.37 GiB of 500 GiB, 30893 cycles of headroom",
+   "at_r_lo_16.9968": "same",
+   "verdict": "ok"
+  },
+  {
+   "check": "T4 worst stage threads <= KTG_CPUS_PER_TASK",
+   "at_r_18.5249": "28 projected, 24 MEASURED, <= 32",
+   "at_r_lo_16.9968": "same",
+   "verdict": "ok, r-independent"
+  }
+ ],
+ "candidate_result_row": {
+  "paper": "arxiv-1902.10565",
+  "result_id": "r_cycle_knobs_9x9_derived",
+  "name": "Production cycle knobs, NUM_GAMES_PER_CYCLE re-derived from 41 executed production cycles: 1500 games per cycle restores the freshness tolerance that the measured fall in rows/game broke at 1000",
+  "amends": "the 2026-09-04 candidate of the same result_id (evidence/derive_cycle_knobs/candidate_rows.json)",
+  "working_context": {
+   "cluster": "skipjack, link 1 ran on l40s node gl111 (mission.json decisions[3] allows b200/l40s); account ssci-anima; 1 GPU, --cpus-per-task 32, --mem 120G, --time 2-23:30:00",
+   "upstream": "lightvector/KataGo v1.18.2 @ fd0723fdbc0e9d82cf269c9630af8c27c57c07c4 (read-only mirror ref-code/lightvector-KataGo)",
+   "model": "b7c96h3tfrs, pos_len 9",
+   "measured_inputs": "41 production cycles of job 301099: rows/game real marginal 18.5249 (last three complete net dirs, 8000 games) / aggregate 22.1743 (36040 games) / random 31.4734 (5000 games); real-net selfplay 5520.0 games/h; train 1964.646 samples/s; gate 0.59638 s per gate game; 366.27 B/row; nlwp_max 24/24/13/4",
+   "conservatism": "every binding inequality is evaluated at the MARGINAL rows/game -- the rate the next cycle gets -- and again at a lower bound taken from the observed per-net DRIFT, not from sampling error; the cycle-wall projection charges every cycle for a two-real-net gate at 200 games where production gates every ~2.8 cycles at ~121, so it is 0.392 h against a directly measured 0.199 h at 1000 games",
+   "scope": "closed-form derivation over production measurements plus an executed arithmetic check; no engine run, no job, no GPU"
+  },
+  "claim": "At the production-measured marginal rows/game r = 18.5249 and its drift-based lower bound r_lo = 16.9968, NUM_GAMES_PER_CYCLE = 1500 -- with every other knob of the 2026-09-04 set unchanged (shuffle threads 8, epoch 20000, reuse 8, SWA 10000, batch 128, MINROWS 25000, cap 100000, taper 50000, KEEPROWS 120000, EPOCHS_PER_EXPORT 5 passed as both -epochs-per-export and -max-epochs-this-instance, --cpus-per-task 32 at numGameThreads 18) -- satisfies every constraint train.py and shuffle.py impose, at BOTH rates. Specifically: a cycle produces 27787 new rows (25495 at r_lo) against the 24000-row freshness floor of 1.2*samples_per_epoch, restoring the tolerance that 18525 rows at 1000 games violated by 22.8 %; the bucket gain 222299 (203962) clears 0.99*E by 11.1x (10.2x); epochs_per_export stays 5 because the gain clears cap_eff = max(cap,E) = 100000 by 2.2x, so the knob that fixes it is MAX_TRAIN_SAMPLES_PER_CYCLE, not the game count; realised reuse falls from 5.40 to 3.60 (3.92 at r_lo) against the cap of 8; keep 120000 > cap 100000 and holds a whole cycle's draw; the shuffle window holds at least one epoch in every cycle including the first (worst case 195 batches against 156); the worst stage thread count is 28 projected and 24 measured against 32 declared, and is independent of the game count because -max-games-total is a loop bound, not a concurrency knob; the projected cycle is 0.392 h so 182 whole cycles fit one 2-23:30:00 link; and the projection writes 15.89 MiB per cycle monotonic, 23.37 GiB after a full link against the 500 GiB cap. THREE THINGS ARE NOT CLAIMED. (i) No cycle has executed at 1500 games -- the evidence is a derivation over production measurements plus an executed arithmetic check, not a measurement of the loop at this value. (ii) The bound is a HORIZON, not a resting point: at the measured -0.1528 rows/game per accepted net the marginal reaches 16.0, where T1 fails again at 1500, after ~16.5 further accepted nets (~52 cycles). 1500 buys a monitored horizon of about ten accepted nets. (iii) SHUFFLE_MINROWS 25000 is re-asserted but is not TESTED by link 2: it binds only a cycle-1 random bootstrap, and link 2 resumes a mature window pinned at SHUFFLE_KEEPROWS = 120000 rows, five times min_rows.",
+  "evidence_type": "symbolic_derivation_over_empirical_measurement_with_executed_numerical_check",
+  "evidence": "results/ktg/paper_1902.10565/evidence/derive_cycle_knobs/rederive_check.txt",
+  "verifier_result": {
+   "verdict": "pass",
+   "command": "python3 results/ktg/paper_1902.10565/codes/eval/check_knobs_9x9.py --throughput results/ktg/paper_1902.10565/evidence/production_chain/throughput.json --rows-file results/ktg/paper_1902.10565/evidence/production_chain/rows_per_game.txt --marginal-nets 3 --trend-nets 9 --horizon-nets 10",
+   "exit_code": 0,
+   "detail": "16 conjuncts, all ok: K1 11.11/10.20; T1 27787/25495 >= 24000; K2 5 == 5; K2b 3.60/3.92 <= 8; K2c structural; K3 120000 > 100000; K4 worst cycle 1 at 195 >= 156 batches; K5 47210/46542 >= 25000; K6 10000; K7 0.392 h, 182 cycles/link; T3 23.37 GiB < 500 GiB; T4 28 <= 32; loop wiring 11/11. Negative control at G = 1000 exits 1 on T1; the parameter-free smoke invocation and derive_knobs.py --self-test both still exit 0."
+  },
+  "dependencies": [
+   "arxiv-1902.10565::synchronous_loop_smoke",
+   "arxiv-1902.10565::train_resume_semantics",
+   "arxiv-1902.10565::training_window_shuffle",
+   "arxiv-1902.10565::data_format_pos_len",
+   "arxiv-1902.10565::data_budget",
+   "arxiv-1902.10565::measure_stage_throughput"
+  ],
+  "assumptions": [
+   "a01_single_node",
+   "a02_gpu_cap_start_at_1",
+   "a03_walltime_resume",
+   "a10_random_bootstrap_ok",
+   "NEW, and the one to attack: the rows/game LOWER BOUND is a linear extrapolation of an observed per-net trend over a stated horizon of ten accepted nets, not a sampling bound. It assumes the -0.1528 rows/game per accepted net slope does not STEEPEN. The per-step rows/move drops are shrinking (-0.0066 -> -0.0020 over the last four complete nets), which supports it, and moves/game has been flat at 80-82 for eight nets, which removes the larger of the two effects; but neither is a bound.",
+   "NEW: the random-net bootstrap cycles of a production run are the ones BEFORE the first gate cycle. Used only to split the selfplay stage seconds when deriving the real-net rate, and cross-checked inside the tool: random_games / bootstrap cycles must be a whole number of games per cycle, and is (5000/5 = 1000).",
+   "NOT a07_moves_per_game_80: production measured 80-82 moves/game for the last eight accepted nets, which happens to land on a07's number -- but this derivation still uses no moves/game figure anywhere. Every row count is the measured rows/game."
+  ],
+  "status": "conditional",
+  "_status_rationale": "conditional, not empirical, and for a DIFFERENT reason than the 2026-09-04 row. The inputs are now genuinely empirical -- 41 executed production cycles, not a 20-game probe -- but nothing has been measured AT 1500 games. The claim is conditional on (a) the marginal rows/game staying above 24000/1500 = 16.0, which the drift reaches in ~16.5 accepted nets, and (b) the realised export cadence improving as the window fills faster, which is a prediction. Promote to empirical when a monitoring read measures a link-2 cycle at 1500 games; refute it if the marginal crosses 16.0 first.",
+  "provenance": "worker derive_cycle_knobs_9x9 re-derivation, login node 2026-09-05, CPU only, no allocation, no job; error-ledger trials row_hash 26b1ede9736b97ea49d9fff62eba1c334e8b3c820459774fa0346d20a47f788e (iteration 3, fail) and c3c098c8170ea70ed746b4e423afe3759536610a571351dbcac6f3603a449f82 (iteration 4, pass)",
+  "open_obligations": [
+   "the rows/game drift has not stopped: re-derive when the marginal crosses ~17.0 (~10 accepted nets)",
+   "scale_data_window: the structural fix -- lower E, or raise SHUFFLE_MINROWS and let the window carry the freshness -- rather than buying freshness with ever more games",
+   "the realised export cadence at 1500 games (13 exports in 41 cycles at 1000; predicted better, bounded by K2c's one per cycle)",
+   "data_budget / measure_stage_throughput: the storage model under-counts production by 2.6x (15.89 MiB/cycle modelled, 41.2 MiB/cycle measured); not a budget risk at 2.6 % of the cap",
+   "measure_stage_throughput: emit selfplay_games_per_hour_real_net, which the JSON declares and leaves null, so the checker need not split the stage itself"
+  ],
+  "_validator_decision_point": "Three places to attack. (1) THE LOWER BOUND. It is the only number in the derivation that is a modelling choice rather than an aggregate, and it is what makes 1412 the binding inequality rather than 1296. A refuter should ask whether ten accepted nets is the right horizon, whether the nine-net window is the right fit (all thirteen complete real nets would give a much steeper slope because they span the one-time moves/game collapse), and whether excluding the newest directory as incomplete is right -- the two snapshots of the SAME 18035 rows at 1136 and 1040 games are the argument, and they are in status_log.txt read 4 and rows_per_game.txt respectively. (2) THE MARGINAL WINDOW. Three net directories is 8000 games; two would give 18.397 and four 18.643, so the choice moves r by 1.3 % and does not move the knob -- but the validator should confirm that on the file. (3) WHETHER 1500 IS THE RIGHT RESPONSE AT ALL. It restores T1 for about ten accepted nets and costs ~50 % more selfplay wall per cycle (652 s -> 978 s at the measured 5520 games/h). Lowering NUM_TRAIN_SAMPLES_PER_EPOCH would restore the same ratio for free, at the cost of the metrics floor (E >= 100*batch = 12800, so E could fall to 12800 and 1.2*E to 15360, which 1000 games at the marginal 18.525 clears with +20 %). The human fixed the value; the alternative is recorded here because scale_data_window owns it and should see it."
+ },
+ "candidate_knowledge_row": {
+  "paper": "arxiv-1902.10565",
+  "node_id": "arxiv-1902.10565::derive_cycle_knobs_9x9",
+  "task_id": "derive_cycle_knobs_9x9",
+  "domain": "symbolic",
+  "status": "preliminary",
+  "summary": "The cycle knobs are derived from measured rows/game and are RE-DERIVED when that measurement moves. Production refuted the smoke's input, not the method: r fell 32.3 (20-game probe on a barely-trained net) to a marginal 18.525 over 8000 games, because the net stopped filling the board (moves/game 130.8 -> ~81, then flat) with a smaller rows/move drift on top, and NOT because of resignations (0.0 % in every net directory). NUM_GAMES_PER_CYCLE moves 1000 -> 1500 (human decision, mission.json decisions[6]); every other knob is unchanged and re-checked at r and at a DRIFT-based lower bound 16.997, the sampling formula having become irrelevant at 8000 games. codes/eval/check_knobs_9x9.py no longer assumes the smoke's cycle layout: stages are located by name across whatever cycles a file records, the gate's seconds and games must be a consistent pair over the same gates, and the real-net selfplay rate is split out of a production selfplay stage; o41 is intact -- a file recording no such stage still exits naming the key, and all seven missing-key self-test cases pass. preliminary, not solid: no cycle has executed at 1500 games, and the drift that broke 1000 will break 1500 in about sixteen more accepted nets.",
+  "evidence": "results/ktg/paper_1902.10565/evidence/derive_cycle_knobs/rederive_check.txt",
+  "_validator_decision_point": "solid still requires solid predecessors, and synchronous_loop_smoke is preliminary. The node is now ALSO downstream of measure_stage_throughput in substance if not in the DAG: its inputs are that node's evidence. A validator may want that edge added, which would change the predecessor set the solid ceiling is computed over."
+ },
+ "candidate_claim_transitions": [
+  {
+   "claim": "c10 rows/game band",
+   "was": "[12, 35] rows/game, with a second conjunct <= 10 KiB/game that job 299259 already refuted",
+   "now_measured": "22.174 aggregate / 18.525 marginal / 31.473 random, and 11.16 KiB/game at 366.27 B/row. The band still holds, but it is now known to be a MOVING quantity within its own lifetime: 34.3 at the first accepted net, 18.4 at the thirteenth, still falling at -0.153 per net.",
+   "proposed": "restate c10 as a band ON THE MARGINAL rate with an explicit drift clause, e.g. 'the marginal rows/game of the most recent complete net directories lies in [12, 35] and falls monotonically with net strength', so that a future reader cannot take a single aggregate as a constant of the run -- which is exactly the mistake this re-derivation had to undo.",
+   "decision_owner": "validator -- the worker does not restate an admitted claim"
+  },
+  {
+   "claim": "T1 (mission tolerance, no train starvation)",
+   "status": "restored, not weakened",
+   "detail": "T1 was violated in production at 1000 games (-22.81 % on the marginal) and is satisfied at 1500 (+15.78 %, +6.23 % at r_lo). It was NOT restated, narrowed, or given an exception. The option of 'accepting a lower freshness ratio explicitly', which read 4 listed, was not taken."
+  },
+  {
+   "claim": "c13 / c14 evaluation criteria",
+   "status": "unaffected",
+   "detail": "13 gate acceptances in 41 cycles at 1000 games; the game count per cycle does not enter either criterion."
+  },
+  {
+   "claim": "o40 export ramp",
+   "status": "confirmed by execution, and now load-bearing in the tooling",
+   "detail": "the admitted ramp predicted the first export at cycle 5 and the first gate at cycle 6; production recorded exactly that (status_log.txt: 'first export at cycle 5', 'first gate at cycle 6'). It is because the ramp is real that a production throughput file has no cycle-2 gatekeeper stage, which is the tooling gap this packet repaired."
+  },
+  {
+   "claim": "o03 / o39 thread budget",
+   "status": "the last conjunct is now measurable and looks discharged",
+   "detail": "o39's third conjunct wanted one executed real-net cycle re-measuring nlwp_max <= --cpus-per-task. Production measured 24 on gatekeeper AND selfplay over 41 cycles, ppid-filtered, against 32 declared; the two-real-net gatekeeper that derivation.md section 8 left [OPEN] as an arithmetic 28 measures 24. The worker does not close an obligation; production_chain_9x9 / gatekeeper_stage own it.",
+   "decision_owner": "validator"
+  }
+ ]
+}

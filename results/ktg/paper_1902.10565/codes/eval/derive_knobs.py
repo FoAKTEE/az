@@ -273,7 +273,20 @@ def derive(args):
     taper = args.taper
     batch = args.batch
 
-    r_lo = rows_lower_bound(r, args.n_games_real)
+    r_lo_formula = rows_lower_bound(r, args.n_games_real)
+    r_lo_override = getattr(args, "rows_per_game_lower", None)
+    if r_lo_override is None:
+        r_lo = r_lo_formula
+        r_lo_source = ("sampling formula r*(1-1/sqrt(n)) over n = %d measured games"
+                       % args.n_games_real)
+    else:
+        r_lo = float(r_lo_override)
+        if r_lo > r:
+            raise SystemExit(
+                "derive_knobs: --rows-per-game-lower %.4f is above --rows-per-game %.4f; a "
+                "lower bound that exceeds the measurement is not a bound." % (r_lo, r))
+        r_lo_source = (getattr(args, "rows_lower_source", None)
+                       or "caller-supplied, no --rows-lower-source given")
     r0_lo = rows_lower_bound(r0, args.n_games_random)
 
     d = {}
@@ -283,6 +296,9 @@ def derive(args):
         n_games_real_measured=args.n_games_real, n_games_random_measured=args.n_games_random,
         reuse=M, samples_per_epoch=E, games=G, keep=keep, cap=cap,
         min_rows=min_rows, taper_window_scale=taper, batch=batch,
+        rows_per_game_real_lower_source=r_lo_source,
+        rows_per_game_real_lower_formula=r_lo_formula,
+        source_label=getattr(args, "source_label", None),
     )
 
     rows_per_cycle = G * r
@@ -572,10 +588,12 @@ def report(d):
     v = d["derived"]
     print("derive_knobs.py -- node arxiv-1902.10565::derive_cycle_knobs_9x9")
     print("")
-    print("MEASURED INPUTS (Slurm job 298712, commit 5bb85ad)")
-    print("  rows/game real      r        = %-10.4f  (lower90 %.4f over %d games)"
+    print("MEASURED INPUTS (%s)"
+          % (i.get("source_label") or "Slurm job 298712, commit 5bb85ad"))
+    print("  rows/game real      r        = %-10.4f  (lower bound %.4f over %d games)"
           % (i["rows_per_game_real"], i["rows_per_game_real_lower90"], i["n_games_real_measured"]))
-    print("  rows/game random    r0       = %-10.4f  (lower90 %.4f over %d games)"
+    print("    lower bound from            : %s" % i.get("rows_per_game_real_lower_source", "-"))
+    print("  rows/game random    r0       = %-10.4f  (lower bound %.4f over %d games)"
           % (i["rows_per_game_random"], i["rows_per_game_random_lower90"], i["n_games_random_measured"]))
     print("  bytes/row on disk            = %.1f" % d["storage"]["bytes_per_row_on_disk"])
     print("")
@@ -684,6 +702,20 @@ def build_parser():
     p.add_argument("--shuffle-processes", type=int, default=8)
     p.add_argument("--n-games-real", type=int, default=20)
     p.add_argument("--n-games-random", type=int, default=80)
+    p.add_argument("--rows-per-game-lower", type=float, default=None,
+                   help="lower bound on rows/game to evaluate every binding inequality at, "
+                        "INSTEAD of the sampling formula r*(1-1/sqrt(n)). The formula bounds "
+                        "SAMPLING error and is the right tool for a 20-game probe; over tens "
+                        "of thousands of production games the sampling term is ~0.5 %% and the "
+                        "binding uncertainty is DRIFT of r as the net trains, which the "
+                        "formula does not see at all. A caller that has measured the drift "
+                        "states the bound here and the run prints it with its provenance "
+                        "(--rows-lower-source). Must be <= --rows-per-game.")
+    p.add_argument("--rows-lower-source", default=None,
+                   help="one line saying where --rows-per-game-lower came from; printed "
+                        "with the report and stored on the JSON")
+    p.add_argument("--source-label", default=None,
+                   help="what job/evidence the measured inputs come from (report heading)")
     p.add_argument("--window-cycles", type=int, default=20)
     p.add_argument("--first-accept-cycle", type=int, default=None,
                    help="cycle whose gatekeeper accepts the first candidate; default = the "

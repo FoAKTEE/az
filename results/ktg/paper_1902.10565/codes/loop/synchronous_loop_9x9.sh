@@ -144,7 +144,7 @@ mkdir -p "$BASEDIR"/torchmodels_toexport
 # evidence/derive_cycle_knobs/derivation.md; the arithmetic is re-run by
 # codes/eval/derive_knobs.py, and `--assert-loop-defaults <this file>` fails if
 # any default below drifts from it. Obligations o24, o13 (knob conjunct).
-NUM_GAMES_PER_CYCLE="${NUM_GAMES_PER_CYCLE:-1000}"          # upstream :57 = 500; >= max(1.2*E/r_lo, 1.25*MINROWS/r0_lo)
+NUM_GAMES_PER_CYCLE="${NUM_GAMES_PER_CYCLE:-1500}"          # upstream :57 = 500; >= max(1.2*E/r_lo, 1.25*MINROWS/r0_lo)
 NUM_THREADS_FOR_SHUFFLING="${NUM_THREADS_FOR_SHUFFLING:-8}" # upstream :58 = 8, unchanged (measured 4+8 = 12 threads)
 NUM_TRAIN_SAMPLES_PER_EPOCH="${NUM_TRAIN_SAMPLES_PER_EPOCH:-20000}"   # upstream :59 = 100000; >= 100*BATCHSIZE (train.py:1379)
 MAX_TRAIN_PER_DATA="${MAX_TRAIN_PER_DATA:-8}"               # upstream :60 = 8, the reuse cap; never raised

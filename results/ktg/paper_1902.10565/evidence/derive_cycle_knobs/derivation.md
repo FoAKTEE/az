@@ -281,3 +281,244 @@ it re-runs whenever any of those four files changes.
   by raising `min_rows` once a real bootstrap is measured.
 - `[FUTURE]` `shuffle.py -exclude-qvalues` (`o21`) would cut 492 B of the 2145 B row and with
   it the storage line; not adopted here.
+
+## 9. Re-derivation from PRODUCTION — 2026-09-05 (`NUM_GAMES_PER_CYCLE` 1000 → 1500)
+
+Authorised by `mission.json` `decisions[6]` (human, 2026-09-05): *raise NUM_GAMES_PER_CYCLE
+1000 -> 1500 for the 9x9 chain from link 2 on*. Recorded here and, for the structural fix,
+against node `scale_data_window`. CPU only, login node, no allocation, no job. Verbatim
+output: `rederive_check.txt` (five blocks). Chain link 1 (job 301099) was NOT touched: it
+sourced its knobs at link start and keeps `NUM_GAMES_PER_CYCLE = 1000` to its end.
+
+### 9.1 What the 20-game probe could not see
+
+§ 1 read `r = 32.3` rows/game from a 20-game probe against the smoke's barely-trained net,
+and § 6 concluded that the set "first fails only if the true `r` falls below 24.0". It did.
+Forty production cycles measured (`evidence/production_chain/{throughput,rows_per_game}.json/txt`,
+`status_log.txt` reads 1–4):
+
+| read | real-net games | r | T1 margin at G = 1000 |
+|---|---|---|---|
+| 2 | 18 016 | 25.397 | +5.82 % |
+| 3 | 18 515 | 25.079 | +4.50 % |
+| 4 | 36 040 | **22.174** | **−7.61 %** |
+
+and the **marginal** rate — the last three complete net directories, 8000 games — is
+**18.525**, i.e. `1000 × 18.525 = 18 525` new rows against an epoch's own 20 000 draw.
+The aggregate flatters the situation because it averages in the early, long-game nets;
+the marginal is what the next cycle gets.
+
+The mechanism is measured, not inferred. `RE[…+R]` is **0.0 % in every net directory**, so
+this is not resignation. Two separable effects (read-4 per-net table):
+
+1. **Game length collapsed once, then stabilised.** moves/game 130.8 → ~81 between the
+   first and third accepted net, and 80–82 for every net since. A one-time transition,
+   already over.
+2. **Rows per move drifts down on top of it**, 0.2518 (`t9-s1166208`) → 0.2268
+   (`t9-s3560832`); the per-step drops are themselves shrinking (−0.0066 → −0.0020), so
+   effect 2 is decelerating but has not stopped.
+
+`derive_knobs.py` never consumed `cheapSearchProb` or `a07_moves_per_game_80` (§ 5b), so
+nothing in the method fails here — only its **input** was measured in the wrong regime.
+
+### 9.2 The lower bound is no longer a sampling bound
+
+§ 1 evaluated every binding inequality at `r_lo = r·(1 − 1/√n)`. Over the 8000 games the
+marginal rests on, that term is **1.12 %** — it bounds sampling error, and sampling error
+is no longer the binding uncertainty. **Drift is.** So `r_lo` is taken from the observed
+per-net trend instead:
+
+* fit the nine **complete** post-transition real-net directories (`t9-s1166208` …
+  `t9-s3560832`); least-squares slope **−0.1528 rows/game per accepted net** (the mean
+  first-to-last step is −0.1517, so the fit is not leaning on one point);
+* the newest directory `t9-s3860608` is **excluded from every fit as incomplete** — it is
+  the net still playing and its npz files lag its own sgfs, which is exactly why the same
+  18 035 rows read as 15.88 rows/game in the read-4 table (1136 games) and 17.34 in
+  `rows_per_game.txt` (1040 games). Neither is a measurement of that net;
+* carry the marginal **ten accepted nets forward**: `18.525 − 10 × 0.1528 = 16.997`.
+
+Ten accepted nets is ≈ 31 cycles at the measured acceptance cadence (13 acceptances in 41
+cycles) — several times the demonstrated monitoring interval (reads 1–4 spanned 7.7 h).
+The horizon is a stated choice, not a hidden one, and the tool prints it.
+
+### 9.3 Solving, at the marginal r and at r_lo
+
+`E = 20 000`, `MAX_TRAIN_PER_DATA = 8`, `cap = 100 000`, `keep = 120 000`,
+`min_rows = 25 000`, `batch = 128`, `r = 18.525`, `r_lo = 16.997`, `r0 = 31.4734`
+(5000 production random-net games), `r0_lo = 31.028`.
+
+* freshness (T1) `G ≥ 1.2·E/r = 1295.6` and `G ≥ 1.2·E/r_lo = **1412.0**` ← binding
+* bootstrap (K5) `G ≥ min_rows/r0_lo = 805.7`
+
+`G = ceil(1412.0)` → **1500**. At 1500: `27 787` rows/cycle, **+15.78 %** on `1.2·E`; at
+`r_lo`, `25 495`, **+6.23 %**. The set survives any `r ≥ 24 000/1500 = 16.0`.
+
+Every dependent inequality re-checked at both rates (`rederive_check.txt` block 3):
+
+| # | constraint | at r = 18.525 | at r_lo = 16.997 | verdict |
+|---|---|---|---|---|
+| T1 | `G·r ≥ 1.2·E` | 27 787 vs 24 000 (+15.8 %) | 25 495 vs 24 000 (+6.2 %) | ok |
+| K1 | bucket gain `≥ 0.99·E` | 222 299 (11.1 × E) | 203 962 (10.2 × E) | ok |
+| K2 | `epochs = floor(min(gain, cap_eff)/E)` | **5** (gain 222 299 > cap_eff 100 000) | **5** | ok, unchanged |
+| K2b | realised reuse `≤ 8` | 100 000/27 787 = **3.60** (was 5.40 at G = 1000) | 3.92 | ok |
+| K3 | `keep > cap`, `keep ≥ epochs·E` | 120 000 > 100 000 ≥ 100 000 | same | ok, r-independent |
+| K4 | window ≥ one epoch, every cycle | worst 25 000 rows = 195 batches vs 156 | same | ok |
+| K5 | `G·r0_lo ≥ min_rows` | 47 210 ≥ 25 000 | 46 542 ≥ 25 000 | ok |
+| K6 | `SWA = E//2` | 10 000 | 10 000 | ok, r-independent |
+| K7 | cycle wall | 1410 s = 0.39 h, 182 cycles/link | same | ok |
+| T3 | storage after one link | 23.37 GiB of 500 GiB | same | ok |
+| T4 | threads ≤ CPUs | 28 ≤ 32 (measured `nlwp_max` 24) | same | ok, r-independent |
+
+**`SHUFFLE_MINROWS` 25 000 is unchanged, and is not even consulted at link 2.** K4/K5 are
+about the *first* cycle, whose window IS `min_rows` because `shuffle.py:1077` caps the
+usable random rows there. Link 2 resumes an existing `BASEDIR` with 13 accepted nets and
+956 527 rows on disk, so its shuffle window is **mature** — pinned at the
+`SHUFFLE_KEEPROWS` ceiling of 120 000 rows, five times `min_rows`. `min_rows` is carried
+through the check only because the check evaluates the whole ramp from cycle 1; it binds
+nothing that link 2 does.
+
+**`EPOCHS_PER_EXPORT` stays 5, and the formula is not what changed.** `floor(min(gain,
+cap_eff)/E)` is 5 at both rates because `gain = G·r·8 = 222 299` clears `cap_eff = 100 000`
+by 2.2×; `MAX_TRAIN_SAMPLES_PER_CYCLE` is what fixes it, not `G`. What DOES change is the
+**realised export cadence**, which the window sets, not this formula: production ran 13
+exports in 41 cycles (one per **3.15** cycles) with `Not enough data files to fill a
+subepoch` in 40 of 41 cycles — the trainer is data-limited, not bucket-limited (`Exceeding
+train bucket` fired once, longest run 1, against the R14 threshold of 3). Feeding 1.5× the
+rows per cycle drives the window to the `keep` ceiling sooner; the simulated ramp reaches
+one export per cycle at cycle 16 instead of 20. The steady state is the same at either
+game count and is set by `keep`, not by `G`: a mature window is pinned at
+`SHUFFLE_KEEPROWS = 120 000` rows = `floor(120 000/20 000) = 6` epochs' worth, capped at
+`-max-epochs-this-instance = 5`, so a mature cycle runs five epochs and exports **exactly
+once** — the K2c ceiling, reached sooner. `[OPEN]` the realised cadence at G = 1500 is a
+prediction; the next monitoring read measures it.
+
+**CPU / thread coupling unchanged**: `KTG_CPUS_PER_TASK = 32`, `KTG_NUM_GAME_THREADS = 18`.
+Production measured `nlwp_max` 24 on gatekeeper AND selfplay (ppid-filtered, 40 cycles),
+13 on train, 4 on shuffle — below the 25/28 § 4 projected and well inside 32. Game count
+per cycle does not enter the thread budget: it is `-max-games-total`, a loop bound, not a
+concurrency knob. This also settles § 8's second `[OPEN]`: the two-real-net gatekeeper
+measures **24**, not the 28 the arithmetic projected.
+
+### 9.4 Rates and projections, now from production
+
+Measured over 41 cycles on l40s node gl111 (`throughput.json`):
+
+| quantity | value | how it is formed |
+|---|---|---|
+| real-net selfplay | **5520.0 games/h** | 36 040 real-net games over the 37 cycle selfplay phases from cycle 6 (the first gate) on, 23 504.35 s |
+| all-net selfplay | 6174.2 games/h | 41 040 games / 23 929.13 s — **not used**: it credits the 5 random-bootstrap cycles, which ran 1000 games in ~85 s each; every cycle from link 2 on is real-net |
+| train | **1964.646 samples/s** | 3 860 608 samples / 1965.04 s |
+| gate | **0.59638 s per gate game** | `stage_elapsed_s['gatekeeper']` 938.11 s / `gatekeeper_games_total` 1573 |
+| shuffle | 4.26 s per cycle at 22 774 rows | `per_phase_stage['cycle2/shuffle']`, `selfplay_rows_total` over 42 cycle phases |
+| bytes/row on disk | **366.27 B** | 350 347 842 B / 956 527 rows (the smoke's 353.8 was 3.5 % optimistic) |
+
+Cycle wall at G = 1500: `978.3 s` selfplay + `50.9 s` train + `238.6 s` gate + `82.4 s`
+shuffle + `60 s` export = **1410 s = 0.392 h**, so **182 whole cycles** fit one
+`2-23:30:00` link (257 400 s). The directly measured production cycle is **0.199 h** at
+G = 1000, and scaling only its selfplay term to 1500 games gives ~0.29 h; the model is
+deliberately the more pessimistic of the two, because its gate term charges **every** cycle
+for a two-real-net gate at the planning figure of 200 games, where production gates every
+~2.8 cycles at ~121 games. The 0.5× planning derate of § 5 is **retired for a production
+rate**: it was an allowance for a 20-game probe writing a multi-MB `logSearchInfo` log
+outside a real cycle, and this rate is 37 real production cycles.
+
+Storage at 366.27 B/row: per-cycle monotonic write **15.89 MiB** (tdata 9.70 + sgfs 3.33 +
+one export 2.87), bounded steady state 557 MiB, so **23.37 GiB after a full 182-cycle
+link** against `KTG_SCRATCH_HARD_BYTES = 500 GiB`, with 30 893 cycles of headroom.
+`[OPEN]` the model under-counts: production actually grew `runs/p1` to 1 688 046 145 B in
+41 cycles = **41.2 MiB/cycle**, 2.6× the model, and the mission root is 13.82 GB (2.6 % of
+the cap). Even at 1.5× that rate a full link adds ~11 GB, so T3 holds by three orders of
+magnitude either way; the discrepancy is a defect of the *model*, not a budget risk, and
+belongs to `data_budget` / `measure_stage_throughput`.
+
+### 9.5 The tooling gap read 4 hit, and its repair
+
+Read 4 could not run the prescribed re-check at all:
+
+```
+$ python3 codes/eval/check_knobs_9x9.py --throughput $EV/throughput.json --rows-file $EV/rows_per_game.txt
+check_knobs_9x9: .../throughput.json is missing the measured key(s)
+per_phase_stage['cycle2/gatekeeper'].elapsed_s. …
+exit 1
+```
+
+The key is absent because **under the admitted export ramp (o40) cycle 2 has no gatekeeper
+stage** — the first candidate exports at cycle 5 and the first gate runs at cycle 6, which
+production confirmed exactly. The checker had the smoke's cycle layout written into it as
+a literal key name. That is a **structurally absent stage**, not a missing measurement, and
+o41 was never about cycle numbers: it forbids substituting a *constant* for a number no job
+produced. Repair, in `codes/eval/check_knobs_9x9.py`:
+
+* `resolve_phase_elapsed()` / `cycle_phases()` — a stage is located by NAME across whatever
+  cycles the file records: the preferred cycle when the file has it (so a smoke file reads
+  exactly as before), else the earliest cycle it does have. A file with **no** such stage
+  still exits naming the key.
+* `resolve_gate_measurement()` — the gate needs a *consistent pair*, seconds and games over
+  the SAME gates, or the s/game it feeds the projection is meaningless. Two layouts give
+  one: `gatekeeper_games_total` with `stage_elapsed_s['gatekeeper']` (production, 1573
+  games), or the smoke's single gate phase with the audit's `S4_gatekeeper_sgfs.lines`
+  (156). Neither introduces a constant, and the older pairing — one gate phase's seconds
+  against a game count from a different file — is now impossible to form by accident.
+* `resolve_real_net_rate()` — a production file has no probe and its own
+  `selfplay_games_per_hour` is all-net, which `derive_knobs.py` correctly refuses. The
+  real-net rate is nevertheless in the file: the bootstrap cycles are the ones **before the
+  first gate** (while `models/` is empty every cycle plays the random net, o40), and the
+  split is cross-checked against the file itself — `random_games` ÷ bootstrap cycles must
+  be a whole number of games per cycle, and it is (5000/5 = 1000, the games/cycle link 1
+  ran). If it is not, the branch returns nothing and o41 exits.
+* `selfplay_rows_total` is divided by the number of cycle selfplay phases the file records
+  rather than by the smoke's hard-coded 2.
+* `--marginal-nets K --trend-nets M --horizon-nets N` re-derive rows/game and its lower
+  bound from the file's own `per_net` table (§ 9.1, § 9.2). Nothing is typed: the flags
+  choose how many net directories to use, and the table, the marginal, the slope and the
+  bound are all printed.
+* `--knobs FILE` puts a candidate knob set under test without editing the file a queued
+  chain link will source. The loop-default assertion is skipped for a non-live file and
+  says so.
+* `derive_knobs.py` gains `--rows-per-game-lower` / `--rows-lower-source`, refuses a bound
+  above the measurement, and prints the bound's provenance on every run.
+
+The **default, parameter-free** invocation is byte-for-byte unchanged in behaviour
+(`rederive_check.txt` block 4: the frozen `-298712` / `-299259` evidence still gives a
+3.11 h cycle and 23 cycles per link), and `derive_knobs.py --self-test` still passes all
+14 cases including the seven o41 missing-key cases (block 2).
+
+The repair is load-bearing, not cosmetic: with it, the checker **evaluates** the failure it
+used to refuse. Block 5 runs the same production command against a `G = 1000` knob file and
+exits 1 on `T1_freshness_rows_per_cycle_ge_1p2_E` / `T1_no_train_starvation` — the
+arithmetic read 4 had to do by hand is now the tool's.
+
+### 9.6 What does NOT move, and what is now open
+
+Unchanged and re-asserted: `NUM_TRAIN_SAMPLES_PER_EPOCH` 20 000, `MAX_TRAIN_PER_DATA` 8,
+`NUM_TRAIN_SAMPLES_PER_SWA` 10 000, `BATCHSIZE` 128, `SHUFFLE_MINROWS` 25 000,
+`MAX_TRAIN_SAMPLES_PER_CYCLE` 100 000, `TAPER_WINDOW_SCALE` 50 000, `SHUFFLE_KEEPROWS`
+120 000, `EPOCHS_PER_EXPORT` 5, `NUM_THREADS_FOR_SHUFFLING` 8, `KTG_CPUS_PER_TASK` 32,
+`KTG_NUM_GAME_THREADS` 18.
+
+- `[OPEN]` **the drift has not stopped.** At −0.1528 rows/game per accepted net the marginal
+  reaches 16.0 — where T1 fails again at 1500 games — after ~16.5 further accepted nets,
+  ~52 cycles. 1500 buys a *monitored horizon*, not a settled answer. Re-run the
+  `--marginal-nets` command at every monitoring read; re-derive when the marginal crosses
+  ~17.0. Buying freshness with ever more games is a treadmill, and the structural fix —
+  lower `E`, or raise `min_rows` and let the window carry the freshness — belongs to
+  `scale_data_window`, which this section is also recorded against.
+- `[OPEN]` the realised export cadence at G = 1500 (predicted better than one per 3.15
+  cycles, bounded by 5/6 per cycle) is measured at the next read.
+- `[OPEN]` the storage model under-counts production by 2.6× (§ 9.4). Not a budget risk;
+  owned by `data_budget` / `measure_stage_throughput`.
+- `[CLOSED 2026-09-05]` § 8's two-real-net gatekeeper thread count: measured 24 over 15 gate
+  stages, against the 28 the arithmetic projected. `[CLOSED 2026-09-05]` § 8's real-net
+  games/hour and train samples/s: 5520.0 and 1964.646 over 41 production cycles, replacing
+  the 100-probe-game and single-probe figures.
+- `[OPEN]` link 1 (job 301099) keeps `NUM_GAMES_PER_CYCLE = 1000` to its end — it sourced
+  `knobs_9x9.env` once at link start (`loop.sbatch:170-193`, `set -a`). The new value takes
+  effect when link 2 (job 305318, `PENDING afterany:301099`) sources the same file. Nothing
+  in the loop reads the game count from run state, so there is no migration: the count is
+  passed straight to `katago selfplay -max-games-total`
+  (`synchronous_loop_9x9.sh:372`), and `.cycles_completed` / `.chain_depth` / `.failcount` /
+  `STOP` carry no per-cycle game count. The `${VAR:-default}` fallback in
+  `synchronous_loop_9x9.sh:147` was moved 1000 → 1500 in the same commit so the two stay
+  equal (`check_knobs_9x9.py` asserts it); the substitution is byte-length neutral and was
+  applied by writing a new file and renaming, so the running link's open descriptor is
+  untouched.
