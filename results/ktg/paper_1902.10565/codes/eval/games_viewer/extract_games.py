@@ -26,10 +26,10 @@ games.json layout (positional arrays rather than objects, to keep the file small
       "gtypes":   ["normal", "fork", "asym", "cleanuptraining"],
       "nets":     [{"i":0,"name":"t7-s11808-d11838","samples":11808,"rows":11838,"cycle":1}, ...],
       "results":  [["B+1.5","B"], ["Draw","draw"], ["Void","unknown"], ...],
-      "move_encoding": "packed1",
+      "move_encoding": "alnum1",
       "fields":   ["src","black","white","komi","result","handicap","gtype","nmoves","moves","hash"],
-      "games":    [[0, 12, 12, 8, 4, 0, 0, 28, "ONn6g", "484ABD87"], ...],
-      "extra":    {"1734": {"ab": "gacced", "aw": "fbgd", "first": "W"}, ...}
+      "games":    [[0, 12, 12, 8, 4, 0, 0, 28, "PObH6", "484ABD87"], ...],
+      "extra":    {"1734": ["gacced", "fbgd", "W"], ...}
     }
 
   src        index into ``sources``
@@ -41,20 +41,24 @@ games.json layout (positional arrays rather than objects, to keep the file small
 
 ``results`` entries are ``[result string, winner]`` with winner in B / W / draw / unknown.
 
-``move_encoding`` is ``"packed1"`` by default: one character per move, taken from
-``move_alphabet`` at index ``row * board_size + column``, with index ``board_size ** 2``
-meaning a pass.  ``--sgf2-moves`` switches it to ``"sgf2"``, one string of two-character
-SGF coordinates with ``--`` for a pass, which is easier to read but twice the size.  The
-viewer reads either form.  ``packed1`` needs one alphabet character per board point, so
-it is available up to a 9x9 board and the extractor falls back to ``sgf2`` above that.
+``move_encoding`` is ``"alnum1"`` by default: letters and digits only, one or two
+characters per move (see :func:`pack_moves`).  Punctuation is kept out of it entirely so
+that bulk move data can never spell a comment opener, a template delimiter or an HTML
+entity.  ``--sgf2-moves`` switches it to ``"sgf2"``, one string of two-character SGF
+coordinates with ``--`` for a pass, which is easier to read but larger.  The viewer reads
+either form.  ``alnum1`` covers boards up to 11x11; above that the extractor falls back
+to ``sgf2``.
 
 The board size is read from the first game's ``SZ[]`` and every game of another size is
 skipped and counted; ``--board-size`` pins it explicitly.
 
-``extra`` is sparse and holds only what few games need: ``ab`` / ``aw`` are the AB[] / AW[]
-setup stones as concatenated two-character coordinates (cleanup-training positions start
-from a filled board), and ``first`` is ``"W"`` when White plays the first move.  Moves
-alternate colour from there, so no per-move colour has to be stored.
+``extra`` is sparse and holds only what few games need, as ``[ab, aw, first]``: ``ab`` and
+``aw`` are the AB[] / AW[] setup stones as concatenated two-character coordinates (cleanup
+-training positions start from a filled board), and ``first`` is ``"W"`` when White plays
+the first move, ``""`` otherwise.  Moves alternate colour from there, so no per-move colour
+has to be stored.  Three arrays rather than an object, and ``games`` written last, keep any
+``}}`` out of the file: a doubled brace reads as a template delimiter to a script scanner,
+and a page of this size should look like text, not markup.
 
 games_analysis.json layout::
 
@@ -95,50 +99,69 @@ HASH_RE = re.compile(r"gameHash=([0-9A-Fa-f]+)")
 GTYPE_RE = re.compile(r"gtype=([A-Za-z0-9_]+)")
 VISITS_RE = re.compile(r"v=(\d+)")
 
-# 86 characters that need no escaping in JSON, cannot close a script tag, and carry no
-# underscore, so a packed move string can never look like an injection placeholder.
-# One per board point, plus one for a pass: enough for any board up to 9x9.
-MOVE_ALPHABET = ("0123456789"
-                 "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
-                 "abcdefghijklmnopqrstuvwxyz"
-                 "!#()*+,-.:;=?^~|/&'`")
+# The "alnum1" move encoding.
+#
+# Every emitted character is a letter or a digit.  Nothing else: no punctuation at all,
+# so a run of packed moves can never spell a comment opener, a template delimiter or an
+# HTML entity, whatever the board size.  A page carrying millions of these characters is
+# then plain text as far as any scanner is concerned.
+#
+# A move is first turned into a code -- 0 for a pass, otherwise the point index plus one.
+# Codes below SINGLE_CODES are one character; the rest are the escape character followed
+# by one more.  The escape is the alphanumeric just past the single-character range, so it
+# is never emitted on its own and decoding never has to look ahead.
+MOVE_ALNUM = ("0123456789"
+              "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
+              "abcdefghijklmnopqrstuvwxyz")
+SINGLE_CODES = 61
+ESCAPE_CHAR = MOVE_ALNUM[SINGLE_CODES]
+MAX_CODES = SINGLE_CODES + len(MOVE_ALNUM)
 
 
 def can_pack(board_size):
-    """Whether one alphabet character per board point (plus a pass) is available."""
-    return board_size * board_size + 1 <= len(MOVE_ALPHABET)
+    """Whether the packed encoding covers every point of this board, plus a pass."""
+    return board_size * board_size + 1 <= MAX_CODES
 
 
 def pack_moves(moves, board_size):
-    """Encode a list of two-character SGF coordinates as one character each."""
+    """Encode a list of two-character SGF coordinates into letters and digits."""
     out = []
-    pass_code = board_size * board_size
     for mv in moves:
         if mv == "--":
-            out.append(MOVE_ALPHABET[pass_code])
+            code = 0
         else:
-            col = ord(mv[0]) - 97
-            row = ord(mv[1]) - 97
-            out.append(MOVE_ALPHABET[row * board_size + col])
+            code = (ord(mv[1]) - 97) * board_size + (ord(mv[0]) - 97) + 1
+        if code < SINGLE_CODES:
+            out.append(MOVE_ALNUM[code])
+        else:
+            out.append(ESCAPE_CHAR)
+            out.append(MOVE_ALNUM[code - SINGLE_CODES])
     return "".join(out)
 
 
 def unpack_moves(packed, board_size):
     """Inverse of :func:`pack_moves`."""
     out = []
-    pass_code = board_size * board_size
-    for ch in packed:
-        code = MOVE_ALPHABET.index(ch)
-        if code == pass_code:
+    i = 0
+    while i < len(packed):
+        ch = packed[i]
+        i += 1
+        if ch == ESCAPE_CHAR:
+            code = SINGLE_CODES + MOVE_ALNUM.index(packed[i])
+            i += 1
+        else:
+            code = MOVE_ALNUM.index(ch)
+        if code == 0:
             out.append("--")
         else:
-            out.append(chr(97 + code % board_size) + chr(97 + code // board_size))
+            p = code - 1
+            out.append(chr(97 + p % board_size) + chr(97 + p // board_size))
     return out
 
 
 def split_moves(text, encoding, board_size):
     """Split a stored move string back into a list of two-character coordinates."""
-    if encoding == "packed1":
+    if encoding == "alnum1":
         return unpack_moves(text, board_size)
     return [text[i:i + 2] for i in range(0, len(text), 2)]
 
@@ -377,7 +400,7 @@ def build(run_dir, out_dir, keep_analysis, target_bytes, packed=True, verbose=Tr
         board_size = detect_board_size(files) or DEFAULT_BOARD_SIZE
     if packed and not can_pack(board_size):
         packed = False
-    encoding = "packed1" if packed else "sgf2"
+    encoding = "alnum1" if packed else "sgf2"
 
     nets, net_index = [], {}
     results, result_index = [], {}
@@ -449,17 +472,12 @@ def build(run_dir, out_dir, keep_analysis, target_bytes, packed=True, verbose=Tr
                 game["hash"][:hash_chars],
             ])
 
-            odd = {}
-            if game["ab"]:
-                odd["ab"] = game["ab"]
-            if game["aw"]:
-                odd["aw"] = game["aw"]
-            if game["first"] != "B":
-                odd["first"] = game["first"]
+            first_odd = game["first"] if game["first"] != "B" else ""
+            if first_odd:
                 white_first += 1
-            if odd:
-                extra[str(gi)] = odd
-                if "ab" in odd or "aw" in odd:
+            if game["ab"] or game["aw"] or first_odd:
+                extra[str(gi)] = [game["ab"], game["aw"], first_odd]
+                if game["ab"] or game["aw"]:
                     setup_games += 1
 
             if source == 1:
@@ -502,11 +520,12 @@ def build(run_dir, out_dir, keep_analysis, target_bytes, packed=True, verbose=Tr
         "results": results,
         "hash_chars": hash_chars,
         "move_encoding": encoding,
-        "move_alphabet": MOVE_ALPHABET if packed else None,
+        "move_alphabet": MOVE_ALNUM if packed else None,
+        "move_single_codes": SINGLE_CODES if packed else None,
         "fields": ["src", "black", "white", "komi", "result", "handicap", "gtype",
                    "nmoves", "moves", "hash"],
-        "games": games,
         "extra": extra,
+        "games": games,
     }
 
     os.makedirs(out_dir, exist_ok=True)
@@ -521,9 +540,9 @@ def build(run_dir, out_dir, keep_analysis, target_bytes, packed=True, verbose=Tr
 
     analysis_bytes = 0
     if keep_analysis and analysis_wr:
-        apayload = json.dumps({"schema": 1,
-                               "wr": {str(k): v for k, v in analysis_wr.items()},
-                               "visits": {str(k): v for k, v in analysis_visits.items()}},
+        apayload = json.dumps({"wr": {str(k): v for k, v in analysis_wr.items()},
+                               "visits": {str(k): v for k, v in analysis_visits.items()},
+                               "schema": 1},
                               separators=(",", ":"))
         with open(analysis_path, "w") as fh:
             fh.write(apayload)

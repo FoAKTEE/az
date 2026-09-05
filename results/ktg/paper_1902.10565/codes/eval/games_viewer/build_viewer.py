@@ -44,6 +44,48 @@ PRESETS = {
 }
 
 
+# Sequences a script scanner may read as a comment, a template delimiter or an HTML
+# entity.  The template itself carries a few, in its own source comments and the font
+# URL; the injected data must add none, or a large page starts looking like markup
+# rather than text.
+MARKER_SEQUENCES = ["/*", "*/", "//", "{{", "}}", "${", "{%", "<!", "&#"]
+
+
+def audit(template_path, page_path, out_dir):
+    """Compare marker sequences in the finished page with the template's own."""
+    with open(template_path, encoding="utf-8") as fh:
+        template = fh.read()
+    with open(page_path, encoding="utf-8") as fh:
+        page = fh.read()
+    data = ""
+    for name in ("games.json", "games_analysis.json", "selftest_fixture.json"):
+        path = os.path.join(out_dir, name)
+        if os.path.exists(path):
+            with open(path, encoding="utf-8") as fh:
+                data += fh.read()
+
+    print("")
+    print("marker audit            %-8s %-8s %-8s" % ("data", "template", "page"))
+    failures = []
+    for seq in MARKER_SEQUENCES:
+        d, t, g = data.count(seq), template.count(seq), page.count(seq)
+        flag = ""
+        if d:
+            flag = "  <- injected data must carry none"
+            failures.append("%r appears %d times in the injected data" % (seq, d))
+        elif g > t:
+            flag = "  <- page exceeds the template"
+            failures.append("%r appears %d times in the page but %d in the template"
+                            % (seq, g, t))
+        print("  %-20s %-8d %-8d %-8d%s" % (repr(seq), d, t, g, flag))
+    if failures:
+        for f in failures:
+            print("AUDIT FAILED: " + f)
+        raise SystemExit(1)
+    print("  data clean; the page carries only the template's own source markers")
+    return True
+
+
 def run(cmd):
     print("$ " + " ".join(("'%s'" % c if " " in c else c) for c in cmd))
     proc = subprocess.run(cmd)
@@ -106,7 +148,9 @@ def main(argv=None):
             "--cross-check", str(args.cases), "--quiet-seconds", str(args.quiet_seconds)]
     run(test if args.test else test + ["--fixture-only"])
 
-    size = inject(os.path.join(HERE, "viewer.html"), page, out, cfg["title"])
+    template = os.path.join(HERE, "viewer.html")
+    size = inject(template, page, out, cfg["title"])
+    audit(template, page, out)
     print("")
     print("page                    %s" % page)
     print("page size               %d bytes (%.2f MiB) of the 16 MB limit"

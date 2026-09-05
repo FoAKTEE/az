@@ -228,6 +228,14 @@ def load_bundle(path):
         return json.load(fh)
 
 
+def extra_of(extra, gi):
+    """The sparse [ab, aw, first] entry for one game, as a dict with defaults."""
+    row = extra.get(str(gi))
+    if not row:
+        return {"ab": "", "aw": "", "first": "B"}
+    return {"ab": row[0], "aw": row[1], "first": row[2] or "B"}
+
+
 def moves_of(bundle, row):
     """The stored moves as two-character SGF coordinates ("--" for a pass)."""
     return EX.split_moves(row[8], bundle.get("move_encoding", "sgf2"),
@@ -241,7 +249,7 @@ def points_of(bundle, row):
 
 def serialise(bundle, gi, row):
     """Rebuild the SGF move sequence of one record."""
-    ex = (bundle.get("extra") or {}).get(str(gi), {})
+    ex = extra_of(bundle.get("extra") or {}, gi)
     colour = ex.get("first", "B")
     out = []
     for mv in moves_of(bundle, row):
@@ -338,7 +346,7 @@ def test_replay_all(bundle):
     total_caps = 0
     capture_games = 0
     for gi, row in enumerate(rows):
-        ex = extra.get(str(gi), {})
+        ex = extra_of(extra, gi)
         st = replay(points_of(bundle, row), ex.get("ab", ""), ex.get("aw", ""),
                     ex.get("first", "B"))
         if st["problems"]:
@@ -385,6 +393,28 @@ def test_replay_all(bundle):
 
 # --------------------------------------------------------------------------- test C
 
+# Sequences a script scanner may read as a comment, a template delimiter or an HTML
+# entity. None of them may come out of the move data, whatever the board size.
+MARKER_SEQUENCES = ["/*", "*/", "//", "{{", "}}", "${", "{%", "<!", "&#"]
+ALNUM_RE = re.compile(r"^[0-9A-Za-z]*$")
+
+
+def check_payload(bundle):
+    """Confirm every packed move string is alphanumeric and carries no marker sequence."""
+    if bundle.get("move_encoding") != "alnum1":
+        return None
+    joined = []
+    for row in bundle["games"]:
+        if not ALNUM_RE.match(row[8]):
+            offending = sorted(set(c for c in row[8] if not c.isalnum()))
+            return "non-alphanumeric characters in the move data: %r" % offending
+        joined.append(row[8])
+    blob = "".join(joined)
+    for seq in MARKER_SEQUENCES:
+        if seq in blob:
+            return "move data contains %r" % seq
+    return None
+
 CORE_BEGIN = "/* --- go-core:begin ---"
 CORE_END = "/* --- go-core:end --- */"
 
@@ -412,7 +442,7 @@ def build_fixture(bundle, sample_n, rng):
     cases = []
     for gi in picks:
         row = rows[gi]
-        ex = extra.get(str(gi), {})
+        ex = extra_of(extra, gi)
         st = replay(points_of(bundle, row), ex.get("ab", ""), ex.get("aw", ""),
                     ex.get("first", "B"))
         cases.append({
@@ -441,10 +471,19 @@ GO.init(fixture.board_size || 7);
 var pass = 0, fail = 0, first = [];
 for (var i = 0; i < fixture.cases.length; i++) {
   var c = fixture.cases[i];
-  var states = GO.replay(GO.decodeMoves(c.moves, c.enc),
-                         { ab: c.ab, aw: c.aw, first: c.first });
+  var points = GO.decodeMoves(c.moves, c.enc);
+  var states = GO.replay(points, { ab: c.ab, aw: c.aw, first: c.first });
   var fin = states[states.length - 1];
   var got = GO.boardString(fin);
+  var reEncoded = GO.encodeMoves(points, c.enc);
+  if (reEncoded !== c.moves) {
+    fail++;
+    if (first.length < 3) {
+      first.push("  case " + i + " game " + c.gi + ": re-encoding the decoded moves does " +
+                 "not reproduce the stored string");
+    }
+    continue;
+  }
   if (got === c.final && fin.capB === c.capB && fin.capW === c.capW) pass++;
   else {
     fail++;
@@ -456,7 +495,8 @@ for (var i = 0; i < fixture.cases.length; i++) {
   }
 }
 console.log("   board               " + GO.N + "x" + GO.N);
-console.log("   cases               " + fixture.cases.length);
+console.log("   cases               " + fixture.cases.length + " (board and captures "
+            + "compared, and every move string re-encoded)");
 console.log("   agree               " + pass);
 console.log("   disagree            " + fail);
 if (first.length) console.log(first.join("\\n"));
@@ -477,11 +517,21 @@ def test_cross_check(bundle, viewer_path, fixture_path, sample_n, rng, node_path
     print("   viewer ?selftest    paste this file in place of the __SELFTEST__ placeholder")
 
     core = extract_core(viewer_path)
-    m = re.search(r'var ALPHABET = "([^"]*)";', core)
-    same = bool(m) and m.group(1) == EX.MOVE_ALPHABET
-    print("   packing alphabet    %d chars, page and extractor %s"
-          % (len(m.group(1)) if m else 0, "agree" if same else "DIFFER"))
+    m = re.search(r'var ALNUM = "([^"]*)";', core)
+    ms = re.search(r"var SINGLE = (\d+);", core)
+    same = (bool(m) and bool(ms) and m.group(1) == EX.MOVE_ALNUM
+            and int(ms.group(1)) == EX.SINGLE_CODES)
+    print("   move alphabet       %d chars, %s single-character codes; page and "
+          "extractor %s" % (len(m.group(1)) if m else 0,
+                            ms.group(1) if ms else "?", "agree" if same else "DIFFER"))
     if not same:
+        print("   RESULT              FAIL")
+        print("")
+        return False
+
+    bad = check_payload(bundle)
+    print("   move payload        %s" % ("letters and digits only" if not bad else bad))
+    if bad:
         print("   RESULT              FAIL")
         print("")
         return False
@@ -704,7 +754,7 @@ def opening_expectations(bundle):
     if gi < 0:
         gi = len(rows) - 1
     row = rows[gi]
-    ex = (bundle.get("extra") or {}).get(str(gi), {})
+    ex = extra_of(bundle.get("extra") or {}, gi)
     moves = points_of(bundle, row)
     stones = [0] * NP
     num = [0] * NP

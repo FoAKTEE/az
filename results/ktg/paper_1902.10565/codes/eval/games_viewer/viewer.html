@@ -718,10 +718,10 @@ select { font-family: var(--mono); font-size: 12px; }
       <div class="controls">
         <div class="ctl-row">
           <div class="nav">
-            <button type="button" id="first" title="First position (Home)" aria-label="First position">&#9198;</button>
-            <button type="button" id="prev" title="Previous move (left arrow)" aria-label="Previous move">&#9664;</button>
-            <button type="button" id="next" title="Next move (right arrow)" aria-label="Next move">&#9654;</button>
-            <button type="button" id="last" title="Last position (End)" aria-label="Last position">&#9197;</button>
+            <button type="button" id="first" title="First position (Home)" aria-label="First position">⏮</button>
+            <button type="button" id="prev" title="Previous move (left arrow)" aria-label="Previous move">◀</button>
+            <button type="button" id="next" title="Next move (right arrow)" aria-label="Next move">▶</button>
+            <button type="button" id="last" title="Last position (End)" aria-label="Last position">⏭</button>
           </div>
           <input type="range" id="slider" min="0" max="0" value="0" aria-label="Move">
           <span class="movecount"><span id="curmove">0</span><span class="of"> / <span id="nmoves">0</span></span></span>
@@ -782,8 +782,13 @@ const GAMES = __GAMES__;
 var GO = (function () {
   var N = 0, NP = 0, NEIGH = [];
   var PASS = -1;
-  /* the same 86 characters the extractor packs moves with */
-  var ALPHABET = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz!#()*+,-.:;=?^~|/&'`";
+  /* The "alnum1" move encoding, matching extract_games.py exactly: letters and digits
+     only, so bulk move data can never spell a comment opener, a template delimiter or an
+     HTML entity. A move is a code -- 0 for a pass, else the point index plus one. Codes
+     below SINGLE are one character; the rest are ESCAPE plus one more. */
+  var ALNUM = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz";
+  var SINGLE = 61;
+  var ESCAPE = ALNUM.charAt(SINGLE);
   /* column letters, I skipped, the way players name points */
   var COLS = "ABCDEFGHJKLMNOPQRSTUVWXYZ";
 
@@ -823,15 +828,39 @@ var GO = (function () {
   function decodeMoves(text, encoding) {
     var out = [], i;
     if (!text) return out;
-    if (encoding === "packed1") {
-      for (i = 0; i < text.length; i++) {
-        var c = ALPHABET.indexOf(text.charAt(i));
-        out.push(c === NP ? PASS : c);
+    if (encoding === "alnum1") {
+      i = 0;
+      while (i < text.length) {
+        var ch = text.charAt(i);
+        i += 1;
+        var code;
+        if (ch === ESCAPE) {
+          code = SINGLE + ALNUM.indexOf(text.charAt(i));
+          i += 1;
+        } else {
+          code = ALNUM.indexOf(ch);
+        }
+        out.push(code === 0 ? PASS : code - 1);
       }
     } else {
       for (i = 0; i + 1 < text.length; i += 2) out.push(sgfToPoint(text.substr(i, 2)));
     }
     return out;
+  }
+
+  /* Encode point indices back, so the page can check its own decoder. */
+  function encodeMoves(points, encoding) {
+    var out = [], i;
+    for (i = 0; i < points.length; i++) {
+      if (encoding !== "alnum1") {
+        out.push(pointToSgf(points[i]));
+        continue;
+      }
+      var code = points[i] === PASS ? 0 : points[i] + 1;
+      if (code < SINGLE) out.push(ALNUM.charAt(code));
+      else out.push(ESCAPE + ALNUM.charAt(code - SINGLE));
+    }
+    return out.join("");
   }
 
   /* Board coordinate as a player would say it: column letter (I skipped), row from the bottom. */
@@ -954,7 +983,9 @@ var GO = (function () {
     get N() { return N; },
     get NP() { return NP; },
     PASS: PASS,
-    ALPHABET: ALPHABET,
+    ALNUM: ALNUM,
+    SINGLE: SINGLE,
+    encodeMoves: encodeMoves,
     sgfToPoint: sgfToPoint, pointToSgf: pointToSgf, decodeMoves: decodeMoves,
     pointName: pointName, starPoints: starPoints,
     groupLiberties: groupLiberties, playStone: playStone,
@@ -1342,9 +1373,9 @@ if (typeof module !== "undefined" && module.exports) module.exports = GO;
     if (gi === undefined || gi < 0 || gi >= ROWS.length) return;
     current = gi;
     G = ROWS[gi];
-    var ex = EXTRA[String(gi)] || {};
+    var ex = EXTRA[String(gi)] || ["", "", ""];
     moves = GO.decodeMoves(G[F.MOVES], ENC);
-    states = GO.replay(moves, { ab: ex.ab || "", aw: ex.aw || "", first: ex.first || "B" });
+    states = GO.replay(moves, { ab: ex[0] || "", aw: ex[1] || "", first: ex[2] || "B" });
     wr = analysisFor(gi);
     visits = visitsFor(gi);
     at = moves.length;
@@ -1427,7 +1458,7 @@ if (typeof module !== "undefined" && module.exports) module.exports = GO;
   function renderMoveList() {
     var list = $("movelist");
     if (!moves.length) { list.innerHTML = '<div class="empty">This record holds no moves.</div>'; return; }
-    var firstW = (EXTRA[String(current)] || {}).first === "W";
+    var firstW = (EXTRA[String(current)] || [])[2] === "W";
     var html = [];
     for (var i = 0; i < moves.length; i++) {
       var black = (i % 2 === 0) !== firstW;
