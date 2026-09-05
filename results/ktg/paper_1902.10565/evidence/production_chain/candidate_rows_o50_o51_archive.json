@@ -1,0 +1,231 @@
+{
+ "_README": "CANDIDATE rows for the VALIDATOR, produced by the worker for the o50 / o51 / SGF-archive packet. The error rows below were APPENDED by the worker (CHANDRA_ROLE=worker) and their row_hashes are recorded; note that error_database.append_row does NOT execute verification.command (only the result and claim ledgers do), so the worker executed each one by hand immediately before appending and every one exited 0 -- the transcript is in the harness/verifier outputs beside this file. The result and claim rows below were NOT appended: they are proposals, and their verification commands are the executable ones the admission gate will run.",
+ "worker_context": {
+  "role": "worker",
+  "date": "2026-09-05",
+  "az_HEAD_at_append": "cc06834",
+  "compute": "login node, CPU only. NO Slurm job submitted, none signalled, no allocation requested, so mission.json compute.policyCheck was not invoked. Jobs 305318 (RUNNING) and 314831 (PENDING) were neither read nor touched; /scratch/.../runs/p1 was READ ONLY (selfplay/, models/, monitor/) and never written. All harness work is under /scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/work/o50_o51.",
+  "shas": {
+   "codes/loop/loop.sbatch": "2cce49a9d0732f8a883337e0c754dc87fe6c4ed133d4112336fde55d1e636f3d",
+   "codes/loop/synchronous_loop_9x9.sh": "57306e0d27802033b9c28de222afe00aadadfd9a485e03b2ad463b4382ea161b",
+   "codes/loop/knobs_9x9.env": "78121713b305630980fca3b1476098540f7eda8ed5f722083e5b93d5545a5dc0",
+   "codes/data_budget/archive_sgf.sh": "1eb9c3749b7ab1262e97a6843c673864d695574c6e8bb2e1742383194c615dfb",
+   "codes/eval/rows_history.py": "e31a37d674ece29e7bc1c3db84957e6fa2549d7bc3f28c9615dd13d0039367cc",
+   "evidence/production_chain/rows_per_game_history.jsonl": "b48478da46023428f6db81ace7da821053d10b778ea60fadcd3443664eda607d"
+  },
+  "knobs_sha_change": {
+   "before": "ba7f1bf7e1bc166d1e86a32ba3ffa70b838d72aa291f4cdba55fb43d63ea36e8",
+   "after": "78121713b305630980fca3b1476098540f7eda8ed5f722083e5b93d5545a5dc0",
+   "note": "link 2 (305318) logged the BEFORE sha and cannot adopt the new file; link 3 (314831) sources knobs_9x9.env and synchronous_loop_9x9.sh at start and will log the AFTER sha. loop.sbatch is stored by Slurm at submission, so the o50 wrapper change is carried by link 4 at the earliest."
+  }
+ },
+ "appended_error_rows": [
+  {
+   "row_hash": "c320f6b31ab1fa99",
+   "node_seq": 3,
+   "node": "arxiv-1902.10565::verify_preemption_resume",
+   "pass_fail": "fail",
+   "gist": "the first o50 attempt: the group SIGTERM killed the stage `tee`, so the engine died of SIGPIPE without 'Exited cleanly after signal' and 53 of 104 bytes of stage stdout were lost"
+  },
+  {
+   "row_hash": "f6baa7bdf414d82e",
+   "node_seq": 4,
+   "node": "arxiv-1902.10565::verify_preemption_resume",
+   "pass_fail": "pass",
+   "gist": "o50 fixed and proven on the harness: 47/47"
+  },
+  {
+   "row_hash": "34e8939632bd305a",
+   "node_seq": 8,
+   "node": "arxiv-1902.10565::derive_cycle_knobs_9x9",
+   "pass_fail": "fail",
+   "gist": "o51 'before': the documented closing check evaluates ZERO tolerances at HEAD, two independent aborts"
+  },
+  {
+   "row_hash": "55076827daa21a5e",
+   "node_seq": 9,
+   "node": "arxiv-1902.10565::derive_cycle_knobs_9x9",
+   "pass_fail": "pass",
+   "gist": "o51 delivered: 46 complete records against the tree's 8, one named gap, check_knobs PASSes"
+  },
+  {
+   "row_hash": "f0380802f87a2f68",
+   "node_seq": 10,
+   "node": "arxiv-1902.10565::data_budget",
+   "pass_fail": "pass",
+   "gist": "SGF archive step, off by default, byte-neutral at 0 (13 staged files identical to HEAD's)"
+  },
+  {
+   "row_hash": "ac37f185636422d4",
+   "node_seq": 10,
+   "node": "arxiv-1902.10565::derive_cycle_knobs_9x9",
+   "pass_fail": "amended",
+   "gist": "o51 refinement: the accepted-net index from models/ turns the gap into '13 accepted nets in between have no complete record'"
+  },
+  {
+   "row_hash": "c3b379dcf9cd6ed9",
+   "node": "arxiv-1902.10565::verify_preemption_resume",
+   "pass_fail": "amended",
+   "gist": "o50 hardening: never signal a pid or pgid the wrapper no longer owns; harness re-run 47/47 against the new loop.sbatch",
+   "node_seq": 5
+  }
+ ],
+ "candidate_result_rows": [
+  {
+   "paper": "arxiv-1902.10565",
+   "result_id": "r_wrapper_term_forwarding",
+   "name": "The chain wrapper's SIGTERM path is reachable while a cycle is running: the loop runs in the background in its own process group, the trap forwards the signal to that group, and finalize writes the walltime classification inside KillWait",
+   "working_context": {
+    "regime": "codes/loop/loop.sbatch + codes/loop/synchronous_loop_9x9.sh, exercised offline: login node, CPU only, a stub katago that models cpp/command/selfplay.cpp:26-32,396-397, scheduler shims for sbatch/scancel/squeue/sinfo/scontrol. NO Slurm job.",
+    "site": "skipjack, KillWait = 30 s (scontrol show config)",
+    "grace": "KTG_TERM_GRACE_SECONDS = 15 s, then SIGKILL to the loop's process group",
+    "units": "seconds, exit status"
+   },
+   "claim": "Measured on the harness of evidence/production_chain/o50_term_forwarding/harness.sh, 47 assertions, all met. Scenario B sends SIGTERM to the WRAPPER PID ONLY -- the form Slurm exercises at the time limit and the one the link-1 boundary showed the old wiring could not survive: the trap fires within 1 s of a 2 s budget; the signal is forwarded to the loop's process group (pgid == the loop's pid, given by `set -m` at the launch); the engine sees it and leaves through its own handler, logging 'Exited cleanly after signal' into BOTH the link log and $BASEDIR/selfplay/stdout.txt; the loop's own TERM trap abandons the cut cycle and exits 143; the wrapper reaps 143 across the interrupted wait; finalize stops the sampler, classifies 'scheduler termination at walltime after 5s (SIGTERM to this wrapper)', leaves .failcount at 0, does not bump .cycles_completed and does NOT cancel the queued successor; and NO SIGKILL is needed. Scenario C, an engine that ignores TERM, escalates to SIGKILL after the grace and completes the whole teardown in 7 s of the 30 s KillWait. Scenarios A, D, E, F and G show the unchanged paths -- clean exit, plain failure, the o33(b) late signal, the storage stop, the pre-flight signal -- behave exactly as before. The o50 closure conditions (i) and (ii) are met; (iii), one real boundary logging the two classification lines, is NOT: Slurm stored link 3's script before this commit, so the earliest link that can carry it is link 4.",
+   "evidence_type": "numerical_simulation",
+   "evidence": "results/ktg/paper_1902.10565/evidence/production_chain/o50_term_forwarding/harness_output.txt",
+   "verification": {
+    "command": "cd /home/schmidt/ssci-haiyangw/az && bash results/ktg/paper_1902.10565/evidence/production_chain/o50_term_forwarding/verify_o50.sh"
+   },
+   "verifier_result": {
+    "verdict": "pass"
+   },
+   "dependencies": [
+    "arxiv-1902.10565::loop_resume_under_walltime",
+    "arxiv-1902.10565::verify_preemption_resume"
+   ],
+   "assumptions": [
+    "the harness's stub engine models katago's signal handling (a flag polled between games, then 'Exited cleanly after signal' and status 0); the real engine additionally tears down a CUDA context, which is why the grace is 15 s and not 2",
+    "slurmstepd sends SIGTERM to at least the batch script's own process; the fix does not depend on which other processes it also reaches"
+   ],
+   "status": "empirical",
+   "provenance": "worker, packet o50/o51/archive, 2026-09-05; harness under /scratch/.../work/o50_o51, evidence copied into the repo",
+   "open_obligations": [
+    "o50 conjunct (iii): one real walltime boundary of a link that stores this loop.sbatch (link 4 at the earliest) must log 'SIGTERM received' and 'scheduler termination at walltime'"
+   ]
+  },
+  {
+   "paper": "arxiv-1902.10565",
+   "result_id": "r_rows_per_game_history",
+   "name": "The per-net rows/game record survives retention: 46 complete accepted nets against the 8 the live tree can show, one gap of 13 accepted nets, and no trend is ever fitted across it",
+   "working_context": {
+    "regime": "9x9 production chain BASEDIR runs/p1, read-only; retention KTG_KEEP_SELFPLAY_GENERATIONS=3",
+    "record": "evidence/production_chain/rows_per_game_history.jsonl, append-only JSON lines",
+    "record_sha256": "b48478da46023428f6db81ace7da821053d10b778ea60fadcd3443664eda607d",
+    "units": "rows/game, accepted nets"
+   },
+   "claim": "The record holds 46 COMPLETE real-net selfplay directories -- 44 recovered from the seven committed versions of rows_per_game.txt plus the two the live tree has since completed -- where the tree itself can only show 8, and where the closing knob check at HEAD could evaluate ZERO tolerances (--trend-nets 9 exceeds the 8 complete directories; and at --trend-nets 3 it aborted on a rows_per_game_random line the pruned table no longer carries). Contiguity is recorded, not guessed: every record carries the predecessor its own observation proves and the accepted-net index from models/, which the pruner never touches. The run's single gap is therefore reported exactly -- t9-s11352064-d2008893 (accepted net 37) -> t9-s15847040-d2653436 (accepted net 51): 13 accepted nets in between have no complete record -- and a window that would span it is REFUSED and narrowed to the contiguous run, loudly, instead of being fitted through. At --marginal-nets 3 --trend-nets 9 --horizon-nets 10 the check now runs end to end and PASSES: marginal r = 16.0361 over 189916 rows / 11843 games, slope -0.0871 rows/game per accepted net over the 8 contiguous records, r_lo = 15.1655, T1 rows_per_cycle 33286.4 (lower90 25843.3) >= 1.2*E = 19200. The record reproduces the validator's boundary numbers on the frozen fixture: 16.9087 = 118361 / 7000.",
+   "evidence_type": "empirical_measurement",
+   "evidence": "results/ktg/paper_1902.10565/evidence/production_chain/o50_term_forwarding/check_knobs_acceptance.txt",
+   "verification": {
+    "command": "cd /home/schmidt/ssci-haiyangw/az && bash results/ktg/paper_1902.10565/evidence/production_chain/o50_term_forwarding/verify_o51.sh"
+   },
+   "verifier_result": {
+    "verdict": "pass"
+   },
+   "dependencies": [
+    "arxiv-1902.10565::measure_stage_throughput",
+    "arxiv-1902.10565::derive_cycle_knobs_9x9"
+   ],
+   "assumptions": [
+    "prune_retention.py deletes selfplay generations oldest-first, so what survives in the tree is always a contiguous SUFFIX of the true sequence and the directories listed in ONE observation are consecutive (its candidate list is sp_gens[:len-keep], ordered by mtime, and the shuffle-window `continue` can only skip a suffix of that list)",
+    "models/ is never pruned, so its ordering is the accepted-net index"
+   ],
+   "status": "empirical",
+   "provenance": "worker, packet o50/o51/archive, 2026-09-05",
+   "open_obligations": [
+    "the trend window is 8 of the 9 o48 asks for, because the 13-net gap predates the record and is permanent; it becomes exactly 9 contiguous at the next accepted net (t9-s18522368-d443329 completes when the next net is accepted). Until then every read must report the narrowing, which the check does.",
+    "o51 conjunct (iv), one monitoring read demonstrating the slope and r_lo from the record with the live tree holding fewer than 9 complete directories, is met by this acceptance run but is owed again by the launcher at the next scheduled read"
+   ]
+  },
+  {
+   "paper": "arxiv-1902.10565",
+   "result_id": "r_sgf_archive_available_off",
+   "name": "The self-play SGF archive is implemented and DISABLED: at KTG_ARCHIVE_SGF=0 the loop's staged tree is byte-identical to HEAD's, and at 1 the archive costs no blocks until retention would have deleted the games",
+   "working_context": {
+    "regime": "codes/data_budget/archive_sgf.sh, wired into loop.sbatch (once per link, immediately before prune_retention.py --apply) and synchronous_loop_9x9.sh (once per cycle, after selfplay); both call sites guarded by KTG_ARCHIVE_SGF",
+    "knobs_file_sha256": "78121713b305630980fca3b1476098540f7eda8ed5f722083e5b93d5545a5dc0",
+    "measured_cost": "3.42 kB per selfplay game on disk (77386206 B / 22648 games) -> 0.68 GB per 1800-game link, ~5.5 GB over a nine-link chain = 1.1 % of the 500 GiB KTG_SCRATCH_HARD_BYTES",
+    "units": "bytes, files"
+   },
+   "claim": "The switch ships at 0 and the human has not decided. At 0: no process is spawned, no directory is created, and a KTG_STAGE_ONLY=1 dry run of the committed loop script stages the same 13 files with the same sha256 as the same dry run of the script at HEAD (the dated directory name normalised away) -- an empty manifest diff. At 1: the archiver hard-links every selfplay/<net>/sgfs/*.sgfs into $BASEDIR/archive/sgf/<net>/, the archived entry is the SAME inode (du -sb delta 0 B over the pass, because du counts an inode once per traversal), a second pass links nothing (linked=0 copied=0 already-linked=2), and the archive still holds the games after its generation is deleted. prune_retention.py protects <basedir>/archive explicitly, and extract_games.snapshot_files reads archive/sgf alongside the live directories and de-duplicates the hard-linked copy (2 files, 1 from the archive, 0 double-counted). codes/data_budget/tests/run_guard_tests.sh still passes 25/25 and check_knobs_9x9 still PASSES with the new knob file.",
+   "evidence_type": "empirical_measurement",
+   "evidence": "results/ktg/paper_1902.10565/evidence/production_chain/o50_term_forwarding/archive_output.txt",
+   "verification": {
+    "command": "cd /home/schmidt/ssci-haiyangw/az && bash results/ktg/paper_1902.10565/evidence/production_chain/o50_term_forwarding/verify_archive.sh"
+   },
+   "verifier_result": {
+    "verdict": "pass"
+   },
+   "dependencies": [
+    "arxiv-1902.10565::data_budget"
+   ],
+   "assumptions": [
+    "hard links are possible inside one BASEDIR (same filesystem); the archiver falls back to cp -p and says so if not"
+   ],
+   "status": "empirical",
+   "provenance": "worker, packet o50/o51/archive, 2026-09-05",
+   "open_obligations": [
+    "the human decision on KTG_ARCHIVE_SGF; the flag stays 0 until then"
+   ]
+  }
+ ],
+ "candidate_claim_rows": [
+  {
+   "paper": "arxiv-1902.10565",
+   "entry_id": "o50_wrapper_term_not_forwarded_to_loop",
+   "kind": "obligation",
+   "status": "conditional",
+   "blocking": true,
+   "node_ids": [
+    "arxiv-1902.10565::loop_resume_under_walltime",
+    "arxiv-1902.10565::verify_preemption_resume"
+   ],
+   "owner": "worker loop_resume_under_walltime; the remaining conjunct is measured by the production_chain_9x9 boundary reads",
+   "statement": "PROPOSED CONDITIONAL DISCHARGE. Conjuncts (i) and (ii) are met and executed: (i) loop.sbatch launches the loop in the background in its own process group (`set -m`, pgid == pid), on_term forwards SIGTERM to that group and escalates to SIGKILL after KTG_TERM_GRACE_SECONDS = 15 s, and the status is reaped in a loop that re-waits across the interrupted wait; synchronous_loop_9x9.sh gained its own TERM trap (abandon the cycle, exit 143) and a `tee` that survives the signal so the engine's shutdown lines are not lost; (ii) the harness was re-run in the form Slurm exercises -- SIGTERM to the WRAPPER ONLY -- and finalize writes the classification 1 s after the signal, inside the 30 s KillWait, with the successor kept and .failcount untouched (evidence/production_chain/o50_term_forwarding/, 47/47). Conjunct (iii) is NOT met and is the condition: one real boundary must log 'SIGTERM received' and 'scheduler termination at walltime'. Slurm snapshots the script at submission and 314831 (link 3) was queued before this commit, so the earliest link that carries this loop.sbatch is LINK 4, submitted by link 3 at its start (~2026-09-06 18:00), and the earliest boundary that can discharge this is the link-4 -> link-5 one.",
+   "notes": "loop.sbatch sha256 2cce49a9d0732f8a883337e0c754dc87fe6c4ed133d4112336fde55d1e636f3d; the harness is re-runnable from evidence/production_chain/o50_term_forwarding/harness.sh."
+  },
+  {
+   "paper": "arxiv-1902.10565",
+   "entry_id": "o51_persist_per_net_rows_record",
+   "kind": "obligation",
+   "status": "discharged",
+   "blocking": false,
+   "node_ids": [
+    "arxiv-1902.10565::measure_stage_throughput",
+    "arxiv-1902.10565::derive_cycle_knobs_9x9"
+   ],
+   "owner": "worker derive_cycle_knobs_9x9",
+   "statement": "PROPOSED DISCHARGE, all four conjuncts. (i) codes/eval/rows_history.py + throughput_report.py --history-out append one line per COMPLETE real-net directory -- net, accepted-net index from models/, predecessor, games (sgfs lines), rows (sum of npz binaryInputNCHWPacked.shape[0]), tdata bytes, first and last mtime, link job, recorded_at, source -- to the append-only evidence/production_chain/rows_per_game_history.jsonl, never rewriting a line (idempotent on (net, games, rows)), and a directory becomes a record only when it is no longer the newest. It is written on the read path, before any prune can reach the directory. (ii) codes/eval/seed_rows_history.py seeded it from the seven committed versions of rows_per_game.txt and from the live tree: 46 complete records, and the gap is listed as 't9-s11352064-d2008893 (accepted net 37) -> t9-s15847040-d2653436 (accepted net 51): 13 accepted net(s) in between have no complete record'. NOTE the 13 vs the validator's 12: indices 39..50 are the twelve with no record at all, and index 38, t9-s11651712-d2059673, has one INCOMPLETE observation (908 games, 13.34 rows/game) which is correctly not a complete record. (iii) check_knobs_9x9.py --rows-file accepts the record, and fit_window never fits across a gap: it narrows to the contiguous run ending at the newest record and names the gap that stopped it; with fewer than two contiguous records it refuses outright and substitutes nothing (o41). (iv) demonstrated on a read with the live tree holding 8 complete directories against the 9 asked for: the check runs end to end and PASSES, marginal 16.0361, slope -0.0871 over the 8, r_lo 15.1655. RESIDUAL, carried to the successor obligation: the window is 8 of 9 until the next accepted net.",
+   "notes": "record sha256 b48478da46023428f6db81ace7da821053d10b778ea60fadcd3443664eda607d. A second, independent defect was fixed on the way: check_knobs_9x9.py handed the whole rows blob to derive_knobs as --rows-per-game-random even when the source carries no such line, which aborted the documented production command before a single tolerance -- reproduced at HEAD in evidence/production_chain/o50_term_forwarding/pre_o51_tree_fit_refusal.txt section (b)."
+  },
+  {
+   "paper": "arxiv-1902.10565",
+   "entry_id": "o52_sgf_archive_human_decision",
+   "kind": "obligation",
+   "status": "open",
+   "blocking": false,
+   "node_ids": [
+    "arxiv-1902.10565::data_budget"
+   ],
+   "owner": "human",
+   "statement": "The self-play SGF archive is BUILT AND DISABLED and the human has not decided. codes/data_budget/archive_sgf.sh hard-links selfplay/<net>/sgfs/*.sgfs into $BASEDIR/archive/sgf/<net>/; codes/loop/loop.sbatch calls it immediately before prune_retention.py --apply (the only place a generation is deleted) and synchronous_loop_9x9.sh once per cycle after selfplay; prune_retention.py protects the tree; extract_games.py reads it and de-duplicates. Both call sites are guarded by KTG_ARCHIVE_SGF, which is 0 in the committed knob file, and at 0 the loop's staged tree is byte-identical to the one the script at HEAD stages. COST if switched to 1: 3.42 kB per selfplay game measured on disk -> 0.68 GB per 1800-game link, about 5.5 GB over a nine-link chain, 1.1 % of the 500 GiB cap; hard links mean scratch_guard measures no growth until retention would have deleted the originals. WHAT IS LOST at 0: the game records of every pruned generation -- 52 generations, 1393149275 B, went at the link-1 -> link-2 boundary alone, and the viewer snapshots hold a parsed games.json rather than the SGFs. Closes when the human sets the flag (a one-line edit to knobs_9x9.env, sourced by the next link at its start) or declines it on the record.",
+   "notes": "knobs_9x9.env sha256 78121713b305630980fca3b1476098540f7eda8ed5f722083e5b93d5545a5dc0 (was ba7f1bf7e1bc166d1e86a32ba3ffa70b838d72aa291f4cdba55fb43d63ea36e8); link 3 (314831) will log the new one."
+  },
+  {
+   "paper": "arxiv-1902.10565",
+   "entry_id": "o53_trend_window_narrowed_by_the_pre_o51_gap",
+   "kind": "obligation",
+   "status": "open",
+   "blocking": false,
+   "node_ids": [
+    "arxiv-1902.10565::derive_cycle_knobs_9x9",
+    "arxiv-1902.10565::measure_stage_throughput"
+   ],
+   "owner": "worker derive_cycle_knobs_9x9; observed by the production_chain_9x9 monitoring reads",
+   "statement": "Successor to o51's residual and a rider on o48's slope leg. The 13 accepted nets between accepted-net index 37 (t9-s11352064-d2008893) and 51 (t9-s15847040-d2653436) have no complete record and never will: their selfplay directories were deleted by retention passes that ran before any record existed. So o48's nine-net trend window is today NARROWED to the 8 contiguous records ending at t9-s18225024-d381697, and check_knobs_9x9.py says so on every read rather than fitting through the gap. Closes when the contiguous run ending at the newest complete record reaches 9 -- one more accepted net, i.e. as soon as t9-s18522368-d443329 stops being the newest -- and a monitoring read records a nine-record fit with no narrowing note. Until then every read must report both the slope over the narrowed window AND the narrowing itself; a read that reports a nine-net slope without the note is wrong.",
+   "notes": "the narrowing note is emitted by rows_history.fit_window and printed by check_knobs_9x9.py as '** TREND FIT: REFUSED to fit across a gap: ...'."
+  }
+ ],
+ "not_appended_because": "result and claim rows are the validator's to append (kernel section 0, spec 2-work). The verification commands above are executable and were each run by the worker with exit 0; their stdout is in evidence/production_chain/o50_term_forwarding/verify_{o50,o51,archive}.txt."
+}

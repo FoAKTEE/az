@@ -307,12 +307,32 @@ def snapshot_files(run_dir, quiet_seconds=0):
 
     A file written within the last ``quiet_seconds`` is left out entirely, so the
     snapshot only contains files the run has finished with.
+
+    Three roots, in this order:
+
+      selfplay/<net>/sgfs      the live self-play games
+      gatekeepersgf/<net>      the gate games (never a retention target)
+      archive/sgf/<net>        the SGF archive, when it exists
+
+    The archive is written by codes/data_budget/archive_sgf.sh, which is off by
+    default (KTG_ARCHIVE_SGF=0 in codes/loop/knobs_9x9.env); when it is on it
+    holds the game records of selfplay generations that node data_budget's
+    retention pass has since deleted -- 52 generations went at the link-1 ->
+    link-2 boundary alone -- so reading it is the difference between a viewer that
+    covers the whole run and one that covers the last three generations.
+
+    It is read LAST and de-duplicated by (net, file name): while a generation is
+    still live the archived entry is a HARD LINK to the same inode, so counting it
+    again would double every game of that net.  With the archive absent this
+    function returns exactly what it returned before.
     """
     files = []
     cutoff = time.time() - quiet_seconds
     skipped_hot = []
+    seen = set()
     for source, root in ((0, os.path.join(run_dir, "selfplay")),
-                         (1, os.path.join(run_dir, "gatekeepersgf"))):
+                         (1, os.path.join(run_dir, "gatekeepersgf")),
+                         (0, os.path.join(run_dir, "archive", "sgf"))):
         if not os.path.isdir(root):
             continue
         for net in sorted(os.listdir(root), key=net_sort_key):
@@ -324,6 +344,8 @@ def snapshot_files(run_dir, quiet_seconds=0):
             for fn in sorted(os.listdir(sgf_dir)):
                 if not fn.endswith(".sgfs"):
                     continue
+                if (source, net, fn) in seen:
+                    continue
                 path = os.path.join(sgf_dir, fn)
                 try:
                     st = os.stat(path)
@@ -334,6 +356,7 @@ def snapshot_files(run_dir, quiet_seconds=0):
                 if quiet_seconds and st.st_mtime > cutoff:
                     skipped_hot.append(path)
                     continue
+                seen.add((source, net, fn))
                 files.append((source, net, path, st.st_size, st.st_mtime))
     return files, skipped_hot
 
@@ -657,6 +680,8 @@ def build(run_dir, out_dir, keep_analysis, target_bytes, packed=True, verbose=Tr
         "run": run_info,
         "files_read": len(files),
         "files_skipped_still_hot": len(skipped_hot),
+        "files_from_sgf_archive": sum(1 for f in files
+                                      if (os.sep + "archive" + os.sep) in f[2]),
         "quiet_seconds": quiet_seconds,
         "games_by_cycle": {str(k): v for k, v in sorted(by_cycle.items())},
         "games_by_link": per_link,
@@ -706,8 +731,13 @@ def build(run_dir, out_dir, keep_analysis, target_bytes, packed=True, verbose=Tr
         print("label                   %s" % bundle["label"])
         print("board size              %dx%d" % (board_size, board_size))
         print("snapshot_utc            %s" % snapshot_utc)
+        n_arch = sum(1 for f in files
+                     if (os.sep + "archive" + os.sep) in f[2])
         print("files snapshotted       %d (%.1f MiB on disk); %d skipped as written "
               "within %ds" % (len(files), total_bytes / mb, len(skipped_hot), quiet_seconds))
+        if n_arch:
+            print("                        %d of them from archive/sgf (generations the "
+                  "retention pass has deleted from selfplay/)" % n_arch)
         if run_info.get("job"):
             print("run                     job %s, link %s/%s, cycle %s in progress, "
                   "%s complete"

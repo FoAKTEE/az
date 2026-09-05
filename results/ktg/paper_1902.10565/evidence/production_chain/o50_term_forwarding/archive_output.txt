@@ -1,0 +1,71 @@
+host: login03  date: 2026-09-05T19:53:22-04:00
+    1eb9c3749b7ab1262e97a6843c673864d695574c6e8bb2e1742383194c615dfb  /home/schmidt/ssci-haiyangw/az/results/ktg/paper_1902.10565/codes/data_budget/archive_sgf.sh
+    78121713b305630980fca3b1476098540f7eda8ed5f722083e5b93d5545a5dc0  /home/schmidt/ssci-haiyangw/az/results/ktg/paper_1902.10565/codes/loop/knobs_9x9.env
+    57306e0d27802033b9c28de222afe00aadadfd9a485e03b2ad463b4382ea161b  /home/schmidt/ssci-haiyangw/az/results/ktg/paper_1902.10565/codes/loop/synchronous_loop_9x9.sh
+    2cce49a9d0732f8a883337e0c754dc87fe6c4ed133d4112336fde55d1e636f3d  /home/schmidt/ssci-haiyangw/az/results/ktg/paper_1902.10565/codes/loop/loop.sbatch
+    c07bc668b16ca866ac8316175d1ce66f92921fb7143dd6f414710cf324f44144  /home/schmidt/ssci-haiyangw/az/results/ktg/paper_1902.10565/codes/data_budget/prune_retention.py
+    51216aff48d9f6e54b258f53c0a07a65ceaa98686180f3f3ca098a79825723c1  /home/schmidt/ssci-haiyangw/az/results/ktg/paper_1902.10565/codes/eval/games_viewer/extract_games.py
+  mode bits:
+    755  /home/schmidt/ssci-haiyangw/az/results/ktg/paper_1902.10565/codes/data_budget/archive_sgf.sh
+    755  /home/schmidt/ssci-haiyangw/az/results/ktg/paper_1902.10565/codes/eval/rows_history.py
+    755  /home/schmidt/ssci-haiyangw/az/results/ktg/paper_1902.10565/codes/eval/seed_rows_history.py
+    755  /home/schmidt/ssci-haiyangw/az/results/ktg/paper_1902.10565/codes/eval/test_rows_history.py
+
+########## 1. bash -n over every script of codes/loop and codes/data_budget
+  parsed ok: 20   parse failures: 0
+    ok    1a every shell script parses
+    ok    1b archive_sgf.sh is 0755
+
+########## 2. the committed knob file ships the flag OFF
+  282:KTG_ARCHIVE_SGF=0
+    ok    2a KTG_ARCHIVE_SGF=0 in the committed knob file
+    ok    2b the archiver is a no-op with the flag unset
+
+########## 3. KTG_STAGE_ONLY=1: the staged archive is byte-identical to the version at HEAD
+  HEAD dry run exit 0 ; working-tree dry run exit 0
+  HEAD: -rw-r--r-- 1 ssci-haiyangw users 9786 Sep  5 19:53 /weka/scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/work/o50_o51/stage_head/scripts/dated/20260905-195324/selfplay.cfg
+  HEAD: -rwxr-xr-x 1 ssci-haiyangw users   47 Sep  5 19:53 /weka/scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/work/o50_o51/stage_head/scripts/dated/20260905-195324/train_9x9.sh
+  NEW : -rw-r--r-- 1 ssci-haiyangw users 9786 Sep  5 19:53 /weka/scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/work/o50_o51/stage_new/scripts/dated/20260905-195326/selfplay.cfg
+  NEW : -rwxr-xr-x 1 ssci-haiyangw users   47 Sep  5 19:53 /weka/scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/work/o50_o51/stage_new/scripts/dated/20260905-195326/train_9x9.sh
+  staged files: HEAD 13   working tree 13
+  diff of the two staged manifests: EMPTY
+    ok    3a both dry runs exit 0
+    ok    3b the staged trees are byte-identical
+    ok    3c no archive/ directory was created at 0
+
+########## 4. KTG_ARCHIVE_SGF=1: hard links, idempotence, and what du sees
+  == archive_sgf 2026-09-05T19:53:29-04:00 [test] ==
+  archive_sgf: /scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/work/o50_o51/arch_tree/archive/sgf  linked=2 copied=0 already-linked=0 failed=0 newly-referenced-bytes=10814
+  archive_sgf: hard links add no blocks while the generation lives; scratch_guard.sh measures the mission root, so the archive is inside the 500 GiB cap either way
+  du -sb before 10814  after 10814  delta 0 B (hard links: du counts an inode once)
+    ok    4a the archive tree exists
+    ok    4b the archived file is the SAME inode
+    ok    4c du grew by less than one file
+  == archive_sgf 2026-09-05T19:53:30-04:00 [again] ==
+  archive_sgf: /scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/work/o50_o51/arch_tree/archive/sgf  linked=0 copied=0 already-linked=2 failed=0 newly-referenced-bytes=0
+  archive_sgf: hard links add no blocks while the generation lives; scratch_guard.sh measures the mission root, so the archive is inside the 500 GiB cap either way
+    ok    4d the second pass links nothing
+    ok    4e the archive survives the deleted generation
+
+########## 5. prune_retention.py protects the archive
+     PROTECT  /scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/work/o50_o51/prune_tree/loop/archive    <- SGF archive (codes/data_budget/archive_sgf.sh; it holds exactly what this pruner deletes)
+    ok    5a the archive is in the protected set
+    ok    5b nothing under archive/ is a candidate
+
+########## 6. extract_games.py reads archive/sgf and de-duplicates
+  snapshot_files ->
+    archive/sgf/t9-s100-d1/AAA.sgfs
+    selfplay/t9-s200-d2/sgfs/BBB.sgfs
+  OK: 2 files, 1 from the archive, the hard-linked duplicate de-duplicated
+    ok    6a viewer dedupe + archive read
+
+########## 7. the knob checker still passes with the new knob file
+  knobs_9x9.env sha256 (first 16) = 78121713b3056309   full: 78121713b305630980fca3b1476098540f7eda8ed5f722083e5b93d5545a5dc0
+    ok   EPOCHS_PER_EXPORT            loop default 5 == derived 5
+  
+  CHECK_KNOBS_9X9: PASS
+    ok    7a check_knobs_9x9 exits 0
+    ok    7b check_knobs_9x9 says PASS
+
+########## RESULT
+archive harness: 17 passed, 0 failed

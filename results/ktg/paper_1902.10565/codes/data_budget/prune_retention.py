@@ -68,6 +68,15 @@ Protected set (never a deletion candidate, always printed):
     (python/train.py:573-578 keeps 4 short-term checkpoints itself)
   - anything under a path component named 'evidence'
   - the newest shuffleddata dir and anything younger than the age threshold
+  - <basedir>/archive - the SGF archive, when codes/data_budget/archive_sgf.sh has
+    been switched on (KTG_ARCHIVE_SGF=1 in codes/loop/knobs_9x9.env, committed at
+    0). It exists to hold what THIS pruner would otherwise delete: a selfplay
+    generation is removed whole and `sgfs/*.sgfs` goes with it, so an archive the
+    pruner could reach would be no archive at all. No rule below could reach it in
+    any case -- every rule names shuffleddata/, selfplay/, train/, rejectedmodels/
+    or scripts/dated/ -- and it is listed explicitly so the protection is a
+    statement in the plan rather than an accident of the rule set. With the switch
+    at 0 the directory does not exist and this line prints nothing.
 
 Rolling mode (--target-bytes) relaxes the keep-N floors above, but never below ONE shuffle
 window older than the age threshold and ONE selfplay generation feeding it, and it never
@@ -287,6 +296,10 @@ def main() -> int:
     ev = os.path.join(root, "evidence")
     if os.path.isdir(ev):
         protected.append(("evidence tree", ev))
+    arch = os.path.join(basedir, "archive")
+    if os.path.isdir(arch):
+        protected.append(("SGF archive (codes/data_budget/archive_sgf.sh; it holds "
+                          "exactly what this pruner deletes)", arch))
 
     seen: set[str] = set()
     deduped = []
@@ -308,7 +321,10 @@ def main() -> int:
     def consider(path: str, rule: str) -> None:
         if path in protected_paths:
             return
-        if any(part == "evidence" for part in os.path.relpath(path, root).split(os.sep)):
+        parts = os.path.relpath(path, root).split(os.sep)
+        if any(part == "evidence" for part in parts):
+            return
+        if any(part == "archive" for part in parts):
             return
         plan.append({"path": path, "rule": rule,
                      "mtime": os.lstat(path).st_mtime if os.path.exists(path) else None,

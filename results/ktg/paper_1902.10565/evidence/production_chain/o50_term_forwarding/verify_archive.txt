@@ -1,0 +1,1 @@
+SGF_ARCHIVE_VERIFIED: KTG_ARCHIVE_SGF=0 in the committed knob file; at 0 nothing is spawned and the KTG_STAGE_ONLY staged tree is byte-identical to HEAD's; at 1 the archiver hard-links, is idempotent, outlives the prune, and the pruner protects it
