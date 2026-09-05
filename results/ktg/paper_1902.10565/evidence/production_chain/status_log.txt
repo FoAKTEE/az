@@ -2299,3 +2299,382 @@ CHAIN STATE
   65 cycles complete, .chain_depth 1, .failcount 0, STOP and .breaker_tripped
   absent, successor 305318 still PENDING afterany:301099.
   chain_status verdict: OK -- no section-11 escalate condition present.
+
+################################################################################
+# monitoring read 7 -- 2026-09-05T08:40:41-04:00 -- job 301099 link 1
+################################################################################
+==============================================================================
+chain_status  2026-09-05T08:40:41-04:00   host=login03
+BASEDIR   : /scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/runs/p1
+KTG_ROOT  : /scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train
+logs read : 1 file(s)
+            /scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/logs/loop-301099.log
+==============================================================================
+
+-- A. slurm ---------------------------------------------------------------
+     JobID    JobName   Part            State    Elapsed                Start                  End   Exit
+    299366   ktg-loop   b200 CANCELLED by 30154   00:00:00                 None  2026-09-04T10:39:32    0:0
+    299461   ktg-loop   b200 CANCELLED by 30154   00:00:00                 None  2026-09-04T17:18:39    0:0
+    301099   ktg-loop   l40s          RUNNING   13:48:28  2026-09-04T18:52:13              Unknown    0:0
+
+pending ktg-loop links (jobid submit_time reason):
+305318 2026-09-04T18:52:22 Dependency
+
+-- B. chain state ---------------------------------------------------------
+.cycles_completed : 83
+.chain_depth      : 1
+.failcount        : 0
+STOP              : absent
+.breaker_tripped  : absent
+
+-- C. cycles / exports / gate ---------------------------------------------
+cycles completed        : 83
+SAVING MODEL FOR EXPORT : 30   (Done exporting: 30)
+first export at cycle   : 5   (P4 tolerance == 5)
+gate decisions          : 30   (won 30, lost 0)
+first gate at cycle     : 6   (P5 tolerance 6 +/- 1)
+models/ (acceptances)   : 30
+    accepted  t9-s1166208-d498733
+    accepted  t9-s143744-d157367
+    accepted  t9-s1462912-d557426
+    accepted  t9-s1762560-d595534
+    accepted  t9-s2062208-d654393
+    accepted  t9-s2361984-d694199
+    accepted  t9-s2661376-d752066
+    accepted  t9-s2961408-d790293
+    accepted  t9-s3260800-d846505
+    accepted  t9-s3560832-d883439
+    accepted  t9-s3860608-d938492
+    accepted  t9-s4160128-d975255
+    accepted  t9-s4460160-d1030183
+    accepted  t9-s448640-d329040
+    accepted  t9-s4759680-d1066850
+    accepted  t9-s5059328-d1121060
+    accepted  t9-s5359104-d1157289
+    accepted  t9-s5658624-d1211334
+    accepted  t9-s5958400-d1246997
+    accepted  t9-s6257664-d1299077
+    accepted  t9-s6557440-d1333543
+    accepted  t9-s6857216-d1384386
+    accepted  t9-s7156736-d1418461
+    accepted  t9-s7456256-d1468879
+    accepted  t9-s7756032-d1502727
+    accepted  t9-s8055808-d1552859
+    accepted  t9-s8355456-d1585867
+    accepted  t9-s8655232-d1635738
+    accepted  t9-s879232-d455105
+    accepted  t9-s8954752-d1669245
+rejectedmodels/         : 0
+modelstobetested/       : 0 awaiting the gate
+gate scores (last 20):
+    2026-09-05 01:42:45-0400: Candidate won match, score 100.000 to 21.000 in 121 games, accepting candidate t9-s3260800-d846505
+    2026-09-05 02:01:39-0400: Candidate won match, score 100.500 to 45.500 in 146 games, accepting candidate t9-s3560832-d883439
+    2026-09-05 02:29:40-0400: Candidate won match, score 100.000 to 45.000 in 145 games, accepting candidate t9-s3860608-d938492
+    2026-09-05 02:48:17-0400: Candidate won match, score 100.500 to 46.500 in 147 games, accepting candidate t9-s4160128-d975255
+    2026-09-05 03:15:27-0400: Candidate won match, score 100.000 to 61.000 in 161 games, accepting candidate t9-s4460160-d1030183
+    2026-09-05 03:33:43-0400: Candidate won match, score 100.500 to 59.500 in 160 games, accepting candidate t9-s4759680-d1066850
+    2026-09-05 04:01:51-0400: Candidate won match, score 100.500 to 68.500 in 169 games, accepting candidate t9-s5059328-d1121060
+    2026-09-05 04:21:02-0400: Candidate won match, score 100.000 to 52.000 in 152 games, accepting candidate t9-s5359104-d1157289
+    2026-09-05 04:48:11-0400: Candidate won match, score 100.000 to 56.000 in 156 games, accepting candidate t9-s5658624-d1211334
+    2026-09-05 05:05:53-0400: Candidate won match, score 100.000 to 70.000 in 170 games, accepting candidate t9-s5958400-d1246997
+    2026-09-05 05:30:50-0400: Candidate won match, score 100.500 to 45.500 in 146 games, accepting candidate t9-s6257664-d1299077
+    2026-09-05 05:47:39-0400: Candidate won match, score 100.500 to 62.500 in 163 games, accepting candidate t9-s6557440-d1333543
+    2026-09-05 06:12:28-0400: Candidate won match, score 100.000 to 69.000 in 169 games, accepting candidate t9-s6857216-d1384386
+    2026-09-05 06:28:37-0400: Candidate won match, score 100.500 to 61.500 in 162 games, accepting candidate t9-s7156736-d1418461
+    2026-09-05 06:51:51-0400: Candidate won match, score 100.500 to 79.500 in 180 games, accepting candidate t9-s7456256-d1468879
+    2026-09-05 07:07:57-0400: Candidate won match, score 100.000 to 61.000 in 161 games, accepting candidate t9-s7756032-d1502727
+    2026-09-05 07:32:39-0400: Candidate won match, score 100.000 to 97.000 in 197 games, accepting candidate t9-s8055808-d1552859
+    2026-09-05 07:49:17-0400: Candidate won match, score 100.500 to 76.500 in 177 games, accepting candidate t9-s8355456-d1585867
+    2026-09-05 08:12:50-0400: Candidate won match, score 100.500 to 83.500 in 184 games, accepting candidate t9-s8655232-d1635738
+    2026-09-05 08:29:25-0400: Candidate won match, score 100.500 to 68.500 in 169 games, accepting candidate t9-s8954752-d1669245
+
+-- D. failure signatures --------------------------------------------------
+  not enough new data rows, terminating          1
+  Not enough data files to fill a subepoch       82
+  Initializing new model!                        1
+  No preexisting checkpoint found                1
+  scratch_guard exit                             0
+  failcount now                                  0
+  circuit breaker tripped                        0
+  SIGTERM received -- scheduler termination      0
+  scheduler termination at walltime              0
+  cancelling queued successor                    0
+  not resubmitting                               0
+  failed with exit                               0
+  longest consecutive-starvation run             1
+  first no-data-exit cycle                       2
+  no-data exits with exit_code != 0              0
+  longest no-data-without-export run             4  (healthy ramp reaches 4; escalates at 6)
+  attn logit bound, max in outexport.txt         136   (export limit 25000)
+
+-- E. storage -------------------------------------------------------------
+last scratch_guard block:
+    == scratch_guard 2026-09-05T08:37:06-04:00 [cycle 84 pre-gatekeeper] ==
+    constants            : /weka/home/schmidt/ssci-haiyangw/az/results/ktg/paper_1902.10565/codes/data_budget/budget.env
+    root                 : /scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train
+    du -sb               : 14421339764	/scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train
+    df -B1               : wekafs1/scratchssci 40000000000000 29871945928704 10128054071296 75% /weka/scratch/schmidt
+    scratch_guard: WARNING quotas.py unreadable or unparseable at /apps/helpers/quotas.py; using df -B1 on the same pool
+    guard invocations: 85    'scratch_guard: OK': 85    of which [cycle N pre-gatekeeper]: 84
+    (P10 wants every invocation to carry a clean verdict, and the per-cycle
+     subset to equal the cycles started in the link; the extra invocation is
+     the wrapper's own '[chain link N pre-flight]' call, one per link)
+    du -sb /scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/runs/p1 : 2247243756 B
+
+-- F. monitor (tail) ------------------------------------------------------
+ps file  : /scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/runs/p1/monitor/ps_samples-301099.tsv
+gpu file : /scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/runs/p1/monitor/gpu_samples-301099.csv
+nlwp max per stage (last 200000 sample rows; cap 32):
+    gatekeeper       24
+    selfplay         24
+    shuffle           4
+    train            13
+    current phase: cycle84
+gpu (last 5000 samples): util_mean 58.78 %  util_max 95 %  mem_used_max 2989 MiB
+newest selfplay net dir : /scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/runs/p1/selfplay/t9-s8954752-d1669245/  (1583 game lines)
+last selfplay phase     : cycle84, 218.07 s -> 26132.9 games/h (games counted in the newest net dir; the two coincide only while that dir is the one the phase wrote)
+
+-- verdict ----------------------------------------------------------------
+NOTICE:   job 299366 ended CANCELLED by 30154 without ever being allocated (Start None, Elapsed 00:00:00) -- not a link end, no resume evidence either way
+NOTICE:   job 299461 ended CANCELLED by 30154 without ever being allocated (Start None, Elapsed 00:00:00) -- not a link end, no resume evidence either way
+chain_status: OK -- no section-11 escalate condition present.
+==============================================================================
+chain_status  2026-09-05T08:40:41-04:00   host=login03
+BASEDIR   : /scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/runs/p1
+KTG_ROOT  : /scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train
+logs read : 1 file(s)
+            /scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/logs/loop-301099.log
+==============================================================================
+
+-- A. slurm ---------------------------------------------------------------
+     JobID    JobName   Part            State    Elapsed                Start                  End   Exit
+    299366   ktg-loop   b200 CANCELLED by 30154   00:00:00                 None  2026-09-04T10:39:32    0:0
+    299461   ktg-loop   b200 CANCELLED by 30154   00:00:00                 None  2026-09-04T17:18:39    0:0
+    301099   ktg-loop   l40s          RUNNING   13:48:28  2026-09-04T18:52:13              Unknown    0:0
+
+pending ktg-loop links (jobid submit_time reason):
+305318 2026-09-04T18:52:22 Dependency
+
+-- B. chain state ---------------------------------------------------------
+.cycles_completed : 83
+.chain_depth      : 1
+.failcount        : 0
+STOP              : absent
+.breaker_tripped  : absent
+
+-- C. cycles / exports / gate ---------------------------------------------
+cycles completed        : 83
+SAVING MODEL FOR EXPORT : 30   (Done exporting: 30)
+first export at cycle   : 5   (P4 tolerance == 5)
+gate decisions          : 30   (won 30, lost 0)
+first gate at cycle     : 6   (P5 tolerance 6 +/- 1)
+models/ (acceptances)   : 30
+    accepted  t9-s1166208-d498733
+    accepted  t9-s143744-d157367
+    accepted  t9-s1462912-d557426
+    accepted  t9-s1762560-d595534
+    accepted  t9-s2062208-d654393
+    accepted  t9-s2361984-d694199
+    accepted  t9-s2661376-d752066
+    accepted  t9-s2961408-d790293
+    accepted  t9-s3260800-d846505
+    accepted  t9-s3560832-d883439
+    accepted  t9-s3860608-d938492
+    accepted  t9-s4160128-d975255
+    accepted  t9-s4460160-d1030183
+    accepted  t9-s448640-d329040
+    accepted  t9-s4759680-d1066850
+    accepted  t9-s5059328-d1121060
+    accepted  t9-s5359104-d1157289
+    accepted  t9-s5658624-d1211334
+    accepted  t9-s5958400-d1246997
+    accepted  t9-s6257664-d1299077
+    accepted  t9-s6557440-d1333543
+    accepted  t9-s6857216-d1384386
+    accepted  t9-s7156736-d1418461
+    accepted  t9-s7456256-d1468879
+    accepted  t9-s7756032-d1502727
+    accepted  t9-s8055808-d1552859
+    accepted  t9-s8355456-d1585867
+    accepted  t9-s8655232-d1635738
+    accepted  t9-s879232-d455105
+    accepted  t9-s8954752-d1669245
+rejectedmodels/         : 0
+modelstobetested/       : 0 awaiting the gate
+gate scores (last 20):
+    2026-09-05 01:42:45-0400: Candidate won match, score 100.000 to 21.000 in 121 games, accepting candidate t9-s3260800-d846505
+    2026-09-05 02:01:39-0400: Candidate won match, score 100.500 to 45.500 in 146 games, accepting candidate t9-s3560832-d883439
+    2026-09-05 02:29:40-0400: Candidate won match, score 100.000 to 45.000 in 145 games, accepting candidate t9-s3860608-d938492
+    2026-09-05 02:48:17-0400: Candidate won match, score 100.500 to 46.500 in 147 games, accepting candidate t9-s4160128-d975255
+    2026-09-05 03:15:27-0400: Candidate won match, score 100.000 to 61.000 in 161 games, accepting candidate t9-s4460160-d1030183
+    2026-09-05 03:33:43-0400: Candidate won match, score 100.500 to 59.500 in 160 games, accepting candidate t9-s4759680-d1066850
+    2026-09-05 04:01:51-0400: Candidate won match, score 100.500 to 68.500 in 169 games, accepting candidate t9-s5059328-d1121060
+    2026-09-05 04:21:02-0400: Candidate won match, score 100.000 to 52.000 in 152 games, accepting candidate t9-s5359104-d1157289
+    2026-09-05 04:48:11-0400: Candidate won match, score 100.000 to 56.000 in 156 games, accepting candidate t9-s5658624-d1211334
+    2026-09-05 05:05:53-0400: Candidate won match, score 100.000 to 70.000 in 170 games, accepting candidate t9-s5958400-d1246997
+    2026-09-05 05:30:50-0400: Candidate won match, score 100.500 to 45.500 in 146 games, accepting candidate t9-s6257664-d1299077
+    2026-09-05 05:47:39-0400: Candidate won match, score 100.500 to 62.500 in 163 games, accepting candidate t9-s6557440-d1333543
+    2026-09-05 06:12:28-0400: Candidate won match, score 100.000 to 69.000 in 169 games, accepting candidate t9-s6857216-d1384386
+    2026-09-05 06:28:37-0400: Candidate won match, score 100.500 to 61.500 in 162 games, accepting candidate t9-s7156736-d1418461
+    2026-09-05 06:51:51-0400: Candidate won match, score 100.500 to 79.500 in 180 games, accepting candidate t9-s7456256-d1468879
+    2026-09-05 07:07:57-0400: Candidate won match, score 100.000 to 61.000 in 161 games, accepting candidate t9-s7756032-d1502727
+    2026-09-05 07:32:39-0400: Candidate won match, score 100.000 to 97.000 in 197 games, accepting candidate t9-s8055808-d1552859
+    2026-09-05 07:49:17-0400: Candidate won match, score 100.500 to 76.500 in 177 games, accepting candidate t9-s8355456-d1585867
+    2026-09-05 08:12:50-0400: Candidate won match, score 100.500 to 83.500 in 184 games, accepting candidate t9-s8655232-d1635738
+    2026-09-05 08:29:25-0400: Candidate won match, score 100.500 to 68.500 in 169 games, accepting candidate t9-s8954752-d1669245
+
+-- D. failure signatures --------------------------------------------------
+  not enough new data rows, terminating          1
+  Not enough data files to fill a subepoch       82
+  Initializing new model!                        1
+  No preexisting checkpoint found                1
+  scratch_guard exit                             0
+  failcount now                                  0
+  circuit breaker tripped                        0
+  SIGTERM received -- scheduler termination      0
+  scheduler termination at walltime              0
+  cancelling queued successor                    0
+  not resubmitting                               0
+  failed with exit                               0
+  longest consecutive-starvation run             1
+  first no-data-exit cycle                       2
+  no-data exits with exit_code != 0              0
+  longest no-data-without-export run             4  (healthy ramp reaches 4; escalates at 6)
+  attn logit bound, max in outexport.txt         136   (export limit 25000)
+
+-- E. storage -------------------------------------------------------------
+last scratch_guard block:
+    == scratch_guard 2026-09-05T08:37:06-04:00 [cycle 84 pre-gatekeeper] ==
+    constants            : /weka/home/schmidt/ssci-haiyangw/az/results/ktg/paper_1902.10565/codes/data_budget/budget.env
+    root                 : /scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train
+    du -sb               : 14421339764	/scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train
+    df -B1               : wekafs1/scratchssci 40000000000000 29871945928704 10128054071296 75% /weka/scratch/schmidt
+    scratch_guard: WARNING quotas.py unreadable or unparseable at /apps/helpers/quotas.py; using df -B1 on the same pool
+    guard invocations: 85    'scratch_guard: OK': 85    of which [cycle N pre-gatekeeper]: 84
+    (P10 wants every invocation to carry a clean verdict, and the per-cycle
+     subset to equal the cycles started in the link; the extra invocation is
+     the wrapper's own '[chain link N pre-flight]' call, one per link)
+    du -sb /scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/runs/p1 : 2247243756 B
+
+-- F. monitor (tail) ------------------------------------------------------
+ps file  : /scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/runs/p1/monitor/ps_samples-301099.tsv
+gpu file : /scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/runs/p1/monitor/gpu_samples-301099.csv
+nlwp max per stage (last 200000 sample rows; cap 32):
+    gatekeeper       24
+    selfplay         24
+    shuffle           4
+    train            13
+    current phase: cycle84
+gpu (last 5000 samples): util_mean 58.78 %  util_max 95 %  mem_used_max 2989 MiB
+newest selfplay net dir : /scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/runs/p1/selfplay/t9-s8954752-d1669245/  (1583 game lines)
+last selfplay phase     : cycle84, 218.07 s -> 26132.9 games/h (games counted in the newest net dir; the two coincide only while that dir is the one the phase wrote)
+
+-- verdict ----------------------------------------------------------------
+NOTICE:   job 299366 ended CANCELLED by 30154 without ever being allocated (Start None, Elapsed 00:00:00) -- not a link end, no resume evidence either way
+NOTICE:   job 299461 ended CANCELLED by 30154 without ever being allocated (Start None, Elapsed 00:00:00) -- not a link end, no resume evidence either way
+chain_status: OK -- no section-11 escalate condition present.
+
+(appended to /home/schmidt/ssci-haiyangw/az/results/ktg/paper_1902.10565/evidence/production_chain/status_log.txt)
+chain_status exit 0
+
+-- read 7 addenda (2026-09-05T08:40) -------------------------------------------
+partition / node: l40s / gl111 (job 301099, link 1 of 9), elapsed 13:48:28,
+time left 9:40:49 -> TIMEOUT ~18:22 as expected. Link 1 still runs G=1000.
+FIRST READ UNDER o48 (o47 discharged, validator commit 1596b5b).
+
+o48 BLOCK -- marginal, refit slope, r_lo, verdict, rho
+    marginal r (3-net)   16.6266   last 3 COMPLETE real-net dirs
+                                   (s8055808, s8355456, s8655232):
+                                   116386 rows / 7000 games
+    slope, refit 9-net   -0.0675   rows/game per accepted net
+    r_lo (10-net horizon) 15.9512
+    whole-run aggregate  19.5637   NOT used
+
+    VERDICT
+      marginal 16.6266  <= 13.0 ?     NO  -- 3.6266 above the trigger
+      r_lo     15.9512  <= 11.733 ?   NO  -- 4.2182 above the trigger
+      => o48 DOES NOT FIRE at read 7.
+      (o49 therefore not mentioned further, per the protocol.)
+
+    distance at the refit slope: marginal -> 13.0 is 53.7 accepted nets.
+
+    [METHOD CAVEAT, and it matters for how much weight the horizon carries]
+    the 9-net refit is volatile between consecutive reads:
+        read 5   slope -0.1070/net   marginal 17.7235   r_lo 16.6532
+        read 6   slope -0.1742/net   marginal 17.1736   r_lo 15.4318
+        read 7   slope -0.0675/net   marginal 16.6266   r_lo 15.9512
+    The slope swings by a factor of 2.6 read to read, so r_lo is not a stable
+    quantity: it FELL to 15.4318 at read 6 and ROSE to 15.9512 at read 7 while
+    the marginal fell monotonically. The marginal itself is well behaved
+    (17.7235 -> 17.1736 -> 16.6266, about -0.55 per read at ~2 h spacing); the
+    trigger that will actually decide o48 is therefore the 13.0 marginal test,
+    not the r_lo test, unless the drift genuinely re-steepens. Reporting both as
+    the protocol requires, and flagging that a single read's slope should not be
+    projected far.
+
+RHO = SHUFFLE_KEEPROWS / (G * r), E does not enter (whole-file epochs)
+    link 1 RUNNING  G=1000   rho 7.217   -> 90 % OF THE MAX_TRAIN_PER_DATA CAP 8
+                             T1 rows/cycle 16626.6 vs 1.2*E=24000  -30.72 %
+    link 2 option C G=1800   rho 4.010
+                             T1 rows/cycle 29927.9 vs 1.2*E=19200  +55.87 %
+    at the 10-net bound r = 15.9512:
+        link 1 rho 7.523 (94 % of cap)      link 2 rho 4.179
+
+    rho on link 1 has climbed 6.99 (read 6) -> 7.217 (read 7), i.e. 87 % -> 90 %
+    of the reuse cap. R14 has still NOT fired: "not enough new data rows,
+    terminating" remains 1 occurrence with longest run 1 against the threshold of
+    3. Link 1 finishes in ~9.7 h and option C halves rho to 4.010 from link 2, so
+    this closes itself at the boundary; it is recorded, not escalated.
+
+P8 RATES (partition l40s, node gl111, 83 cycles)
+    selfplay games      83604  (78604 real-net, 5000 random-net)
+    selfplay games/h    7293.4  all-net over 41266.62 s   (6871.9 at read 6)
+    rows/game           19.5637 aggregate / 16.6266 marginal / 31.4734 random
+    bytes/row on disk   343.19 B
+    train samples       8954752
+    train samples/s     2138.116 over 4188.15 s           (2119.65 at read 6)
+    gatekeeper games    4396  (sz_other 0)
+    projected_cycle_h   0.1678  (0.1758 read 6, 0.1785 read 5, 0.2394 read 2)
+    basedir bytes       2247569601
+
+P1 / o03 -- nlwp_max per stage, ppid-filtered: UNCHANGED at every read
+    gatekeeper 24, selfplay 24, shuffle 4, train 13, cap 32.
+    throughput_report.py --assert-nlwp-le 32 exit 0.
+
+GPU util mean 59.24 %, max 96 %, peak VRAM 3071 MiB
+    per stage: gatekeeper 73.02, selfplay 64.25, train 36.06, shuffle 0.00
+
+P10 STORAGE -- guard triples per cycle
+    guard invocations 85, 'scratch_guard: OK' 85, of which
+    [cycle N pre-gatekeeper] 84 = cycles started. Both classes satisfied.
+    mission root 14421339764 B of 536870912000 B (2.7 % of the cap)
+    runs/p1      2247243756 B
+    l40s quotas.py -> df -B1 fallback persists, exit 0 throughout.
+
+P4 / P5 / P7
+    exports 30, first at cycle 5 (o40 (c) still exact); 30 gate decisions,
+    30 acceptances, 0 rejections; rejectedmodels/ and modelstobetested/ empty.
+    attn logit bound max 136 (21 -> 55 -> 108 -> 136 across reads 2/4/6/7)
+    against the 25000 refusal limit.
+
+    [GATE -- A NEAR-REJECTION] the last eight losing scores are
+        69.0, 61.5, 79.5, 61.0, 97.0, 76.5, 83.5, 68.5
+    One decision was 100.000 to 97.000 in 197 games -- the candidate won by
+    three points. The gate needs 100 to accept, so that is as close to a
+    rejection as it can get without being one. A rejection is EXPECTED
+    BEHAVIOUR and not a fault; it is worth noting only because P7 and c13 are
+    written against acceptances, and the first rejection will change the export
+    ramp's cadence (a rejection keeps the loop in the one-epoch regime).
+
+VALUE LOSS -- the drift is FLATTENING
+    0.568837 (min) -> 0.592790 (r5) -> 0.596167 (r6) -> 0.601022 (r7)
+    the last four exports read 0.602579, 0.601796, 0.602323, 0.601022, i.e. the
+    rise has levelled off near 0.60 rather than continuing.
+    the policy keeps improving: p0loss 1.743656 -> 1.702719 over the same four,
+    pacc1 0.471881 -> 0.479694, loss 35.824588 -> 35.688866, all monotone.
+    c12 UNAVAILABLE for the same structural reason. CHECK_METRICS: PASS.
+
+CHAIN STATE
+    83 cycles complete, .chain_depth 1, .failcount 0, STOP and .breaker_tripped
+    absent, successor 305318 still PENDING afterany:301099.
+    chain_status verdict: OK -- no section-11 escalate condition present.
