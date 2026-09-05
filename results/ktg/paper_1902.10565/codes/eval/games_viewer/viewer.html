@@ -1099,7 +1099,8 @@ if (typeof module !== "undefined" && module.exports) module.exports = GO;
   var ENC = GAMES.move_encoding || "sgf2";
   var SRC_LABEL = { selfplay: "self-play", gatekeeper: "gatekeeper" };
 
-  var F = { SRC: 0, BLACK: 1, WHITE: 2, KOMI: 3, RESULT: 4, HA: 5, GTYPE: 6, NMOVES: 7, MOVES: 8, HASH: 9 };
+  var F = { SRC: 0, BLACK: 1, WHITE: 2, KOMI: 3, RESULT: 4, HA: 5, GTYPE: 6, NMOVES: 7,
+            MOVES: 8, HASH: 9, CYCLE: 10 };
 
   function netOf(i) { return NETS[i] || { name: "?", cycle: 0, samples: 0, rows: 0 }; }
   /* "t9-s879232-d455105" -> "s879232", enough to tell two nets apart in a list row */
@@ -1112,8 +1113,8 @@ if (typeof module !== "undefined" && module.exports) module.exports = GO;
 
   var runInfo = GAMES.run || {};
   var runBits = [];
-  if (runInfo.cycles_completed !== null && runInfo.cycles_completed !== undefined) {
-    runBits.push("cycle " + (runInfo.current_cycle || runInfo.cycles_completed));
+  if (GAMES.cycle_range) {
+    runBits.push("cycles " + GAMES.cycle_range[0] + "\u2013" + GAMES.cycle_range[1]);
   }
   runBits.push(fmtInt(ROWS.length) + " games");
   runBits.push(NETS.length + " nets");
@@ -1209,9 +1210,9 @@ if (typeof module !== "undefined" && module.exports) module.exports = GO;
     var res = RESULTS[g[F.RESULT]];
     var src = SOURCES[g[F.SRC]];
     var nB = netOf(g[F.BLACK]), nW = netOf(g[F.WHITE]);
-    var pairing = nB === nW
-      ? ("c" + nB.cycle + "  " + nB.name)
-      : ("c" + nB.cycle + " " + shortNet(nB) + "  vs  c" + nW.cycle + " " + shortNet(nW));
+    var cyc = g[F.CYCLE] ? "cycle " + g[F.CYCLE] + "  ·  " : "";
+    var pairing = cyc + (nB === nW ? nB.name
+                                   : shortNet(nB) + " vs " + shortNet(nW));
     var gt = GTYPES[g[F.GTYPE]] || "";
     return '<div class="grow" data-i="' + gi + '" role="option" aria-selected="' +
       (gi === current) + '" style="top:' + top + 'px">' +
@@ -1396,13 +1397,15 @@ if (typeof module !== "undefined" && module.exports) module.exports = GO;
     $("pwmeta").textContent = "cycle " + wn.cycle + (wn.samples ? "  ·  " + fmtInt(wn.samples) + " samples" : "");
 
     var res = RESULTS[G[F.RESULT]];
-    var fields = [
+    var fields = [];
+    if (G[F.CYCLE]) fields.push(["Cycle", G[F.CYCLE]]);
+    fields = fields.concat([
       ["Komi", G[F.KOMI]],
       ["Result", res[0]],
       ["Moves", G[F.NMOVES]],
       ["Source", SRC_LABEL[SOURCES[G[F.SRC]]] || SOURCES[G[F.SRC]]],
       ["Type", GTYPES[G[F.GTYPE]] || "?"]
-    ];
+    ]);
     if (G[F.HA]) fields.push(["Handicap", G[F.HA]]);
     fields.push(["Hash", G[F.HASH]]);
     var html = [];

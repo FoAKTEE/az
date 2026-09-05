@@ -70,6 +70,8 @@ count, otherwise one integer per move.
 """
 
 import argparse
+import datetime
+import glob
 import json
 import os
 import re
@@ -91,6 +93,7 @@ SETUP_RE = re.compile(r"\b(AB|AW)((?:\[[a-z]*\])+)")
 SIZE_RE = re.compile(r"\bSZ\[(\d+)")
 COORD_RE = re.compile(r"\[([a-z]*)\]")
 NET_RE = re.compile(r"-s(\d+)-d(\d+)$")
+CYCLE_MARK_RE = re.compile(r"scratch_guard ([0-9T:+\-]+) \[cycle (\d+) pre-gatekeeper\]")
 CYCLE_DONE_RE = re.compile(r"cycle (\d+) complete")
 CYCLE_INDEX_RE = re.compile(r"CYCLE_INDEX=(\d+)")
 CHAIN_DEPTH_RE = re.compile(r"chain depth (\d+)/(\d+)")
@@ -176,6 +179,67 @@ def net_sort_key(name):
     return (0, 0, name)
 
 
+def read_links(loop_logs):
+    """One chain link per loop log: its job, and the times its cycles were marked.
+
+    Each cycle leaves a timestamped pre-gatekeeper marker in the log.  The worker writes
+    one self-play file per cycle and one gatekeeper file per cycle that had a candidate,
+    all of them finished after that cycle's marker and before the next one, so a file's
+    modification time places it in a cycle exactly.
+    """
+    links = []
+    for path in sorted(glob.glob(loop_logs)) if isinstance(loop_logs, str) else loop_logs:
+        job, marks = None, []
+        try:
+            fh = open(path, errors="replace")
+        except OSError:
+            continue
+        with fh:
+            for line in fh:
+                if job is None:
+                    m = JOB_RE.search(line)
+                    if m:
+                        job = m.group(1)
+                m = CYCLE_MARK_RE.search(line)
+                if m:
+                    try:
+                        when = datetime.datetime.strptime(
+                            m.group(1), "%Y-%m-%dT%H:%M:%S%z").timestamp()
+                    except ValueError:
+                        continue
+                    marks.append((when, int(m.group(2))))
+        if not marks:
+            continue
+        marks.sort()
+        links.append({"job": job, "log": path, "marks": marks,
+                      "first_cycle": min(c for _, c in marks),
+                      "last_cycle": max(c for _, c in marks),
+                      "started_utc": time.strftime("%Y-%m-%dT%H:%M:%SZ",
+                                                   time.gmtime(marks[0][0]))})
+    links.sort(key=lambda link: link["marks"][0][0])
+    for i, link in enumerate(links):
+        link["link"] = i + 1
+    return links
+
+
+def cycle_of(mtime, marks):
+    """The cycle a file written at ``mtime`` belongs to: the last one marked before it."""
+    found = None
+    for when, cyc in marks:
+        if when <= mtime:
+            found = cyc
+        else:
+            break
+    return found if found is not None else (marks[0][1] if marks else 0)
+
+
+def link_of(cycle, links):
+    for link in links:
+        if link["first_cycle"] <= cycle <= link["last_cycle"]:
+            return link["link"]
+    return 0
+
+
 def expand_label(label, run_info, board_size, n_games):
     """Fill {job} {link} {chain} {cycle} {n} {games} in a header label."""
     if not label:
@@ -188,6 +252,7 @@ def expand_label(label, run_info, board_size, n_games):
                        if run_info.get("current_cycle") is not None
                        else run_info.get("cycles_completed") or "?"),
         "{n}": str(board_size),
+        "{cycles}": run_info.get("cycle_span") or "?",
         "{games}": "{:,}".format(n_games),
     }
     for k, v in subs.items():
@@ -390,11 +455,21 @@ def parse_game(line):
 
 def build(run_dir, out_dir, keep_analysis, target_bytes, packed=True, verbose=True,
           board_size=None, label=None, hash_chars=DEFAULT_HASH_CHARS,
-          quiet_seconds=DEFAULT_QUIET_SECONDS, loop_log=None):
+          quiet_seconds=DEFAULT_QUIET_SECONDS, loop_log=None, loop_logs=None,
+          cycle_range=None):
     snapshot_utc = time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())
     files, skipped_hot = snapshot_files(run_dir, quiet_seconds)
     total_bytes = sum(f[3] for f in files)
     run_info = read_run_info(run_dir, loop_log)
+
+    links = read_links(loop_logs) if loop_logs else []
+    marks = []
+    for link in links:
+        marks.extend(link["marks"])
+    marks.sort()
+    lo, hi = cycle_range if cycle_range else (None, None)
+    out_of_range = 0
+    cycle_files = {}
 
     if board_size is None:
         board_size = detect_board_size(files) or DEFAULT_BOARD_SIZE
@@ -413,6 +488,7 @@ def build(run_dir, out_dir, keep_analysis, target_bytes, packed=True, verbose=Tr
     by_net = {}
     by_komi = {}
     by_gtype = {}
+    by_cycle = {}
     handicap_games = 0
     setup_games = 0
     white_first = 0
@@ -433,7 +509,13 @@ def build(run_dir, out_dir, keep_analysis, target_bytes, packed=True, verbose=Tr
             by_net[name] = {"black": 0, "white": 0, "games": 0}
         return idx
 
-    for source, _net_dir, path, size, _mtime in files:
+    for source, _net_dir, path, size, mtime in files:
+        cycle = cycle_of(mtime, marks) if marks else 0
+        if cycle:
+            cycle_files.setdefault((source, cycle), []).append(path)
+        if lo is not None and not (lo <= cycle <= hi):
+            out_of_range += 1
+            continue
         for raw in stream_lines(path, size):
             line = raw.decode("utf-8", "replace").strip()
             if not line.endswith(")"):
@@ -469,7 +551,7 @@ def build(run_dir, out_dir, keep_analysis, target_bytes, packed=True, verbose=Tr
             games.append([
                 source, bi, wi, game["komi"], ri, game["handicap"], gt_i,
                 len(moves), pack_moves(moves, board_size) if packed else "".join(moves),
-                game["hash"][:hash_chars],
+                game["hash"][:hash_chars], cycle,
             ])
 
             first_odd = game["first"] if game["first"] != "B" else ""
@@ -492,6 +574,7 @@ def build(run_dir, out_dir, keep_analysis, target_bytes, packed=True, verbose=Tr
             by_net[nets[bi]["name"]]["games"] += 1
             if wi != bi:
                 by_net[nets[wi]["name"]]["games"] += 1
+            by_cycle[cycle] = by_cycle.get(cycle, 0) + 1
             kkey = str(game["komi"])
             by_komi[kkey] = by_komi.get(kkey, 0) + 1
             by_gtype[gkey] = by_gtype.get(gkey, 0) + 1
@@ -505,6 +588,10 @@ def build(run_dir, out_dir, keep_analysis, target_bytes, packed=True, verbose=Tr
                                     key=lambda k: (nets[k]["samples"], nets[k]["name"]))):
         nets[i]["cycle"] = rank
 
+    if by_cycle:
+        run_info = dict(run_info)
+        run_info["cycle_span"] = ("%d\u2013%d" % (min(by_cycle), max(by_cycle))
+                                  if min(by_cycle) != max(by_cycle) else str(min(by_cycle)))
     label = expand_label(label, run_info, board_size, len(games))
 
     bundle = {
@@ -522,8 +609,10 @@ def build(run_dir, out_dir, keep_analysis, target_bytes, packed=True, verbose=Tr
         "move_encoding": encoding,
         "move_alphabet": MOVE_ALNUM if packed else None,
         "move_single_codes": SINGLE_CODES if packed else None,
+        "links": [{k: v for k, v in link.items() if k != "marks"} for link in links],
+        "cycle_range": [min(by_cycle), max(by_cycle)] if by_cycle else None,
         "fields": ["src", "black", "white", "komi", "result", "handicap", "gtype",
-                   "nmoves", "moves", "hash"],
+                   "nmoves", "moves", "hash", "cycle"],
         "extra": extra,
         "games": games,
     }
@@ -555,12 +644,10 @@ def build(run_dir, out_dir, keep_analysis, target_bytes, packed=True, verbose=Tr
         key = results[g[4]][0]
         by_result[key] = by_result.get(key, 0) + 1
 
-    per_cycle = {}
-    for g in games:
-        for ni in (g[1], g[2]):
-            key = str(nets[ni]["cycle"])
-            per_cycle[key] = per_cycle.get(key, 0) + (1 if g[1] != g[2] else 0.5)
-    per_cycle = {k: int(round(v)) for k, v in per_cycle.items()}
+    per_link = {}
+    for cyc, n in by_cycle.items():
+        per_link[str(link_of(cyc, links))] = per_link.get(str(link_of(cyc, links)), 0) + n
+    duplicated = sorted(k for k, v in cycle_files.items() if len(v) > 1)
 
     stats_out = {
         "snapshot_utc": snapshot_utc,
@@ -571,7 +658,13 @@ def build(run_dir, out_dir, keep_analysis, target_bytes, packed=True, verbose=Tr
         "files_read": len(files),
         "files_skipped_still_hot": len(skipped_hot),
         "quiet_seconds": quiet_seconds,
-        "games_by_cycle": per_cycle,
+        "games_by_cycle": {str(k): v for k, v in sorted(by_cycle.items())},
+        "games_by_link": per_link,
+        "links": [{k: v for k, v in link.items() if k != "marks"} for link in links],
+        "cycle_range_selected": list(cycle_range) if cycle_range else None,
+        "files_out_of_cycle_range": out_of_range,
+        "cycles_with_more_than_one_file": ["%s cycle %d" % (SOURCES[s], c)
+                                           for s, c in duplicated],
         "hash_chars": hash_chars,
         "bytes_snapshotted": total_bytes,
         "games": len(games),
@@ -624,6 +717,20 @@ def build(run_dir, out_dir, keep_analysis, target_bytes, packed=True, verbose=Tr
               % (len(games), by_source[0], by_source[1]))
         print("lines skipped           %d incomplete/unparsable, %d not %dx%d"
               % (bad_lines, wrong_size, board_size, board_size))
+        if links:
+            print("chain links            %s"
+                  % "; ".join("link %d job %s cycles %d-%d"
+                              % (l["link"], l["job"], l["first_cycle"], l["last_cycle"])
+                              for l in links))
+        if cycle_range:
+            print("cycle range kept        %d-%d (%d files outside it left out)"
+                  % (cycle_range[0], cycle_range[1], out_of_range))
+        if by_cycle:
+            print("cycles present          %d-%d over %d cycles"
+                  % (min(by_cycle), max(by_cycle), len(by_cycle)))
+        if duplicated:
+            print("WARNING                 %d cycles hold more than one file: %s"
+                  % (len(duplicated), duplicated[:4]))
         print("distinct nets           %d" % len(nets))
         print("distinct results        %d" % len(results))
         print("game types              %s"
@@ -668,6 +775,11 @@ def main(argv=None):
                     help="pin the board size instead of reading it from the first SZ[]")
     ap.add_argument("--loop-log", default=None,
                     help="loop log to read the cycle and chain position from")
+    ap.add_argument("--loop-logs", default=None,
+                    help="glob for every loop log of the chain, one per link; this is "
+                         "what places each game in a cycle and a link")
+    ap.add_argument("--cycle-range", default=None, metavar="A-B",
+                    help="keep only the games produced in cycles A to B inclusive")
     ap.add_argument("--quiet-seconds", type=int, default=DEFAULT_QUIET_SECONDS,
                     help="leave out any file written this recently, so the snapshot only "
                          "holds files the run has finished with (default %d)"
@@ -685,11 +797,20 @@ def main(argv=None):
     args = ap.parse_args(argv)
 
     target = int(args.target_mib * 1024 * 1024)
+    cycle_range = None
+    if args.cycle_range:
+        try:
+            lo, hi = args.cycle_range.split("-", 1)
+            cycle_range = (int(lo), int(hi))
+        except ValueError:
+            ap.error("--cycle-range wants two numbers, as in 1-95")
+        if not args.loop_logs:
+            ap.error("--cycle-range needs --loop-logs to place games in cycles")
     games_bytes, analysis_bytes, _ = build(
         args.run_dir, args.out_dir, not args.no_analysis, target,
         packed=not args.sgf2_moves, board_size=args.board_size, label=args.label,
         hash_chars=args.hash_chars, quiet_seconds=args.quiet_seconds,
-        loop_log=args.loop_log)
+        loop_log=args.loop_log, loop_logs=args.loop_logs, cycle_range=cycle_range)
 
     if games_bytes + analysis_bytes > target:
         print("")
