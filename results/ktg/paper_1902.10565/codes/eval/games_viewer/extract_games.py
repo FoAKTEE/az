@@ -101,7 +101,7 @@ VISITS_RE = re.compile(r"v=(\d+)")
 MOVE_ALPHABET = ("0123456789"
                  "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
                  "abcdefghijklmnopqrstuvwxyz"
-                 "!#$%()*+,-.:;=?@[]^{|}~'")
+                 "!#()*+,-.:;=?^~|/&'`")
 
 
 def can_pack(board_size):
