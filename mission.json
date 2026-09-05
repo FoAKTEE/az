@@ -120,6 +120,16 @@
         "codes/loop/converged_7x7.sbatch continuation mode",
         "loss-curve artifact refresh cadence"
       ]
+    },
+    {
+      "date": "2026-09-05",
+      "by": "human",
+      "decision": "raise NUM_GAMES_PER_CYCLE 1000 -> 1500 for the 9x9 chain from link 2 on; measured rows/game fell to 18.5 (games shortened to ~81 moves) so 1000 games no longer covers one 20k-sample epoch (T1 violated at read 4)",
+      "affects": [
+        "codes/loop/knobs_9x9.env",
+        "node derive_cycle_knobs_9x9 (re-derivation)",
+        "node scale_data_window"
+      ]
     }
   ]
 }
