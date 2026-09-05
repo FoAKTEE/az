@@ -1,0 +1,20 @@
+{
+  "notes_for_validator": [
+    {
+      "date": "2026-09-05",
+      "from": "worker, production_chain_9x9, read 3",
+      "subject": "c12 needs restating: its baseline cannot exist under this ramp",
+      "claim": "c12 -- p0loss at >= 200 k samples below p0loss at <= 20 k samples",
+      "problem": "check_metrics.py reports c12 UNAVAILABLE: 'need an export at <= 20000 samples (0 found) and one at >= 200000 samples (5 found)'. Under the admitted export ramp the FIRST export lands at 143744 samples (t9-s143744-d157367), so no export at <= 20000 samples can ever exist on this run and the comparison as specified is unsatisfiable. This is a property of the ramp, not a failure of the chain, and re-running would not produce a <= 20 k export either.",
+      "substance_is_evidenced": "the loss falls monotonically across every export of link 1: p0loss 3.603458 -> 2.731470, vloss 0.871793 -> 0.568837, pacc1 0.075852 -> 0.362401, over samples 143744 -> 1762560 (a 12x increase). Full table in evidence/production_chain/status_log.txt read 2.",
+      "proposed_restatement": "compare against the FIRST AVAILABLE export rather than a <= 20 k baseline, e.g. 'p0loss at the latest export is below p0loss at the first export by a margin exceeding the run-to-run spread', which the link-1 data satisfies with 2.731 < 3.603.",
+      "decision_owner": "validator -- the worker does not restate an admitted claim"
+    },
+    {
+      "date": "2026-09-05",
+      "from": "worker, production_chain_9x9, read 3",
+      "subject": "R16 (b) threshold is calibrated on one link and wants review",
+      "detail": "the authorised restatement of R16 shipped with NODATA_NO_EXPORT_RUN=6 in chain_status.sh. The proposed value was 3, but the healthy link-1 ramp reaches a run of 4 (exports at cycles 5,10,15,17,20,22 leave gaps of 4 at cycles 6-9 and 11-14) and the validator's own predicted ramp 5,10,15,19,22 has the same maximum gap, so 3 fires on a good chain. 6 is one clear step above the observed and predicted maximum. Calibrated on ONE link; it is a monitoring parameter of the reader, not a knob of the run."
+    }
+  ]
+}

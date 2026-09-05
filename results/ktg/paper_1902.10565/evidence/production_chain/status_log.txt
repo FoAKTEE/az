@@ -1,0 +1,1150 @@
+################################################################################
+# monitoring read 1 -- 2026-09-04T18:54:30-04:00 -- job 301099 link 1
+################################################################################
+==============================================================================
+chain_status  2026-09-04T18:54:30-04:00   host=login03
+BASEDIR   : /scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/runs/p1
+KTG_ROOT  : /scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train
+logs read : 1 file(s)
+            /scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/logs/loop-301099.log
+==============================================================================
+
+-- A. slurm ---------------------------------------------------------------
+     JobID    JobName   Part            State    Elapsed                Start                  End   Exit
+    299366   ktg-loop   b200 CANCELLED by 30154   00:00:00                 None  2026-09-04T10:39:32    0:0
+    299461   ktg-loop   b200 CANCELLED by 30154   00:00:00                 None  2026-09-04T17:18:39    0:0
+    301099   ktg-loop   l40s          RUNNING   00:02:17  2026-09-04T18:52:13              Unknown    0:0
+
+pending ktg-loop links (jobid submit_time reason):
+305318 2026-09-04T18:52:22 Dependency
+
+-- B. chain state ---------------------------------------------------------
+.cycles_completed : 0
+.chain_depth      : 1
+.failcount        : 0
+STOP              : absent
+.breaker_tripped  : absent
+
+-- C. cycles / exports / gate ---------------------------------------------
+cycles completed        : 0
+SAVING MODEL FOR EXPORT : 0   (Done exporting: 0)
+first export at cycle   : none yet   (P4 tolerance == 5)
+gate decisions          : 0   (won 0, lost 0)
+first gate at cycle     : none yet   (P5 tolerance 6 +/- 1)
+models/ (acceptances)   : 0
+rejectedmodels/         : 0
+modelstobetested/       : 0 awaiting the gate
+gate scores (last 20):
+
+-- D. failure signatures --------------------------------------------------
+  not enough new data rows, terminating          0
+  Not enough data files to fill a subepoch       0
+  Initializing new model!                        1
+  No preexisting checkpoint found                1
+  scratch_guard exit                             0
+  failcount now                                  0
+  circuit breaker tripped                        0
+  SIGTERM received -- scheduler termination      0
+  scheduler termination at walltime              0
+  cancelling queued successor                    0
+  not resubmitting                               0
+  failed with exit                               0
+  longest consecutive-starvation run             0
+  first no-data-exit cycle                       none
+
+-- E. storage -------------------------------------------------------------
+last scratch_guard block:
+    == scratch_guard 2026-09-04T18:52:25-04:00 [cycle 1 pre-gatekeeper] ==
+    constants            : /weka/home/schmidt/ssci-haiyangw/az/results/ktg/paper_1902.10565/codes/data_budget/budget.env
+    root                 : /scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train
+    du -sb               : 9954197718	/scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train
+    df -B1               : wekafs1/scratchssci 40000000000000 33059816132608 6940183867392 83% /weka/scratch/schmidt
+    scratch_guard: WARNING quotas.py unreadable or unparseable at /apps/helpers/quotas.py; using df -B1 on the same pool
+    guard blocks [cycle N pre-gatekeeper]: 1    'scratch_guard: OK': 2
+    (P10 wants the two equal, and equal to the cycles started in the link)
+    du -sb /scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/runs/p1 : 59562833 B
+
+-- F. monitor (tail) ------------------------------------------------------
+ps file  : /scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/runs/p1/monitor/ps_samples-301099.tsv
+gpu file : /scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/runs/p1/monitor/gpu_samples-301099.csv
+nlwp max per stage (last 200000 sample rows; cap 32):
+    selfplay         22
+    shuffle           4
+    train            12
+    current phase: cycle1
+gpu (last 26 samples): util_mean 0.00 %  util_max 0 %  mem_used_max 547 MiB
+newest selfplay net dir : /scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/runs/p1/selfplay/random/  (1000 game lines)
+last selfplay phase     : cycle1, 86.62 s -> 41560.8 games/h (games counted in the newest net dir; the two coincide only while that dir is the one the phase wrote)
+
+-- verdict ----------------------------------------------------------------
+NOTICE:   job 299366 ended CANCELLED by 30154 without ever being allocated (Start None, Elapsed 00:00:00) -- not a link end, no resume evidence either way
+NOTICE:   job 299461 ended CANCELLED by 30154 without ever being allocated (Start None, Elapsed 00:00:00) -- not a link end, no resume evidence either way
+NOTICE:   P10: 1 guard blocks but 2 'scratch_guard: OK' lines -- a cycle started without a clean guard verdict
+chain_status: OK -- no section-11 escalate condition present.
+==============================================================================
+chain_status  2026-09-04T18:54:30-04:00   host=login03
+BASEDIR   : /scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/runs/p1
+KTG_ROOT  : /scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train
+logs read : 1 file(s)
+            /scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/logs/loop-301099.log
+==============================================================================
+
+-- A. slurm ---------------------------------------------------------------
+     JobID    JobName   Part            State    Elapsed                Start                  End   Exit
+    299366   ktg-loop   b200 CANCELLED by 30154   00:00:00                 None  2026-09-04T10:39:32    0:0
+    299461   ktg-loop   b200 CANCELLED by 30154   00:00:00                 None  2026-09-04T17:18:39    0:0
+    301099   ktg-loop   l40s          RUNNING   00:02:17  2026-09-04T18:52:13              Unknown    0:0
+
+pending ktg-loop links (jobid submit_time reason):
+305318 2026-09-04T18:52:22 Dependency
+
+-- B. chain state ---------------------------------------------------------
+.cycles_completed : 0
+.chain_depth      : 1
+.failcount        : 0
+STOP              : absent
+.breaker_tripped  : absent
+
+-- C. cycles / exports / gate ---------------------------------------------
+cycles completed        : 0
+SAVING MODEL FOR EXPORT : 0   (Done exporting: 0)
+first export at cycle   : none yet   (P4 tolerance == 5)
+gate decisions          : 0   (won 0, lost 0)
+first gate at cycle     : none yet   (P5 tolerance 6 +/- 1)
+models/ (acceptances)   : 0
+rejectedmodels/         : 0
+modelstobetested/       : 0 awaiting the gate
+gate scores (last 20):
+
+-- D. failure signatures --------------------------------------------------
+  not enough new data rows, terminating          0
+  Not enough data files to fill a subepoch       0
+  Initializing new model!                        1
+  No preexisting checkpoint found                1
+  scratch_guard exit                             0
+  failcount now                                  0
+  circuit breaker tripped                        0
+  SIGTERM received -- scheduler termination      0
+  scheduler termination at walltime              0
+  cancelling queued successor                    0
+  not resubmitting                               0
+  failed with exit                               0
+  longest consecutive-starvation run             0
+  first no-data-exit cycle                       none
+
+-- E. storage -------------------------------------------------------------
+last scratch_guard block:
+    == scratch_guard 2026-09-04T18:52:25-04:00 [cycle 1 pre-gatekeeper] ==
+    constants            : /weka/home/schmidt/ssci-haiyangw/az/results/ktg/paper_1902.10565/codes/data_budget/budget.env
+    root                 : /scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train
+    du -sb               : 9954197718	/scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train
+    df -B1               : wekafs1/scratchssci 40000000000000 33059816132608 6940183867392 83% /weka/scratch/schmidt
+    scratch_guard: WARNING quotas.py unreadable or unparseable at /apps/helpers/quotas.py; using df -B1 on the same pool
+    guard blocks [cycle N pre-gatekeeper]: 1    'scratch_guard: OK': 2
+    (P10 wants the two equal, and equal to the cycles started in the link)
+    du -sb /scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/runs/p1 : 59562833 B
+
+-- F. monitor (tail) ------------------------------------------------------
+ps file  : /scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/runs/p1/monitor/ps_samples-301099.tsv
+gpu file : /scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/runs/p1/monitor/gpu_samples-301099.csv
+nlwp max per stage (last 200000 sample rows; cap 32):
+    selfplay         22
+    shuffle           4
+    train            12
+    current phase: cycle1
+gpu (last 26 samples): util_mean 0.00 %  util_max 0 %  mem_used_max 547 MiB
+newest selfplay net dir : /scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/runs/p1/selfplay/random/  (1000 game lines)
+last selfplay phase     : cycle1, 86.62 s -> 41560.8 games/h (games counted in the newest net dir; the two coincide only while that dir is the one the phase wrote)
+
+-- verdict ----------------------------------------------------------------
+NOTICE:   job 299366 ended CANCELLED by 30154 without ever being allocated (Start None, Elapsed 00:00:00) -- not a link end, no resume evidence either way
+NOTICE:   job 299461 ended CANCELLED by 30154 without ever being allocated (Start None, Elapsed 00:00:00) -- not a link end, no resume evidence either way
+NOTICE:   P10: 1 guard blocks but 2 'scratch_guard: OK' lines -- a cycle started without a clean guard verdict
+chain_status: OK -- no section-11 escalate condition present.
+
+(appended to /home/schmidt/ssci-haiyangw/az/results/ktg/paper_1902.10565/evidence/production_chain/status_log.txt)
+chain_status exit 0
+
+-- read 1 addenda (2026-09-04T18:57:21-04:00) ------------------------------------------------
+
+L40S-SPECIFIC FACTS FOR P8 (partition/node recorded on every rate)
+  partition / node          : l40s / gl111        (job 301099, link 1 of 9)
+  link start                : 2026-09-04T18:52:13   TimeLimit 23:30:00
+  cpus granted              : 32 == KTG_CPUS_PER_TASK 32   (wrapper assert, log:22)
+  cfg numGameThreads        : 18 on both engine configs      (wrapper assert, log:23)
+  knobs sha256 in the link  : 5ae5358791974ae1...   (log:7)
+
+  cycle 1 stage wall times (l40s):
+    selfplay  1000 games  18:52:27 -> 18:53:54   =  87 s  -> 41380 games/h
+    shuffle               18:53:54 -> 18:54:11   =  17 s
+    train                 started 18:54:11, running at this read
+    gatekeeper            skipped (models/ empty, cycle 1)
+
+  vs the B200-derived planning inputs:
+    random-net selfplay   41380 games/h measured on l40s vs 5569.5 games/h in the
+                          smoke -- 7.4x FASTER, not slower. Cause is identified,
+                          not mysterious: codes/cfg/selfplay_9x9.cfg:16 sets
+                          logSearchInfo = false, while every smoke probe ran with
+                          it true and wrote a multi-MB search log per game. The
+                          knobs file flags exactly this as its own [OPEN]
+                          (knobs_9x9.env:167-170) and assigns the real number to
+                          node measure_stage_throughput -- this read is that
+                          measurement beginning.
+    3.11 h/cycle projection: NOT yet comparable. It is dominated by the train term
+                          (7021 s of 11182 s) and train has not finished a cycle.
+                          Reported, never escalated on: an l40s link being slower
+                          is expected and is not a section-11 condition.
+
+P1  9x9-only + threads
+    sgf lines                     : 1000     (exactly NUM_GAMES_PER_CYCLE)
+    lines without SZ[9]           : 0
+    files without SZ[9]           : 0
+    npz files / rows              : 4 / 31170
+    rows per game                 : 31.170   (derived r0 31.675, lower90 28.134 -- inside the band)
+    bytes per row on disk         : 349.9    (derived 353.8)
+    nlwp_max selfplay             : 22  <= 32     (the B200 smoke measured 22 for random-net too)
+    nlwp_max shuffle              : 4   <= 32
+    nlwp_max train                : 12  <= 32
+    -> o03 / o39 conjunct 3: PASS so far. The binding case is still ahead:
+       real-net selfplay (cycle 6+) and the two-real-net gatekeeper (~cycle 9).
+
+P2  shuffle window
+    Final input rows to shuffle   : 31.2K   (>= SHUFFLE_MINROWS 25000, K5 holds)
+    shuffleddata dirs             : 20260904-185355
+    *.tmp left behind             : 0
+
+P3  training
+    'Initializing new model!'     : 1       (exactly one over the chain, as required)
+    'not enough new data rows'    : 0
+    Export cycle counter          : 0       (consistent with the cycle-5 ramp)
+
+P4/P5  exports and gate
+    SAVING MODEL FOR EXPORT       : 0   first export expected at cycle 5
+    gate decisions                : 0   first expected at cycle 6
+    models/ | rejectedmodels/     : 0 | 0
+
+P10 storage (o04 production-log condition)
+    guard blocks this link        : 2 -- one '[chain link 1 pre-flight]' (log:38)
+                                    and one '[cycle 1 pre-gatekeeper]' (log:55)
+    'scratch_guard: OK'           : 2   -> both verdicts clean
+    du -sb mission root           : 9954197718 B    (cap 536870912000 B = 500 GiB)
+    du -sb runs/p1                : 59562833 B  after cycle 1 selfplay+shuffle
+    GUARD WARNING on l40s         : "quotas.py unreadable or unparseable at
+                                    /apps/helpers/quotas.py; using df -B1 on the
+                                    same pool". /apps/helpers/quotas.py is a
+                                    symlink to /opt/mprov/software/quotas.py; it
+                                    reads fine on login03 (exit 0) but /opt/mprov
+                                    is evidently not mounted on gl111. The guard
+                                    fell back to df on the SAME pool and still
+                                    exited 0, so the cap is still enforced -- but
+                                    an l40s link's guard triple carries df in
+                                    place of the quotas.py line.
+
+GPU duty (c06)
+    during selfplay/shuffle       : util_mean 0.00 %, mem_used_max 547 MiB
+    during train                  : 92-93 % util, ~2955 MiB
+    -> the near-zero reading in the read above is the selfplay phase, not an idle
+       GPU; c06 needs a full cycle of samples before it means anything.
+
+CHAIN WIRING
+    successor 305318              : PENDING, Dependency=afterany:301099(unfulfilled),
+                                    Partition=b200,l40s, TimeLimit=23:30:00
+    -> SBATCH_TIMELIMIT and the KTG_PARTITIONS fallback both propagated correctly.
+    -> b300 pinning did NOT occur at this boundary: gb301 was reserved, so
+       pick_partition() fell through to the b200,l40s set exactly as designed.
+
+[DEFECT, ESCALATED -- not a section-11 abort, the chain is healthy and must keep running]
+resubmit() loses the successor's job id to the site's BILLING banner
+-------------------------------------------------------------------------------
+loop.sbatch:554-560
+
+    out=$(sbatch --parsable --partition="$part" \
+        --dependency=afterany:"${SLURM_JOB_ID:-0}" "$SELF" 2>&1)
+    if [[ "$out" =~ ^[0-9]+$ ]]; then
+        SUCCESSOR="$out"
+        say "successor queued: ..."
+    else
+        SUCCESSOR=""
+
+The site's Slurm wrapper prints a two-line BILLING banner on STDERR. `2>&1` folds
+it into $out, so $out is
+
+    [BILLING] loaded!
+    [BILLING] Re-emitting cost at job start!
+    305318
+
+which fails the ^[0-9]+$ test even though sbatch --parsable SUCCEEDED. The link
+therefore logged (log:17)
+
+    === [2026-09-04T18:52:22-04:00] sbatch did not return a job id -- chain not
+        extended: [BILLING] loaded! [BILLING] Re-emitting cost at job start! 305318 ===
+
+while scontrol shows the successor was in fact created and correctly wired:
+
+    JobId=305318 JobName=ktg-loop JobState=PENDING Reason=Dependency
+    Dependency=afterany:301099(unfulfilled) TimeLimit=23:30:00 Partition=b200,l40s
+
+WHAT IS AND IS NOT AFFECTED
+  unaffected  chain continuity -- successors ARE created, with the right
+              dependency, walltime and partition set. The chain will advance.
+  unaffected  the circuit breaker -- it is enforced a second way, by the
+              post-trip guard at the top of the body: a successor that starts
+              with failcount >= KTG_MAX_FAILS or .breaker_tripped present exits 0
+              before running the loop. A crash loop still stops.
+  unaffected  the STOP brake -- a successor checks $BASEDIR/STOP at entry and
+              exits 0, so a storage stop still halts the chain.
+  BROKEN      cancel_successor() can never fire, because SUCCESSOR is always "".
+              The path that exists to cut a deterministic pre-flight failure
+              early (loop.sbatch:"pre-flight failure -- the successor would
+              repeat it") is dead: that successor will start, fail the same way
+              and spend another breaker attempt instead of being cancelled.
+  BROKEN      the storage-stop path will log "no queued successor to cancel"
+              while a successor is in fact queued. Harmless (it exits 0 on STOP)
+              but wrong in the record.
+  MISLEADING  every link will log "chain not extended" when it did extend the
+              chain, and the "successor queued:" line P9 looks for will never
+              appear. The section-C boundary procedure must read the successor
+              from squeue/sacct, NOT from the log.
+
+FIX (one line, does not touch any knob or classification constant)
+  capture only the id, e.g.
+      out=$(sbatch --parsable --partition="$part" \
+            --dependency=afterany:"${SLURM_JOB_ID:-0}" "$SELF" 2>&1 \
+            | grep -oE '^[0-9]+$' | tail -1)
+  $SELF is re-read from the repo path at every link start, so a fix landing
+  before link 1 ends (TIMEOUT ~2026-09-05T18:22) is picked up by link 2.
+
+NOT ACTIONED HERE: editing loop.sbatch is a change to an admitted script while
+the chain runs, which task file section 13 forbids. Escalated with the evidence
+above.
+
+################################################################################
+# monitoring read 2 -- 2026-09-04T23:39:01-04:00 -- job 301099 link 1
+################################################################################
+==============================================================================
+chain_status  2026-09-04T23:39:01-04:00   host=login03
+BASEDIR   : /scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/runs/p1
+KTG_ROOT  : /scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train
+logs read : 1 file(s)
+            /scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/logs/loop-301099.log
+==============================================================================
+
+-- A. slurm ---------------------------------------------------------------
+     JobID    JobName   Part            State    Elapsed                Start                  End   Exit
+    299366   ktg-loop   b200 CANCELLED by 30154   00:00:00                 None  2026-09-04T10:39:32    0:0
+    299461   ktg-loop   b200 CANCELLED by 30154   00:00:00                 None  2026-09-04T17:18:39    0:0
+    301099   ktg-loop   l40s          RUNNING   04:46:48  2026-09-04T18:52:13              Unknown    0:0
+
+pending ktg-loop links (jobid submit_time reason):
+305318 2026-09-04T18:52:22 Dependency
+
+-- B. chain state ---------------------------------------------------------
+.cycles_completed : 22
+.chain_depth      : 1
+.failcount        : 0
+STOP              : absent
+.breaker_tripped  : absent
+
+-- C. cycles / exports / gate ---------------------------------------------
+cycles completed        : 22
+SAVING MODEL FOR EXPORT : 6   (Done exporting: 6)
+first export at cycle   : 5   (P4 tolerance == 5)
+gate decisions          : 6   (won 6, lost 0)
+first gate at cycle     : 6   (P5 tolerance 6 +/- 1)
+models/ (acceptances)   : 6
+    accepted  t9-s1166208-d498733
+    accepted  t9-s143744-d157367
+    accepted  t9-s1462912-d557426
+    accepted  t9-s1762560-d595534
+    accepted  t9-s448640-d329040
+    accepted  t9-s879232-d455105
+rejectedmodels/         : 0
+modelstobetested/       : 0 awaiting the gate
+gate scores (last 20):
+    2026-09-04 19:06:03-0400: Candidate won match, score 100.500 to 34.500 in 135 games, accepting candidate t9-s143744-d157367
+    2026-09-04 20:49:26-0400: Candidate won match, score 100.500 to 22.500 in 123 games, accepting candidate t9-s448640-d329040
+    2026-09-04 22:07:32-0400: Candidate won match, score 100.000 to 22.000 in 122 games, accepting candidate t9-s879232-d455105
+    2026-09-04 22:32:35-0400: Candidate won match, score 100.000 to 13.000 in 113 games, accepting candidate t9-s1166208-d498733
+    2026-09-04 23:06:46-0400: Candidate won match, score 100.000 to 4.000 in 104 games, accepting candidate t9-s1462912-d557426
+    2026-09-04 23:29:12-0400: Candidate won match, score 100.000 to 6.000 in 106 games, accepting candidate t9-s1762560-d595534
+
+-- D. failure signatures --------------------------------------------------
+  not enough new data rows, terminating          1
+  Not enough data files to fill a subepoch       21
+  Initializing new model!                        1
+  No preexisting checkpoint found                1
+  scratch_guard exit                             0
+  failcount now                                  0
+  circuit breaker tripped                        0
+  SIGTERM received -- scheduler termination      0
+  scheduler termination at walltime              0
+  cancelling queued successor                    0
+  not resubmitting                               0
+  failed with exit                               0
+  longest consecutive-starvation run             1
+  first no-data-exit cycle                       2
+  attn logit bound, max in outexport.txt         21   (export limit 25000)
+
+-- E. storage -------------------------------------------------------------
+last scratch_guard block:
+    == scratch_guard 2026-09-04T23:27:52-04:00 [cycle 23 pre-gatekeeper] ==
+    constants            : /weka/home/schmidt/ssci-haiyangw/az/results/ktg/paper_1902.10565/codes/data_budget/budget.env
+    root                 : /scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train
+    du -sb               : 13322982381	/scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train
+    df -B1               : wekafs1/scratchssci 40000000000000 31368151117824 8631848882176 79% /weka/scratch/schmidt
+    scratch_guard: WARNING quotas.py unreadable or unparseable at /apps/helpers/quotas.py; using df -B1 on the same pool
+    guard invocations: 24    'scratch_guard: OK': 24    of which [cycle N pre-gatekeeper]: 23
+    (P10 wants every invocation to carry a clean verdict, and the per-cycle
+     subset to equal the cycles started in the link; the extra invocation is
+     the wrapper's own '[chain link N pre-flight]' call, one per link)
+    du -sb /scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/runs/p1 : 1232887867 B
+
+-- F. monitor (tail) ------------------------------------------------------
+ps file  : /scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/runs/p1/monitor/ps_samples-301099.tsv
+gpu file : /scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/runs/p1/monitor/gpu_samples-301099.csv
+nlwp max per stage (last 200000 sample rows; cap 32):
+    gatekeeper       24
+    selfplay         24
+    shuffle           4
+    train            13
+    current phase: cycle23
+gpu (last 3419 samples): util_mean 59.38 %  util_max 96 %  mem_used_max 3071 MiB
+newest selfplay net dir : /scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/runs/p1/selfplay/t9-s1762560-d595534/  (1000 game lines)
+last selfplay phase     : cycle23, 526.20 s -> 6841.5 games/h (games counted in the newest net dir; the two coincide only while that dir is the one the phase wrote)
+
+-- verdict ----------------------------------------------------------------
+NOTICE:   job 299366 ended CANCELLED by 30154 without ever being allocated (Start None, Elapsed 00:00:00) -- not a link end, no resume evidence either way
+NOTICE:   job 299461 ended CANCELLED by 30154 without ever being allocated (Start None, Elapsed 00:00:00) -- not a link end, no resume evidence either way
+chain_status: OK -- no section-11 escalate condition present.
+==============================================================================
+chain_status  2026-09-04T23:39:01-04:00   host=login03
+BASEDIR   : /scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/runs/p1
+KTG_ROOT  : /scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train
+logs read : 1 file(s)
+            /scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/logs/loop-301099.log
+==============================================================================
+
+-- A. slurm ---------------------------------------------------------------
+     JobID    JobName   Part            State    Elapsed                Start                  End   Exit
+    299366   ktg-loop   b200 CANCELLED by 30154   00:00:00                 None  2026-09-04T10:39:32    0:0
+    299461   ktg-loop   b200 CANCELLED by 30154   00:00:00                 None  2026-09-04T17:18:39    0:0
+    301099   ktg-loop   l40s          RUNNING   04:46:48  2026-09-04T18:52:13              Unknown    0:0
+
+pending ktg-loop links (jobid submit_time reason):
+305318 2026-09-04T18:52:22 Dependency
+
+-- B. chain state ---------------------------------------------------------
+.cycles_completed : 22
+.chain_depth      : 1
+.failcount        : 0
+STOP              : absent
+.breaker_tripped  : absent
+
+-- C. cycles / exports / gate ---------------------------------------------
+cycles completed        : 22
+SAVING MODEL FOR EXPORT : 6   (Done exporting: 6)
+first export at cycle   : 5   (P4 tolerance == 5)
+gate decisions          : 6   (won 6, lost 0)
+first gate at cycle     : 6   (P5 tolerance 6 +/- 1)
+models/ (acceptances)   : 6
+    accepted  t9-s1166208-d498733
+    accepted  t9-s143744-d157367
+    accepted  t9-s1462912-d557426
+    accepted  t9-s1762560-d595534
+    accepted  t9-s448640-d329040
+    accepted  t9-s879232-d455105
+rejectedmodels/         : 0
+modelstobetested/       : 0 awaiting the gate
+gate scores (last 20):
+    2026-09-04 19:06:03-0400: Candidate won match, score 100.500 to 34.500 in 135 games, accepting candidate t9-s143744-d157367
+    2026-09-04 20:49:26-0400: Candidate won match, score 100.500 to 22.500 in 123 games, accepting candidate t9-s448640-d329040
+    2026-09-04 22:07:32-0400: Candidate won match, score 100.000 to 22.000 in 122 games, accepting candidate t9-s879232-d455105
+    2026-09-04 22:32:35-0400: Candidate won match, score 100.000 to 13.000 in 113 games, accepting candidate t9-s1166208-d498733
+    2026-09-04 23:06:46-0400: Candidate won match, score 100.000 to 4.000 in 104 games, accepting candidate t9-s1462912-d557426
+    2026-09-04 23:29:12-0400: Candidate won match, score 100.000 to 6.000 in 106 games, accepting candidate t9-s1762560-d595534
+
+-- D. failure signatures --------------------------------------------------
+  not enough new data rows, terminating          1
+  Not enough data files to fill a subepoch       21
+  Initializing new model!                        1
+  No preexisting checkpoint found                1
+  scratch_guard exit                             0
+  failcount now                                  0
+  circuit breaker tripped                        0
+  SIGTERM received -- scheduler termination      0
+  scheduler termination at walltime              0
+  cancelling queued successor                    0
+  not resubmitting                               0
+  failed with exit                               0
+  longest consecutive-starvation run             1
+  first no-data-exit cycle                       2
+  attn logit bound, max in outexport.txt         21   (export limit 25000)
+
+-- E. storage -------------------------------------------------------------
+last scratch_guard block:
+    == scratch_guard 2026-09-04T23:27:52-04:00 [cycle 23 pre-gatekeeper] ==
+    constants            : /weka/home/schmidt/ssci-haiyangw/az/results/ktg/paper_1902.10565/codes/data_budget/budget.env
+    root                 : /scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train
+    du -sb               : 13322982381	/scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train
+    df -B1               : wekafs1/scratchssci 40000000000000 31368151117824 8631848882176 79% /weka/scratch/schmidt
+    scratch_guard: WARNING quotas.py unreadable or unparseable at /apps/helpers/quotas.py; using df -B1 on the same pool
+    guard invocations: 24    'scratch_guard: OK': 24    of which [cycle N pre-gatekeeper]: 23
+    (P10 wants every invocation to carry a clean verdict, and the per-cycle
+     subset to equal the cycles started in the link; the extra invocation is
+     the wrapper's own '[chain link N pre-flight]' call, one per link)
+    du -sb /scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/runs/p1 : 1232887867 B
+
+-- F. monitor (tail) ------------------------------------------------------
+ps file  : /scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/runs/p1/monitor/ps_samples-301099.tsv
+gpu file : /scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/runs/p1/monitor/gpu_samples-301099.csv
+nlwp max per stage (last 200000 sample rows; cap 32):
+    gatekeeper       24
+    selfplay         24
+    shuffle           4
+    train            13
+    current phase: cycle23
+gpu (last 3419 samples): util_mean 59.38 %  util_max 96 %  mem_used_max 3071 MiB
+newest selfplay net dir : /scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/runs/p1/selfplay/t9-s1762560-d595534/  (1000 game lines)
+last selfplay phase     : cycle23, 526.20 s -> 6841.5 games/h (games counted in the newest net dir; the two coincide only while that dir is the one the phase wrote)
+
+-- verdict ----------------------------------------------------------------
+NOTICE:   job 299366 ended CANCELLED by 30154 without ever being allocated (Start None, Elapsed 00:00:00) -- not a link end, no resume evidence either way
+NOTICE:   job 299461 ended CANCELLED by 30154 without ever being allocated (Start None, Elapsed 00:00:00) -- not a link end, no resume evidence either way
+chain_status: OK -- no section-11 escalate condition present.
+
+(appended to /home/schmidt/ssci-haiyangw/az/results/ktg/paper_1902.10565/evidence/production_chain/status_log.txt)
+chain_status exit 0
+
+-- read 2 addenda (2026-09-04T23:39) -------------------------------------------
+
+P8 / o03 -- THE EXECUTED THREAD MEASUREMENT (o39 conjunct 3), l40s / gl111
+  nlwp_max per stage, over 16663 ppid-filtered sample rows, 23 cycles:
+      gatekeeper   24   <= 32     <- TWO REAL NETS, many times: the binding case
+      selfplay     24   <= 32     <- REAL NET, many times
+      shuffle       4   <= 32
+      train        13   <= 32
+  worst stage 24 against the declared 32: headroom 8.
+  o03 / o39 conjunct 3 is now EXECUTED, not projected. Both stages that hold a
+  CUDA context have run repeatedly at production knobs.
+
+  measured vs the DESIGN/knobs arithmetic (a measured fact, not a fault):
+      gatekeeper, two real nets   predicted 28   measured 24   (-4)
+      selfplay, real net          B200 smoke 25  measured 24   (-1)
+      train                       B200 smoke 14  measured 13   (-1)
+      shuffle                     B200 smoke 12  measured  4   (-8)
+  The 32 declaration is correct and was never approached.
+
+P8 RATES AT PRODUCTION KNOBS ON L40S (throughput.json, rows_per_game.txt)
+  selfplay games            23016  (18016 real-net, 5000 random-net)
+  selfplay games/h          5500.0 over 15064.95 s of selfplay (all nets)
+  rows/game                 25.397 real   /  31.473 random
+  bytes/row on disk         375.21 B   (uncompressed row 2145 B)
+  train samples             1762560
+  train samples/s           1738.071 over 1014.09 s of train
+  gatekeeper games          703   (sz_other 0 -- every gate game was 9x9)
+  stage_elapsed_s           selfplay 15064.95, train 1014.09, gatekeeper 519.27,
+                            shuffle 171.27
+  projected_cycle_h         0.2394   (max over the all-four-stage cycles 0.3632)
+  basedir bytes             1232992246
+
+  DEVIATIONS FROM THE B200-DERIVED knobs_9x9.env PROJECTIONS -- measured facts:
+    cycle wall        projected 3.11 h (11182 s)  measured 0.2394 h (862 s)
+                      -> 13x faster. A 23:30:00 link fits ~98 cycles, not the 23
+                         the projection assumed.
+    train samples/s   projected 14.243            measured 1738.071  (122x)
+                      -> the 14.243 was a smoke number in which torch.compile's
+                         one-time cost dominated a tiny run; over 1.76 M samples
+                         that cost is amortised away. Not a machine speedup.
+    selfplay games/h  planning 1015.85 (0.5-derated 2031.7)  measured 5500 all-net
+                      -> the smoke ran with logSearchInfo = true writing a
+                         multi-MB log per game; production has it false
+                         (selfplay_9x9.cfg:16). knobs_9x9.env:167-170 flagged
+                         this input as its own [OPEN].
+    rows/game real    derived 32.300 (lower90 25.0775)  measured 25.397
+                      -> [WATCH] the measurement landed just ABOVE the lower90
+                         bound that every binding inequality was evaluated at.
+                         T1 freshness margin is now 1000*25.397 = 25397 rows
+                         against 1.2*E = 24000, i.e. +5.8 %, not the +61 % the
+                         central value implied. Still satisfied; it is the one
+                         derived quantity with little room left.
+    rows/game random  derived 31.675   measured 31.473    (inside the band)
+    bytes/row         derived 353.8    measured 375.21    (+6 %)
+    GPU util mean     smoke 21.5 %     measured 59.36 %  (max 96 %)
+                        per stage: gatekeeper 71.55, selfplay 63.23,
+                                   train 32.12, shuffle 0.00
+    peak VRAM         smoke 4094 MiB at batch 32   measured 3071 MiB at batch 128
+    storage           projected 16.1 MiB/cycle monotonic + 553 MiB steady state
+                      measured 1232992246 B total after 23 cycles (~53.6 MB/cycle
+                      all-in), i.e. ~1.27x the projected all-in figure. Mission
+                      root 13322982381 B of the 536870912000 B cap.
+
+P4 EXPORTS -- o40 (c) HOLDS EXACTLY
+  first export at cycle    5      (tolerance == 5)
+  exports observed         6, during cycles 5, 10, 15, 17, 20, 22
+  validator's predicted ramp      ~5, 10, 15, 19, 22
+  -> the first three land exactly; 17 and 20 arrive EARLIER than the predicted
+     19 and 22, consistent with the shuffle window reaching its keep cap sooner.
+  orphan *.exported        0
+  attn logit bound max     21   (exporter refusal limit 25000) -- o15 clear
+
+P5/P7 GATE -- 6 decisions, 6 acceptances, 0 rejections
+  first gate at cycle      6      (tolerance 6 +/- 1)
+  every candidate resolved once; modelstobetested/ empty; rejectedmodels/ empty
+  gate margins, in order:
+      100.5 - 34.5 in 135 games   t9-s143744-d157367
+      100.5 - 22.5 in 123 games   t9-s448640-d329040
+      100.0 - 22.0 in 122 games   t9-s879232-d455105
+      100.0 - 13.0 in 113 games   t9-s1166208-d498733
+      100.0 -  4.0 in 104 games   t9-s1462912-d557426
+      100.0 -  6.0 in 106 games   t9-s1762560-d595534
+  -> the margin WIDENS monotonically (bar the last), i.e. each candidate beats
+     its predecessor more decisively. c13 (>= 1 acceptance by cycle 20) is
+     satisfied 6x over, well inside the bound.
+
+P3 TRAINING -- loss falls monotonically across every export
+  net                    samples     p0loss     vloss      loss       pacc1
+  t9-s143744-d157367      143744     3.603458   0.871793   44.169789  0.075852
+  t9-s448640-d329040      448640     3.242968   0.665980   41.555985  0.145317
+  t9-s879232-d455105      879232     3.039205   0.588751   40.602185  0.335291
+  t9-s1166208-d498733    1166208     2.954822   0.576095   40.272757  0.358357
+  t9-s1462912-d557426    1462912     2.856949   0.573972   40.028544  0.351077
+  t9-s1762560-d595534    1762560     2.731470   0.568837   39.604234  0.362401
+  'Initializing new model!'  1   (exactly one over the chain)
+  CHECK_METRICS: PASS, exit 0
+
+  [OPEN for the validator] c12 is UNAVAILABLE, not failed. Its literal form
+  wants p0loss at >= 200 k samples below p0loss at <= 20 k, and the checker
+  reports "need an export at <= 20000 samples (0 found) and one at >= 200000
+  samples (5 found)". Under this ramp the FIRST export lands at 143744 samples,
+  so no <= 20 k export can ever exist and the comparison as specified is
+  unsatisfiable on this run. The SUBSTANCE of c12 is nonetheless strongly
+  evidenced by the table above: p0loss 3.603 -> 2.731, vloss 0.872 -> 0.569 and
+  pacc1 0.076 -> 0.362, monotone across a 12x increase in samples. The threshold
+  needs restating against the first available export, not the run re-run.
+
+P2 SHUFFLE WINDOWS -- non-decreasing, then at the keep cap
+  last twelve: 92.0K 96.8K 100.8K 109.0K 115.1K 117.6K 117.3K 119.4K 120.0K
+               120.0K 120.0K 120.0K
+  23 windows written; *.tmp left 0
+  -> growth is monotone (the single 117.6K -> 117.3K step is within the shuffle's
+     own file granularity) and saturates at SHUFFLE_KEEPROWS = 120000 exactly.
+
+P10 STORAGE
+  guard invocations 24, 'scratch_guard: OK' 24, of which [cycle N pre-gatekeeper]
+  23 -- equal to the cycles started in the link. The extra invocation is the
+  wrapper's own one-per-link '[chain link 1 pre-flight]' call.
+  -> the spurious NOTICE reported at read 1 is GONE: chain_status.sh now counts
+     the two classes separately and says so. Reader artifact resolved.
+  mission root 13322982381 B of 536870912000 B (2.5 % of the cap)
+  runs/p1      1232887867 B
+  the l40s quotas.py warning persists, as expected: the guard uses df -B1 on the
+  same pool and still exits 0.
+
+CHAIN STATE
+  .cycles_completed 22, .chain_depth 1, .failcount 0, STOP absent,
+  .breaker_tripped absent; successor 305318 still PENDING on afterany:301099.
+  chain_status verdict: OK -- no section-11 escalate condition present.
+
+[ESCALATED -- a rule-vs-reality question, NOT an abort; the chain is healthy]
+section-11 rule R16 over-fires on the loop's normal instance termination
+-------------------------------------------------------------------------------
+The task file's section-11 table says:
+
+    no-data exit on a real-net cycle (R16) | "Not enough data files to fill a
+    subepoch" at cycle >= 6 | escalate; window sizes from outshuffle.txt attached
+
+That string appears 22 times in 22 completed cycles -- essentially once per
+cycle, from cycle 2 on. Taken literally the rule fires every cycle.
+
+WHAT IT ACTUALLY IS. The line is immediately followed, every time, by
+
+    Not enough data files to fill a subepoch! Quitting.
+    Exiting with code exit_code=0
+
+That is the DESIGNED end of a training instance under -quit-if-no-data plus
+-no-repeat-files: the trainer consumes whole shuffled files (train.py:1303-1346,
+:1511) against shuffle.py's ~70k-row files, runs its allotted epochs, finds no
+unused file left and exits ZERO. It is the same mechanism the repairs validator
+identified when it corrected the export ramp -- the rule was written before
+whole-file consumption was understood, exactly as the "no export by cycle 8"
+rule was.
+
+WHY IT IS NOT THE FAULT THE RULE MEANT TO CATCH. R16's intent is "the window is
+too small to train on". The evidence says the opposite:
+  * the window is at its CAP, not starved: 120.0K = SHUFFLE_KEEPROWS exactly,
+    after monotone growth 92.0K -> 120.0K;
+  * exports are on schedule -- first at cycle 5 (o40 (c) exact), six so far;
+  * every candidate is ACCEPTED, 6 for 6, with widening margins;
+  * p0loss falls monotonically 3.603 -> 2.731 across the six exports;
+  * the genuine starvation signal is a different string and is nearly absent:
+    "not enough new data rows, terminating" appears once, longest consecutive
+    run 1, against the rule's own threshold of >= 3 consecutive.
+
+REQUESTED DECISION. Re-read R16 the way the export rule was re-read, e.g.
+"'Not enough data files to fill a subepoch' accompanied by exit_code != 0, OR
+accompanied by no export progress over >= 3 consecutive cycles". P4 already
+covers the failure this rule was reaching for. Recorded here rather than acted
+on; nothing was tuned and the chain runs.
+
+################################################################################
+# monitoring read 3 -- 2026-09-04T23:43:49-04:00 -- job 301099 link 1
+################################################################################
+==============================================================================
+chain_status  2026-09-04T23:43:49-04:00   host=login03
+BASEDIR   : /scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/runs/p1
+KTG_ROOT  : /scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train
+logs read : 1 file(s)
+            /scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/logs/loop-301099.log
+==============================================================================
+
+-- A. slurm ---------------------------------------------------------------
+     JobID    JobName   Part            State    Elapsed                Start                  End   Exit
+    299366   ktg-loop   b200 CANCELLED by 30154   00:00:00                 None  2026-09-04T10:39:32    0:0
+    299461   ktg-loop   b200 CANCELLED by 30154   00:00:00                 None  2026-09-04T17:18:39    0:0
+    301099   ktg-loop   l40s          RUNNING   04:51:36  2026-09-04T18:52:13              Unknown    0:0
+
+pending ktg-loop links (jobid submit_time reason):
+305318 2026-09-04T18:52:22 Dependency
+
+-- B. chain state ---------------------------------------------------------
+.cycles_completed : 23
+.chain_depth      : 1
+.failcount        : 0
+STOP              : absent
+.breaker_tripped  : absent
+
+-- C. cycles / exports / gate ---------------------------------------------
+cycles completed        : 23
+SAVING MODEL FOR EXPORT : 6   (Done exporting: 6)
+first export at cycle   : 5   (P4 tolerance == 5)
+gate decisions          : 6   (won 6, lost 0)
+first gate at cycle     : 6   (P5 tolerance 6 +/- 1)
+models/ (acceptances)   : 6
+    accepted  t9-s1166208-d498733
+    accepted  t9-s143744-d157367
+    accepted  t9-s1462912-d557426
+    accepted  t9-s1762560-d595534
+    accepted  t9-s448640-d329040
+    accepted  t9-s879232-d455105
+rejectedmodels/         : 0
+modelstobetested/       : 0 awaiting the gate
+gate scores (last 20):
+    2026-09-04 19:06:03-0400: Candidate won match, score 100.500 to 34.500 in 135 games, accepting candidate t9-s143744-d157367
+    2026-09-04 20:49:26-0400: Candidate won match, score 100.500 to 22.500 in 123 games, accepting candidate t9-s448640-d329040
+    2026-09-04 22:07:32-0400: Candidate won match, score 100.000 to 22.000 in 122 games, accepting candidate t9-s879232-d455105
+    2026-09-04 22:32:35-0400: Candidate won match, score 100.000 to 13.000 in 113 games, accepting candidate t9-s1166208-d498733
+    2026-09-04 23:06:46-0400: Candidate won match, score 100.000 to 4.000 in 104 games, accepting candidate t9-s1462912-d557426
+    2026-09-04 23:29:12-0400: Candidate won match, score 100.000 to 6.000 in 106 games, accepting candidate t9-s1762560-d595534
+
+-- D. failure signatures --------------------------------------------------
+  not enough new data rows, terminating          1
+  Not enough data files to fill a subepoch       22
+  Initializing new model!                        1
+  No preexisting checkpoint found                1
+  scratch_guard exit                             0
+  failcount now                                  0
+  circuit breaker tripped                        0
+  SIGTERM received -- scheduler termination      0
+  scheduler termination at walltime              0
+  cancelling queued successor                    0
+  not resubmitting                               0
+  failed with exit                               0
+  longest consecutive-starvation run             1
+  first no-data-exit cycle                       2
+  attn logit bound, max in outexport.txt         21   (export limit 25000)
+
+-- E. storage -------------------------------------------------------------
+last scratch_guard block:
+    == scratch_guard 2026-09-04T23:39:17-04:00 [cycle 24 pre-gatekeeper] ==
+    constants            : /weka/home/schmidt/ssci-haiyangw/az/results/ktg/paper_1902.10565/codes/data_budget/budget.env
+    root                 : /scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train
+    du -sb               : 13359964642	/scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train
+    df -B1               : wekafs1/scratchssci 40000000000000 31320675094528 8679324905472 79% /weka/scratch/schmidt
+    scratch_guard: WARNING quotas.py unreadable or unparseable at /apps/helpers/quotas.py; using df -B1 on the same pool
+    guard invocations: 25    'scratch_guard: OK': 25    of which [cycle N pre-gatekeeper]: 24
+    (P10 wants every invocation to carry a clean verdict, and the per-cycle
+     subset to equal the cycles started in the link; the extra invocation is
+     the wrapper's own '[chain link N pre-flight]' call, one per link)
+    du -sb /scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/runs/p1 : 1237205877 B
+
+-- F. monitor (tail) ------------------------------------------------------
+ps file  : /scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/runs/p1/monitor/ps_samples-301099.tsv
+gpu file : /scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/runs/p1/monitor/gpu_samples-301099.csv
+nlwp max per stage (last 200000 sample rows; cap 32):
+    gatekeeper       24
+    selfplay         24
+    shuffle           4
+    train            13
+    current phase: cycle24
+gpu (last 3476 samples): util_mean 59.42 %  util_max 96 %  mem_used_max 3071 MiB
+newest selfplay net dir : /scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/runs/p1/selfplay/t9-s1762560-d595534/  (1493 game lines)
+last selfplay phase     : cycle24, 270.30 s -> 19884.6 games/h (games counted in the newest net dir; the two coincide only while that dir is the one the phase wrote)
+
+-- verdict ----------------------------------------------------------------
+NOTICE:   job 299366 ended CANCELLED by 30154 without ever being allocated (Start None, Elapsed 00:00:00) -- not a link end, no resume evidence either way
+NOTICE:   job 299461 ended CANCELLED by 30154 without ever being allocated (Start None, Elapsed 00:00:00) -- not a link end, no resume evidence either way
+chain_status: OK -- no section-11 escalate condition present.
+==============================================================================
+chain_status  2026-09-04T23:43:49-04:00   host=login03
+BASEDIR   : /scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/runs/p1
+KTG_ROOT  : /scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train
+logs read : 1 file(s)
+            /scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/logs/loop-301099.log
+==============================================================================
+
+-- A. slurm ---------------------------------------------------------------
+     JobID    JobName   Part            State    Elapsed                Start                  End   Exit
+    299366   ktg-loop   b200 CANCELLED by 30154   00:00:00                 None  2026-09-04T10:39:32    0:0
+    299461   ktg-loop   b200 CANCELLED by 30154   00:00:00                 None  2026-09-04T17:18:39    0:0
+    301099   ktg-loop   l40s          RUNNING   04:51:36  2026-09-04T18:52:13              Unknown    0:0
+
+pending ktg-loop links (jobid submit_time reason):
+305318 2026-09-04T18:52:22 Dependency
+
+-- B. chain state ---------------------------------------------------------
+.cycles_completed : 23
+.chain_depth      : 1
+.failcount        : 0
+STOP              : absent
+.breaker_tripped  : absent
+
+-- C. cycles / exports / gate ---------------------------------------------
+cycles completed        : 23
+SAVING MODEL FOR EXPORT : 6   (Done exporting: 6)
+first export at cycle   : 5   (P4 tolerance == 5)
+gate decisions          : 6   (won 6, lost 0)
+first gate at cycle     : 6   (P5 tolerance 6 +/- 1)
+models/ (acceptances)   : 6
+    accepted  t9-s1166208-d498733
+    accepted  t9-s143744-d157367
+    accepted  t9-s1462912-d557426
+    accepted  t9-s1762560-d595534
+    accepted  t9-s448640-d329040
+    accepted  t9-s879232-d455105
+rejectedmodels/         : 0
+modelstobetested/       : 0 awaiting the gate
+gate scores (last 20):
+    2026-09-04 19:06:03-0400: Candidate won match, score 100.500 to 34.500 in 135 games, accepting candidate t9-s143744-d157367
+    2026-09-04 20:49:26-0400: Candidate won match, score 100.500 to 22.500 in 123 games, accepting candidate t9-s448640-d329040
+    2026-09-04 22:07:32-0400: Candidate won match, score 100.000 to 22.000 in 122 games, accepting candidate t9-s879232-d455105
+    2026-09-04 22:32:35-0400: Candidate won match, score 100.000 to 13.000 in 113 games, accepting candidate t9-s1166208-d498733
+    2026-09-04 23:06:46-0400: Candidate won match, score 100.000 to 4.000 in 104 games, accepting candidate t9-s1462912-d557426
+    2026-09-04 23:29:12-0400: Candidate won match, score 100.000 to 6.000 in 106 games, accepting candidate t9-s1762560-d595534
+
+-- D. failure signatures --------------------------------------------------
+  not enough new data rows, terminating          1
+  Not enough data files to fill a subepoch       22
+  Initializing new model!                        1
+  No preexisting checkpoint found                1
+  scratch_guard exit                             0
+  failcount now                                  0
+  circuit breaker tripped                        0
+  SIGTERM received -- scheduler termination      0
+  scheduler termination at walltime              0
+  cancelling queued successor                    0
+  not resubmitting                               0
+  failed with exit                               0
+  longest consecutive-starvation run             1
+  first no-data-exit cycle                       2
+  attn logit bound, max in outexport.txt         21   (export limit 25000)
+
+-- E. storage -------------------------------------------------------------
+last scratch_guard block:
+    == scratch_guard 2026-09-04T23:39:17-04:00 [cycle 24 pre-gatekeeper] ==
+    constants            : /weka/home/schmidt/ssci-haiyangw/az/results/ktg/paper_1902.10565/codes/data_budget/budget.env
+    root                 : /scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train
+    du -sb               : 13359964642	/scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train
+    df -B1               : wekafs1/scratchssci 40000000000000 31320675094528 8679324905472 79% /weka/scratch/schmidt
+    scratch_guard: WARNING quotas.py unreadable or unparseable at /apps/helpers/quotas.py; using df -B1 on the same pool
+    guard invocations: 25    'scratch_guard: OK': 25    of which [cycle N pre-gatekeeper]: 24
+    (P10 wants every invocation to carry a clean verdict, and the per-cycle
+     subset to equal the cycles started in the link; the extra invocation is
+     the wrapper's own '[chain link N pre-flight]' call, one per link)
+    du -sb /scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/runs/p1 : 1237205877 B
+
+-- F. monitor (tail) ------------------------------------------------------
+ps file  : /scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/runs/p1/monitor/ps_samples-301099.tsv
+gpu file : /scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/runs/p1/monitor/gpu_samples-301099.csv
+nlwp max per stage (last 200000 sample rows; cap 32):
+    gatekeeper       24
+    selfplay         24
+    shuffle           4
+    train            13
+    current phase: cycle24
+gpu (last 3476 samples): util_mean 59.42 %  util_max 96 %  mem_used_max 3071 MiB
+newest selfplay net dir : /scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/runs/p1/selfplay/t9-s1762560-d595534/  (1493 game lines)
+last selfplay phase     : cycle24, 270.30 s -> 19884.6 games/h (games counted in the newest net dir; the two coincide only while that dir is the one the phase wrote)
+
+-- verdict ----------------------------------------------------------------
+NOTICE:   job 299366 ended CANCELLED by 30154 without ever being allocated (Start None, Elapsed 00:00:00) -- not a link end, no resume evidence either way
+NOTICE:   job 299461 ended CANCELLED by 30154 without ever being allocated (Start None, Elapsed 00:00:00) -- not a link end, no resume evidence either way
+chain_status: OK -- no section-11 escalate condition present.
+
+(appended to /home/schmidt/ssci-haiyangw/az/results/ktg/paper_1902.10565/evidence/production_chain/status_log.txt)
+chain_status exit 0
+==============================================================================
+chain_status  2026-09-04T23:45:05-04:00   host=login03
+BASEDIR   : /scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/runs/p1
+KTG_ROOT  : /scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train
+logs read : 1 file(s)
+            /scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/logs/loop-301099.log
+==============================================================================
+
+-- A. slurm ---------------------------------------------------------------
+     JobID    JobName   Part            State    Elapsed                Start                  End   Exit
+    299366   ktg-loop   b200 CANCELLED by 30154   00:00:00                 None  2026-09-04T10:39:32    0:0
+    299461   ktg-loop   b200 CANCELLED by 30154   00:00:00                 None  2026-09-04T17:18:39    0:0
+    301099   ktg-loop   l40s          RUNNING   04:52:52  2026-09-04T18:52:13              Unknown    0:0
+
+pending ktg-loop links (jobid submit_time reason):
+305318 2026-09-04T18:52:22 Dependency
+
+-- B. chain state ---------------------------------------------------------
+.cycles_completed : 23
+.chain_depth      : 1
+.failcount        : 0
+STOP              : absent
+.breaker_tripped  : absent
+
+-- C. cycles / exports / gate ---------------------------------------------
+cycles completed        : 23
+SAVING MODEL FOR EXPORT : 6   (Done exporting: 6)
+first export at cycle   : 5   (P4 tolerance == 5)
+gate decisions          : 6   (won 6, lost 0)
+first gate at cycle     : 6   (P5 tolerance 6 +/- 1)
+models/ (acceptances)   : 6
+    accepted  t9-s1166208-d498733
+    accepted  t9-s143744-d157367
+    accepted  t9-s1462912-d557426
+    accepted  t9-s1762560-d595534
+    accepted  t9-s448640-d329040
+    accepted  t9-s879232-d455105
+rejectedmodels/         : 0
+modelstobetested/       : 0 awaiting the gate
+gate scores (last 20):
+    2026-09-04 19:06:03-0400: Candidate won match, score 100.500 to 34.500 in 135 games, accepting candidate t9-s143744-d157367
+    2026-09-04 20:49:26-0400: Candidate won match, score 100.500 to 22.500 in 123 games, accepting candidate t9-s448640-d329040
+    2026-09-04 22:07:32-0400: Candidate won match, score 100.000 to 22.000 in 122 games, accepting candidate t9-s879232-d455105
+    2026-09-04 22:32:35-0400: Candidate won match, score 100.000 to 13.000 in 113 games, accepting candidate t9-s1166208-d498733
+    2026-09-04 23:06:46-0400: Candidate won match, score 100.000 to 4.000 in 104 games, accepting candidate t9-s1462912-d557426
+    2026-09-04 23:29:12-0400: Candidate won match, score 100.000 to 6.000 in 106 games, accepting candidate t9-s1762560-d595534
+
+-- D. failure signatures --------------------------------------------------
+  not enough new data rows, terminating          1
+  Not enough data files to fill a subepoch       22
+  Initializing new model!                        1
+  No preexisting checkpoint found                1
+  scratch_guard exit                             0
+  failcount now                                  0
+  circuit breaker tripped                        0
+  SIGTERM received -- scheduler termination      0
+  scheduler termination at walltime              0
+  cancelling queued successor                    0
+  not resubmitting                               0
+  failed with exit                               0
+  longest consecutive-starvation run             1
+  first no-data-exit cycle                       2
+  no-data exits with exit_code != 0              0
+  longest no-data-without-export run             4
+  attn logit bound, max in outexport.txt         21   (export limit 25000)
+
+-- E. storage -------------------------------------------------------------
+last scratch_guard block:
+    == scratch_guard 2026-09-04T23:39:17-04:00 [cycle 24 pre-gatekeeper] ==
+    constants            : /weka/home/schmidt/ssci-haiyangw/az/results/ktg/paper_1902.10565/codes/data_budget/budget.env
+    root                 : /scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train
+    du -sb               : 13359964642	/scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train
+    df -B1               : wekafs1/scratchssci 40000000000000 31320675094528 8679324905472 79% /weka/scratch/schmidt
+    scratch_guard: WARNING quotas.py unreadable or unparseable at /apps/helpers/quotas.py; using df -B1 on the same pool
+    guard invocations: 25    'scratch_guard: OK': 25    of which [cycle N pre-gatekeeper]: 24
+    (P10 wants every invocation to carry a clean verdict, and the per-cycle
+     subset to equal the cycles started in the link; the extra invocation is
+     the wrapper's own '[chain link N pre-flight]' call, one per link)
+    du -sb /scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/runs/p1 : 1237711935 B
+
+-- F. monitor (tail) ------------------------------------------------------
+ps file  : /scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/runs/p1/monitor/ps_samples-301099.tsv
+gpu file : /scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/runs/p1/monitor/gpu_samples-301099.csv
+nlwp max per stage (last 200000 sample rows; cap 32):
+    gatekeeper       24
+    selfplay         24
+    shuffle           4
+    train            13
+    current phase: cycle24
+gpu (last 3491 samples): util_mean 59.43 %  util_max 96 %  mem_used_max 3071 MiB
+newest selfplay net dir : /scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/runs/p1/selfplay/t9-s1762560-d595534/  (1630 game lines)
+last selfplay phase     : cycle24, 347.17 s -> 16902.4 games/h (games counted in the newest net dir; the two coincide only while that dir is the one the phase wrote)
+
+-- verdict ----------------------------------------------------------------
+NOTICE:   job 299366 ended CANCELLED by 30154 without ever being allocated (Start None, Elapsed 00:00:00) -- not a link end, no resume evidence either way
+NOTICE:   job 299461 ended CANCELLED by 30154 without ever being allocated (Start None, Elapsed 00:00:00) -- not a link end, no resume evidence either way
+chain_status: OK -- no section-11 escalate condition present.
+
+==============================================================================
+chain_status  2026-09-04T23:45:08-04:00   host=login03
+BASEDIR   : /scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/runs/p1
+KTG_ROOT  : /scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train
+logs read : 1 file(s)
+            /scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/logs/loop-301099.log
+==============================================================================
+
+-- A. slurm ---------------------------------------------------------------
+     JobID    JobName   Part            State    Elapsed                Start                  End   Exit
+    299366   ktg-loop   b200 CANCELLED by 30154   00:00:00                 None  2026-09-04T10:39:32    0:0
+    299461   ktg-loop   b200 CANCELLED by 30154   00:00:00                 None  2026-09-04T17:18:39    0:0
+    301099   ktg-loop   l40s          RUNNING   04:52:55  2026-09-04T18:52:13              Unknown    0:0
+
+pending ktg-loop links (jobid submit_time reason):
+305318 2026-09-04T18:52:22 Dependency
+
+-- B. chain state ---------------------------------------------------------
+.cycles_completed : 23
+.chain_depth      : 1
+.failcount        : 0
+STOP              : absent
+.breaker_tripped  : absent
+
+-- C. cycles / exports / gate ---------------------------------------------
+cycles completed        : 23
+SAVING MODEL FOR EXPORT : 6   (Done exporting: 6)
+first export at cycle   : 5   (P4 tolerance == 5)
+gate decisions          : 6   (won 6, lost 0)
+first gate at cycle     : 6   (P5 tolerance 6 +/- 1)
+models/ (acceptances)   : 6
+    accepted  t9-s1166208-d498733
+    accepted  t9-s143744-d157367
+    accepted  t9-s1462912-d557426
+    accepted  t9-s1762560-d595534
+    accepted  t9-s448640-d329040
+    accepted  t9-s879232-d455105
+rejectedmodels/         : 0
+modelstobetested/       : 0 awaiting the gate
+gate scores (last 20):
+    2026-09-04 19:06:03-0400: Candidate won match, score 100.500 to 34.500 in 135 games, accepting candidate t9-s143744-d157367
+    2026-09-04 20:49:26-0400: Candidate won match, score 100.500 to 22.500 in 123 games, accepting candidate t9-s448640-d329040
+    2026-09-04 22:07:32-0400: Candidate won match, score 100.000 to 22.000 in 122 games, accepting candidate t9-s879232-d455105
+    2026-09-04 22:32:35-0400: Candidate won match, score 100.000 to 13.000 in 113 games, accepting candidate t9-s1166208-d498733
+    2026-09-04 23:06:46-0400: Candidate won match, score 100.000 to 4.000 in 104 games, accepting candidate t9-s1462912-d557426
+    2026-09-04 23:29:12-0400: Candidate won match, score 100.000 to 6.000 in 106 games, accepting candidate t9-s1762560-d595534
+
+-- D. failure signatures --------------------------------------------------
+  not enough new data rows, terminating          1
+  Not enough data files to fill a subepoch       22
+  Initializing new model!                        1
+  No preexisting checkpoint found                1
+  scratch_guard exit                             0
+  failcount now                                  0
+  circuit breaker tripped                        0
+  SIGTERM received -- scheduler termination      0
+  scheduler termination at walltime              0
+  cancelling queued successor                    0
+  not resubmitting                               0
+  failed with exit                               0
+  longest consecutive-starvation run             1
+  first no-data-exit cycle                       2
+  no-data exits with exit_code != 0              0
+  longest no-data-without-export run             4
+  attn logit bound, max in outexport.txt         21   (export limit 25000)
+
+-- E. storage -------------------------------------------------------------
+last scratch_guard block:
+    == scratch_guard 2026-09-04T23:39:17-04:00 [cycle 24 pre-gatekeeper] ==
+    constants            : /weka/home/schmidt/ssci-haiyangw/az/results/ktg/paper_1902.10565/codes/data_budget/budget.env
+    root                 : /scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train
+    du -sb               : 13359964642	/scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train
+    df -B1               : wekafs1/scratchssci 40000000000000 31320675094528 8679324905472 79% /weka/scratch/schmidt
+    scratch_guard: WARNING quotas.py unreadable or unparseable at /apps/helpers/quotas.py; using df -B1 on the same pool
+    guard invocations: 25    'scratch_guard: OK': 25    of which [cycle N pre-gatekeeper]: 24
+    (P10 wants every invocation to carry a clean verdict, and the per-cycle
+     subset to equal the cycles started in the link; the extra invocation is
+     the wrapper's own '[chain link N pre-flight]' call, one per link)
+    du -sb /scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/runs/p1 : 1237844964 B
+
+-- F. monitor (tail) ------------------------------------------------------
+ps file  : /scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/runs/p1/monitor/ps_samples-301099.tsv
+gpu file : /scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/runs/p1/monitor/gpu_samples-301099.csv
+nlwp max per stage (last 200000 sample rows; cap 32):
+    gatekeeper       24
+    selfplay         24
+    shuffle           4
+    train            13
+    current phase: cycle24
+gpu (last 3491 samples): util_mean 59.43 %  util_max 96 %  mem_used_max 3071 MiB
+newest selfplay net dir : /scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/runs/p1/selfplay/t9-s1762560-d595534/  (1636 game lines)
+last selfplay phase     : cycle24, 349.31 s -> 16860.7 games/h (games counted in the newest net dir; the two coincide only while that dir is the one the phase wrote)
+
+-- verdict ----------------------------------------------------------------
+NOTICE:   job 299366 ended CANCELLED by 30154 without ever being allocated (Start None, Elapsed 00:00:00) -- not a link end, no resume evidence either way
+NOTICE:   job 299461 ended CANCELLED by 30154 without ever being allocated (Start None, Elapsed 00:00:00) -- not a link end, no resume evidence either way
+chain_status: OK -- no section-11 escalate condition present.
+
+
+-- read 3 addenda (2026-09-04T23:43) -------------------------------------------
+(run early rather than at 02:40, so that the authorised restatements could be
+made and re-verified against a live chain rather than a remembered one)
+
+[WATCH] rows/game real has CONVERGED ONTO the bound the derivation used
+    read 2 (23:39, 18016 real-net games)   25.397
+    read 3 (23:43, 18515 real-net games)   25.0793
+    lower90 bound the inequality was evaluated at   25.0775
+    measured - bound = +0.0018 rows/game (+0.007 %)
+
+  T1 freshness margin, stated explicitly as instructed:
+    rows_per_cycle = G * r = 1000 * 25.0793 = 25079.3 rows
+    1.2 * E                                 = 24000.0 rows
+    MARGIN                                  = +4.50 %
+  (at read 2's 25.397 the margin was +5.82 %; it is narrowing as the estimate
+   settles, not because the chain is degrading)
+
+  What this means. The derivation took r = 32.300 from a 20-game probe and used
+  r_lo = r*(1 - 1/sqrt(20)) = 25.0775 for every binding inequality (K1, T1, K4).
+  Over 18515 real-net production games the true value is 25.079 -- the CENTRAL
+  value was 29 % too high, and the conservative lower bound turned out to be
+  almost exactly right. K1/T1/K4 hold because they were evaluated at the bound;
+  had they been evaluated at 32.3 the freshness inequality would now be the
+  binding constraint. Recorded as a measured fact about the derivation, not a
+  fault of the run. The number to keep reading: if r drifts below 24.0 the T1
+  margin closes and NUM_GAMES_PER_CYCLE would need re-deriving (a knob change,
+  therefore an escalation, never a silent edit).
+
+  other rates at this read: selfplay 5519.1 games/h all-net over 15338.42 s;
+  23515 games (18515 real-net, 5000 random-net); rows/game random 31.4734
+  unchanged; train samples/s 1738.071; projected_cycle_h 0.2394;
+  nlwp_max {gatekeeper 24, selfplay 24, shuffle 4, train 13} -- unchanged, <= 32.
+
+  chain state: 22 cycles complete, cycle 24 in flight, .failcount 0, STOP and
+  .breaker_tripped absent, 25 guard invocations / 25 clean verdicts / 24 of them
+  per-cycle, mission root 13359964642 B, runs/p1 1237205877 B, GPU util mean
+  59.42 % max 96 %, successor 305318 still PENDING.
+  chain_status verdict: OK -- no section-11 escalate condition present.
+
+AUTHORISED RESTATEMENTS MADE AT THIS READ (see the read-3 commit `- change:`)
+  1. task file section 11, the R16 row
+  2. task file section 2, the P10 predicate
+  3. codes/eval/chain_status.sh, the R16 detector + NODATA_NO_EXPORT_RUN
+  Verified after the edits, against the live chain and against a synthetic
+  failure:
+      live   no-data exits with exit_code != 0   0
+             longest no-data-without-export run  4   (escalates at 6)
+             chain_status exit 0, verdict OK
+      synth  a log carrying the string followed by exit_code=1 ->
+             "ESCALATE: no-data exit with a FAILING instance (R16 (a))",
+             chain_status exit 1
+  So the detector is silent on the healthy chain and still fires on the fault
+  the rule was written for.
+
+  CALIBRATION NOTE, flagged for the validator. The first draft of R16 (b) used
+  the threshold I proposed (>= 3 consecutive cycles with no export) and gated the
+  run on the FIRST no-data cycle being >= 6. Running it against the live chain
+  showed both to be wrong:
+    * the gate disabled the detector permanently, because the bootstrap ramp
+      always produces an early no-data exit (job 301099: cycle 2);
+    * the healthy ramp reaches a run of 4 (exports at 5, 10, 15, 17, 20, 22 ->
+      gaps of 4 at cycles 6-9 and 11-14), and the validator's own predicted ramp
+      5, 10, 15, 19, 22 has the same maximum gap of 4, so a threshold of 3 fires
+      on a perfectly good chain.
+  The shipped detector therefore counts the run only over cycles >= 6 and
+  escalates at 6, one clear step above the observed and predicted maximum of 4.
+  The threshold is calibrated on ONE link's evidence and is a monitoring
+  parameter of the reader, not a knob of the run; it is offered for validator
+  review.

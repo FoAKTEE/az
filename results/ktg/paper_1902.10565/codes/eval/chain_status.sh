@@ -37,7 +37,11 @@
 #                                cycle 5 itself produced none.
 #   bucket starvation            "not enough new data rows, terminating" in >= 3
 #                                consecutive cycles
-#   no-data exit on a real cycle "Not enough data files to fill a subepoch" at cycle >= 6
+#   no-data exit on a real cycle  "Not enough data files to fill a subepoch" WITH a non-zero
+#                                 instance exit, or over >= 6 consecutive real-net cycles with no
+#                                 export (the healthy ramp reaches 4)
+#                                 (restated 2026-09-05: the bare string is the designed end of an
+#                                 instance under -quit-if-no-data, exit_code=0)
 #   gate never accepts by 20     models/ empty with cycles >= 20
 #   threads over the declaration nlwp max > 32 on any stage
 #   export refusal (o15)         exporter non-zero exit, or attn bound > 2.5e4
@@ -83,7 +87,10 @@ ATTN_LIMIT=25000                          # export_model_pytorch.py:42 default 2
 NO_EXPORT_BY_CYCLE=8                      # section 11
 NO_ACCEPT_BY_CYCLE=20                     # section 11 / c13
 STARVATION_RUN=3                          # section 11 (R14)
-NODATA_FROM_CYCLE=6                       # section 11 (R16)
+NODATA_FROM_CYCLE=6                       # section 11 (R16): before this the ramp is expected
+NODATA_NO_EXPORT_RUN=6                    # section 11 (R16 (b), restated 2026-09-05); the healthy
+                                          # link-1 ramp reaches 4 (exports at 5,10,15,17,20,22), so
+                                          # 3 would fire on a good chain; 6 clears it with margin
 PENDING_WARN_HOURS=24                     # section 11 (report only)
 GPU_TAIL=5000
 
@@ -378,8 +385,26 @@ report() {
       esc "bucket starvation (R14) -- 'not enough new data rows, terminating' in $starve_run consecutive cycles; attach check_knobs_9x9.py --throughput \$EV/throughput.json output"
     fi
 
-    # R16: a no-data exit is only a fault once the net is real, i.e. cycle >= 6.
-    local nodata_cycle
+    # R16, restated 2026-09-05 on link-1 evidence (task file section 11).
+    #
+    # The bare string is NOT the fault. Under -quit-if-no-data plus
+    # -no-repeat-files the trainer consumes WHOLE shuffled files
+    # (train.py:1303-1346,:1511) against shuffle.py's ~70k-row files, so every
+    # healthy cycle ends its training instance by running out of unused files
+    # and exiting ZERO. Job 301099 logged the string 22 times in 22 cycles, each
+    # one immediately followed by "Exiting with code exit_code=0", while the
+    # window sat at its keep cap (120000), the first export landed at cycle 5 and
+    # 6 of 6 candidates were accepted with widening margins. Firing on the string
+    # alone escalates every healthy cycle.
+    #
+    # What R16 actually means -- "the window is too small to train on" -- shows up
+    # as one of two things, and this is what is detected now:
+    #   (a) the instance exits NON-ZERO after the message, or
+    #   (b) the message recurs over >= NODATA_NO_EXPORT_RUN consecutive cycles
+    #       with NO export in any of them.
+    # A no-data exit before the net is real (cycle < NODATA_FROM_CYCLE) is the
+    # bootstrap ramp and is never a fault.
+    local nodata_cycle nodata_nonzero nodata_noexport_run
     nodata_cycle="$(awk '
       /Not enough data files to fill a subepoch/ { pending = 1 }
       /complete -- [0-9]+ cycle\(s\) recorded/ {
@@ -389,8 +414,52 @@ report() {
       }
       END { if (first != "") print first }' "${LOGFILES[@]}" 2>/dev/null)"
     printf '  %-46s %s\n' 'first no-data-exit cycle' "${nodata_cycle:-none}"
-    if [ -n "${nodata_cycle:-}" ] && [ "$nodata_cycle" -ge "$NODATA_FROM_CYCLE" ]; then
-      esc "no-data exit on a real-net cycle (R16) -- 'Not enough data files to fill a subepoch' first at cycle $nodata_cycle (>= $NODATA_FROM_CYCLE); attach the window sizes from logs/outshuffle.txt"
+
+    # (a) the message followed by a non-zero instance exit.
+    nodata_nonzero="$(awk '
+      /Not enough data files to fill a subepoch/ { pending = 1; next }
+      pending && /Exiting with code exit_code=/ {
+        c = $0; sub(/.*exit_code=/, "", c); sub(/[^0-9-].*$/, "", c);
+        if (c + 0 != 0) n++;
+        pending = 0
+      }
+      END { print n + 0 }' "${LOGFILES[@]}" 2>/dev/null)"
+    printf '  %-46s %s\n' 'no-data exits with exit_code != 0' "${nodata_nonzero:-0}"
+
+    # (b) consecutive REAL-NET cycles that carry the message and produce no
+    # export. Two things matter here and both were got wrong on the first draft:
+    #
+    #   * the run must be counted only over cycles >= NODATA_FROM_CYCLE, not
+    #     gated on the FIRST no-data cycle. The bootstrap ramp always produces an
+    #     early no-data exit (job 301099: cycle 2), so gating on the first one
+    #     would disable this detector for the entire rest of the run.
+    #   * the threshold must clear the healthy export ramp. Exports do not fall
+    #     on every cycle: job 301099 exported at cycles 5, 10, 15, 17, 20, 22, so
+    #     four consecutive real-net cycles with no export (6,7,8,9 and again
+    #     11,12,13,14) is HEALTHY, and the validator's predicted ramp
+    #     (~5,10,15,19,22) has the same maximum gap of 4. A threshold of 3 fires
+    #     on a perfectly good chain. NODATA_NO_EXPORT_RUN is set above that
+    #     observed maximum with margin; a genuinely starved window produces an
+    #     unbounded run, not a bounded one.
+    nodata_noexport_run="$(awk -v from="$NODATA_FROM_CYCLE" '
+      /Not enough data files to fill a subepoch/ { nodata = 1 }
+      /SAVING MODEL FOR EXPORT/                  { exported = 1 }
+      /complete -- [0-9]+ cycle\(s\) recorded/ {
+        k = $0; sub(/.*complete -- /, "", k); sub(/ cycle\(s\).*/, "", k); k = k + 0;
+        if (k >= from) {
+          if (nodata && !exported) { run++; if (run > best) best = run } else { run = 0 }
+        }
+        nodata = 0; exported = 0
+      }
+      END { print best + 0 }' "${LOGFILES[@]}" 2>/dev/null)"
+    printf '  %-46s %s  (healthy ramp reaches 4; escalates at %s)\n' \
+      'longest no-data-without-export run' "${nodata_noexport_run:-0}" "$NODATA_NO_EXPORT_RUN"
+
+    if [ "${nodata_nonzero:-0}" -gt 0 ]; then
+      esc "no-data exit with a FAILING instance (R16 (a)) -- 'Not enough data files to fill a subepoch' followed by exit_code != 0 on ${nodata_nonzero} occasion(s); attach the window sizes from logs/outshuffle.txt"
+    fi
+    if [ "${nodata_noexport_run:-0}" -ge "$NODATA_NO_EXPORT_RUN" ]; then
+      esc "no-data exit starving the export ramp (R16 (b)) -- ${nodata_noexport_run} consecutive cycles at or past cycle $NODATA_FROM_CYCLE carried 'Not enough data files to fill a subepoch' with no export; attach the window sizes from logs/outshuffle.txt"
     fi
 
     local n_init

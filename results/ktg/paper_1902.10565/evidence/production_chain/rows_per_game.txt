@@ -1,0 +1,16 @@
+rows_per_game -- node arxiv-1902.10565::measure_stage_throughput; claim c10
+basedir = /scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/runs/p1
+games = one line of a .sgfs file (cpp/program/selfplaymanager.cpp:377-378)
+rows  = sum of npz binaryInputNCHWPacked.shape[0] over tdata
+
+rows_per_game_real   = 25.079341074804212   (464344 rows / 18515 games)
+rows_per_game_random = 31.4734   (157367 rows / 5000 games)
+
+per selfplay net directory (name = the net that played, 'random' = bootstrap):
+  random                       real_net=False games=5000   rows=157367   rows/game=31.4734
+  t9-s1166208-d498733          real_net=True  games=3000   rows=58693    rows/game=19.564333333333334
+  t9-s143744-d157367           real_net=True  games=5000   rows=171673   rows/game=34.3346
+  t9-s1462912-d557426          real_net=True  games=2000   rows=38108    rows/game=19.054
+  t9-s1762560-d595534          real_net=True  games=1515   rows=26177    rows/game=17.27854785478548
+  t9-s448640-d329040           real_net=True  games=5000   rows=126065   rows/game=25.213
+  t9-s879232-d455105           real_net=True  games=2000   rows=43628    rows/game=21.814
