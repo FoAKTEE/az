@@ -1,0 +1,42 @@
+boundary_check.txt -- node arxiv-1902.10565::scale_data_window, option C applied 2026-09-05.
+Confirms the running link cannot adopt the new file and the queued link will.
+
+$ sha256sum codes/loop/knobs_9x9.env codes/loop/synchronous_loop_9x9.sh
+ba7f1bf7e1bc166d1e86a32ba3ffa70b838d72aa291f4cdba55fb43d63ea36e8  codes/loop/knobs_9x9.env
+10d195ff6ef764c16d3d5e9d35239c6af0a3873749c3bd7abf9b99aa4094004c  codes/loop/synchronous_loop_9x9.sh
+
+$ grep -n 'loop knobs' $KTG_ROOT/logs/loop-301099.log | head -3
+7:=== [2026-09-04T18:52:13-04:00] loop knobs /home/schmidt/ssci-haiyangw/az/results/ktg/paper_1902.10565/codes/loop/knobs_9x9.env (sha256 5ae5358791974ae1) KTG_CPUS_PER_TASK=32 KTG_NUM_GAME_THREADS=18 ===
+  -> the RUNNING link 1 logged sha256 5ae5358791974ae1 at start; the file is now
+     ba7f1bf7e1bc166d. A running link sourced its knobs once, at link start, so
+     job 301099 executes the OLD 1000-game set for its whole duration. Untouched.
+
+$ squeue -j 301099,305318 -o '%.10i %.10P %.12j %.10T %.12M %.20R %.30E'
+     JOBID  PARTITION         NAME      STATE         TIME     NODELIST(REASON)                     DEPENDENCY
+    305318  b200,l40s     ktg-loop    PENDING         0:00         (Dependency)   afterany:301099(unfulfilled)
+    301099       l40s     ktg-loop    RUNNING     11:31:14                gl111                         (null)
+
+$ grep -n 'knobs_9x9.env' codes/loop/loop.sbatch
+102:# The CPU count is NOT typed here. codes/loop/knobs_9x9.env is node
+170:KNOBS_ENV="${KTG_KNOBS_ENV:-$KTG_CODES/loop/knobs_9x9.env}"
+
+$ grep -n 'NUM_GAMES_PER_CYCLE\|NUM_TRAIN_SAMPLES_PER_EPOCH\|NUM_TRAIN_SAMPLES_PER_SWA\|MAX_TRAIN_SAMPLES_PER_CYCLE' codes/loop/knobs_9x9.env | grep -v '^ *#' | grep '='
+147:NUM_GAMES_PER_CYCLE=1800
+169:NUM_TRAIN_SAMPLES_PER_EPOCH=16000
+183:NUM_TRAIN_SAMPLES_PER_SWA=8000
+210:MAX_TRAIN_SAMPLES_PER_CYCLE=80000
+
+$ grep -c -E '^[[:space:]]*(KTG_MAX_FAILS|KTG_MAX_CHAIN|KTG_MIN_RUNTIME_SECONDS)=' codes/loop/knobs_9x9.env
+0
+  -> 0 stray classification knobs, so loop.sbatch:176-184 sources the file rather
+     than refusing it; loop.sbatch:170 resolves KNOBS_ENV at LINK START, which is
+     why link 2 (305318, PENDING afterany:301099) picks up the new set and link 1
+     cannot. The boundary read must see 'loop knobs ... (sha256 ba7f1bf7e1bc166d)'
+     in the link-2 log, and NEITHER 5ae53587 (link 1) NOR 3504a8ea (the staged 1500
+     file that was never consumed).
+
+$ bash -n codes/loop/synchronous_loop_9x9.sh && stat -c '%a %n' codes/loop/synchronous_loop_9x9.sh
+755 codes/loop/synchronous_loop_9x9.sh
+
+$ set -a; . codes/loop/knobs_9x9.env; set +a  (sourceability, obligation o13)
+  sourced OK: G=1800 E=16000 SWA=8000 CAP=80000 KEEP=120000 EPE=5 CPUS=32 GT=18

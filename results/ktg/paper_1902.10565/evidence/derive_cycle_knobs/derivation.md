@@ -284,6 +284,12 @@ it re-runs whenever any of those four files changes.
 
 ## 9. Re-derivation from PRODUCTION — 2026-09-05 (`NUM_GAMES_PER_CYCLE` 1000 → 1500)
 
+> **SUPERSEDED THE SAME DAY BY § 10.** The 1500 set derived here was staged at monitoring
+> read 5 and replaced at read 6, before any link consumed it: the fitted drift steepened
+> from −0.1070 to −0.1742 rows/game per accepted net and 1500 no longer cleared T1 ten
+> accepted nets out. Everything below stands as the record of that step — the method is
+> unchanged and § 10 reuses it — but the *values* it derives are not the live set.
+
 Authorised by `mission.json` `decisions[6]` (human, 2026-09-05): *raise NUM_GAMES_PER_CYCLE
 1000 -> 1500 for the 9x9 chain from link 2 on*. Recorded here and, for the structural fix,
 against node `scale_data_window`. CPU only, login node, no allocation, no job. Verbatim
@@ -522,3 +528,136 @@ Unchanged and re-asserted: `NUM_TRAIN_SAMPLES_PER_EPOCH` 20 000, `MAX_TRAIN_PER_
   equal (`check_knobs_9x9.py` asserts it); the substitution is byte-length neutral and was
   applied by writing a new file and renaming, so the running link's open descriptor is
   untouched.
+
+
+## 10. Second re-derivation the same day — OPTION C, 2026-09-05 (`NUM_GAMES_PER_CYCLE` 1500 → 1800, `NUM_TRAIN_SAMPLES_PER_EPOCH` 20 000 → 16 000)
+
+Authorised by `mission.json` `decisions` (human, 2026-09-05): *link 2 onward runs OPTION C*.
+The options were prepared under node `scale_data_window`
+(`../scale_data_window/o47_options.md`, obligation `o47_rows_per_game_drift_rederive_at_17`)
+and this section records the application. CPU only, login node, no allocation, no job.
+Verbatim output: `../scale_data_window/check_applied_C_live.txt` (production inputs),
+`../scale_data_window/check_applied_C_smoke.txt` (the parameter-free run against the frozen
+smoke evidence), `../scale_data_window/derive_knobs_self_test.txt`,
+`../scale_data_window/boundary_check.txt`. Chain link 1 (job 301099) was NOT touched.
+
+### 10.1 Why the 1500 set did not survive the day
+
+Two further monitoring reads measured the marginal and, crucially, re-fitted the SLOPE:
+
+| read | cycles | marginal r | fitted slope /accepted net | 10-net bound r_lo |
+|---|---|---|---|---|
+| 4 | 41 | 18.525 | −0.1528 | 16.997 |
+| 5 | 61 | 17.7235 | −0.1070 | 16.6532 |
+| 6 | 65 | 17.1736 | **−0.1742** | 15.4318 |
+
+The marginal fell 17.7235 → 17.1736 in ~33 minutes (two accepted nets) and the slope
+steepened 1.6×. At read 6's bound the staged set fails the tolerance it was derived to
+satisfy:
+
+| set | rows/cycle at r | vs 1.2·E | at r_lo | vs 1.2·E |
+|---|---|---|---|---|
+| link 1, G = 1000, E = 20 000 | 17 173.6 | −28.44 % | 15 431.8 | −35.70 % |
+| staged, G = 1500, E = 20 000 | 25 760.4 | +7.33 % | 23 147.7 | **−3.55 % FAILS** |
+| option C, G = 1800, E = 16 000 | 30 912.5 | +61.00 % | 27 777.2 | +44.67 % |
+
+### 10.2 The whole-file epoch measurement, and what it does to the reading of T1
+
+`../scale_data_window/epoch_granularity.txt`, read out of `logs/loop-301099.log` and the
+live `shuffleddata` directory:
+
+* the shuffle writes the kept sample as `round(SHUFFLE_KEEPROWS/70000)` = 2 output files
+  (`shuffle.sh:48 -approx-rows-per-out-file 70000`, `shuffle.py:406-412`); measured
+  60 136 + 59 864 = 120 000 rows exactly;
+* `get_files_for_subepoch` (`train.py:1306-1345`) takes WHOLE files — its probabilistic skip
+  at `:1332` requires `batches_to_use_so_far > 0`, which a first file of 467 batches never
+  allows — so an epoch trains one whole file: measured `Global step` 6 557 440 → 6 617 216 →
+  6 677 248, i.e. 467 and 469 batches against the nominal `round(E/128)` = 156;
+* the third epoch of each cycle finds no unused file (`-no-repeat-files`,
+  `training_data_generator.py:35`) and exits 0 (`train.py:1487-1489`). 174 epochs started,
+  62 aborted there, 22 exports in 62 cycles.
+
+Therefore **samples per cycle = `SHUFFLE_KEEPROWS`**, not `EPOCHS_PER_EXPORT × E`, and the
+reuse the loop really applies is
+
+    rho = SHUFFLE_KEEPROWS / (G · r)          — E cancels out of it
+
+At the read-6 marginal: 6.99 at link 1's G = 1000 (**87 % of the `MAX_TRAIN_PER_DATA` cap of
+8**, and 7.78 at its own 10-net bound), 4.66 at G = 1500, **3.88** at G = 1800. This is the
+measured mechanism behind the value-loss drift reported from read 5 (vloss 0.568837 →
+0.592790 while `p0loss` 3.603458 → 1.844065): the value target is per GAME, so the samples
+drawn from one game over its window residence are `SHUFFLE_KEEPROWS / G`, independent of r —
+120 through all of link 1, 80 at G = 1500, 66.7 at G = 1800. Lowering E does not enter it.
+
+Honest decomposition of option C's +61.00 %: raising G moves the NUMERATOR
+(−28.44 % → +28.80 % against the unchanged 24 000 threshold) and lowering E moves the
+THRESHOLD (24 000 → 19 200, +28.80 % → +61.00 %). About half the headline gain is the test
+getting easier, not the run getting more data. The E half is justified elsewhere — the SWA
+horizon and the metrics floor, § 10.3 — not by T1.
+
+### 10.3 The four values, and why the other seven do not move
+
+| knob | old | new | why |
+|---|---|---|---|
+| `NUM_GAMES_PER_CYCLE` | 1500 | **1800** | smallest hundred with `G·r_lo ≥ 1.2·(1.2·E_old)` = 28 800 at read 5's bound 16.6532 — a bound stated against the OLD epoch so it constrains data per cycle, i.e. `rho ≤ 120000/28800 = 4.167`, not tolerance headroom |
+| `NUM_TRAIN_SAMPLES_PER_EPOCH` | 20 000 | **16 000** | = 125·`BATCHSIZE`; keeps 25 batches (20 %) over the 100-batch metrics floor (`train.py:1379`, `:1661`), where 12 800 keeps none |
+| `NUM_TRAIN_SAMPLES_PER_SWA` | 10 000 | **8 000** | `= E//2` (`train.py:441`) — mechanical. With `swa_scale` 8 (`:443`) the export is an EMA over ~4·E samples: 80 000 → 64 000. Taking E to 12 800 would have cut it to 51 200, i.e. less regularisation on the head that is drifting — the reason 12 800 was rejected |
+| `MAX_TRAIN_SAMPLES_PER_CYCLE` | 100 000 | **80 000** | `= 5·E`, upstream's own cap/epoch ratio (`:64`/`:59`) — mechanical |
+| `SHUFFLE_KEEPROWS` | 120 000 | 120 000 | deliberately NOT scaled with the cap. `K3` needs only `keep > cap` and `keep ≥ epochs·E` (120 000 > 80 000 ≥ 80 000), and by § 10.2 this knob is what a cycle actually trains: lowering it would cut training volume and, below ~98 000, collapse the sample to one output file and halve the export cadence |
+| `SHUFFLE_MINROWS` | 25 000 | 25 000 | binds only a cycle-1 random bootstrap. The requirement is `min_rows/batch ≥ round(E/batch)`: 195 ≥ 125, ratio 1.56 (it was 1.25). Tracking it to 1.25·E = 20 000 would only shrink a margin nothing needs |
+| `EPOCHS_PER_EXPORT` | 5 | 5 | `floor(min(gain, cap_eff)/E)` = `floor(min(247 300, 80 000)/16 000)` = 5 at r and at r_lo |
+| `MAX_TRAIN_PER_DATA`, `BATCHSIZE`, `NUM_THREADS_FOR_SHUFFLING`, `TAPER_WINDOW_SCALE`, `KTG_CPUS_PER_TASK`, `KTG_NUM_GAME_THREADS` | — | unchanged | no constraint on them moved |
+
+### 10.4 Projections at the read-6 rates
+
+Measured over 65 cycles, job 301099 on l40s/gl111: real-net selfplay 6429.7 games/h
+(60 904 games over 61 real-net cycle phases, 34 100.39 s), train 2119.650 samples/s
+(6 857 216 samples / 3235.07 s), gate 0.48678 s per gate game (1541.13 s / 3166 games),
+350.92 B/row.
+
+* cycle wall = 1008 s selfplay + 38 s train + 195 s gate + 84 s shuffle + 60 s export
+  = **1384 s = 0.385 h** → 185 whole cycles inside the declared 257 400 s, 61 inside the
+  granted 84 600 s of link 2. `[PRELIMINARY]` The directly measured cycle is 0.1758 h at
+  G = 1000; the measured-basis extrapolation to this set,
+  `3600·1800/6429.7 + 120000/2119.65 + 109.8` = 1174 s = 0.326 h, is the optimistic bound and
+  the truth lies between the two.
+* storage = 17.12 MiB/cycle monotonic + 551.9 MiB bounded → 23.63 GiB after a full
+  185-cycle link against the 500 GiB cap; 28 682 cycles of headroom.
+
+### 10.5 Verification actually run
+
+    python3 codes/eval/check_knobs_9x9.py \
+      --throughput evidence/production_chain/throughput.json \
+      --rows-file  evidence/production_chain/rows_per_game.txt \
+      --marginal-nets 3 --trend-nets 9 --horizon-nets 10        -> CHECK_KNOBS_9X9: PASS, exit 0
+    python3 codes/eval/check_knobs_9x9.py                        -> CHECK_KNOBS_9X9: PASS, exit 0
+    python3 codes/eval/derive_knobs.py --self-test               -> SELF-TEST: PASS, exit 0
+
+The first run's `LOOP DEFAULT WIRING` block asserts all eleven `${VAR:-default}` values of
+`synchronous_loop_9x9.sh` against the knob file, including
+`NUM_GAMES_PER_CYCLE loop default 1800 == derived 1800` and
+`NUM_TRAIN_SAMPLES_PER_EPOCH loop default 16000 == derived 16000`.
+
+### 10.6 Open items after this move
+
+- `[OPEN]` **the slope is not stable** — it went −0.1070 → −0.1742 in one read. Obligation
+  `o48_rows_per_game_drift_rederive_at_13` re-arms at marginal r = 13.0, which is above the
+  12.409 at which this set's own 10-net bound stops clearing `1.2·E/G` = 10.667, so the
+  trigger fires with margin. That is 24.0 accepted nets at read 6's slope, 39.0 at read 5's.
+  Every monitoring read must recompute the SLOPE, not only the marginal.
+- `[OPEN]` `[FUTURE]` the untried structural lever is `shuffle.sh:48
+  -approx-rows-per-out-file` together with `SHUFFLE_KEEPROWS`: a smaller out file would make
+  `NUM_TRAIN_SAMPLES_PER_EPOCH` operative again and let the export cadence be set
+  deliberately instead of falling out of a file count. Owner `scale_data_window`; it changes
+  a shipped script, not a knob, so it needs its own packet.
+- `[OPEN]` the realised cycle wall and export cadence at G = 1800 / E = 16 000 are measured
+  at the first link-2 monitoring read, which also verifies that the log line reads
+  `loop knobs … (sha256 ba7f1bf7e1bc166d)` — neither `5ae53587` (link 1) nor `3504a8ea` (the
+  staged 1500 file that no link consumed).
+- `[OPEN]` the storage model still under-counts production (29.2 MiB/cycle measured against
+  17.12 projected). Not a budget risk; owned by `data_budget` / `measure_stage_throughput`.
+- `[CLOSED 2026-09-05]` `o47_rows_per_game_drift_rederive_at_17` — the trigger response is
+  applied here.
+- `[OPEN]` link 1 (job 301099) keeps `NUM_GAMES_PER_CYCLE = 1000` to its end, for the reason
+  in § 9's last bullet. Both files were changed by writing a new file and renaming, so the
+  running link's open descriptors are untouched; `synchronous_loop_9x9.sh` kept mode 0755.

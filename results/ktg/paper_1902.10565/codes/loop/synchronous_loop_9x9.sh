@@ -138,22 +138,30 @@ mkdir -p "$BASEDIR"/torchmodels_toexport
 #
 # The defaults below are DERIVED, no longer a hypothesis: every one is the
 # solution of a constraint read out of train.py / shuffle.py at path:line,
-# evaluated at the rows/game Slurm job 298712 measured (r = 32.3 real net,
-# 31.675 random net). The derivation, one comment per knob, lives in
-# codes/loop/knobs_9x9.env; the full trace is
+# evaluated at a rows/game some job actually measured. They now stand at the
+# PRODUCTION marginal of job 301099 monitoring read 5 (r = 17.7235 over the last
+# three complete real-net net dirs, 10-net drift bound 16.6532, random-net
+# r0 = 31.4734), not at the 20-game smoke probe of job 298712 that gave 32.3:
+# rows/game falls as the net trains, so a single r is never a constant of the
+# run. Re-derived twice on 2026-09-05 -- NUM_GAMES_PER_CYCLE 1000 -> 1500 at
+# read 4, then option C (1500 -> 1800 with the epoch 20000 -> 16000 and its two
+# dependants) at read 5, on the human decision recorded in mission.json.
+# The derivation, one comment per knob, lives in codes/loop/knobs_9x9.env; the
+# options and every K/T inequality behind option C are in
+# evidence/scale_data_window/o47_options.md; the full trace is
 # evidence/derive_cycle_knobs/derivation.md; the arithmetic is re-run by
 # codes/eval/derive_knobs.py, and `--assert-loop-defaults <this file>` fails if
-# any default below drifts from it. Obligations o24, o13 (knob conjunct).
-NUM_GAMES_PER_CYCLE="${NUM_GAMES_PER_CYCLE:-1500}"          # upstream :57 = 500; >= max(1.2*E/r_lo, 1.25*MINROWS/r0_lo)
+# any default below drifts from it. Obligations o24, o13 (knob conjunct), o47.
+NUM_GAMES_PER_CYCLE="${NUM_GAMES_PER_CYCLE:-1800}"          # upstream :57 = 500; >= max(1.44*E/r_lo, MINROWS/r0_lo)
 NUM_THREADS_FOR_SHUFFLING="${NUM_THREADS_FOR_SHUFFLING:-8}" # upstream :58 = 8, unchanged (measured 4+8 = 12 threads)
-NUM_TRAIN_SAMPLES_PER_EPOCH="${NUM_TRAIN_SAMPLES_PER_EPOCH:-20000}"   # upstream :59 = 100000; >= 100*BATCHSIZE (train.py:1379)
+NUM_TRAIN_SAMPLES_PER_EPOCH="${NUM_TRAIN_SAMPLES_PER_EPOCH:-16000}"   # upstream :59 = 100000; = 125*BATCHSIZE, >= the 100 of train.py:1379
 MAX_TRAIN_PER_DATA="${MAX_TRAIN_PER_DATA:-8}"               # upstream :60 = 8, the reuse cap; never raised
-NUM_TRAIN_SAMPLES_PER_SWA="${NUM_TRAIN_SAMPLES_PER_SWA:-10000}"       # upstream :61 = 80000; = E//2, train.py:441's own default
+NUM_TRAIN_SAMPLES_PER_SWA="${NUM_TRAIN_SAMPLES_PER_SWA:-8000}"        # upstream :61 = 80000; = E//2, train.py:441's own default
 BATCHSIZE="${BATCHSIZE:-128}"                               # upstream :62 = 128, unchanged (peak VRAM 4094 MiB at batch 32)
-SHUFFLE_MINROWS="${SHUFFLE_MINROWS:-25000}"                 # upstream :63 = 100000; = 1.25*E, and cycle 1's window IS min_rows
-MAX_TRAIN_SAMPLES_PER_CYCLE="${MAX_TRAIN_SAMPLES_PER_CYCLE:-100000}"  # upstream :64 = 500000; = 5*E, upstream's own cap/epoch ratio
+SHUFFLE_MINROWS="${SHUFFLE_MINROWS:-25000}"                 # upstream :63 = 100000; held at 195 batches >= round(E/batch) = 125
+MAX_TRAIN_SAMPLES_PER_CYCLE="${MAX_TRAIN_SAMPLES_PER_CYCLE:-80000}"   # upstream :64 = 500000; = 5*E, upstream's own cap/epoch ratio
 TAPER_WINDOW_SCALE="${TAPER_WINDOW_SCALE:-50000}"           # upstream :65 = 50000, unchanged (no constraint binds it)
-SHUFFLE_KEEPROWS="${SHUFFLE_KEEPROWS:-120000}"              # upstream :66 = 600000; = 1.2*cap, upstream's own keep/cap ratio
+SHUFFLE_KEEPROWS="${SHUFFLE_KEEPROWS:-120000}"              # upstream :66 = 600000; held at 1.5*cap -- it IS samples/cycle
 
 # At most one exported candidate per cycle: without the pair the trainer keeps
 # exporting inside one cycle (train.py:116 -epochs-per-export, :118

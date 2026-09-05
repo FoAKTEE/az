@@ -1,0 +1,230 @@
+{
+ "_note": "CANDIDATE rows only. Written by the worker on APPLYING knob option C to codes/loop/knobs_9x9.env for node arxiv-1902.10565::scale_data_window, on the human decision in mission.json decisions[-1]. NOT appended -- no result, knowledge or claim row was written by this packet; an independent validator admits or refutes them. The only rows this worker appended are error-ledger trials under task_id scale_data_window. This file SUCCEEDS evidence/derive_cycle_knobs/candidate_rows_rederive.json, whose 1500/20000 set was staged at monitoring read 5 and superseded at read 6 before any link consumed it; that file is left in place unchanged as the record of what was proposed then.",
+ "node_id": "arxiv-1902.10565::scale_data_window",
+ "also_recorded_for": "arxiv-1902.10565::derive_cycle_knobs_9x9",
+ "task_id": "scale_data_window",
+ "worker_role": "worker",
+ "authority": {
+  "mission_json": "decisions[-1]",
+  "date": "2026-09-05",
+  "by": "human",
+  "decision": "link 2 onward runs knob option C: NUM_GAMES_PER_CYCLE 1800, NUM_TRAIN_SAMPLES_PER_EPOCH 16000 (SWA 8000, per-cycle cap 80000); supersedes the 1500/20000 set before any cycle ran at it",
+  "worker_scope": "the human fixed the VALUES; this packet applies them, re-derives every dependent knob from them, re-checks every K1-K7/T1-T4 inequality at the freshest production measurement, and records what the move overturns. The worker does not discharge an obligation or restate an admitted claim."
+ },
+ "evidence_files": {
+  "codes/loop/knobs_9x9.env": "ba7f1bf7e1bc166d1e86a32ba3ffa70b838d72aa291f4cdba55fb43d63ea36e8",
+  "codes/loop/synchronous_loop_9x9.sh": "10d195ff6ef764c16d3d5e9d35239c6af0a3873749c3bd7abf9b99aa4094004c",
+  "evidence/scale_data_window/o47_options.md": "ee9ddf78cad0433e085eb57a2778625ef5829185a382385c03cdc230cdf6214d",
+  "evidence/scale_data_window/knobs_option_A.env": "9cf164a822d04a4012c6cad6d3be1aaac22b58f02cc87bbb6605caf6f008d4cc",
+  "evidence/scale_data_window/knobs_option_B.env": "c15c84a9ea700a527030e56aad0923c3e09b955b8ad648b6b7655f9071f58757",
+  "evidence/scale_data_window/knobs_option_C.env": "d66ca368f25c92b423b2d365f730269fb2554be4f442456551082f01b47430aa",
+  "evidence/scale_data_window/check_applied_C_live.txt": "4e184507bce18309ebe7c1f89c201b6934bed9a80a009668eb735c691dd7009c",
+  "evidence/scale_data_window/check_applied_C_smoke.txt": "6aee93135aaecc82f1e9c6eb5f794004d4486f404e9783a9bb0b3b7f34584a92",
+  "evidence/scale_data_window/derive_knobs_self_test.txt": "c67a1cca39c29a78735235734aaa6342b22fee7f2b15767e6ee80baa2f566a2e",
+  "evidence/scale_data_window/epoch_granularity.txt": "9b2c00152824a3411c3f83e1d0df2ca0043cd7ef88d5c22008937e7a494433d8",
+  "evidence/scale_data_window/boundary_check.txt": "f465d207f72985e171d31957b8801f0e3309c11eeea9a5c6a3b58e0a24c76f19",
+  "evidence/scale_data_window/scenarios_r15_r13.txt": "84c9daee4fc6b2d91f7f0992c38eceb140a7c19973d2f1c53674d8f13cec41fe",
+  "evidence/production_chain/throughput.json": "e19644ce4f7c6eb08aac8777b794cfe1e006521c628a4cdacbf8ac16b9ffddef",
+  "evidence/production_chain/rows_per_game.txt": "bce1aeaeccbe33d9355f6bb7f471e3ed9106398c25b661df1471693caa4b7ca0"
+ },
+ "verification": [
+  {
+   "command": "python3 codes/eval/check_knobs_9x9.py --throughput evidence/production_chain/throughput.json --rows-file evidence/production_chain/rows_per_game.txt --marginal-nets 3 --trend-nets 9 --horizon-nets 10",
+   "verdict": "CHECK_KNOBS_9X9: PASS",
+   "exit": 0,
+   "transcript": "evidence/scale_data_window/check_applied_C_live.txt",
+   "includes": "the LOOP DEFAULT WIRING block, which asserts all eleven ${VAR:-default} values of synchronous_loop_9x9.sh against the knob file"
+  },
+  {
+   "command": "python3 codes/eval/check_knobs_9x9.py",
+   "verdict": "CHECK_KNOBS_9X9: PASS",
+   "exit": 0,
+   "transcript": "evidence/scale_data_window/check_applied_C_smoke.txt",
+   "note": "parameter-free run against the frozen, content-hashed smoke evidence"
+  },
+  {
+   "command": "python3 codes/eval/derive_knobs.py --self-test",
+   "verdict": "SELF-TEST: PASS",
+   "exit": 0,
+   "transcript": "evidence/scale_data_window/derive_knobs_self_test.txt",
+   "note": "3 knob cases (2 negative, 1 executed-smoke), 2 o40 ramp cases, 7 o41 missing-key cases plus a positive control"
+  }
+ ],
+ "measured_inputs_read": {
+  "source": "evidence/production_chain/throughput.json + rows_per_game.txt at monitoring read 6 (2026-09-05T06:17), job 301099, 65 cycles, l40s/gl111",
+  "marginal_rows_per_game": 17.1736,
+  "marginal_basis": "t9-s5958400-d1246997, t9-s6257664-d1299077, t9-s6557440-d1333543: 137389 rows / 8000 games",
+  "trend_slope_per_accepted_net": -0.1742,
+  "trend_nets": 9,
+  "horizon_nets": 10,
+  "horizon_lower_bound": 15.4318,
+  "whole_run_aggregate_not_used": 20.2922,
+  "rows_per_game_random": 31.4734,
+  "real_net_selfplay_games_per_hour": 6429.7,
+  "train_samples_per_second": 2119.65,
+  "gate_seconds_per_game": 0.48678,
+  "bytes_per_row_on_disk": 350.92,
+  "slope_history": {
+   "read4": -0.1528,
+   "read5": -0.107,
+   "read6": -0.1742,
+   "note": "the slope is NOT stable; it steepened 1.6x between reads 5 and 6"
+  }
+ },
+ "knob_set_applied": {
+  "changed": {
+   "NUM_GAMES_PER_CYCLE": {
+    "was": 1500,
+    "now": 1800,
+    "derivation": "smallest hundred with G*r_lo >= 1.2*(1.2*E_old) = 28800 at read 5's bound 16.6532 = 1729.4; the bound is stated against the OLD epoch 20000 so it constrains data per cycle (rho <= 4.167), not tolerance headroom"
+   },
+   "NUM_TRAIN_SAMPLES_PER_EPOCH": {
+    "was": 20000,
+    "now": 16000,
+    "derivation": "125*BATCHSIZE; keeps 25 batches (20 %) over the 100-batch metrics floor of train.py:1379/:1661, where the 12800 floor keeps none"
+   },
+   "NUM_TRAIN_SAMPLES_PER_SWA": {
+    "was": 10000,
+    "now": 8000,
+    "derivation": "= E//2, train.py:441 default made explicit; with swa_scale 8 (:443) the export is an EMA over ~4E = 64000 samples, down from 80000"
+   },
+   "MAX_TRAIN_SAMPLES_PER_CYCLE": {
+    "was": 100000,
+    "now": 80000,
+    "derivation": "= 5*E, upstream's own cap/epoch ratio (:64 / :59)"
+   }
+  },
+  "unchanged_and_why": {
+   "SHUFFLE_KEEPROWS": "120000; deliberately NOT scaled with the cap. K3 needs only keep > cap and keep >= epochs*E (120000 > 80000 >= 80000), and this knob is what a cycle actually trains (see whole_file_epoch_finding). Below ~98000 the sample collapses to one output file and the export cadence halves.",
+   "SHUFFLE_MINROWS": "25000; binds only a cycle-1 random bootstrap. The requirement is min_rows/batch >= round(E/batch): 195 >= 125, ratio 1.56.",
+   "EPOCHS_PER_EXPORT": "5 = floor(min(gain 247300, cap_eff 80000)/16000), the same at r and r_lo",
+   "MAX_TRAIN_PER_DATA": "8, the hard reuse cap, never raised",
+   "BATCHSIZE": "128",
+   "NUM_THREADS_FOR_SHUFFLING": "8",
+   "TAPER_WINDOW_SCALE": "50000",
+   "KTG_CPUS_PER_TASK": "32",
+   "KTG_NUM_GAME_THREADS": "18"
+  },
+  "knobs_env_sha256_before_5ae53587_consumed_by_link1": "5ae5358791974ae12dd2e635aa38b825637faf23e1963dae1d96f146fd266d62",
+  "knobs_env_sha256_staged_1500_never_consumed": "3504a8ea9c9d0bfa941dc8084e4fbaa75fc601a66141feee06daa4fc136fae3e",
+  "knobs_env_sha256_now": "ba7f1bf7e1bc166d1e86a32ba3ffa70b838d72aa291f4cdba55fb43d63ea36e8"
+ },
+ "inequality_table_at_read6_marginal": {
+  "K1_bucket_gain_clears_epoch": "gain = 247300.2 (lower90 222217.4) vs 0.99*E = 15840.0 -- ok",
+  "T1_freshness": "rows_per_cycle = 30912.5 (lower90 27777.2) vs 1.2*E = 19200.0; +61.00 % / +44.67 % -- ok",
+  "K2_one_export_per_cycle": "epochs = 5 (lower90 5); cap_eff 80000; bucket reuse 2.59 (2.88) <= 8 -- ok",
+  "K2b_effective_reuse_within_cap": "2.59 (2.88) <= 8 -- ok",
+  "K3_keep_gt_cap": "120000 > 80000 and >= epochs*E = 80000 -- ok",
+  "K4_window_holds_one_epoch": "worst cycle 1: 25000 rows = 195 batches >= 125 -- ok",
+  "K5_random_bootstrap_reaches_min_rows": "1800*31.4734 = 56652.1 (55850.9) >= 25000 -- ok",
+  "K6_swa_period_is_half_epoch": "8000 -- ok",
+  "K7_cycle_wall_under_bound": "1384 s = 0.38 h; 185 cycles per declared 257400 s link -- ok",
+  "T2_bucket_holds_batches": "195 >= 125; gain 247300 (222218) >= epochs*E = 80000 -- ok",
+  "T3_storage_projection": "17.12 MiB/cycle; 23.631 GiB after a 185-cycle link < 500 GiB -- ok",
+  "T4_threads_le_cpus": "worst stage 28 <= 32 -- ok",
+  "comparison_at_the_same_measurement": {
+   "link1_G1000_E20000": "17173.6 vs 24000 = -28.44 %; at r_lo -35.70 %",
+   "staged_G1500_E20000": "25760.4 vs 24000 = +7.33 %; at r_lo 23147.7 = -3.55 % FAILS",
+   "applied_G1800_E16000": "30912.5 vs 19200 = +61.00 %; at r_lo 27777.2 = +44.67 %"
+  },
+  "honest_decomposition_of_the_61_percent": "raising G moves the NUMERATOR (-28.44 % -> +28.80 % against the unchanged 24000 threshold) and lowering E moves the THRESHOLD (24000 -> 19200, +28.80 % -> +61.00 %). About half the headline gain is the test getting easier, not the run getting more data. Only the G half moves rho."
+ },
+ "whole_file_epoch_finding": {
+  "statement": "NUM_TRAIN_SAMPLES_PER_EPOCH does not set what an epoch trains and MAX_TRAIN_SAMPLES_PER_CYCLE does not set what a cycle trains: samples per cycle = SHUFFLE_KEEPROWS, one pass over the kept shuffle sample.",
+  "measured": {
+   "out_files_per_cycle": 2,
+   "rows_per_out_file": [
+    60136,
+    59864
+   ],
+   "sum": 120000,
+   "batches_per_epoch_measured": [
+    467,
+    469
+   ],
+   "batches_per_epoch_nominal_round_E_over_128_at_E20000": 156,
+   "global_step_samples": [
+    6557440,
+    6617216,
+    6677248
+   ],
+   "epochs_started": 174,
+   "epochs_aborted_on_subepoch_check": 62,
+   "exports": 22,
+   "cycles": 62
+  },
+  "code": "shuffle.sh:48 -approx-rows-per-out-file 70000 with shuffle.py:406-412 gives round(120000/70000) = 2 output files; train.py:1306-1345 get_files_for_subepoch takes WHOLE files because its probabilistic skip at :1332 requires batches_to_use_so_far > 0, which a first file of 467 batches never allows; the third epoch exits 0 via -no-repeat-files (training_data_generator.py:35) and train.py:1487-1489",
+  "consequence_rho": {
+   "formula": "rho = SHUFFLE_KEEPROWS / (G * r), E cancels",
+   "at_read6": {
+    "link1_G1000": 6.99,
+    "G1500": 4.66,
+    "applied_G1800": 3.88,
+    "cap_MAX_TRAIN_PER_DATA": 8,
+    "watch": "link 1 is at 87 % of the cap and 7.78 = 97 % at its own 10-net bound; the R14 starvation signal has not fired (one occurrence, longest run 1, threshold 3)"
+   }
+  },
+  "consequence_value_head": "the value target is per GAME and the policy target per ROW, so the samples drawn from one game over its window residence are SHUFFLE_KEEPROWS/G, independent of r: 120 through all of link 1 at G = 1000, 80 at G = 1500, 66.7 at G = 1800. Lowering E does not enter it. This is the measured mechanism available to explain the value-loss drift 0.568837 -> 0.592790 while p0loss falls 3.603458 -> 1.844065. [PRELIMINARY] -- inference from the code path plus the measured step sizes; no ablation was run.",
+  "consequence_cadence": "the export counter advances 2 per cycle, so a candidate every EPOCHS_PER_EXPORT/2 = 2.5 cycles (measured 22 exports in 62 cycles = 2.82 with the ramp); no option-C knob changes it",
+  "consequence_metrics": "floor(467/100) = 4 metrics_train.json lines per epoch regardless of E, so the 100-batch floor that makes 12800 the nominal lower bound on E is currently unreachable; it becomes reachable if SHUFFLE_KEEPROWS is ever lowered enough to split the sample finer"
+ },
+ "candidate_result_row": {
+  "paper": "arxiv-1902.10565",
+  "result_id": "r_cycle_knobs_9x9_derived",
+  "action": "AMEND (the admitted row's knob set is superseded)",
+  "name": "9x9 production cycle knobs, derived from the measured marginal rows/game",
+  "working_context": "job 301099 link 1, l40s/gl111, 65 cycles, monitoring read 6; knobs consumed from link 2 (job 305318) on",
+  "claim": "The production knob set is NUM_GAMES_PER_CYCLE 1800, NUM_TRAIN_SAMPLES_PER_EPOCH 16000, NUM_TRAIN_SAMPLES_PER_SWA 8000, MAX_TRAIN_SAMPLES_PER_CYCLE 80000, with BATCHSIZE 128, MAX_TRAIN_PER_DATA 8, NUM_THREADS_FOR_SHUFFLING 8, SHUFFLE_MINROWS 25000, TAPER_WINDOW_SCALE 50000, SHUFFLE_KEEPROWS 120000, EPOCHS_PER_EXPORT 5, KTG_CPUS_PER_TASK 32, KTG_NUM_GAME_THREADS 18; every K1-K7 and T1-T4 inequality holds at the read-6 marginal 17.1736 and at its 10-net drift bound 15.4318.",
+  "evidence_type": "numerical_simulation + empirical_measurement",
+  "status": "conditional",
+  "conditional_on": "the drift continuing to be describable by a least-squares slope over the last nine complete net directories -- a description that weakened between reads 5 and 6, when the slope itself steepened 1.6x",
+  "supersedes": "the 1500 / 20000 / 10000 / 100000 set of candidate_rows_rederive.json, which no link consumed",
+  "open_obligations": [
+   "o48_rows_per_game_drift_rederive_at_13"
+  ],
+  "decision_owner": "validator"
+ },
+ "candidate_claim_transitions": [
+  {
+   "obligation": "o47_rows_per_game_drift_rederive_at_17",
+   "proposed_status": "discharged",
+   "proposed_discharged_by": "r_cycle_knobs_9x9_derived (as amended above)",
+   "argument": "o47 (b) required the knob set to be RE-DERIVED before the next chain link sources knobs_9x9.env, once the marginal crossed 17.0, with every K1-K7/T1-T4 inequality re-checked at the new marginal and its drift bound. That is done: the marginal is 17.1736 and falling ~0.17 per accepted net, the re-derivation is applied to the live file, and the checker exits 0 at the fresh measurement including the loop-default wiring assertion. o47 (a) -- recording marginal, slope and verdict in status_log.txt at every read -- was satisfied at reads 5 and 6 by the production_chain_9x9 worker. o47 (c) -- the first read that measures a link-2 cycle at the new game count -- is NOT satisfied and no link has run at 1800 yet; it carries forward into o48 rather than blocking the discharge, because it is a confirmation of the applied set, not of the trigger response.",
+   "caveat": "the structural fix o47 named (raising min_rows / lowering E) turns out to be a paper fix by the whole-file epoch measurement above: only the G half of option C moves the reuse the loop applies. The genuinely structural lever, shuffle.sh:48 -approx-rows-per-out-file with SHUFFLE_KEEPROWS, is untried and is carried as [FUTURE] on scale_data_window.",
+   "decision_owner": "validator -- the worker does not discharge an obligation"
+  },
+  {
+   "obligation": "o48_rows_per_game_drift_rederive_at_13",
+   "proposed_status": "open",
+   "proposed_blocking": true,
+   "proposed_node_ids": [
+    "arxiv-1902.10565::scale_data_window",
+    "arxiv-1902.10565::derive_cycle_knobs_9x9",
+    "arxiv-1902.10565::measure_stage_throughput"
+   ],
+   "proposed_dependencies": [
+    "r_cycle_knobs_9x9_derived",
+    "o47_rows_per_game_drift_rederive_at_17"
+   ],
+   "proposed_owner": "worker scale_data_window (trigger measured by the production_chain_9x9 monitoring reads)",
+   "proposed_statement": "Rows/game keeps falling as the net trains and the RATE of the fall is not stable: the least-squares slope over the last nine complete real-net selfplay directories went -0.1528 (read 4) -> -0.1070 (read 5) -> -0.1742 (read 6) rows/game per accepted net, while the marginal went 18.525 -> 17.7235 -> 17.1736. At the applied set (NUM_GAMES_PER_CYCLE 1800, NUM_TRAIN_SAMPLES_PER_EPOCH 16000) the freshness tolerance T1 in its lower-bound form fails when the marginal reaches 1.2*E/G + 10*|slope| = 10.667 + 1.742 = 12.409 (11.737 at read 5's slope), i.e. 27.4 accepted nets away at read 6's slope and 50.8 at read 5's. The reuse the loop really applies, rho = SHUFFLE_KEEPROWS/(G*r), reaches the MAX_TRAIN_PER_DATA cap of 8 at r = 8.33 with G = 1800. Closes when, at every production monitoring read of link 2 and after: (a) check_knobs_9x9.py --marginal-nets 3 --trend-nets 9 --horizon-nets 10 is run on evidence refreshed by measure_stage_throughput and its marginal, SLOPE and verdict are recorded in status_log.txt -- the SLOPE explicitly, because a re-armed trigger computed from a stale slope is worthless; (b) when the marginal crosses 13.0 -- above the 12.409 failure point, so the trigger fires with margin -- the knob set is RE-DERIVED before the next chain link sources knobs_9x9.env, with every K1-K7/T1-T4 inequality re-checked at the new marginal and its drift bound, and with rho reported alongside the T1 margin so the move is not judged only by a tolerance that a smaller epoch can satisfy without changing what the loop does; (c) the first monitoring read that measures a link-2 cycle at 1800 games reports rows/cycle on the marginal, rho, the cycle wall and the export cadence, which either promotes r_cycle_knobs_9x9_derived to empirical or refutes it. A knob move is an escalation (mission tolerance), never a silent edit; the running link keeps the knobs it sourced at link start.",
+   "decision_owner": "validator -- the worker does not open an admitted obligation"
+  },
+  {
+   "claim": "c10_rows_per_game",
+   "status": "unchanged by this packet (refuted as written)",
+   "detail": "the marginal is now 17.1736 and the whole-run aggregate 20.2922, both still inside the [12, 35] band; the byte conjunct stays refuted at 350.92 B/row. The restatement proposed in candidate_rows_rederive.json -- a band on the MARGINAL rate with an explicit drift clause -- is unchanged and still owed to the validator."
+  },
+  {
+   "claim": "T1 (mission tolerance, no train starvation)",
+   "status": "restored with margin, but its READING is now qualified",
+   "detail": "T1 is satisfied at +61.00 % (+44.67 % at the drift bound). It was not restated, narrowed, or given an exception. But by the whole-file epoch measurement, 1.2*E is a tolerance threshold and not the data a cycle needs: about half the improvement in the T1 margin comes from lowering E. The quantity that measures what the loop does is rho = SHUFFLE_KEEPROWS/(G*r), and a validator should judge the move on rho (4.66 -> 3.88) as well as on T1."
+  },
+  {
+   "claim": "R19 (new DESIGN section 8 risk row)",
+   "status": "proposed, recorded in DESIGN.md section 8 by this packet",
+   "detail": "'a knob is believed to control something it does not' -- fired 2026-09-05. Recorded as a risk with its signature and response because it is a methodology defect, not a result; a validator may prefer it as a knowledge-ledger claim."
+  }
+ ],
+ "not_appended": "no result, claim or knowledge row was appended by this packet. mission.json was NOT edited by the worker -- the human decision was already recorded there. The running link 1 (job 301099) was not touched and runs/p1 was read, never written."
+}
