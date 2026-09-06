@@ -21,6 +21,7 @@ Add --test to also run the full A-D test suite against the new bundle.
 
 import argparse
 import json
+import glob
 import os
 import re
 import subprocess
@@ -170,8 +171,26 @@ td.n { font-family: "IBM Plex Mono", ui-monospace, monospace;
 """
 
 
+def pages_for_link(cfg, link_no):
+    """Every built page that covers this link, newest build first.
+
+    A link that outgrew the size ceiling is published as several cycle-range
+    pages, so the index has to list what was actually built rather than assume
+    one page per link.
+    """
+    base = os.path.basename(cfg["page"]).replace(".html", "")
+    d = os.path.dirname(cfg["page"])
+    found = []
+    for path in sorted(glob.glob(os.path.join(d, base + "_link%d*.html" % link_no))):
+        name = os.path.basename(path)
+        m = re.search(r"_cycles(\d+)-(\d+)\.html$", name)
+        span = "%s\u2013%s" % (m.group(1), m.group(2)) if m else "whole link"
+        found.append((name, span, os.path.getsize(path)))
+    return found
+
+
 def write_index(cfg, out_dir, index_path, page_for_link):
-    """A small page listing the chain's links; it carries no game data."""
+    """A small page listing the chain's links and the pages built for each."""
     with open(os.path.join(out_dir, "games_stats.json")) as fh:
         stats = json.load(fh)
     links = stats.get("links") or []
@@ -179,20 +198,34 @@ def write_index(cfg, out_dir, index_path, page_for_link):
     rows = []
     for link in links:
         n = by_link.get(str(link["link"]), 0)
-        rows.append("<tr><td class=\"n\">%d</td><td class=\"n\">%s</td>"
-                    "<td class=\"n\">%d&ndash;%d</td><td class=\"n\">%s</td>"
-                    "<td class=\"n\">%s</td></tr>"
-                    % (link["link"], link["job"], link["first_cycle"], link["last_cycle"],
-                       "{:,}".format(n), os.path.basename(page_for_link(link["link"]))))
+        pages = pages_for_link(cfg, link["link"])
+        if not pages:
+            rows.append("<tr><td class=\"n\">%d</td><td class=\"n\">%s</td>"
+                        "<td class=\"n\">%d&ndash;%d</td><td class=\"n\">%s</td>"
+                        "<td class=\"n\">not built yet</td></tr>"
+                        % (link["link"], link["job"], link["first_cycle"],
+                           link["last_cycle"], "{:,}".format(n)))
+            continue
+        for i, (name, span, size) in enumerate(pages):
+            rows.append("<tr><td class=\"n\">%s</td><td class=\"n\">%s</td>"
+                        "<td class=\"n\">%s</td><td class=\"n\">%s</td>"
+                        "<td class=\"n\"><a href=\"%s\">%s</a> (%.1f MiB)</td></tr>"
+                        % (link["link"] if i == 0 else "",
+                           link["job"] if i == 0 else "",
+                           span,
+                           "{:,}".format(n) if i == 0 else "",
+                           name, name, size / 1048576.0))
     html = INDEX_PAGE % {
         "title": cfg["title"] + " index",
         "heading": "%s production chain" % cfg["board"],
-        "sub": "snapshot %s  ·  %s games over %d link%s"
+        "sub": "snapshot %s  \u00b7  %s games over %d link%s"
                % (stats.get("snapshot_utc"), "{:,}".format(stats.get("games", 0)),
                   len(links), "" if len(links) == 1 else "s"),
         "rows": "\n".join(rows) or "<tr><td colspan=\"5\">no links found</td></tr>",
-        "note": "Each link has its own page, built with "
-                "<code>build_viewer.py --preset p1 --link N</code>. "
+        "note": "Each link is published as one page, or as several cycle-range "
+                "pages when it outgrows the size ceiling, built with "
+                "<code>build_viewer.py --preset p1 --link N [--cycle-range A-B]</code>. "
+                "Cycle numbers are per link: the loop's counter restarts each link. "
                 "Counts are games in the snapshot above, not the whole link, when a "
                 "link is still running.",
     }
@@ -223,8 +256,13 @@ def main(argv=None):
     cfg = PRESETS[args.preset]
     if (args.link or args.cycle_range) and not cfg.get("loop_logs"):
         ap.error("--link and --cycle-range need a preset with loop logs to read cycles from")
-    if args.link and args.cycle_range:
-        ap.error("give either --link or --cycle-range, not both")
+    if args.cycle_range and not args.link and cfg.get("loop_logs"):
+        # A bare cycle range is ambiguous once the chain has more than one link,
+        # because the loop's cycle counter restarts every link.
+        many = len(EX.read_links(cfg["loop_logs"])) > 1
+        if many:
+            ap.error("this run has more than one link and cycle numbers restart "
+                     "each link: say --link N --cycle-range A-B")
 
     label = cfg["label"]
     page = cfg["page"]
@@ -238,11 +276,17 @@ def main(argv=None):
             raise SystemExit("link %d not found; the chain has %d link(s) so far"
                              % (args.link, len(links)))
         link = match[0]
-        cycle_range = "%d-%d" % (link["first_cycle"], link["last_cycle"])
+        if args.cycle_range:
+            cycle_range = args.cycle_range
+            page = page.replace(".html", "_link%d_cycles%s.html" % (args.link, cycle_range))
+            out = os.path.join(out, "link%d_cycles%s" % (args.link, cycle_range))
+        else:
+            cycle_range = "%d-%d" % (link["first_cycle"], link["last_cycle"])
         label = ("%s production chain · link %d · job %s · cycles {cycles}"
                  % (cfg["board"], link["link"], link["job"]))
-        page = page.replace(".html", "_link%d.html" % args.link)
-        out = os.path.join(out, "link%d" % args.link)
+        if not args.cycle_range:
+            page = page.replace(".html", "_link%d.html" % args.link)
+            out = os.path.join(out, "link%d" % args.link)
     elif cycle_range:
         label = "%s production chain · cycles {cycles} · job {job}" % cfg["board"]
         page = page.replace(".html", "_cycles%s.html" % cycle_range)
@@ -261,6 +305,8 @@ def main(argv=None):
         extract += ["--loop-log", cfg["loop_log"]]
     if cfg.get("loop_logs"):
         extract += ["--loop-logs", cfg["loop_logs"]]
+    if args.link:
+        extract += ["--link", str(args.link)]
     if cycle_range:
         extract += ["--cycle-range", cycle_range]
     run(extract)

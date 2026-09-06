@@ -38,6 +38,7 @@ import os
 import random
 import re
 import subprocess
+import inspect
 import sys
 import tempfile
 import time
@@ -817,6 +818,89 @@ def test_headless(bundle, games_path, viewer_path, fixture_path, node_path):
 
 # --------------------------------------------------------------------------- main
 
+
+def test_link_attribution():
+    """Games are credited to the link that WROTE them, not to link 1.
+
+    The loop's cycle counter restarts every link, so link 1 cycle 12 and link 2
+    cycle 12 are different games.  Matching on the cycle number instead of the
+    time returned the first link whose range contained the number, which
+    credited every later link's games to link 1 and stamped its job on the page.
+
+    The strict-JSON check at the end is not incidental: the link records are
+    serialised into games.json, and a float("inf") sentinel for "the last link
+    is still open" writes as ``Infinity`` -- which json.loads accepts and a
+    browser's JSON.parse rejects, breaking the page for every reader.
+    """
+    links = [
+        {"link": 1, "job": "301099", "t_start": 1000.0, "t_end": 1900.0,
+         "first_cycle": 1, "last_cycle": 157},
+        {"link": 2, "job": "305318", "t_start": 2000.0, "t_end": 2900.0,
+         "first_cycle": 1, "last_cycle": 63},
+    ]
+    links[0]["t_until"] = links[1]["t_start"]
+    links[1]["t_until"] = None          # open-ended, and JSON-safe
+
+    ok = True
+    cases = [
+        (1500.0, 1, "301099", "written while link 1 ran"),
+        (2500.0, 2, "305318", "written while link 2 ran"),
+        (1950.0, 1, "301099", "in the gap between links: the earlier link owns it"),
+        (9999.0, 2, "305318", "after the last mark: the open link owns it"),
+    ]
+    for mtime, want_link, want_job, why in cases:
+        got = EX.link_for_mtime(mtime, links)
+        if got is None or got["link"] != want_link or got["job"] != want_job:
+            print("   FAIL  link_for_mtime(%s) -> %s, wanted link %d job %s (%s)"
+                  % (mtime, got and got["link"], want_link, want_job, why))
+            ok = False
+    if EX.link_for_mtime(500.0, links) is not None:
+        print("   FAIL  a file older than every link must not be attributed")
+        ok = False
+
+    text = json.dumps(links)
+    if "Infinity" in text or "NaN" in text:
+        print("   FAIL  link records carry a non-finite value; JSON.parse would reject them")
+        ok = False
+    else:
+        try:
+            json.loads(text)
+        except ValueError as exc:
+            print("   FAIL  link records are not strict JSON: %s" % exc)
+            ok = False
+
+    print("A0 link attribution: by write time, and JSON-safe")
+    print("   windows             4 checked, plus a file older than the chain")
+    print("   RESULT              %s" % ("PASS" if ok else "FAIL"))
+    print("")
+    return ok
+
+
+def test_link_scoped_cycle_range():
+    """--link N --cycle-range A-B is accepted, and the range is read inside link N."""
+    ok = True
+    src = open(os.path.join(HERE, "build_viewer.py")).read()
+    if "give either --link or --cycle-range, not both" in src:
+        print("   FAIL  build_viewer still refuses the combined flags")
+        ok = False
+    if '"--link", str(args.link)' not in src:
+        print("   FAIL  build_viewer does not pass --link through to the extractor")
+        ok = False
+    if "only_link" not in inspect.signature(EX.build).parameters:
+        print("   FAIL  extract_games.build has no only_link parameter")
+        ok = False
+    helptext = subprocess.run(
+        [sys.executable, os.path.join(HERE, "extract_games.py"), "--help"],
+        capture_output=True, text=True).stdout
+    if "--link" not in helptext:
+        print("   FAIL  extract_games exposes no --link flag")
+        ok = False
+    print("A1 link-scoped cycle range: --link N --cycle-range A-B")
+    print("   RESULT              %s" % ("PASS" if ok else "FAIL"))
+    print("")
+    return ok
+
+
 def main(argv=None):
     ap = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     ap.add_argument("--games", default=DEFAULT_GAMES)
@@ -857,6 +941,8 @@ def main(argv=None):
     print("")
 
     ok = True
+    ok &= test_link_attribution()
+    ok &= test_link_scoped_cycle_range()
     ok &= test_round_trip(bundle, args.run_dir, args.round_trip, random.Random(args.seed),
                           args.quiet_seconds)
     ok &= test_replay_all(bundle)

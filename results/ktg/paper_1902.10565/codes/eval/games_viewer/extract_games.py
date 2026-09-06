@@ -214,12 +214,39 @@ def read_links(loop_logs):
         links.append({"job": job, "log": path, "marks": marks,
                       "first_cycle": min(c for _, c in marks),
                       "last_cycle": max(c for _, c in marks),
+                      "t_start": marks[0][0],
+                      "t_end": marks[-1][0],
                       "started_utc": time.strftime("%Y-%m-%dT%H:%M:%SZ",
                                                    time.gmtime(marks[0][0]))})
     links.sort(key=lambda link: link["marks"][0][0])
     for i, link in enumerate(links):
         link["link"] = i + 1
+        # A link owns the wall-clock window from its first cycle mark up to the
+        # next link's first mark; the last link owns everything after its own.
+        # The cycle counter RESTARTS at 1 in every link
+        # (synchronous_loop_9x9.sh CYCLE_INDEX), so cycle numbers alone cannot
+        # say which link wrote a file -- link 1 cycle 12 and link 2 cycle 12 are
+        # different games.  Time can, and does.
+        # None, not float("inf"): this dict is serialised into games.json, and
+        # json.dump writes Infinity, which json.loads accepts but a browser's
+        # JSON.parse rejects -- it would break the page for every reader.
+        link["t_until"] = (links[i + 1]["t_start"] if i + 1 < len(links) else None)
     return links
+
+
+def link_for_mtime(mtime, links):
+    """The link that was running when a file was written, or None.
+
+    This is the attribution the label and the per-link counts must use.  Matching
+    on the cycle number instead (the old ``link_of``) silently credits every
+    later link's games to link 1, because the per-link cycle ranges overlap.
+    """
+    found = None
+    for link in links:
+        until = link.get("t_until")
+        if link["t_start"] <= mtime and (until is None or mtime < until):
+            found = link
+    return found
 
 
 def cycle_of(mtime, marks):
@@ -479,7 +506,7 @@ def parse_game(line):
 def build(run_dir, out_dir, keep_analysis, target_bytes, packed=True, verbose=True,
           board_size=None, label=None, hash_chars=DEFAULT_HASH_CHARS,
           quiet_seconds=DEFAULT_QUIET_SECONDS, loop_log=None, loop_logs=None,
-          cycle_range=None):
+          cycle_range=None, only_link=None):
     snapshot_utc = time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())
     files, skipped_hot = snapshot_files(run_dir, quiet_seconds)
     total_bytes = sum(f[3] for f in files)
@@ -493,6 +520,23 @@ def build(run_dir, out_dir, keep_analysis, target_bytes, packed=True, verbose=Tr
     lo, hi = cycle_range if cycle_range else (None, None)
     out_of_range = 0
     cycle_files = {}
+    file_link = {}
+
+    # Attribute the run to the link that actually wrote the selected games,
+    # not to whichever single loop log the caller happened to pass. With
+    # --link N that is link N; otherwise it is the link covering the newest
+    # snapshotted file.
+    if links:
+        owner = None
+        if only_link is not None:
+            owner = next((l for l in links if l["link"] == only_link), None)
+        elif files:
+            owner = link_for_mtime(max(f[4] for f in files), links)
+        if owner:
+            run_info["job"] = owner["job"] or run_info.get("job")
+            run_info["link"] = owner["link"]
+            run_info["chain_length"] = run_info.get("chain_length") or len(links)
+            run_info["attributed_from"] = os.path.basename(owner["log"])
 
     if board_size is None:
         board_size = detect_board_size(files) or DEFAULT_BOARD_SIZE
@@ -534,8 +578,16 @@ def build(run_dir, out_dir, keep_analysis, target_bytes, packed=True, verbose=Tr
 
     for source, _net_dir, path, size, mtime in files:
         cycle = cycle_of(mtime, marks) if marks else 0
+        wrote_by = link_for_mtime(mtime, links) if links else None
+        wrote_link = wrote_by["link"] if wrote_by else 0
         if cycle:
             cycle_files.setdefault((source, cycle), []).append(path)
+            file_link[(source, cycle)] = wrote_link
+        # --link N scopes the selection to the link that WROTE the file, so a
+        # cycle range is read inside that link rather than across the chain.
+        if only_link is not None and wrote_link != only_link:
+            out_of_range += 1
+            continue
         if lo is not None and not (lo <= cycle <= hi):
             out_of_range += 1
             continue
@@ -667,9 +719,16 @@ def build(run_dir, out_dir, keep_analysis, target_bytes, packed=True, verbose=Tr
         key = results[g[4]][0]
         by_result[key] = by_result.get(key, 0) + 1
 
+    # Count per link by the link that WROTE each cycle's files. link_of() keyed
+    # on the cycle number, and per-link cycle ranges overlap, so it credited
+    # every later link's games to link 1.
+    cycle_owner = {}
+    for (src, cyc), lnk in file_link.items():
+        cycle_owner.setdefault(cyc, lnk)
     per_link = {}
     for cyc, n in by_cycle.items():
-        per_link[str(link_of(cyc, links))] = per_link.get(str(link_of(cyc, links)), 0) + n
+        key = str(cycle_owner.get(cyc, 0))
+        per_link[key] = per_link.get(key, 0) + n
     duplicated = sorted(k for k, v in cycle_files.items() if len(v) > 1)
 
     stats_out = {
@@ -687,6 +746,7 @@ def build(run_dir, out_dir, keep_analysis, target_bytes, packed=True, verbose=Tr
         "games_by_link": per_link,
         "links": [{k: v for k, v in link.items() if k != "marks"} for link in links],
         "cycle_range_selected": list(cycle_range) if cycle_range else None,
+        "link_selected": only_link,
         "files_out_of_cycle_range": out_of_range,
         "cycles_with_more_than_one_file": ["%s cycle %d" % (SOURCES[s], c)
                                            for s, c in duplicated],
@@ -808,6 +868,8 @@ def main(argv=None):
     ap.add_argument("--loop-logs", default=None,
                     help="glob for every loop log of the chain, one per link; this is "
                          "what places each game in a cycle and a link")
+    ap.add_argument("--link", type=int, default=None,
+                    help="only games written by this chain link")
     ap.add_argument("--cycle-range", default=None, metavar="A-B",
                     help="keep only the games produced in cycles A to B inclusive")
     ap.add_argument("--quiet-seconds", type=int, default=DEFAULT_QUIET_SECONDS,
@@ -840,7 +902,8 @@ def main(argv=None):
         args.run_dir, args.out_dir, not args.no_analysis, target,
         packed=not args.sgf2_moves, board_size=args.board_size, label=args.label,
         hash_chars=args.hash_chars, quiet_seconds=args.quiet_seconds,
-        loop_log=args.loop_log, loop_logs=args.loop_logs, cycle_range=cycle_range)
+        loop_log=args.loop_log, loop_logs=args.loop_logs, cycle_range=cycle_range,
+        only_link=args.link)
 
     if games_bytes + analysis_bytes > target:
         print("")
