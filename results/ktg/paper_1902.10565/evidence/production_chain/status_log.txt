@@ -3402,3 +3402,104 @@ CORRECTION ACCEPTED AND VERIFIED -- THE SUCCESSOR-ID PARSE DEFECT IS FIXED
     scontrol write batch_script 314831 shows the 2>"$sb_err" form at its line 578.
     So the mis-logging ends with link 2 and link 3 will record its successor
     correctly. Recorded as fixed-and-pending-rollover, not as an open defect.
+
+################################################################################
+# READ 10 -- link 2 -- 2026-09-06T00:45 -- job 305318
+################################################################################
+partition / node: l40s / gl111, link 2 of 9, 31 cycles completed in this link
+
+(1) HISTORY WRITTEN FIRST (o51)
+    "+6 new, 12 already present, 56 complete real-net record(s), 1 gap(s);
+     newest t9-s21519232-d1204669 is still being written and is NOT recorded"
+    --assert-nlwp-le 32 exit 0.
+
+(2) o48 BLOCK
+    marginal r (3-net, from the tree)  16.8683
+        t9-s20620032-d992128, t9-s20919936-d1053205, t9-s21219584-d1143954
+        212541 rows / 12600 games
+    slope, 9 CONTIGUOUS records        -0.0161 rows/game per accepted net
+    r_lo (10-net horizon)              16.7069
+    whole-run aggregate over the record 18.0803 (NOT used)
+
+    VERDICT
+      marginal 16.8683 <= 13.0    ?  NO -- 3.8683 above
+      r_lo     16.7069 <= 11.733  ?  NO -- 4.9739 above
+      => o48 DOES NOT FIRE
+
+    GAP NOTE, VERBATIM -- unchanged, and the fit still does not cross it:
+      ROWS/GAME SOURCE: the append-only per-net record
+      .../rows_per_game_history.jsonl -- 56 complete real-net record(s),
+      1 gap(s) (obligation o51)
+        GAP  t9-s11352064-d2008893 (accepted net 37) -> t9-s15847040-d2653436
+        (accepted net 51): 13 accepted net(s) in between have no complete record
+    No "narrowed to N contiguous" note was emitted this read: the window is a
+    full 9 contiguous records, all inside link 2's own span.
+
+    THE SIGKILL-CUT RECORD HAS AGED OUT OF THE WINDOW. The nine records now
+    fitted are s18821760 through s21219584 -- all post-boundary, all complete:
+        17.027, 16.819, 17.149, 16.863, 16.907, 16.950, 16.966, 16.805, 16.865
+    So this read's slope is the first computed on a window with no artefact in
+    it, and it reads -0.0161 per accepted net: essentially flat. Read 9's
+    +0.0421 was measured with the depressed 15.183 point in the middle of the
+    window, which biased it downward; with that point gone the slope is slightly
+    negative rather than positive. The honest reading across reads 8, 9 and 10 --
+    -0.0148, +0.0421, -0.0161 -- is that rows/game has been STATIONARY near 16.9
+    since the option-C changeover, and neither sign should be over-read. The
+    decline of reads 5-7 has not resumed.
+
+    rho at G=1800 = 120000/30362.9 = 3.952  (cap 8)
+    T1            = 30362.9 vs 1.2*E = 19200 -> +58.14 %
+
+(3) LINK-2 P8, FROM THE LINK'S OWN stage_elapsed_s
+      stage_elapsed_s  gatekeeper 606.83, selfplay 19777.89, shuffle 220.18,
+                       train 1651.85
+      cycles in link 2 31
+      selfplay         31 * 1800 / 19777.89 s = 10156.8 games/h   (9872.5 at read 9)
+      cycle wall       projected_cycle_h 0.2097 (max 0.2175) over 13 all-four-stage
+                       cycles                                     (0.2093 at read 9)
+      train per cycle  1651.85 / 31 = 53.3 s                      (53.5 at read 9)
+      bytes/row        296.23 B
+      basedir          2144743815 B
+    Excluded as before, and for the same reason: throughput.json's cumulative
+    selfplay games/h and train samples/s divide whole-run counts by link-2 stage
+    time.
+
+(4) EXPORT CADENCE AT 1800 / 16000
+      12 exports over 31 link-2 cycles = 2.58 cycles per export
+      (read 9: 6 over 16 = 2.67; link 1 at 1000/20000: 54 over 157 = 2.91)
+    The cadence is holding and drifting very slightly denser as the sample grows.
+
+    GATE OUTCOMES IN LINK 2: 12 decisions, 12 accepted, 0 rejected.
+    Losing scores, most recent six:
+      64.5, 51.5, 51.0, 87.5, 53.0, 75.5
+    Band 46-88 over the link, against link 1's terminal 90/93/97 and its two
+    rejections at 92.5 and 96.5. The 87.5 is the one excursion toward the old
+    band; the rest sit comfortably below. The margin option C restored is holding.
+
+(5) VALUE LOSS vs THE 0.62 FLAG
+      0.598828, 0.599375, 0.599423, 0.601278, 0.600090 over the last five exports
+      (t9-s20320384 .. t9-s21519232)
+    Hovering at 0.60, 0.0199 clear of the flag; min 0.568837, peak 0.602834 --
+    it has neither resumed climbing nor fallen back.
+    The policy has FLATTENED this read and is no longer monotone:
+      p0loss 1.503071, 1.489962, 1.485115, 1.497000, 1.506489
+      pacc1  0.539011, 0.542960, 0.544882, 0.539143, 0.537954
+    p0loss bottomed at 1.485115 (t9-s20919936) and has risen on the two exports
+    since; pacc1 peaked at 0.544882 on the same net and has fallen twice. Two
+    points is not a trend and the gate is still accepting every candidate, so
+    nothing is claimed -- but this is the first read at which the policy metrics
+    have not improved, and it is the thing to watch next read.
+    c12 still UNAVAILABLE for the structural reason. CHECK_METRICS: PASS.
+
+(6) THREADS, GUARD, GPU
+    nlwp_max per stage: gatekeeper 24, selfplay 24, shuffle 4, train 13, cap 32
+    -- unchanged at every read of the whole run. Current phase cycle32.
+    guard invocations 192, 'scratch_guard: OK' 192, of which
+    [cycle N pre-gatekeeper] 190; the difference of 2 is the two link pre-flight
+    calls. mission root 14399306312 B of 536870912000 B (2.7 % of the cap);
+    runs/p1 2145192177 B.
+    GPU-count check via mission.json compute.policyCheck:
+      my jobs : gpus=1 cpus=64  (2 jobs incl. 1 dependency-pending, not counted)
+      OK      : request gpus=1 cpus=32 part=b200,l40s within policy
+      squeue  : 305318 l40s RUNNING gl111 ; 314831 b200,l40s PENDING (Dependency)
+    chain_status: OK -- no section-11 escalate condition present.
