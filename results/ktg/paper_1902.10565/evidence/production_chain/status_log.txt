@@ -3816,3 +3816,137 @@ partition / node: l40s / gl111, link 2 of 9, 75 cycles completed in this link
       my jobs : gpus=1 cpus=64  (2 jobs incl. 1 dependency-pending, not counted)
       OK      : request gpus=1 cpus=32 part=b200,l40s within policy
     chain_status: OK -- no section-11 escalate condition present.
+
+################################################################################
+# READ 14 -- link 2 -- 2026-09-06T12:45 -- job 305318 -- REVISED PROTOCOL
+################################################################################
+partition / node: l40s / gl111, link 2 of 9, 90 cycles completed in this link
+
+(1) HISTORY FIRST (o51)
+    "+6 new, 35 already present, 79 complete real-net record(s), 1 gap(s);
+     newest t9-s28711040-d3032547 is still being written and is NOT recorded"
+    --assert-nlwp-le 32 exit 0.
+
+(2) o48 -- check_knobs exited 0, so the trend leg was available and both legs apply
+    marginal r (3-net)  17.1187  (t9-s27812352-d2816852, t9-s28111744-d2878395,
+                                  t9-s28411648-d2971410: 215695 rows / 12600 games)
+    slope, 9 CONTIGUOUS +0.0118 rows/game per accepted net
+    r_lo (10-net)       17.1187
+    whole-run aggregate 17.6344 (NOT used)
+    CHECK_KNOBS_9X9: PASS, exit 0 -- no "lower bound above measurement" message
+    was emitted, so there is nothing to quote verbatim and the o48 verdict uses
+    both legs as usual:
+      marginal 17.1187 <= 13.0    ?  NO -- 4.1187 above
+      r_lo     17.1187 <= 11.733  ?  NO -- 5.3857 above
+      => o48 DOES NOT FIRE
+    GAP note unchanged; the fit does not cross it.
+    rho at G=1800 = 3.894 (cap 8);  T1 = 30813.7 vs 19200 -> +60.49 %
+
+(3) THE POLICY STALL HAS ENDED. A NEW BEST WAS SET ON BOTH METRICS.
+
+  net                    samples     p0loss    vloss     pacc1   gate
+  t9-s26913152-d2573793  26913152  1.495273  0.608482  0.539717  82.0
+  t9-s27212800-d2664932  27212800  1.488588  0.606466  0.542298  83.5
+  t9-s27512448-d2725331  27512448  1.488755  0.604423  0.541161  93.5
+  t9-s27812352-d2816852  27812352  1.487080  0.607313  0.540905  77.0
+  t9-s28111744-d2878395  28111744  1.483893  0.608243  0.542767  64.5   <- p0loss record broken
+  t9-s28411648-d2971410  28411648  1.474934  0.609256  0.545393  73.0   <- BOTH records broken
+  t9-s28711040-d3032547  28711040  1.468828  0.604930  0.546105  65.5   <- new best on both
+
+    old record (t9-s20919936-d1053205)  p0loss 1.485115   pacc1 0.544882
+    now                                 p0loss 1.468828   pacc1 0.546105
+    exports since the loss best: 0   (19 at read 13, 14 at read 12, 8 at read 11)
+
+    p0loss beat the old record at t9-s28111744 and has improved on each of the
+    two exports since; pacc1 beat its record at t9-s28411648 and again at
+    t9-s28711040. The counter is reset to zero and the plateau watch is CLOSED.
+    Read 12 called it "an excursion with a recovery underway" and read 13
+    recorded that the reading had not held; the resolution is that the excursion
+    was simply longer than either read could see -- 21 exports and about 7.8 M
+    samples from the old best to the new one.
+
+    THE ONE-TIME c14 STATEMENT, as instructed: the c14 match (commit 3c3b5dc)
+    put the latest accepted net against t9-s20919936 -- the loss-record net --
+    at p = 0.741, +183 Elo over 400 games. The 19-export loss stall was
+    therefore NEVER a strength stall, and no LR change is triggered. From this
+    read on I count exports since the loss best and make no plateau claim.
+
+(4) RAW VLOSS -- REPORTED WITHOUT A VERDICT (the 0.62 flag is retired)
+      raw vloss now 0.604930   (0.608482 at read 13; run low 0.568837)
+    No flag verdict is attached, per the revised protocol.
+
+    WINDOW COMPOSITION, memo section 8 method (selfplay games with both sides the
+    same net; RE[] winner and |margin|; close = |margin| <= 2.5; game-count
+    weighted over the five accepted nets before the latest export, 23400 games):
+      t9-s25414912-d2205679   3600 games   draw 10.81 %   close 42.72 %
+      t9-s25714304-d2267292   9000 games   draw 10.51 %   close 43.26 %
+      t9-s26313728-d2421398   5400 games   draw  9.69 %   close 41.09 %
+      t9-s26613120-d2513417   3600 games   draw  9.89 %   close 42.17 %
+      t9-s26913152-d2573793   1800 games   draw  9.22 %   close 41.22 %
+      WINDOW  draw share 10.17 %   close-game share 42.35 %
+    The draw share is FALLING across the window (10.81 -> 9.22 per net), which is
+    the direction that would LOWER an outcome cross-entropy, not raise it. That
+    the raw vloss nonetheless sat near 0.605-0.609 over the same span is the
+    memo's point restated from this read's data: the number is not tracking fit.
+
+(5) TD-LOSS TRIGGERS
+    (i) tdvloss1 > 0.160 for 3 consecutive exports
+        last eight metric rows: 0.150172, 0.149990, 0.149840, 0.149755,
+        0.149494, 0.149075, 0.149096, 0.148991
+        max over the last twelve 0.150172 -> DOES NOT FIRE, headroom 0.0098
+        it is FALLING over these rows, having crept up through read 13
+        [carry] it still sits +0.0024 above the 0.1465-0.1466 flat band
+        tdvloss2 0.102976, tdvloss3 0.087368, both falling with it
+    (ii) ownership / score losses rising for 3 consecutive exports
+        oloss   0.46178, 0.46160, 0.46129, 0.46157   rising 3 consecutive? no
+        sloss   0.35889, 0.35866, 0.35838, 0.35861   no
+        skloss  0.07385, 0.07363, 0.07334, 0.07402   no
+        smloss  0.05891, 0.05858, 0.05850, 0.05856   no
+        => DOES NOT FIRE
+    (iii) needs a validation split, which does not exist yet -- not evaluable.
+    The first two post-boundary exports of the link are excluded from all three,
+    as instructed; link 2's boundary is far behind this window.
+
+(6) SHUFFLE WINDOW ROWS, latest train step
+      window_end_batch - window_start_batch = 442100 rows
+      (418453 at the read-13 spot check; the KEEP=60 band is >= 380000, the
+       not-landed band 110000-125000)
+    The row count is deep inside the KEEP=60 band. Two things to carry to the
+    link-3 boundary read, where this is the closing evidence:
+      * codes/data_budget/budget.env:55 still reads
+        KTG_KEEP_SELFPLAY_GENERATIONS=3, yet 38 selfplay net directories survive
+        on disk. The row count is being met WITHOUT the config edit having
+        landed, so whatever is holding the directories is not that knob.
+      * the second half of the retention test is NOT met on today's data: across
+        the metric rows inside the >= 380k window the maximum |vloss step| is
+        0.006765, above the stated 0.005. The row-count half passes, the
+        vloss-stability half does not.
+
+(7) LINK-2 P8 FROM THE LINK'S OWN stage_elapsed_s
+      stage_elapsed_s  gatekeeper 1885.72, selfplay 56956.09, shuffle 572.74,
+                       train 4749.34
+      cycles in link 2 90
+      selfplay         90 * 1800 / 56956.09 = 10239.5 games/h
+                       (10189.1 r13, 10311.7 r12, 10262.2 r11)
+      cycle wall       projected_cycle_h 0.2079 (max 0.2175) over 41 cycles
+      train per cycle  4749.34 / 90 = 52.8 s
+      bytes/row        295.57 B;  basedir 3291168568 B
+    Excluded as before: throughput.json's cumulative rates.
+
+(8) EXPORT CADENCE AND GATE
+      36 exports over 90 link-2 cycles = 2.50 cycles per export (2.50 at r13)
+      link 2: 36 decisions, 35 accepted, 1 rejected
+      last five losing scores: 93.5, 77.0, 64.5, 73.0, 65.5
+      chain totals 93 accepted, 3 rejected
+
+(9) THREADS, GUARD, GPU
+    nlwp_max: gatekeeper 24, selfplay 24, shuffle 4, train 13, cap 32 --
+    unchanged at every read of the whole run.
+    guard 251 invocations, 251 'scratch_guard: OK', of which
+    [cycle N pre-gatekeeper] 249; the difference of 2 is the two link pre-flight
+    calls. mission root 15748614943 B of 536870912000 B (2.9 % of the cap);
+    runs/p1 3291724656 B.
+    GPU-count check via mission.json compute.policyCheck:
+      my jobs : gpus=1 cpus=64  (2 jobs incl. 1 dependency-pending, not counted)
+      OK      : request gpus=1 cpus=32 part=b200,l40s within policy
+    chain_status: OK -- no section-11 escalate condition present.
