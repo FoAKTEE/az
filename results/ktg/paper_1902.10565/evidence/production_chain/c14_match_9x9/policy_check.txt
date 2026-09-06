@@ -1,0 +1,16 @@
+$ bash .claude/skills/compute-budget/check.sh --gpus 1 --cpus 32 --partition b200,l40s
+== compute-budget self-check  2026-09-06T10:25:21-04:00 ==
+my jobs      : gpus=1 cpus=64  (2 jobs incl. 1 dependency-pending, not counted)
+partition b200 : free_gpus=0/128 (excludes reserved/drained nodes)
+partition b300 : free_gpus=0/8 (excludes reserved/drained nodes)
+partition l40s : free_gpus=4/48 (excludes reserved/drained nodes)
+reservations : 9 defined (7 active) — scontrol show reservation
+quota        : | /home/ssci-haiyangw/ | 4.36 GB  | 100.00 GB |  4.36%   |
+quota        : | /scratch/ssci-anima/ | 30.76 TB |  40.00 TB |   76%    |
+OK           : request gpus=1 cpus=32 part=b200,l40s within policy (gpu<=4, no cpu cap)
+EXIT=0
+
+$ squeue -u ssci-haiyangw -o '%.10i %.12P %.20j %.9T %.10M %.10L %R'
+     JOBID    PARTITION                 NAME     STATE       TIME  TIME_LEFT NODELIST(REASON)
+    314831    b200,l40s             ktg-loop   PENDING       0:00   23:30:00 (Dependency)
+    305318         l40s             ktg-loop   RUNNING   16:02:06    7:27:54 gl111

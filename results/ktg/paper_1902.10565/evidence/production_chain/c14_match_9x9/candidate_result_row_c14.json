@@ -1,0 +1,76 @@
+{
+  "_note_for_validator": {
+    "from": "worker, production_chain_9x9, packet B (memo option h)",
+    "status": "CANDIDATE -- not appended to the result ledger. The worker produced the evidence; a validator on a different model refutes or admits it (kernel section 0, admission contract).",
+    "proposed_status": "empirical",
+    "why_not_checked": "one measurement, at one visit count (150, the gate's), between two specific nets. It is a statistical inference from 400 games, not a proof, and it has not been repeated.",
+    "what_would_refute_it": [
+      "a rerun at n = 400 with a different RNG seed that puts p below 0.60 -- the CI [0.6983, 0.7842] says that would be a 1-in-thousands event, so a refutation here is really a claim that the two arms were not the nets they say they were",
+      "showing that the snapshot BASEDIR did not hold the nets its manifests name (every model.bin.gz is sha256-pinned in the manifests, in job-317503.out and in the row, so this is checkable)",
+      "showing that the 200/200 colour split did not hold, which would mean the pairing was not balanced and p is not a colour-free number (verify_c14.sh asserts it per arm)",
+      "arguing the result does not generalise past 150 visits -- that does not refute the claim as stated, which is explicitly at the gate's visit count"
+    ],
+    "worker_evidence": "results/ktg/paper_1902.10565/evidence/production_chain/c14_match_9x9/ (README.md, results.json, results.txt, summarize_c14.py, verify_c14.sh, job-317503.out, sgfs_manifest.txt, sgfs/)",
+    "error_ledger_row": "d8c9fb6fd5274f1c9f80593520fbc9745362f34e2f807e259d2474e425390f45"
+  },
+  "row": {
+    "paper": "arxiv-1902.10565",
+    "result_id": "r_c14_latest_beats_best_by_loss_9x9",
+    "name": "c14: at 400 games and the gate's 150 visits the latest accepted 9x9 net beats the run's best-by-loss net 0.7412 (+183 Elo) and the frozen first net 400/400 -- the 19-export p0loss/pacc1 stall is a loss-metric stall, not a strength stall",
+    "working_context": {
+      "regime": "9x9, komi fixed at 7, no handicap, maxVisits 150 with 1 search thread (the gatekeeper's search, gatekeeper_9x9.cfg:66), 18 game threads, both colour orderings, codes/cfg/match_first_latest_9.cfg unmodified. Rule block character-identical to codes/cfg/selfplay_9x9.cfg:101-109,174-175",
+      "nets": "latest t9-s27212800-d2664932 (sha256 d207dfb02769ac75a42b590ee0373f24ab6b4d8018b3e434ffad639b5b014626); arm A baseline t9-s20919936-d1053205 (c58932380ae6a188b52513c6ab06569d932d0d8ac9da5037b7ab6030a4e001f0), the net holding the run's best p0loss 1.485115 and best pacc1 0.544882; arm B baseline t9-s143744-d157367 (859c58d6785e5efdc3c40fb24400e3f5f56afca247009d2f1e94d35a8b4ac5d8), the frozen first accepted net",
+      "run": "runs/p1, chain link 2 of 9, job 305318, 27.2 M training samples, 90 exports, 88 accepted",
+      "job": "317503, 1 B200 on gb203, COMPLETED 0:0, elapsed 00:06:51",
+      "units": "win rate on [0,1] with draws at 0.5; Elo = -400 log10(1/p - 1)"
+    },
+    "claim": "Against t9-s20919936-d1053205 the latest accepted net scores 296.5/400 = 0.74125 (282 W, 89 L, 29 D), se = sqrt(p(1-p)/n) = 0.021897, 95 % CI [0.6983, 0.7842], Elo +182.8 with 95 % CI [+145.8, +224.1]; the exact Clopper-Pearson interval over the 371 decisive games is [0.7133, 0.8027], Elo [+158.4, +243.7]. Against t9-s143744-d157367 it scores 400/400; the normal interval is degenerate there (se = 0) and the exact 95 % interval is [0.9908, 1.0000], i.e. Elo > +813. Colours are balanced by construction, 200 games of each per arm, and the split is 135/200 = 0.6750 [0.6101, 0.7399] as Black and 161.5/200 = 0.8075 [0.7529, 0.8621] as White in arm A. Therefore, at the gate's visit count, the 19-export stall in p0loss (best 1.485115) and pacc1 (best 0.544882) is a stall of those two metrics and NOT of playing strength: the run gained about 183 Elo over the net that still holds both records. By the memo's pre-registered rule (p >= 0.60), option (b), LR x0.5, is NOT triggered for link 4",
+    "evidence_type": "statistical_inference",
+    "evidence": "results/ktg/paper_1902.10565/evidence/production_chain/c14_match_9x9/results.json",
+    "verification": {
+      "command": "cd /home/schmidt/ssci-haiyangw/az && bash results/ktg/paper_1902.10565/evidence/production_chain/c14_match_9x9/verify_c14.sh",
+      "timeout_s": 300
+    },
+    "verifier_result": {
+      "verdict": "pass",
+      "execution": {
+        "command": "cd /home/schmidt/ssci-haiyangw/az && bash results/ktg/paper_1902.10565/evidence/production_chain/c14_match_9x9/verify_c14.sh",
+        "exit_code": 0,
+        "output_tail": "C14_VERIFIED: p(latest vs t9-s20919936) = 0.7412 >= 0.60 -- the 19-export loss stall is NOT a strength stall; memo option (b) LR x0.5 is NOT triggered",
+        "ran_at": "2026-09-06T14:47:00+00:00",
+        "note": "run by the WORKER by hand; the validator must re-run it before admitting"
+      }
+    },
+    "dependencies": [
+      "arxiv-1902.10565::match_latest_against_first",
+      "arxiv-1902.10565::eval_improvement",
+      "arxiv-1902.10565::gating_rule",
+      "results/ktg/paper_1902.10565/codes/eval/match.sbatch",
+      "results/ktg/paper_1902.10565/codes/cfg/match_first_latest_9.cfg",
+      "results/ktg/paper_1902.10565/evidence/production_chain/vloss_escalation_memo.md"
+    ],
+    "assumptions": [
+      "one .sgfs line is one game (the same rule match.sbatch:142 counts by); 400 lines were written per arm and none carried a board size other than SZ[9]",
+      "a draw scores 0.5 to each side, matching drawEquivalentWinsForWhite = 0.5 in both the match and the selfplay configs",
+      "the normal-approximation CI treats the SCORE as a binomial proportion although 29 of arm A's 400 games are draws; the exact Clopper-Pearson interval quoted alongside it is computed on the 371 decisive games only, and the two agree to within 0.015 in p",
+      "Elo is the logistic map -400 log10(1/p - 1), the same convention DESIGN section 7 uses; it is a summary of p at these visits and is not claimed to transfer to other search budgets",
+      "the snapshot BASEDIR held byte-identical copies of the three nets (sha256 verified against runs/p1 before the job and re-verified inside it)"
+    ],
+    "status": "empirical",
+    "provenance": {
+      "stage": "2-work",
+      "task_id": "production_chain_9x9",
+      "agent_role": "worker",
+      "job": "317503 (sbatch results/ktg/paper_1902.10565/evidence/production_chain/c14_match_9x9/c14_match.sbatch)",
+      "compute_policy": "mission.json compute.policyCheck run before submission and pasted at evidence/production_chain/c14_match_9x9/policy_check.txt; exit 0; footprint 1 running + 1 dependency-pending + this 1 = 3 of the cap of 4",
+      "isolation": "no file under runs/p1 was written; BASEDIR was a frozen snapshot under runtime/matches/2026-09-06/; jobs 305318 and 314831 were never signalled",
+      "code": "codes/eval/match.sbatch and codes/cfg/match_first_latest_9.cfg run UNMODIFIED; the only new code is the driver c14_match.sbatch and the analysis summarize_c14.py / verify_c14.sh, all under the evidence directory"
+    },
+    "open_obligations": [
+      "arm B is saturated at 400/400 and only BOUNDS the gain from the first accepted net (Elo > +813 at 95 %); measuring it needs a ladder against an intermediate net, e.g. t9-s1762560 at the vloss minimum",
+      "the result is at 150 visits; whether +183 Elo survives at selfplay's 600 visits is untested",
+      "o-new: the plateau rule (memo option f) is currently written against p0loss/pacc1, which this measurement shows can be 19 exports stale while strength moves; it should be written against a match"
+    ],
+    "notes": "The number that answers the memo's question 2 is 0.7412 with a 95 % CI whose lower end, 0.6983, is still far above the 0.60 decision line, so the rule discharges cleanly in the do-nothing direction. The colour split is reported because it is the only place a pairing bug would show: at komi 7 White scores 0.5663 [0.5178, 0.6148] pooled over both bots in arm A, a real but symmetric edge that cancels from the head-to-head number because each net plays exactly 200 games of each colour."
+  }
+}

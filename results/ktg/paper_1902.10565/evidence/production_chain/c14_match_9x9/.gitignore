@@ -1,0 +1,7 @@
+# The raw match records live here on disk (the packet asked for them at this path) but are
+# NOT tracked: mission.json gitPolicy.neverCommit forbids committing game records, and the
+# repo .gitignore already carries *.sgf. sgfs_manifest.txt pins every file by sha256 and
+# line count, and the same files are on scratch under
+# /scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/runtime/matches/2026-09-06/.
+# Delete this file if the human wants the 2.3 MB of records tracked.
+sgfs/

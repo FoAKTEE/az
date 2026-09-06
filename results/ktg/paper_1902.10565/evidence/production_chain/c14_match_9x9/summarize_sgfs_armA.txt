@@ -1,0 +1,38 @@
+{'input-files-or-dirs': ['/scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/runtime/matches/2026-09-06/armA_vs_s20919936/match-317503'], 'recursive': True, 'elo_prior_games': 2, 'estimate_first_player_advantage': False}
+Searching and adding files in /scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/runtime/matches/2026-09-06/armA_vs_s20919936/match-317503, please wait...
+Added 10/18 game files for /scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/runtime/matches/2026-09-06/armA_vs_s20919936/match-317503
+Added 18 new game files from /scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/runtime/matches/2026-09-06/armA_vs_s20919936/match-317503
+Beginning iteration 0, cur log likelihood -280.03237988475115, last elo change None
+Beginning iteration 1, cur log likelihood -231.90073260399348, last elo change 83.60981048112552
+Beginning iteration 2, cur log likelihood -231.60823931883314, last elo change 7.370052887526758
+Beginning iteration 3, cur log likelihood -231.6081290294588, last elo change 0.14685888650675585
+Beginning iteration 4, cur log likelihood -231.60812902944068, last elo change 5.95902619453398e-05
+Beginning iteration 5, cur log likelihood -231.60812902944065, last elo change 5.882397545975052e-12
+Beginning iteration 6, cur log likelihood -231.6081290294406, last elo change 8.678947198979584e-13
+Total games: 400
+Games by player:
+latest: 400.0
+first: 400.0
+Wins by row player against column player:
+              latest        first
+ latest            -  296.5/400.0
+  first  103.5/400.0            -
+Win% by row player against column player:
+         lates  first
+ latest      -  74.1%
+  first  25.9%      -
+Elos (+/- one approx standard error):
+latest              :    91.13 +/- 19.76
+first               :   -91.13 +/- 19.76
+Pairwise approx % likelihood of superiority of row over column:
+         latest   first
+ latest   50.00  100.00
+  first    0.00   50.00
+Log10odds surprise matrix given the maximum-likelihood Elos:
+E.g. +3.0 means a 1:1000 unexpected good performance by row vs column.
+E.g. -4.0 means a 1:10000 unexpected bad performance by row vs column.
+Extreme numbers may indicate rock/paper/scissors, or Elo is not a good model for the data.
+         lates  first
+ latest      -    0.0
+  first   -0.0      -
+Used a prior of 2 games worth that each player is near Elo 0.

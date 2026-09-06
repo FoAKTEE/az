@@ -1,0 +1,43 @@
+{'input-files-or-dirs': ['/scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/runtime/matches/2026-09-06/armB_vs_first/match-317503'], 'recursive': True, 'elo_prior_games': 2, 'estimate_first_player_advantage': False}
+Searching and adding files in /scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/runtime/matches/2026-09-06/armB_vs_first/match-317503, please wait...
+Added 10/18 game files for /scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/runtime/matches/2026-09-06/armB_vs_first/match-317503
+Added 18 new game files from /scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/runtime/matches/2026-09-06/armB_vs_first/match-317503
+Beginning iteration 0, cur log likelihood -280.03237988475115, last elo change None
+Beginning iteration 1, cur log likelihood -54.26120205884862, last elo change 173.28458130803216
+Beginning iteration 2, cur log likelihood -21.25171414160529, last elo change 97.26847714404362
+Beginning iteration 3, cur log likelihood -11.100629405422017, last elo change 86.47142445217449
+Beginning iteration 4, cur log likelihood -8.01895410428052, last elo change 76.49922326303786
+Beginning iteration 5, cur log likelihood -7.278728115281535, last elo change 58.46961220992071
+Beginning iteration 6, cur log likelihood -7.184800981429421, last elo change 29.974421855958738
+Beginning iteration 7, cur log likelihood -7.182041040481731, last elo change 6.309613066486374
+Beginning iteration 8, cur log likelihood -7.182037600893543, last elo change 0.23328896167675195
+Beginning iteration 9, cur log likelihood -7.182037600887669, last elo change 0.0003046440782969816
+Beginning iteration 10, cur log likelihood -7.1820376008876465, last elo change 3.1120776000607683e-10
+Beginning iteration 11, cur log likelihood -7.1820376008876385, last elo change 1.612355524077096e-11
+Total games: 400
+Games by player:
+latest: 400.0
+first: 400.0
+Wins by row player against column player:
+              latest        first
+ latest            -  400.0/400.0
+  first    0.0/400.0            -
+Win% by row player against column player:
+         latest   first
+ latest       -  100.0%
+  first    0.0%       -
+Elos (+/- one approx standard error):
+latest              :   528.51 +/- 174.17
+first               :  -528.51 +/- 174.17
+Pairwise approx % likelihood of superiority of row over column:
+         latest   first
+ latest   50.00  100.00
+  first    0.00   50.00
+Log10odds surprise matrix given the maximum-likelihood Elos:
+E.g. +3.0 means a 1:1000 unexpected good performance by row vs column.
+E.g. -4.0 means a 1:10000 unexpected bad performance by row vs column.
+Extreme numbers may indicate rock/paper/scissors, or Elo is not a good model for the data.
+         lates  first
+ latest      -    0.2
+  first   -0.2      -
+Used a prior of 2 games worth that each player is near Elo 0.

@@ -1,0 +1,143 @@
+{
+  "latest": "t9-s27212800-d2664932",
+  "root": "/scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/runtime/matches/2026-09-06",
+  "arms": {
+    "armA_vs_s20919936": {
+      "baseline": "t9-s20919936-d1053205",
+      "why": "best by p0loss / pacc1, 19 exports back",
+      "games": 400,
+      "score_for_latest": 296.5,
+      "wins": 282,
+      "losses": 89,
+      "draws": 29,
+      "p": 0.74125,
+      "se": 0.021897399246257533,
+      "ci95": [
+        0.698331886112169,
+        0.7841681138878309
+      ],
+      "elo": 182.8337391629379,
+      "elo_ci95": [
+        145.81298583201473,
+        224.117429172427
+      ],
+      "decisive_games": 371,
+      "p_decisive": 0.7601078167115903,
+      "clopper_pearson95_decisive": [
+        0.7133294119847959,
+        0.8026803855289371
+      ],
+      "elo_clopper_pearson95_decisive": [
+        158.362797584353,
+        243.74895693573632
+      ],
+      "by_colour": {
+        "latest as Black": {
+          "games": 200,
+          "score": 135.0,
+          "p": 0.675,
+          "se": 0.03311910324872942,
+          "wins": 129,
+          "losses": 59,
+          "draws": 12,
+          "ci95": [
+            0.6100877504169939,
+            0.7399122495830062
+          ],
+          "elo": 126.96816474086026
+        },
+        "latest as White": {
+          "games": 200,
+          "score": 161.5,
+          "p": 0.8075,
+          "se": 0.027878643259671012,
+          "wins": 153,
+          "losses": 30,
+          "draws": 17,
+          "ci95": [
+            0.7528588632603818,
+            0.8621411367396182
+          ],
+          "elo": 249.08471886344836
+        }
+      },
+      "white_score_overall": 226.5,
+      "p_white_overall": 0.56625,
+      "p_white_ci95": [
+        0.5176829251765882,
+        0.6148170748234119
+      ]
+    },
+    "armB_vs_first": {
+      "baseline": "t9-s143744-d157367",
+      "why": "the frozen first accepted net",
+      "games": 400,
+      "score_for_latest": 400.0,
+      "wins": 400,
+      "losses": 0,
+      "draws": 0,
+      "p": 1.0,
+      "se": 0.0,
+      "ci95": [
+        1.0,
+        1.0
+      ],
+      "elo": Infinity,
+      "elo_ci95": [
+        Infinity,
+        Infinity
+      ],
+      "decisive_games": 400,
+      "p_decisive": 1.0,
+      "clopper_pearson95_decisive": [
+        0.9908201954163467,
+        1.0
+      ],
+      "elo_clopper_pearson95_decisive": [
+        813.2645655301081,
+        Infinity
+      ],
+      "by_colour": {
+        "latest as Black": {
+          "games": 200,
+          "score": 200.0,
+          "p": 1.0,
+          "se": 0.0,
+          "wins": 200,
+          "losses": 0,
+          "draws": 0,
+          "ci95": [
+            1.0,
+            1.0
+          ],
+          "elo": Infinity
+        },
+        "latest as White": {
+          "games": 200,
+          "score": 200.0,
+          "p": 1.0,
+          "se": 0.0,
+          "wins": 200,
+          "losses": 0,
+          "draws": 0,
+          "ci95": [
+            1.0,
+            1.0
+          ],
+          "elo": Infinity
+        }
+      },
+      "white_score_overall": 200.0,
+      "p_white_overall": 0.5,
+      "p_white_ci95": [
+        0.451000900375,
+        0.548999099625
+      ]
+    }
+  },
+  "decision_rule": {
+    "rule": "memo section 6.1 item 3 / options json recommendation.decision_rule_for_b",
+    "p_latest_vs_s20919936": 0.74125,
+    "verdict": "p >= 0.60: the loss stall is NOT a strength stall. Option (b) is NOT triggered; keep running unchanged."
+  }
+}

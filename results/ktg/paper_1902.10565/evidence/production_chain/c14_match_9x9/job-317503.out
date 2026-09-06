@@ -1,0 +1,488 @@
+=== c14 driver start 2026-09-06T10:37:54-04:00 host=gb203 job=317503 ===
+=== partition=b200  gpus=1  cpus=32 ===
+0, NVIDIA B200, 183359 MiB
+=== pinned latest: t9-s27212800-d2664932 ===
+
+######## ARM A: latest vs t9-s20919936-d1053205 ########
+=== [2026-09-06T10:37:54-04:00] match.sbatch start   job=317503 host=gb203 ===
+=== [2026-09-06T10:37:55-04:00] BASEDIR=/scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/runtime/matches/2026-09-06/snapshot  EVALDIR=/scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/runtime/matches/2026-09-06/armA_vs_s20919936  NUM_GAMES=400 ===
+=== [2026-09-06T10:37:55-04:00] config=/home/schmidt/ssci-haiyangw/az/results/ktg/paper_1902.10565/codes/cfg/match_first_latest_9.cfg ===
+=== [2026-09-06T10:37:55-04:00] frozen first net : t9-s20919936-d1053205  (/scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/runtime/matches/2026-09-06/snapshot/models/t9-s20919936-d1053205/model.bin.gz) ===
+=== [2026-09-06T10:37:55-04:00]                    sha256 c58932380ae6a188b52513c6ab06569d932d0d8ac9da5037b7ab6030a4e001f0 (re-verified) ===
+=== [2026-09-06T10:37:55-04:00] latest accepted  : t9-s27212800-d2664932  (/scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/runtime/matches/2026-09-06/snapshot/models/t9-s27212800-d2664932/model.bin.gz) ===
+=== [2026-09-06T10:37:55-04:00]                    sha256 d207dfb02769ac75a42b590ee0373f24ab6b4d8018b3e434ffad639b5b014626 ===
+0, NVIDIA B200, 183359 MiB
+=== [2026-09-06T10:37:55-04:00] katago match: 400 games, 9x9, komi 7, maxVisits 150, 1 search thread, 18 game threads ===
+2026-09-06 10:37:55-0400: Running with following config:
+allowRectangleProb = 0
+allowResignation = true
+bSizeRelProbs = 1
+bSizes = 9
+botName0 = first
+botName1 = latest
+chosenMovePrune = 1
+chosenMoveSubtract = 0
+chosenMoveTemperature = 0.2
+chosenMoveTemperatureEarly = 0.5
+chosenMoveTemperatureHalflife = 19
+cpuctExploration = 1.1
+cpuctExplorationLog = 0.0
+cudaUseFP16 = auto
+cudaUseNHWC = auto
+drawEquivalentWinsForWhite = 0.5
+dynamicScoreCenterScale = 0.50
+dynamicScoreCenterZeroWeight = 0.25
+dynamicScoreUtilityFactor = 0.25
+fpuReductionMax = 0.2
+handicapCompensateKomiProb = 1.0
+handicapProb = 0.0
+hasButtons = false,false,true
+koRules = SIMPLE,POSITIONAL,SITUATIONAL
+komiAuto = false
+komiMean = 7
+lcbStdevs = 5.0
+logGamesEvery = 50
+logMoves = false
+logSearchInfo = false
+logToStdout = true
+maxMovesPerGame = 1600
+maxVisits = 150
+minVisitPropForLCB = 0.15
+multiStoneSuicideLegals = false,true
+nnCacheSizePowerOfTwo = 21
+nnMaxBatchSize = 128
+nnModelFile0 = /scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/runtime/matches/2026-09-06/snapshot/models/t9-s20919936-d1053205/model.bin.gz
+nnModelFile1 = /scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/runtime/matches/2026-09-06/snapshot/models/t9-s27212800-d2664932/model.bin.gz
+nnMutexPoolSizePowerOfTwo = 15
+nnRandomize = true
+noResultUtilityForWhite = 0.0
+numBots = 2
+numGameThreads = 18
+numGamesTotal = 400
+numNNServerThreadsPerModel = 1
+numSearchThreads = 1
+numVirtualLossesPerThread = 1
+policyOptimism = 1.0
+resignConsecTurns = 5
+resignThreshold = -0.90
+rootEndingBonusPoints = 0.5
+rootFpuReductionMax = 0.1
+rootPolicyOptimism = 0.0
+rootPruneUselessMoves = true
+scoringRules = AREA,TERRITORY
+staticScoreUtilityFactor = 0.00
+subtreeValueBiasFactor = 0.35
+subtreeValueBiasWeightExponent = 0.8
+taxRules = NONE,NONE,SEKI,SEKI,ALL
+uncertaintyCoeff = 0.25
+uncertaintyExponent = 1.0
+useGraphSearch = true
+useLcbForSelection = true
+useNonBuggyLcb = true
+useUncertainty = true
+valueWeightExponent = 0.5
+winLossUtilityFactor = 1.0
+
+2026-09-06 10:37:55-0400: Match Engine starting...
+2026-09-06 10:37:55-0400: Git revision: fd0723fdbc0e9d82cf269c9630af8c27c57c07c4-dirty
+2026-09-06 10:37:55-0400: nnRandSeed0 = 4458072902489681304
+2026-09-06 10:37:55-0400: After dedups: nnModelFile0 = /scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/runtime/matches/2026-09-06/snapshot/models/t9-s20919936-d1053205/model.bin.gz useFP16 auto
+2026-09-06 10:37:55-0400: Initializing neural net buffer to be size 9 * 9 exactly
+2026-09-06 10:37:56-0400: Cuda backend thread 0: Found GPU NVIDIA B200 memory 191495471104 compute capability major 10 minor 0
+2026-09-06 10:37:56-0400: Cuda backend thread 0: Model version 17 useFP16 = true useNHWC = true
+2026-09-06 10:37:56-0400: Cuda backend thread 0: Model name: ktg9-t9-s20919936-d1053205 (transformer, 818857 params)
+2026-09-06 10:37:56-0400: Cuda backend: using combined QKV projection for attention
+2026-09-06 10:37:56-0400: Cuda backend: using CUTLASS fused FFN kernel
+2026-09-06 10:37:56-0400: CUDA backend: running 1x1 NHWC convolutions as a GEMM
+2026-09-06 10:37:56-0400: Cuda backend thread 0: warming up transformer graphs for batch sizes 1..128
+2026-09-06 10:37:57-0400: Cuda backend: using tensor-core mma flash attention kernel
+2026-09-06 10:37:57-0400: nnRandSeed1 = 5805722914691981915
+2026-09-06 10:37:57-0400: After dedups: nnModelFile1 = /scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/runtime/matches/2026-09-06/snapshot/models/t9-s27212800-d2664932/model.bin.gz useFP16 auto
+2026-09-06 10:37:57-0400: Initializing neural net buffer to be size 9 * 9 exactly
+2026-09-06 10:37:57-0400: Cuda backend thread 0: Found GPU NVIDIA B200 memory 191495471104 compute capability major 10 minor 0
+2026-09-06 10:37:57-0400: Cuda backend thread 0: Model version 17 useFP16 = true useNHWC = true
+2026-09-06 10:37:57-0400: Cuda backend thread 0: Model name: ktg9-t9-s27212800-d2664932 (transformer, 818857 params)
+2026-09-06 10:37:57-0400: Cuda backend: using combined QKV projection for attention
+2026-09-06 10:37:57-0400: Cuda backend: using CUTLASS fused FFN kernel
+2026-09-06 10:37:57-0400: CUDA backend: running 1x1 NHWC convolutions as a GEMM
+2026-09-06 10:37:57-0400: Cuda backend thread 0: warming up transformer graphs for batch sizes 1..128
+2026-09-06 10:37:57-0400: Cuda backend: using tensor-core mma flash attention kernel
+2026-09-06 10:37:57-0400: Loaded neural net
+2026-09-06 10:37:57-0400: Loaded all config stuff, starting matches
+2026-09-06 10:37:59-0400: Avg move time used by first 0.0554011 20 moves
+2026-09-06 10:37:59-0400: Avg move time used by latest 0.0632222 21 moves
+2026-09-06 10:38:00-0400: Avg move time used by first 0.070899 35 moves
+2026-09-06 10:38:00-0400: Avg move time used by latest 0.0737416 35 moves
+2026-09-06 10:38:00-0400: Avg move time used by first 0.0695514 60 moves
+2026-09-06 10:38:00-0400: Avg move time used by latest 0.0670895 60 moves
+2026-09-06 10:38:00-0400: Avg move time used by first 0.0691194 85 moves
+2026-09-06 10:38:00-0400: Avg move time used by latest 0.0656338 85 moves
+2026-09-06 10:38:01-0400: Avg move time used by first 0.073251 107 moves
+2026-09-06 10:38:01-0400: Avg move time used by latest 0.0672313 107 moves
+2026-09-06 10:38:01-0400: Avg move time used by first 0.0746054 129 moves
+2026-09-06 10:38:01-0400: Avg move time used by latest 0.0709381 129 moves
+2026-09-06 10:38:01-0400: Avg move time used by first 0.0747754 184 moves
+2026-09-06 10:38:01-0400: Avg move time used by latest 0.069299 183 moves
+2026-09-06 10:38:01-0400: Avg move time used by first 0.0768796 231 moves
+2026-09-06 10:38:01-0400: Avg move time used by latest 0.0722764 230 moves
+2026-09-06 10:38:02-0400: Avg move time used by first 0.0768204 275 moves
+2026-09-06 10:38:02-0400: Avg move time used by latest 0.0716822 274 moves
+2026-09-06 10:38:02-0400: Avg move time used by first 0.075354 419 moves
+2026-09-06 10:38:02-0400: Avg move time used by latest 0.0703032 416 moves
+2026-09-06 10:38:04-0400: Avg move time used by first 0.0770576 523 moves
+2026-09-06 10:38:04-0400: Avg move time used by latest 0.0722145 517 moves
+2026-09-06 10:38:05-0400: Avg move time used by first 0.0767139 633 moves
+2026-09-06 10:38:05-0400: Avg move time used by latest 0.0721973 626 moves
+2026-09-06 10:38:06-0400: Avg move time used by first 0.0768794 870 moves
+2026-09-06 10:38:06-0400: Avg move time used by latest 0.0721735 861 moves
+2026-09-06 10:38:06-0400: Started 50 games
+2026-09-06 10:38:08-0400: Avg move time used by first 0.0773682 1099 moves
+2026-09-06 10:38:08-0400: Avg move time used by latest 0.0729945 1088 moves
+2026-09-06 10:38:10-0400: Avg move time used by first 0.0771335 1298 moves
+2026-09-06 10:38:10-0400: Avg move time used by latest 0.0724687 1286 moves
+2026-09-06 10:38:14-0400: Avg move time used by first 0.0766412 1704 moves
+2026-09-06 10:38:14-0400: Avg move time used by latest 0.0728587 1689 moves
+2026-09-06 10:38:16-0400: Avg move time used by first 0.0762617 2127 moves
+2026-09-06 10:38:16-0400: Avg move time used by latest 0.0721504 2107 moves
+2026-09-06 10:38:17-0400: Started 100 games
+2026-09-06 10:38:20-0400: Avg move time used by first 0.0763957 2533 moves
+2026-09-06 10:38:20-0400: Avg move time used by latest 0.0723841 2511 moves
+2026-09-06 10:38:26-0400: Avg move time used by first 0.0749663 3336 moves
+2026-09-06 10:38:26-0400: Avg move time used by latest 0.0712092 3309 moves
+2026-09-06 10:38:27-0400: Started 150 games
+2026-09-06 10:38:33-0400: Avg move time used by first 0.0740387 4227 moves
+2026-09-06 10:38:33-0400: Avg move time used by latest 0.0702726 4194 moves
+2026-09-06 10:38:38-0400: Started 200 games
+2026-09-06 10:38:40-0400: Avg move time used by first 0.0744189 5054 moves
+2026-09-06 10:38:40-0400: Avg move time used by latest 0.0705644 5012 moves
+2026-09-06 10:38:48-0400: Started 250 games
+2026-09-06 10:38:53-0400: Avg move time used by first 0.0732002 6746 moves
+2026-09-06 10:38:53-0400: Avg move time used by latest 0.0696168 6685 moves
+2026-09-06 10:38:58-0400: Started 300 games
+2026-09-06 10:39:05-0400: Avg move time used by first 0.0727322 8399 moves
+2026-09-06 10:39:05-0400: Avg move time used by latest 0.0691925 8321 moves
+2026-09-06 10:39:07-0400: Started 350 games
+2026-09-06 10:39:18-0400: Started 400 games
+2026-09-06 10:39:18-0400: Match loop thread terminating
+2026-09-06 10:39:18-0400: Avg move time used by first 0.0725316 10079 moves
+2026-09-06 10:39:18-0400: Avg move time used by latest 0.0689958 9987 moves
+2026-09-06 10:39:18-0400: Match loop thread terminating
+2026-09-06 10:39:18-0400: Match loop thread terminating
+2026-09-06 10:39:19-0400: Match loop thread terminating
+2026-09-06 10:39:19-0400: Match loop thread terminating
+2026-09-06 10:39:19-0400: Match loop thread terminating
+2026-09-06 10:39:19-0400: Match loop thread terminating
+2026-09-06 10:39:19-0400: Match loop thread terminating
+2026-09-06 10:39:19-0400: Match loop thread terminating
+2026-09-06 10:39:20-0400: Match loop thread terminating
+2026-09-06 10:39:20-0400: Match loop thread terminating
+2026-09-06 10:39:20-0400: Match loop thread terminating
+2026-09-06 10:39:21-0400: Match loop thread terminating
+2026-09-06 10:39:21-0400: Match loop thread terminating
+2026-09-06 10:39:21-0400: Match loop thread terminating
+2026-09-06 10:39:21-0400: Match loop thread terminating
+2026-09-06 10:39:22-0400: Match loop thread terminating
+2026-09-06 10:39:22-0400: Match loop thread terminating
+2026-09-06 10:39:22-0400: /scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/runtime/matches/2026-09-06/snapshot/models/t9-s20919936-d1053205/model.bin.gz
+2026-09-06 10:39:22-0400: NN rows: 803673
+2026-09-06 10:39:22-0400: NN batches: 180622
+2026-09-06 10:39:22-0400: NN avg batch size: 4.44947
+2026-09-06 10:39:22-0400: GPU -1 finishing, processed 803673 rows 180622 batches
+2026-09-06 10:39:23-0400: /scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/runtime/matches/2026-09-06/snapshot/models/t9-s27212800-d2664932/model.bin.gz
+2026-09-06 10:39:23-0400: NN rows: 762951
+2026-09-06 10:39:23-0400: NN batches: 181635
+2026-09-06 10:39:23-0400: NN avg batch size: 4.20046
+2026-09-06 10:39:23-0400: GPU -1 finishing, processed 762951 rows 181635 batches
+2026-09-06 10:39:23-0400: All cleaned up, quitting
+=== [2026-09-06T10:39:23-04:00] katago match exit=0 ===
+=== [2026-09-06T10:39:23-04:00] sgf lines written: 400   (not SZ[9]: 0
+0) ===
+=== [2026-09-06T10:39:23-04:00] summarize_sgfs.py over /scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/runtime/matches/2026-09-06/armA_vs_s20919936/match-317503 ===
+{'input-files-or-dirs': ['/scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/runtime/matches/2026-09-06/armA_vs_s20919936/match-317503'], 'recursive': True, 'elo_prior_games': 2, 'estimate_first_player_advantage': False}
+Searching and adding files in /scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/runtime/matches/2026-09-06/armA_vs_s20919936/match-317503, please wait...
+Added 10/18 game files for /scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/runtime/matches/2026-09-06/armA_vs_s20919936/match-317503
+Added 18 new game files from /scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/runtime/matches/2026-09-06/armA_vs_s20919936/match-317503
+Beginning iteration 0, cur log likelihood -280.03237988475115, last elo change None
+Beginning iteration 1, cur log likelihood -231.90073260399348, last elo change 83.60981048112552
+Beginning iteration 2, cur log likelihood -231.60823931883314, last elo change 7.370052887526758
+Beginning iteration 3, cur log likelihood -231.6081290294588, last elo change 0.14685888650675585
+Beginning iteration 4, cur log likelihood -231.60812902944068, last elo change 5.95902619453398e-05
+Beginning iteration 5, cur log likelihood -231.60812902944065, last elo change 5.882397545975052e-12
+Beginning iteration 6, cur log likelihood -231.6081290294406, last elo change 8.678947198979584e-13
+Total games: 400
+Games by player:
+latest: 400.0
+first: 400.0
+Wins by row player against column player:
+              latest        first
+ latest            -  296.5/400.0
+  first  103.5/400.0            -
+Win% by row player against column player:
+         lates  first
+ latest      -  74.1%
+  first  25.9%      -
+Elos (+/- one approx standard error):
+latest              :    91.13 +/- 19.76
+first               :   -91.13 +/- 19.76
+Pairwise approx % likelihood of superiority of row over column:
+         latest   first
+ latest   50.00  100.00
+  first    0.00   50.00
+Log10odds surprise matrix given the maximum-likelihood Elos:
+E.g. +3.0 means a 1:1000 unexpected good performance by row vs column.
+E.g. -4.0 means a 1:10000 unexpected bad performance by row vs column.
+Extreme numbers may indicate rock/paper/scissors, or Elo is not a good model for the data.
+         lates  first
+ latest      -    0.0
+  first   -0.0      -
+Used a prior of 2 games worth that each player is near Elo 0.
+=== [2026-09-06T10:39:25-04:00] wrote /scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/runtime/matches/2026-09-06/armA_vs_s20919936/match_summary-317503.txt ===
+=== [2026-09-06T10:39:25-04:00] next (login node, CPU): python3 codes/eval/declare.py /scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/runtime/matches/2026-09-06/armA_vs_s20919936 \ ===
+=== [2026-09-06T10:39:25-04:00]         --match-sgfs /scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/runtime/matches/2026-09-06/armA_vs_s20919936/match-317503 --match-summary /scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/runtime/matches/2026-09-06/armA_vs_s20919936/match_summary-317503.txt \ ===
+=== [2026-09-06T10:39:25-04:00]         --require-acceptances 1 --ci 0.95 --target-p 0.60 ===
+######## ARM A exit=0 ########
+
+######## ARM B: latest vs t9-s143744-d157367 (first net) ########
+=== [2026-09-06T10:39:25-04:00] match.sbatch start   job=317503 host=gb203 ===
+=== [2026-09-06T10:39:25-04:00] BASEDIR=/scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/runtime/matches/2026-09-06/snapshot  EVALDIR=/scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/runtime/matches/2026-09-06/armB_vs_first  NUM_GAMES=400 ===
+=== [2026-09-06T10:39:25-04:00] config=/home/schmidt/ssci-haiyangw/az/results/ktg/paper_1902.10565/codes/cfg/match_first_latest_9.cfg ===
+=== [2026-09-06T10:39:25-04:00] frozen first net : t9-s143744-d157367  (/scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/runtime/matches/2026-09-06/snapshot/models/t9-s143744-d157367/model.bin.gz) ===
+=== [2026-09-06T10:39:25-04:00]                    sha256 859c58d6785e5efdc3c40fb24400e3f5f56afca247009d2f1e94d35a8b4ac5d8 (re-verified) ===
+=== [2026-09-06T10:39:25-04:00] latest accepted  : t9-s27212800-d2664932  (/scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/runtime/matches/2026-09-06/snapshot/models/t9-s27212800-d2664932/model.bin.gz) ===
+=== [2026-09-06T10:39:25-04:00]                    sha256 d207dfb02769ac75a42b590ee0373f24ab6b4d8018b3e434ffad639b5b014626 ===
+0, NVIDIA B200, 183359 MiB
+=== [2026-09-06T10:39:26-04:00] katago match: 400 games, 9x9, komi 7, maxVisits 150, 1 search thread, 18 game threads ===
+2026-09-06 10:39:26-0400: Running with following config:
+allowRectangleProb = 0
+allowResignation = true
+bSizeRelProbs = 1
+bSizes = 9
+botName0 = first
+botName1 = latest
+chosenMovePrune = 1
+chosenMoveSubtract = 0
+chosenMoveTemperature = 0.2
+chosenMoveTemperatureEarly = 0.5
+chosenMoveTemperatureHalflife = 19
+cpuctExploration = 1.1
+cpuctExplorationLog = 0.0
+cudaUseFP16 = auto
+cudaUseNHWC = auto
+drawEquivalentWinsForWhite = 0.5
+dynamicScoreCenterScale = 0.50
+dynamicScoreCenterZeroWeight = 0.25
+dynamicScoreUtilityFactor = 0.25
+fpuReductionMax = 0.2
+handicapCompensateKomiProb = 1.0
+handicapProb = 0.0
+hasButtons = false,false,true
+koRules = SIMPLE,POSITIONAL,SITUATIONAL
+komiAuto = false
+komiMean = 7
+lcbStdevs = 5.0
+logGamesEvery = 50
+logMoves = false
+logSearchInfo = false
+logToStdout = true
+maxMovesPerGame = 1600
+maxVisits = 150
+minVisitPropForLCB = 0.15
+multiStoneSuicideLegals = false,true
+nnCacheSizePowerOfTwo = 21
+nnMaxBatchSize = 128
+nnModelFile0 = /scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/runtime/matches/2026-09-06/snapshot/models/t9-s143744-d157367/model.bin.gz
+nnModelFile1 = /scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/runtime/matches/2026-09-06/snapshot/models/t9-s27212800-d2664932/model.bin.gz
+nnMutexPoolSizePowerOfTwo = 15
+nnRandomize = true
+noResultUtilityForWhite = 0.0
+numBots = 2
+numGameThreads = 18
+numGamesTotal = 400
+numNNServerThreadsPerModel = 1
+numSearchThreads = 1
+numVirtualLossesPerThread = 1
+policyOptimism = 1.0
+resignConsecTurns = 5
+resignThreshold = -0.90
+rootEndingBonusPoints = 0.5
+rootFpuReductionMax = 0.1
+rootPolicyOptimism = 0.0
+rootPruneUselessMoves = true
+scoringRules = AREA,TERRITORY
+staticScoreUtilityFactor = 0.00
+subtreeValueBiasFactor = 0.35
+subtreeValueBiasWeightExponent = 0.8
+taxRules = NONE,NONE,SEKI,SEKI,ALL
+uncertaintyCoeff = 0.25
+uncertaintyExponent = 1.0
+useGraphSearch = true
+useLcbForSelection = true
+useNonBuggyLcb = true
+useUncertainty = true
+valueWeightExponent = 0.5
+winLossUtilityFactor = 1.0
+
+2026-09-06 10:39:26-0400: Match Engine starting...
+2026-09-06 10:39:26-0400: Git revision: fd0723fdbc0e9d82cf269c9630af8c27c57c07c4-dirty
+2026-09-06 10:39:26-0400: nnRandSeed0 = 15844950370290419147
+2026-09-06 10:39:26-0400: After dedups: nnModelFile0 = /scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/runtime/matches/2026-09-06/snapshot/models/t9-s143744-d157367/model.bin.gz useFP16 auto
+2026-09-06 10:39:26-0400: Initializing neural net buffer to be size 9 * 9 exactly
+2026-09-06 10:39:27-0400: Cuda backend thread 0: Found GPU NVIDIA B200 memory 191495471104 compute capability major 10 minor 0
+2026-09-06 10:39:27-0400: Cuda backend thread 0: Model version 17 useFP16 = true useNHWC = true
+2026-09-06 10:39:27-0400: Cuda backend thread 0: Model name: ktg9-t9-s143744-d157367 (transformer, 818857 params)
+2026-09-06 10:39:27-0400: Cuda backend: using combined QKV projection for attention
+2026-09-06 10:39:27-0400: Cuda backend: using CUTLASS fused FFN kernel
+2026-09-06 10:39:27-0400: CUDA backend: running 1x1 NHWC convolutions as a GEMM
+2026-09-06 10:39:27-0400: Cuda backend thread 0: warming up transformer graphs for batch sizes 1..128
+2026-09-06 10:39:27-0400: Cuda backend: using tensor-core mma flash attention kernel
+2026-09-06 10:39:27-0400: nnRandSeed1 = 605241940979606261
+2026-09-06 10:39:27-0400: After dedups: nnModelFile1 = /scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/runtime/matches/2026-09-06/snapshot/models/t9-s27212800-d2664932/model.bin.gz useFP16 auto
+2026-09-06 10:39:27-0400: Initializing neural net buffer to be size 9 * 9 exactly
+2026-09-06 10:39:27-0400: Cuda backend thread 0: Found GPU NVIDIA B200 memory 191495471104 compute capability major 10 minor 0
+2026-09-06 10:39:27-0400: Cuda backend thread 0: Model version 17 useFP16 = true useNHWC = true
+2026-09-06 10:39:27-0400: Cuda backend thread 0: Model name: ktg9-t9-s27212800-d2664932 (transformer, 818857 params)
+2026-09-06 10:39:27-0400: Cuda backend: using combined QKV projection for attention
+2026-09-06 10:39:27-0400: Cuda backend: using CUTLASS fused FFN kernel
+2026-09-06 10:39:27-0400: CUDA backend: running 1x1 NHWC convolutions as a GEMM
+2026-09-06 10:39:27-0400: Cuda backend thread 0: warming up transformer graphs for batch sizes 1..128
+2026-09-06 10:39:27-0400: Cuda backend: using tensor-core mma flash attention kernel
+2026-09-06 10:39:27-0400: Loaded neural net
+2026-09-06 10:39:27-0400: Loaded all config stuff, starting matches
+2026-09-06 10:39:39-0400: Avg move time used by first 0.142713 43 moves
+2026-09-06 10:39:39-0400: Avg move time used by latest 0.136963 43 moves
+2026-09-06 10:39:40-0400: Avg move time used by first 0.143259 87 moves
+2026-09-06 10:39:40-0400: Avg move time used by latest 0.137762 87 moves
+2026-09-06 10:39:40-0400: Avg move time used by first 0.143277 132 moves
+2026-09-06 10:39:40-0400: Avg move time used by latest 0.137035 132 moves
+2026-09-06 10:39:40-0400: Avg move time used by first 0.143537 178 moves
+2026-09-06 10:39:40-0400: Avg move time used by latest 0.137111 178 moves
+2026-09-06 10:39:40-0400: Avg move time used by first 0.143705 224 moves
+2026-09-06 10:39:40-0400: Avg move time used by latest 0.136903 225 moves
+2026-09-06 10:39:41-0400: Avg move time used by first 0.143387 272 moves
+2026-09-06 10:39:41-0400: Avg move time used by latest 0.13683 274 moves
+2026-09-06 10:39:42-0400: Avg move time used by first 0.14264 377 moves
+2026-09-06 10:39:42-0400: Avg move time used by latest 0.136252 379 moves
+2026-09-06 10:39:43-0400: Avg move time used by first 0.142749 484 moves
+2026-09-06 10:39:43-0400: Avg move time used by latest 0.136304 487 moves
+2026-09-06 10:39:44-0400: Avg move time used by first 0.14265 603 moves
+2026-09-06 10:39:44-0400: Avg move time used by latest 0.135634 608 moves
+2026-09-06 10:39:44-0400: Avg move time used by first 0.142501 845 moves
+2026-09-06 10:39:44-0400: Avg move time used by latest 0.135505 851 moves
+2026-09-06 10:39:53-0400: Avg move time used by first 0.141139 1072 moves
+2026-09-06 10:39:53-0400: Avg move time used by latest 0.134629 1079 moves
+2026-09-06 10:39:56-0400: Avg move time used by first 0.140738 1257 moves
+2026-09-06 10:39:56-0400: Avg move time used by latest 0.13432 1266 moves
+2026-09-06 10:39:58-0400: Avg move time used by first 0.139837 1676 moves
+2026-09-06 10:39:58-0400: Avg move time used by latest 0.133365 1689 moves
+2026-09-06 10:39:58-0400: Started 50 games
+2026-09-06 10:40:07-0400: Avg move time used by first 0.139419 2082 moves
+2026-09-06 10:40:07-0400: Avg move time used by latest 0.132916 2099 moves
+2026-09-06 10:40:12-0400: Avg move time used by first 0.139295 2494 moves
+2026-09-06 10:40:12-0400: Avg move time used by latest 0.132803 2512 moves
+2026-09-06 10:40:24-0400: Avg move time used by first 0.138995 3350 moves
+2026-09-06 10:40:24-0400: Avg move time used by latest 0.132128 3377 moves
+2026-09-06 10:40:37-0400: Avg move time used by first 0.13834 4144 moves
+2026-09-06 10:40:37-0400: Avg move time used by latest 0.131404 4178 moves
+2026-09-06 10:40:38-0400: Started 100 games
+2026-09-06 10:40:50-0400: Avg move time used by first 0.138472 4978 moves
+2026-09-06 10:40:50-0400: Avg move time used by latest 0.131256 5020 moves
+2026-09-06 10:41:17-0400: Avg move time used by first 0.137866 6608 moves
+2026-09-06 10:41:17-0400: Avg move time used by latest 0.13071 6660 moves
+2026-09-06 10:41:17-0400: Started 150 games
+2026-09-06 10:41:37-0400: Avg move time used by first 0.137788 8276 moves
+2026-09-06 10:41:37-0400: Avg move time used by latest 0.130582 8340 moves
+2026-09-06 10:41:57-0400: Started 200 games
+2026-09-06 10:42:01-0400: Avg move time used by first 0.13734 9920 moves
+2026-09-06 10:42:01-0400: Avg move time used by latest 0.130113 9997 moves
+2026-09-06 10:42:32-0400: Started 250 games
+2026-09-06 10:42:54-0400: Avg move time used by first 0.136941 13247 moves
+2026-09-06 10:42:54-0400: Avg move time used by latest 0.129726 13349 moves
+2026-09-06 10:43:11-0400: Started 300 games
+2026-09-06 10:43:42-0400: Avg move time used by first 0.13638 16584 moves
+2026-09-06 10:43:42-0400: Avg move time used by latest 0.129098 16716 moves
+2026-09-06 10:43:49-0400: Started 350 games
+2026-09-06 10:44:27-0400: Started 400 games
+2026-09-06 10:44:29-0400: Match loop thread terminating
+2026-09-06 10:44:29-0400: Avg move time used by first 0.136338 19880 moves
+2026-09-06 10:44:29-0400: Avg move time used by latest 0.129059 20040 moves
+2026-09-06 10:44:29-0400: Match loop thread terminating
+2026-09-06 10:44:30-0400: Match loop thread terminating
+2026-09-06 10:44:31-0400: Match loop thread terminating
+2026-09-06 10:44:31-0400: Match loop thread terminating
+2026-09-06 10:44:32-0400: Match loop thread terminating
+2026-09-06 10:44:33-0400: Match loop thread terminating
+2026-09-06 10:44:34-0400: Match loop thread terminating
+2026-09-06 10:44:35-0400: Match loop thread terminating
+2026-09-06 10:44:35-0400: Match loop thread terminating
+2026-09-06 10:44:36-0400: Match loop thread terminating
+2026-09-06 10:44:37-0400: Match loop thread terminating
+2026-09-06 10:44:38-0400: Match loop thread terminating
+2026-09-06 10:44:38-0400: Match loop thread terminating
+2026-09-06 10:44:38-0400: Match loop thread terminating
+2026-09-06 10:44:38-0400: Match loop thread terminating
+2026-09-06 10:44:40-0400: Match loop thread terminating
+2026-09-06 10:44:41-0400: Match loop thread terminating
+2026-09-06 10:44:41-0400: /scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/runtime/matches/2026-09-06/snapshot/models/t9-s143744-d157367/model.bin.gz
+2026-09-06 10:44:41-0400: NN rows: 2952999
+2026-09-06 10:44:41-0400: NN batches: 657274
+2026-09-06 10:44:41-0400: NN avg batch size: 4.4928
+2026-09-06 10:44:41-0400: GPU -1 finishing, processed 2952999 rows 657274 batches
+2026-09-06 10:44:41-0400: /scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/runtime/matches/2026-09-06/snapshot/models/t9-s27212800-d2664932/model.bin.gz
+2026-09-06 10:44:41-0400: NN rows: 2851303
+2026-09-06 10:44:41-0400: NN batches: 663917
+2026-09-06 10:44:41-0400: NN avg batch size: 4.29467
+2026-09-06 10:44:41-0400: GPU -1 finishing, processed 2851303 rows 663917 batches
+2026-09-06 10:44:42-0400: All cleaned up, quitting
+=== [2026-09-06T10:44:43-04:00] katago match exit=0 ===
+=== [2026-09-06T10:44:43-04:00] sgf lines written: 400   (not SZ[9]: 0
+0) ===
+=== [2026-09-06T10:44:43-04:00] summarize_sgfs.py over /scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/runtime/matches/2026-09-06/armB_vs_first/match-317503 ===
+{'input-files-or-dirs': ['/scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/runtime/matches/2026-09-06/armB_vs_first/match-317503'], 'recursive': True, 'elo_prior_games': 2, 'estimate_first_player_advantage': False}
+Searching and adding files in /scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/runtime/matches/2026-09-06/armB_vs_first/match-317503, please wait...
+Added 10/18 game files for /scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/runtime/matches/2026-09-06/armB_vs_first/match-317503
+Added 18 new game files from /scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/runtime/matches/2026-09-06/armB_vs_first/match-317503
+Beginning iteration 0, cur log likelihood -280.03237988475115, last elo change None
+Beginning iteration 1, cur log likelihood -54.26120205884862, last elo change 173.28458130803216
+Beginning iteration 2, cur log likelihood -21.25171414160529, last elo change 97.26847714404362
+Beginning iteration 3, cur log likelihood -11.100629405422017, last elo change 86.47142445217449
+Beginning iteration 4, cur log likelihood -8.01895410428052, last elo change 76.49922326303786
+Beginning iteration 5, cur log likelihood -7.278728115281535, last elo change 58.46961220992071
+Beginning iteration 6, cur log likelihood -7.184800981429421, last elo change 29.974421855958738
+Beginning iteration 7, cur log likelihood -7.182041040481731, last elo change 6.309613066486374
+Beginning iteration 8, cur log likelihood -7.182037600893543, last elo change 0.23328896167675195
+Beginning iteration 9, cur log likelihood -7.182037600887669, last elo change 0.0003046440782969816
+Beginning iteration 10, cur log likelihood -7.1820376008876465, last elo change 3.1120776000607683e-10
+Beginning iteration 11, cur log likelihood -7.1820376008876385, last elo change 1.612355524077096e-11
+Total games: 400
+Games by player:
+latest: 400.0
+first: 400.0
+Wins by row player against column player:
+              latest        first
+ latest            -  400.0/400.0
+  first    0.0/400.0            -
+Win% by row player against column player:
+         latest   first
+ latest       -  100.0%
+  first    0.0%       -
+Elos (+/- one approx standard error):
+latest              :   528.51 +/- 174.17
+first               :  -528.51 +/- 174.17
+Pairwise approx % likelihood of superiority of row over column:
+         latest   first
+ latest   50.00  100.00
+  first    0.00   50.00
+Log10odds surprise matrix given the maximum-likelihood Elos:
+E.g. +3.0 means a 1:1000 unexpected good performance by row vs column.
+E.g. -4.0 means a 1:10000 unexpected bad performance by row vs column.
+Extreme numbers may indicate rock/paper/scissors, or Elo is not a good model for the data.
+         lates  first
+ latest      -    0.2
+  first   -0.2      -
+Used a prior of 2 games worth that each player is near Elo 0.
+=== [2026-09-06T10:44:44-04:00] wrote /scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/runtime/matches/2026-09-06/armB_vs_first/match_summary-317503.txt ===
+=== [2026-09-06T10:44:44-04:00] next (login node, CPU): python3 codes/eval/declare.py /scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/runtime/matches/2026-09-06/armB_vs_first \ ===
+=== [2026-09-06T10:44:44-04:00]         --match-sgfs /scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/runtime/matches/2026-09-06/armB_vs_first/match-317503 --match-summary /scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/runtime/matches/2026-09-06/armB_vs_first/match_summary-317503.txt \ ===
+=== [2026-09-06T10:44:44-04:00]         --require-acceptances 1 --ci 0.95 --target-p 0.60 ===
+######## ARM B exit=0 ########
+=== c14 driver end 2026-09-06T10:44:44-04:00  armA=0 armB=0 ===
