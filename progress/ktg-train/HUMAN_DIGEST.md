@@ -1,72 +1,72 @@
 # HUMAN_DIGEST — ktg-train
 
-**Status:** training is on. The 9x9 production chain is running link 2 of 9, under the knob change you
-authorized (option C). Nothing is blocked. One decision is worth your attention: whether to archive game
-records before the loop's own cleanup deletes most of them.
+**Status: STOPPED by you on 2026-09-06 at 13:03 EDT.** You said "this is good enough already, save all
+necessary checkpoints and stop" at 12:57. The chain (link 2 of 9) exited cleanly three minutes later at
+cycle 249, nothing was killed mid-write, and everything is checkpointed and verified. Nothing is running.
+Nothing is blocked. Nothing needs a decision from you right now.
 
-## What landed today (2026-09-05)
+## Where the checkpoints are, and how to resume
 
-- **You chose knob option C, and it is now running on link 2.** Monitoring found the amount of fresh
-  training data per game declining as the run progressed (from roughly 18 rows/game toward 15), which would
-  eventually have made the trainer reuse each game's data too many times. Three fixes were prepared; you
-  picked the one that raises games-per-cycle from 1000 to 1800 and lowers the epoch/SWA sizing to match. The
-  worker also found, while preparing this, that an "epoch" in this trainer is really one whole shuffled data
-  file, not the sample count the knob names suggest — a correction to how several numbers in this pipeline
-  should be read, not just a tuning choice.
-- **Link 1 finished on its own time limit, cleanly for training purposes.** Job 301099 ran 157 cycles, with
-  58 of 60 candidate networks accepted by the gatekeeper (the first two rejections of the whole run, and
-  both were close matches, which is expected as the network gets stronger, not a fault). The very last two
-  monitoring reads before it ended showed a mild reversal of the trend that motivated the knob change: the
-  data-per-game decline stalled and ticked back up, and a training-quality number (value loss) that had been
-  drifting the wrong way also turned back down. That reversal was noticed only after option C was already
-  decided; it does not undo the reasoning, but it is worth knowing the picture improved on its own too.
-- **Link 2 started immediately and confirmed the new knobs are working as intended** — its first training
-  cycle matches every number the change was designed to produce.
-- **A loop-monitoring detail needs a decision, not a fix**: the tool that checks the data-decline trend needs
-  nine recent batches of self-play games to compute its slope, but the loop's own housekeeping deletes most
-  older game batches to save disk space, so only six of the nine survive by the time link 2 starts. The
-  check still ran and did not raise an alarm, but this piece of it cannot be trusted long-term without a
-  change — see "Decisions needed" below.
-- One earlier logging bug (the loop wrongly claiming "chain not extended" after a successful submission) was
-  already fixed, but link 2 is running the version of the script from just before that fix landed, so its
-  log still shows the old wrong message. The chain itself is fine; the next link picks up the fix
-  automatically.
+    /home/schmidt/ssci-haiyangw/ktg-checkpoints/2026-09-06_stop
 
-## What is live / blocked / open
+7.2 GB, 10,957 files, every one verified against a manifest (`sha256sum -c MANIFEST.sha256` exits 0, no
+failures). It holds the trained models, the trainer's own resumable state, every self-play game that
+survived to the stop, the loop scripts and configs as they actually ran, the built game-viewer pages, and
+a `README.md` inside the checkpoint directory that carries the full resume procedure (§7 there): restore
+`p1/` into the run directory, rebuild the training environment if scratch was cleared, remove the `STOP`
+file, run the compute-policy check, then resubmit the training job. It resumes exactly where it left off —
+the trainer continues from its last saved checkpoint, about 240,000 samples past the last exported network.
+Pointer with the full inventory and a one-command verifier: `results/ktg/paper_1902.10565/evidence/
+production_chain/CHECKPOINTS.md`.
 
-- **Live, healthy, unattended**: the 9x9 chain, now on link 2 of 9. **The separate 7x7 test run is no
-  longer live** — you stopped it on 2026-09-05 to redirect effort to the GUI; it ended with a flattening
-  loss curve (88 cycles, policy loss down to 1.26, value loss down to 0.52, 76 of 87 candidates accepted)
-  but never formally reached the plateau rule, and its closing strength match was waived by your stop, so
-  no playing-strength claim is being made from it.
-- **Nothing is blocked.**
-- **One monitoring gap, not yet a fault**: the data-decline drift check's longer-range leg cannot compute
-  this read because its input history gets partly deleted by routine cleanup (see decision below).
-- **Eight tasks carry an open "simplify before the next commit" flag** (one more than last wave), all
-  deferred by design while their allocations are live.
-- **Nothing blocks the mission's own progress gate** — continue, no-progress 0/8, stuck 0/3.
+## What was achieved
 
-## Decisions needed from you
+- **249 training cycles** across two chain segments (157 at 1,000 games/cycle, then 92 at 1,800
+  games/cycle after a mid-run tuning change you approved), **322,600 self-play games**, **28.95 million**
+  training samples, **93 candidate networks accepted** by the built-in quality gate and only **3
+  rejected**.
+- **The network the run leaves behind is its best one**, on every metric tracked: `t9-s28711040-d3032547`
+  has the best policy-loss and move-prediction accuracy of all 93 exports, and it reached that mark in
+  the last three networks produced — a value the run was still climbing toward, not a plateau it had
+  settled into.
+- **A 19-network stretch where the loss numbers stopped improving turned out not to be a real strength
+  stall.** A direct 400-game match between the network from partway through that stretch and the earlier
+  loss-record network showed the newer one winning about 74% of the time (roughly +183 rating points) —
+  clear, measured improvement the loss metric alone was not showing. The same network beat the very first
+  accepted network in all 400 games. This also means a monitoring alarm on one particular loss number was
+  retired mid-run because it was found to be tracking how often games end in draws, not how well the
+  network is learning — a correction to how the run's health was being read, not a change to the run
+  itself.
+- Full run history, loss curves, and playable game viewers are linked below.
 
-- **Should game records be archived before the loop's routine cleanup deletes them?** Right now, cleanup
-  removes roughly three-quarters of a link's self-play games within the same day, to keep disk usage and
-  the monitoring window small. Two things depend on having the full history: the "watch all the games"
-  viewer pages, and the drift-monitoring tool's longer-range check (mentioned above), which is already
-  missing three of the nine batches it wants. If you want either of those to reflect the complete run rather
-  than only the most recent slice, we would need to add a place to keep older game batches — costing some
-  extra disk space (not yet sized) and a small addition to the loop's own script. If you are fine with only
-  the newest games being viewable/checkable at any time, no change is needed and the note below can be
-  closed as accepted behavior rather than a gap.
-- No other decision is pending — the knob-change decision this wave (option C) is fully applied and
-  confirmed working.
+## What remains open, if training is ever resumed
+
+None of this blocked the stop, and none of it needs attention unless you choose to restart the chain:
+
+- **A disk-saving change was prepared but deliberately not applied.** Right now the loop deletes most
+  older self-play games fairly aggressively; a one-line fix that would keep much more game history around
+  (at a small, measured disk cost) was written, tested, and confirmed safe, but was left un-applied so it
+  wouldn't be a moving part at the same time as the stop. If the chain resumes, this fix is ready to apply
+  first (or to discard) — it is a five-minute decision either way, not more analysis.
+- **Archiving self-play game records before they get deleted** is still an open decision (unchanged from
+  last wave) — relevant again only if the chain resumes and keeps deleting older games.
+- Two smaller monitoring/bookkeeping items (an unbounded model-storage folder, one stale comment in a
+  config file) are noted but harmless either way.
+- The separate, smaller 7x7 test run remains stopped, as you ordered on 2026-09-04; nothing further is
+  owed on it.
 
 ## Pointers
 
-Loss curve: https://claude.ai/code/artifact/b7a554d2-fff8-49e0-8c9b-020c7ac906bb . Games viewer, cycles
-1–50 / 51–107 / 81–157: see orchestrator message. `progress/ktg-train/RESEARCH_STATE.md` (mission
-through-line) · `progress/ktg-train/nodal_note.md` (10-iteration window, last full rewrite at iteration 4) ·
-`progress/ktg-train/loop_notes/current_iter.md` (this wave's verbatim verifier + crash-triage output) ·
-`results/ktg/paper_1902.10565/decomposition/{logic,DESIGN,claims,obligations}.md` ·
-`results/ktg/GLOBAL_DAG.md` (regenerated this wave) ·
-`results/ktg/paper_1902.10565/evidence/production_chain/{preflight,launch.json,status_log.txt}` ·
-`results/ktg/paper_1902.10565/evidence/scale_data_window/` (the option-C knob-change record).
+Loss curve: https://claude.ai/code/artifact/b7a554d2-fff8-49e0-8c9b-020c7ac906bb .
+Games viewer — link 1: cycles 1–50 https://claude.ai/code/artifact/1944c772-dd3c-4ba1-97e2-677676f97f0b ,
+51–107 https://claude.ai/code/artifact/5c7976d9-53d0-4814-9d64-51b75def54e1 ,
+81–157 https://claude.ai/code/artifact/30b1f960-5a0c-468d-b9e7-865c766cc635 . Link 2: cycles 1–40
+https://claude.ai/code/artifact/51adbcdc-e12e-40c5-982d-d949b1c238e7 , 41–90
+https://claude.ai/code/artifact/dcb5ec16-6854-4385-a588-e2234585fb40 .
+`progress/ktg-train/RESEARCH_STATE.md` (mission through-line, final state) ·
+`progress/ktg-train/nodal_note.md` (closing 10-iteration window) ·
+`progress/ktg-train/loop_notes/current_iter.md` (this wave's verbatim verifier output) ·
+`results/ktg/paper_1902.10565/evidence/production_chain/{status_log.txt,CHECKPOINTS.md,c14_match_9x9/,
+retention_60/,vloss_escalation_memo.md}` · checkpoint pointer
+`results/ktg/paper_1902.10565/evidence/production_chain/CHECKPOINTS.md` ·
+`results/ktg/GLOBAL_DAG.md` (regenerated this wave).

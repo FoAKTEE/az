@@ -29,19 +29,19 @@ flowchart TD
     n_arxiv_1902_10565__export_stage["○ <b>export_stage</b> · k2<br/>Mission copy of export_model_for_selfplay.sh (mv before r…"]:::hypothesis
     n_arxiv_1902_10565__gatekeeper_stage["○ <b>gatekeeper_stage</b> · k2<br/>katago gatekeeper -config gatekeeper_9x9.cfg -quit-if-no-…"]:::hypothesis
     n_arxiv_1902_10565__eval_improvement["○ <b>eval_improvement</b> △ · k2<br/>Declare 'improves under self-play at 9x9' iff (a) >= 1 ga…"]:::hypothesis
-    n_arxiv_1902_10565__data_budget["○ <b>data_budget</b> · k2 t9✗5<br/>Scratch guard for the whole mission root /scratch/schmidt…"]:::hypothesis
+    n_arxiv_1902_10565__data_budget["○ <b>data_budget</b> · k2 t11✗5<br/>Scratch guard for the whole mission root /scratch/schmidt…"]:::hypothesis
     n_arxiv_1902_10565__scale_up["○ <b>scale_up</b> · k3<br/>Next architecture as a FRESH run (never resume a b7 check…"]:::hypothesis
     n_arxiv_1902_10565__transformer_trunk_b7c96h3tfrs["● <b>transformer_trunk_b7c96h3tfrs</b> △ · k4 t1<br/>b7c96h3tfrs (modelconfigs.py:1008-1029, registered :1887)…"]:::solid
     n_arxiv_1902_10565__engine_ffn_swiglu_constraint["● <b>engine_ffn_swiglu_constraint</b> · k1<br/>Every C++ inference backend requires useSwiGLU=1 for tran…"]:::solid
     n_arxiv_1902_10565__select_transformer_ladder["◐ <b>select_transformer_ladder</b> △ · k2<br/>Architecture ladder decision: b7c96h3tfrs (start: smoke +…"]:::preliminary
-    n_arxiv_1902_10565__derive_cycle_knobs_9x9["◐ <b>derive_cycle_knobs_9x9</b> · k6 t7✗3<br/>The cycle knobs are derived from measured rows/game and R…"]:::preliminary
-    n_arxiv_1902_10565__verify_preemption_resume["○ <b>verify_preemption_resume</b> · k1 t1✗1<br/>Executed kill/resume test on the smoke BASEDIR: scancel m…"]:::hypothesis
+    n_arxiv_1902_10565__derive_cycle_knobs_9x9["◐ <b>derive_cycle_knobs_9x9</b> · k6 t10✗4<br/>The cycle knobs are derived from measured rows/game and R…"]:::preliminary
+    n_arxiv_1902_10565__verify_preemption_resume["○ <b>verify_preemption_resume</b> · k1 t5✗3<br/>Executed kill/resume test on the smoke BASEDIR: scancel m…"]:::hypothesis
     n_arxiv_1902_10565__loop_failure_circuit_breaker["○ <b>loop_failure_circuit_breaker</b> · k1<br/>The resubmit chain must stop on deterministic failure: sy…"]:::hypothesis
     n_arxiv_1902_10565__bootstrap_accepted_model["○ <b>bootstrap_accepted_model</b> · k1<br/>Freeze the first directory that appears in models/ (with …"]:::hypothesis
-    n_arxiv_1902_10565__measure_stage_throughput["○ <b>measure_stage_throughput</b> · k1 t8✗1<br/>Per-stage machine-readable profile on b200 (and b300 when…"]:::hypothesis
+    n_arxiv_1902_10565__measure_stage_throughput["○ <b>measure_stage_throughput</b> · k1 t14✗4<br/>Per-stage machine-readable profile on b200 (and b300 when…"]:::hypothesis
     n_arxiv_1902_10565__count_gatekeeper_acceptances["○ <b>count_gatekeeper_acceptances</b> · k1<br/>Accepted successors = (# dirs in models/) - 1 (frozen bas…"]:::hypothesis
-    n_arxiv_1902_10565__match_latest_against_first["○ <b>match_latest_against_first</b> · k1<br/>katago match with codes/cfg/match_first_latest_9.cfg: 400…"]:::hypothesis
-    n_arxiv_1902_10565__scale_data_window["◐ <b>scale_data_window</b> · k2 t3<br/>First result of the node, from production rather than fro…"]:::preliminary
+    n_arxiv_1902_10565__match_latest_against_first["○ <b>match_latest_against_first</b> · k1 t1<br/>katago match with codes/cfg/match_first_latest_9.cfg: 400…"]:::hypothesis
+    n_arxiv_1902_10565__scale_data_window["◐ <b>scale_data_window</b> · k2 t4✗1<br/>First result of the node, from production rather than fro…"]:::preliminary
     n_arxiv_1902_10565__scale_search_budget["○ <b>scale_search_budget</b> · k1<br/>Raise self-play visits maxVisits/cheapSearchVisits 128/32…"]:::hypothesis
     n_arxiv_1902_10565__async_multi_gpu_layout["□ <b>async_multi_gpu_layout</b> · k1<br/>Concurrent self-play / training on 2-4 GPUs inside one jo…"]:::future
     n_arxiv_1902_10565__converged_test_7x7["○ <b>converged_test_7x7</b> · k1 t3✗1<br/>A converged 7x7 self-play test run with b7c96h3tfrs insid…"]:::hypothesis
