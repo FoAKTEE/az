@@ -1,0 +1,350 @@
+# link-3 replica: the wrapper Slurm stored for job 314831 (scontrol write batch_script, sha256 9e64864df848280572654e7f7015b3afbdee5fc11faab166139829afb51b5f54 = git show cc06834:codes/loop/loop.sbatch)
+# + knobs_9x9.env at HEAD (sha256 78121713b3056309...) + synchronous_loop_9x9.sh OLD (cc06834, sha256 10d195ff6ef764c1) vs NEW (HEAD, 57306e0d27802033...)
+# stub katago / scheduler shims from the worker's sandbox, copied to /scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/work/o50_o51_validator; login node, CPU only, no job, nothing signalled outside the sandbox. Driver: link3_replica_drive.sh
+
+########## stage: normalized diff of the link log, OLD loop vs NEW loop (paths/timestamps/pids normalized)
+3c3
+---
+22c22
+---
+(lines old=32 new=32)
+
+########## cycle: normalized diff of the link log, OLD loop vs NEW loop (paths/timestamps/pids normalized)
+3c3
+---
+22c22
+---
+32d31
+< + tee -a /weka/scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/work/o50_o51_validator/sandbox/root/loop/gatekeepersgf/stdout.txt
+33a33,35
+> + tee_through_term /weka/scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/work/o50_o51_validator/sandbox/root/loop/gatekeepersgf/stdout.txt
+> + trap '' TERM
+> + exec tee -a /weka/scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/work/o50_o51_validator/sandbox/root/loop/gatekeepersgf/stdout.txt
+36,38c38,40
+< real	0m0.019s
+< user	0m0.003s
+< sys	0m0.002s
+---
+> real	0m0.026s
+> user	0m0.002s
+> sys	0m0.004s
+42c44,46
+< + tee -a /weka/scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/work/o50_o51_validator/sandbox/root/loop/selfplay/stdout.txt
+---
+> + tee_through_term /weka/scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/work/o50_o51_validator/sandbox/root/loop/selfplay/stdout.txt
+> + trap '' TERM
+> + exec tee -a /weka/scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/work/o50_o51_validator/sandbox/root/loop/selfplay/stdout.txt
+48c52
+< real	0m1.000s
+---
+> real	0m1.021s
+50c54,55
+< sys	0m0.007s
+---
+> sys	0m0.008s
+> + '[' 0 = 1 ']'
+57c62,64
+< + tee -a /weka/scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/work/o50_o51_validator/sandbox/root/loop/logs/outshuffle.txt
+---
+> + tee_through_term /weka/scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/work/o50_o51_validator/sandbox/root/loop/logs/outshuffle.txt
+> + trap '' TERM
+> + exec tee -a /weka/scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/work/o50_o51_validator/sandbox/root/loop/logs/outshuffle.txt
+61,62c68,69
+< user	0m0.001s
+< sys	0m0.005s
+---
+> user	0m0.003s
+> sys	0m0.003s
+68,70c75,77
+< real	0m0.024s
+< user	0m0.002s
+< sys	0m0.001s
+---
+> real	0m0.023s
+> user	0m0.000s
+> sys	0m0.002s
+74c81,83
+< + tee -a /weka/scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/work/o50_o51_validator/sandbox/root/loop/logs/outexport.txt
+---
+> + tee_through_term /weka/scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/work/o50_o51_validator/sandbox/root/loop/logs/outexport.txt
+> + trap '' TERM
+> + exec tee -a /weka/scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/work/o50_o51_validator/sandbox/root/loop/logs/outexport.txt
+77,79c86,88
+< real	0m0.037s
+< user	0m0.000s
+< sys	0m0.005s
+---
+> real	0m0.028s
+> user	0m0.002s
+> sys	0m0.003s
+(lines old=87 new=96)
+
+########## term-wrapper: normalized diff of the link log, OLD loop vs NEW loop (paths/timestamps/pids normalized)
+3c3
+---
+22c22
+---
+31a32,33
+> + tee_through_term /weka/scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/work/o50_o51_validator/sandbox/root/loop/gatekeepersgf/stdout.txt
+> + trap '' TERM
+33c35
+< + tee -a /weka/scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/work/o50_o51_validator/sandbox/root/loop/gatekeepersgf/stdout.txt
+---
+> + exec tee -a /weka/scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/work/o50_o51_validator/sandbox/root/loop/gatekeepersgf/stdout.txt
+36c38
+< real	0m0.034s
+---
+> real	0m0.023s
+42c44,46
+< + tee -a /weka/scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/work/o50_o51_validator/sandbox/root/loop/selfplay/stdout.txt
+---
+> + tee_through_term /weka/scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/work/o50_o51_validator/sandbox/root/loop/selfplay/stdout.txt
+> + trap '' TERM
+> + exec tee -a /weka/scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/work/o50_o51_validator/sandbox/root/loop/selfplay/stdout.txt
+70,72c74,77
+< real	0m8.292s
+< user	0m0.017s
+< sys	0m0.078s
+---
+> real	0m8.259s
+> user	0m0.015s
+> sys	0m0.053s
+> + '[' 0 = 1 ']'
+79c84,86
+< + tee -a /weka/scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/work/o50_o51_validator/sandbox/root/loop/logs/outshuffle.txt
+---
+> + tee_through_term /weka/scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/work/o50_o51_validator/sandbox/root/loop/logs/outshuffle.txt
+> + trap '' TERM
+> + exec tee -a /weka/scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/work/o50_o51_validator/sandbox/root/loop/logs/outshuffle.txt
+82,84c89,91
+< real	0m0.027s
+< user	0m0.003s
+< sys	0m0.003s
+---
+> real	0m0.035s
+> user	0m0.000s
+> sys	0m0.005s
+90,92c97,99
+< real	0m0.024s
+< user	0m0.002s
+< sys	0m0.001s
+---
+> real	0m0.023s
+> user	0m0.001s
+> sys	0m0.002s
+96c103,105
+< + tee -a /weka/scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/work/o50_o51_validator/sandbox/root/loop/logs/outexport.txt
+---
+> + tee_through_term /weka/scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/work/o50_o51_validator/sandbox/root/loop/logs/outexport.txt
+> + trap '' TERM
+> + exec tee -a /weka/scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/work/o50_o51_validator/sandbox/root/loop/logs/outexport.txt
+99,101c108,110
+< real	0m0.134s
+< user	0m0.005s
+< sys	0m0.127s
+---
+> real	0m0.045s
+> user	0m0.002s
+> sys	0m0.004s
+109c118
+< stage_monitor: stopped; 7 ps samples, 2 gpu samples
+---
+> stage_monitor: stopped; 7 ps samples, 3 gpu samples
+(lines old=110 new=119)
+
+########## term-group: normalized diff of the link log, OLD loop vs NEW loop (paths/timestamps/pids normalized)
+3c3
+---
+22c22
+---
+32c32,33
+< + tee -a /weka/scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/work/o50_o51_validator/sandbox/root/loop/gatekeepersgf/stdout.txt
+---
+> + tee_through_term /weka/scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/work/o50_o51_validator/sandbox/root/loop/gatekeepersgf/stdout.txt
+> + trap '' TERM
+33a35
+> + exec tee -a /weka/scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/work/o50_o51_validator/sandbox/root/loop/gatekeepersgf/stdout.txt
+36c38
+< real	0m0.024s
+---
+> real	0m0.045s
+38c40
+< sys	0m0.004s
+---
+> sys	0m0.005s
+41d42
+< + tee -a /weka/scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/work/o50_o51_validator/sandbox/root/loop/selfplay/stdout.txt
+42a44,46
+> + tee_through_term /weka/scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/work/o50_o51_validator/sandbox/root/loop/selfplay/stdout.txt
+> + trap '' TERM
+> + exec tee -a /weka/scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/work/o50_o51_validator/sandbox/root/loop/selfplay/stdout.txt
+46c50,58
+< Terminated
+---
+> Exited cleanly after signal
+> All cleaned up, quitting
+> ++ on_loop_term
+> ++ set +x
+> synchronous_loop_9x9: SIGTERM received -- abandoning the cycle in flight, exiting 143
+> 
+> real	0m0.989s
+> user	0m0.030s
+> sys	0m0.090s
+49c61
+< stage_monitor: stopped; 0 ps samples, 1 gpu samples
+---
+> stage_monitor: stopped; 1 ps samples, 1 gpu samples
+(lines old=50 new=62)
+
+########## term-group-ignore: normalized diff of the link log, OLD loop vs NEW loop (paths/timestamps/pids normalized)
+3c3
+---
+22c22
+---
+31a32
+> + tee_through_term /weka/scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/work/o50_o51_validator/sandbox/root/loop/gatekeepersgf/stdout.txt
+33c34,35
+< + tee -a /weka/scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/work/o50_o51_validator/sandbox/root/loop/gatekeepersgf/stdout.txt
+---
+> + trap '' TERM
+> + exec tee -a /weka/scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/work/o50_o51_validator/sandbox/root/loop/gatekeepersgf/stdout.txt
+36c38
+< real	0m0.037s
+---
+> real	0m0.028s
+41d42
+< + tee -a /weka/scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/work/o50_o51_validator/sandbox/root/loop/selfplay/stdout.txt
+42a44,46
+> + tee_through_term /weka/scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/work/o50_o51_validator/sandbox/root/loop/selfplay/stdout.txt
+> + trap '' TERM
+> + exec tee -a /weka/scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/work/o50_o51_validator/sandbox/root/loop/selfplay/stdout.txt
+46c50,94
+< Terminated
+---
+> Started 40 games
+> Started 50 games
+> Started 60 games
+> Started 70 games
+> Started 80 games
+> Started 90 games
+> Started 100 games
+> Started 110 games
+> Started 120 games
+> Started 130 games
+> Started 140 games
+> Started 150 games
+> Started 160 games
+> Started 170 games
+> Started 180 games
+> Started 190 games
+> Started 200 games
+> Started 210 games
+> Started 220 games
+> Started 230 games
+> Started 240 games
+> Started 250 games
+> Started 260 games
+> Started 270 games
+> Started 280 games
+> Started 290 games
+> Started 300 games
+> Started 310 games
+> Started 320 games
+> Started 330 games
+> Started 340 games
+> Started 350 games
+> Started 360 games
+> Started 370 games
+> Started 380 games
+> Started 390 games
+> Started 400 games
+> All cleaned up, quitting
+> ++ on_loop_term
+> ++ set +x
+> synchronous_loop_9x9: SIGTERM received -- abandoning the cycle in flight, exiting 143
+> 
+> real	0m13.432s
+> user	0m0.066s
+> sys	0m0.155s
+(lines old=50 new=98)
+
+########## key lines per run
+--- run_cycle_new.log
+4:=== [2026-09-05T20:14:20-04:00] chain depth 1/200, failcount 0/3, cycles completed so far 0 ===
+90:cycle 1 complete -- 1 cycle(s) recorded in /weka/scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/work/o50_o51_validator/sandbox/root/loop/.cycles_completed
+94:=== [2026-09-05T20:14:23-04:00] loop exited rc=0 after 3s ===
+96:=== [2026-09-05T20:14:27-04:00] clean exit -- failcount reset to 0 ===
+--- run_cycle_old.log
+4:=== [2026-09-05T20:14:11-04:00] chain depth 1/200, failcount 0/3, cycles completed so far 0 ===
+81:cycle 1 complete -- 1 cycle(s) recorded in /weka/scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/work/o50_o51_validator/sandbox/root/loop/.cycles_completed
+85:=== [2026-09-05T20:14:14-04:00] loop exited rc=0 after 3s ===
+87:=== [2026-09-05T20:14:18-04:00] clean exit -- failcount reset to 0 ===
+--- run_stage_new.log
+4:=== [2026-09-05T20:12:47-04:00] chain depth 1/200, failcount 0/3, cycles completed so far 0 ===
+24:KTG_STAGE_ONLY=1 -- archive staged at /weka/scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/work/o50_o51_validator/sandbox/root/loop/scripts/dated/20260905-201248, no cycle run.
+30:=== [2026-09-05T20:12:49-04:00] loop exited rc=0 after 2s ===
+32:=== [2026-09-05T20:12:53-04:00] clean exit -- failcount reset to 0 ===
+--- run_stage_old.log
+4:=== [2026-09-05T20:12:40-04:00] chain depth 1/200, failcount 0/3, cycles completed so far 0 ===
+24:KTG_STAGE_ONLY=1 -- archive staged at /weka/scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/work/o50_o51_validator/sandbox/root/loop/scripts/dated/20260905-201241, no cycle run.
+30:=== [2026-09-05T20:12:42-04:00] loop exited rc=0 after 2s ===
+32:=== [2026-09-05T20:12:46-04:00] clean exit -- failcount reset to 0 ===
+--- run_term-group-ignore_new.log
+4:=== [2026-09-05T20:15:26-04:00] chain depth 1/200, failcount 0/3, cycles completed so far 0 ===
+90:synchronous_loop_9x9: SIGTERM received -- abandoning the cycle in flight, exiting 143
+95:=== [2026-09-05T20:15:42-04:00] SIGTERM received -- scheduler termination (walltime or scancel); the queued successor is the resume path ===
+96:=== [2026-09-05T20:15:42-04:00] loop exited rc=143 after 16s ===
+98:=== [2026-09-05T20:15:46-04:00] scheduler termination at walltime after 17s (SIGTERM to this wrapper) -- successor continues, failcount left at 0 ===
+--- run_term-group-ignore_old.log
+4:=== [2026-09-05T20:15:18-04:00] chain depth 1/200, failcount 0/3, cycles completed so far 0 ===
+46:Terminated
+47:=== [2026-09-05T20:15:20-04:00] SIGTERM received -- scheduler termination (walltime or scancel); the queued successor is the resume path ===
+48:=== [2026-09-05T20:15:20-04:00] loop exited rc=143 after 3s ===
+50:=== [2026-09-05T20:15:24-04:00] scheduler termination at walltime after 3s (SIGTERM to this wrapper) -- successor continues, failcount left at 0 ===
+--- run_term-group_new.log
+4:=== [2026-09-05T20:15:09-04:00] chain depth 1/200, failcount 0/3, cycles completed so far 0 ===
+50:Exited cleanly after signal
+54:synchronous_loop_9x9: SIGTERM received -- abandoning the cycle in flight, exiting 143
+59:=== [2026-09-05T20:15:12-04:00] SIGTERM received -- scheduler termination (walltime or scancel); the queued successor is the resume path ===
+60:=== [2026-09-05T20:15:12-04:00] loop exited rc=143 after 3s ===
+62:=== [2026-09-05T20:15:16-04:00] scheduler termination at walltime after 3s (SIGTERM to this wrapper) -- successor continues, failcount left at 0 ===
+--- run_term-group_old.log
+4:=== [2026-09-05T20:15:00-04:00] chain depth 1/200, failcount 0/3, cycles completed so far 0 ===
+46:Terminated
+47:=== [2026-09-05T20:15:03-04:00] SIGTERM received -- scheduler termination (walltime or scancel); the queued successor is the resume path ===
+48:=== [2026-09-05T20:15:03-04:00] loop exited rc=143 after 3s ===
+50:=== [2026-09-05T20:15:07-04:00] scheduler termination at walltime after 3s (SIGTERM to this wrapper) -- successor continues, failcount left at 0 ===
+--- run_term-wrapper_new.log
+4:=== [2026-09-05T20:14:44-04:00] chain depth 1/200, failcount 0/3, cycles completed so far 0 ===
+112:cycle 1 complete -- 1 cycle(s) recorded in /weka/scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/work/o50_o51_validator/sandbox/root/loop/.cycles_completed
+116:=== [2026-09-05T20:14:55-04:00] SIGTERM received -- scheduler termination (walltime or scancel); the queued successor is the resume path ===
+117:=== [2026-09-05T20:14:55-04:00] loop exited rc=0 after 11s ===
+119:=== [2026-09-05T20:14:59-04:00] scheduler termination at walltime after 11s (SIGTERM to this wrapper) -- successor continues, failcount left at 0 ===
+--- run_term-wrapper_old.log
+4:=== [2026-09-05T20:14:28-04:00] chain depth 1/200, failcount 0/3, cycles completed so far 0 ===
+103:cycle 1 complete -- 1 cycle(s) recorded in /weka/scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/work/o50_o51_validator/sandbox/root/loop/.cycles_completed
+107:=== [2026-09-05T20:14:39-04:00] SIGTERM received -- scheduler termination (walltime or scancel); the queued successor is the resume path ===
+108:=== [2026-09-05T20:14:39-04:00] loop exited rc=0 after 11s ===
+110:=== [2026-09-05T20:14:43-04:00] scheduler termination at walltime after 11s (SIGTERM to this wrapper) -- successor continues, failcount left at 0 ===
+
+########## one-cycle trees, OLD vs NEW (sha256 of every file; version.txt and the monitor's pid/sample files excluded)
+4355a46b19d348dc2f57c046f8ef63d4538ebb936000f3c9ee954a27460dd865  .chain_depth
+4355a46b19d348dc2f57c046f8ef63d4538ebb936000f3c9ee954a27460dd865  .cycles_completed
+9a271f2a916b0b6ee6cecb2426f0b3206ef074578be55d9bc94f6f3fe3ab86aa  .failcount
+52e2bee2f4b18625b3d0b065dd677719539bc2829a8cb961b088972805f0db4a  gatekeepersgf/stdout.txt
+61ececdd8b190a5a355bc2f36b6bbf95b7218bfed141c9683332d3965d255d26  logs/outexport.txt
+b1c0b34f6c9151e2b7a35b8d665e4726a9e2daf2fcd0cd7b49589a749846f201  logs/outshuffle.txt
+a243b7f77a7c40f91dcf5a9916fe9f509b3497cce13f2b316b0ba37136bb72d3  scripts/dated/<TS>/bin/katago
+e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855  scripts/dated/<TS>/diff.txt
+e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855  scripts/dated/<TS>/diffstaged.txt
+257ac7151aad797b4c9eb1446d3f92ee973856b05c1c8a9434b640d46e7f006e  scripts/dated/<TS>/export_model_for_selfplay_9x9.sh
+b72c09c5f3ad1a583268ddeec4aeb8758df1a1e2eb123ba4bc20ea5959d4e57b  scripts/dated/<TS>/gatekeeper.cfg
+74e0b6bbb9b457d72ffdd12d94fcc9aa1e95a5a487504d834a0466987b496cca  scripts/dated/<TS>/katago/__init__.py
+74e0b6bbb9b457d72ffdd12d94fcc9aa1e95a5a487504d834a0466987b496cca  scripts/dated/<TS>/muon/__init__.py
+be49d61d7d9adc8925fd61dbd5f526b8ad3f00657cee051b82ee9ba07bf23991  scripts/dated/<TS>/selfplay.cfg
+944eb0216a8a51cf9978d0610d48926fefe8c7b2eb5b05acbfb3bf5e65ebb5d6  scripts/dated/<TS>/selfplay_stub.py
+add71958e46d1ec666031cf3f12939279b21d56e8a91a1b9d86437784857b6ca  scripts/dated/<TS>/shuffle.sh
+74e0b6bbb9b457d72ffdd12d94fcc9aa1e95a5a487504d834a0466987b496cca  scripts/dated/<TS>/top_stub.py
+fbf75d16ae4dbf88a6f297acfbb0f1024bb6cde38ce436e81bd2388b5b3b3b18  scripts/dated/<TS>/train_9x9.sh
+f6fa08a4c58d7e991290ae7954f6427169d2209218fecfe07b8add231c376b6d  selfplay/stdout.txt
+IDENTICAL: 19 files

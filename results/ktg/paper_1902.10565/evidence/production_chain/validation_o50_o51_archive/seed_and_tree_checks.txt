@@ -1,0 +1,8 @@
+# seed reproduction (validator, 2026-09-05 ~20:08 EDT): seed_rows_history.py --git az --tree runs/p1 --models-from runs/p1 into a scratch file, compared with the committed record
+repro git-derived records: 44; committed git-derived records: 44; field-by-field IDENTICAL
+tree-derived records at the validator's read: t9-s17945216-d2940346 6243/94787, t9-s18225024-d381697 3600/61632 (both in the committed record, identical), t9-s18522368-d443329 5400/91487 (NEW complete directory since the worker's read; not yet in the record: the record is append-on-read)
+idempotent re-append of the 7 git versions onto a copy of the committed record: appended 0, skipped 132 already present; file byte-identical
+on-disk check of the 8 recorded nets still in the tree (venv numpy, npz binaryInputNCHWPacked.shape[0]; sgfs line counts): all 8 (games, rows) pairs MATCH the record
+models/ index at read time: 61 accepted nets; index 37 = t9-s11352064-d2008893, 38 = t9-s11651712-d2059673 (one INCOMPLETE observation, 908 games), 39 = t9-s11951360-d2093144 ... 50 = t9-s15547392-d2603142, 51 = t9-s15847040-d2653436 -> 13 accepted nets between 37 and 51 without a complete record
+read-time marginal over the 3 newest COMPLETE directories (t9-s17945216-d2940346, t9-s18225024-d381697, t9-s18522368-d443329): 247906 rows / 15243 games = 16.2636
+prune_retention.py dry run (no --apply) against runs/p1, cc06834 version vs HEAD version: plans IDENTICAL (1 shuffleddata dir + 4 selfplay generations t9-s15847040..t9-s17045760 would be removed at the next link start; all 4 are complete records in the history)

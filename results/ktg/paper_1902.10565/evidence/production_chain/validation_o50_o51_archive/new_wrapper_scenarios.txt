@@ -1,0 +1,69 @@
+# NEW wrapper (HEAD loop.sbatch 2cce49a9...) + NEW loop; SIGTERM to the WRAPPER PID ONLY (the form the site delivers, see validation md); stubs patched for a slow gatekeeper / trainer (python child) / shuffle. Driver: new_wrapper_scenarios_drive.sh
+
+########## gate
+4:=== [2026-09-05T20:15:51-04:00] chain depth 1/200, failcount 0/3, cycles completed so far 0 ===
+9:=== [2026-09-05T20:15:51-04:00] successor queued: 900001 (partition b200, dependency afterany:700002) ===
+23:=== [2026-09-05T20:15:52-04:00] loop pid 3128472 in its own process group 3128472 (this wrapper is in 3128331) -- a SIGTERM to this wrapper is forwarded to that group, which is what reaches katago ===
+38:=== [2026-09-05T20:15:53-04:00] SIGTERM received -- scheduler termination (walltime or scancel); the queued successor is the resume path ===
+39:=== [2026-09-05T20:15:53-04:00] forwarding SIGTERM to the loop (grace 15s, then SIGKILL; the site's KillWait is 30 s) ===
+40:Exited cleanly after signal
+44:synchronous_loop_9x9: SIGTERM received -- abandoning the cycle in flight, exiting 143
+45:=== [2026-09-05T20:15:53-04:00] SIGTERM -> loop process group -3128472 (pid 3128472) ===
+50:=== [2026-09-05T20:15:54-04:00] loop exited rc=143 after 4s ===
+51:stage_monitor: stopped; 1 ps samples, 1 gpu samples
+52:=== [2026-09-05T20:15:58-04:00] scheduler termination at walltime after 4s (SIGTERM to this wrapper) -- successor continues, failcount left at 0 ===
+
+########## train
+4:=== [2026-09-05T20:16:00-04:00] chain depth 1/200, failcount 0/3, cycles completed so far 0 ===
+9:=== [2026-09-05T20:16:00-04:00] successor queued: 900001 (partition b200, dependency afterany:700002) ===
+23:=== [2026-09-05T20:16:01-04:00] loop pid 3128917 in its own process group 3128917 (this wrapper is in 3128788) -- a SIGTERM to this wrapper is forwarded to that group, which is what reaches katago ===
+76:=== [2026-09-05T20:16:03-04:00] SIGTERM received -- scheduler termination (walltime or scancel); the queued successor is the resume path ===
+77:=== [2026-09-05T20:16:03-04:00] forwarding SIGTERM to the loop (grace 15s, then SIGKILL; the site's KillWait is 30 s) ===
+78:Terminated
+81:synchronous_loop_9x9: SIGTERM received -- abandoning the cycle in flight, exiting 143
+82:=== [2026-09-05T20:16:03-04:00] SIGTERM -> loop process group -3128917 (pid 3128917) ===
+87:=== [2026-09-05T20:16:04-04:00] loop exited rc=143 after 5s ===
+88:stage_monitor: stopped; 1 ps samples, 1 gpu samples
+89:=== [2026-09-05T20:16:08-04:00] scheduler termination at walltime after 5s (SIGTERM to this wrapper) -- successor continues, failcount left at 0 ===
+
+########## shuffle
+4:=== [2026-09-05T20:16:09-04:00] chain depth 1/200, failcount 0/3, cycles completed so far 0 ===
+9:=== [2026-09-05T20:16:10-04:00] successor queued: 900001 (partition b200, dependency afterany:700002) ===
+23:=== [2026-09-05T20:16:10-04:00] loop pid 3129621 in its own process group 3129621 (this wrapper is in 3129498) -- a SIGTERM to this wrapper is forwarded to that group, which is what reaches katago ===
+68:=== [2026-09-05T20:16:13-04:00] SIGTERM received -- scheduler termination (walltime or scancel); the queued successor is the resume path ===
+69:=== [2026-09-05T20:16:13-04:00] forwarding SIGTERM to the loop (grace 15s, then SIGKILL; the site's KillWait is 30 s) ===
+70:Terminated
+73:synchronous_loop_9x9: SIGTERM received -- abandoning the cycle in flight, exiting 143
+74:=== [2026-09-05T20:16:13-04:00] SIGTERM -> loop process group -3129621 (pid 3129621) ===
+75:=== [2026-09-05T20:16:14-04:00] loop exited rc=143 after 5s ===
+76:stage_monitor: stopped; 1 ps samples, 1 gpu samples
+77:=== [2026-09-05T20:16:18-04:00] scheduler termination at walltime after 5s (SIGTERM to this wrapper) -- successor continues, failcount left at 0 ===
+
+########## grace15
+4:=== [2026-09-05T20:16:19-04:00] chain depth 1/200, failcount 0/3, cycles completed so far 0 ===
+9:=== [2026-09-05T20:16:19-04:00] successor queued: 900001 (partition b200, dependency afterany:700002) ===
+23:=== [2026-09-05T20:16:20-04:00] loop pid 3130215 in its own process group 3130215 (this wrapper is in 3130075) -- a SIGTERM to this wrapper is forwarded to that group, which is what reaches katago ===
+51:=== [2026-09-05T20:16:22-04:00] SIGTERM received -- scheduler termination (walltime or scancel); the queued successor is the resume path ===
+52:=== [2026-09-05T20:16:22-04:00] forwarding SIGTERM to the loop (grace 15s, then SIGKILL; the site's KillWait is 30 s) ===
+53:=== [2026-09-05T20:16:22-04:00] SIGTERM -> loop process group -3130215 (pid 3130215) ===
+100:=== [2026-09-05T20:16:37-04:00] the loop is still running 15s after the forwarded SIGTERM -- escalating to SIGKILL so finalize still runs inside KillWait ===
+101:=== [2026-09-05T20:16:37-04:00] SIGKILL -> loop process group -3130215 (pid 3130215) ===
+103:=== [2026-09-05T20:16:37-04:00] loop exited rc=137 after 18s ===
+104:stage_monitor: stopped; 14 ps samples, 4 gpu samples
+105:=== [2026-09-05T20:16:41-04:00] scheduler termination at walltime after 18s (SIGTERM to this wrapper) -- successor continues, failcount left at 0 ===
+
+########## double
+4:=== [2026-09-05T20:16:42-04:00] chain depth 1/200, failcount 0/3, cycles completed so far 0 ===
+9:=== [2026-09-05T20:16:43-04:00] successor queued: 900001 (partition b200, dependency afterany:700002) ===
+23:=== [2026-09-05T20:16:43-04:00] loop pid 3131442 in its own process group 3131442 (this wrapper is in 3131272) -- a SIGTERM to this wrapper is forwarded to that group, which is what reaches katago ===
+51:=== [2026-09-05T20:16:45-04:00] SIGTERM received -- scheduler termination (walltime or scancel); the queued successor is the resume path ===
+52:=== [2026-09-05T20:16:45-04:00] forwarding SIGTERM to the loop (grace 15s, then SIGKILL; the site's KillWait is 30 s) ===
+53:Exited cleanly after signal
+57:synchronous_loop_9x9: SIGTERM received -- abandoning the cycle in flight, exiting 143
+58:=== [2026-09-05T20:16:45-04:00] SIGTERM -> loop process group -3131442 (pid 3131442) ===
+63:=== [2026-09-05T20:16:46-04:00] SIGTERM received -- scheduler termination (walltime or scancel); the queued successor is the resume path ===
+64:=== [2026-09-05T20:16:46-04:00] forwarding SIGTERM to the loop (grace 15s, then SIGKILL; the site's KillWait is 30 s) ===
+65:=== [2026-09-05T20:16:46-04:00] SIGTERM not sent: the loop (pid 3131442) has already ended ===
+66:=== [2026-09-05T20:16:46-04:00] loop exited rc=143 after 4s ===
+67:stage_monitor: stopped; 1 ps samples, 1 gpu samples
+68:=== [2026-09-05T20:16:50-04:00] scheduler termination at walltime after 4s (SIGTERM to this wrapper) -- successor continues, failcount left at 0 ===

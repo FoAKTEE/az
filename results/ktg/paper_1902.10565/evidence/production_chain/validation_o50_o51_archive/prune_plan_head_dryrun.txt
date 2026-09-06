@@ -1,0 +1,28 @@
+== prune_retention 2026-09-05T20:10:59-0400 DRY-RUN ==
+constants : /weka/home/schmidt/ssci-haiyangw/az/results/ktg/paper_1902.10565/codes/data_budget/budget.env
+root      : /scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train
+basedir   : /scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/runs/p1
+-- protected set (17 entries; never a deletion candidate) --
+   PROTECT  /scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/runs/p1/models/t9-s143744-d157367    <- frozen baseline (oldest models/ dir)
+   PROTECT  /scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/runs/p1/models/t9-s18821760-d534816    <- latest accepted net (newest models/ dir)
+   PROTECT  /scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/runs/p1/train/t9/checkpoint.ckpt    <- short-term checkpoint (train.py:573-578)
+   PROTECT  /scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/runs/p1/train/t9/checkpoint_prev3.ckpt    <- short-term checkpoint (train.py:573-578)
+   PROTECT  /scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/runs/p1/train/t9/checkpoint_prev2.ckpt    <- short-term checkpoint (train.py:573-578)
+   PROTECT  /scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/runs/p1/train/t9/checkpoint_prev1.ckpt    <- short-term checkpoint (train.py:573-578)
+   PROTECT  /scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/runs/p1/train/t9/checkpoint_prev0.ckpt    <- short-term checkpoint (train.py:573-578)
+   PROTECT  /scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/runs/p1/shuffleddata/20260905-181548    <- shuffleddata younger than 7200s
+   PROTECT  /scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/runs/p1/shuffleddata/20260905-183427    <- shuffleddata younger than 7200s
+   PROTECT  /scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/runs/p1/shuffleddata/20260905-184548    <- shuffleddata younger than 7200s
+   PROTECT  /scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/runs/p1/shuffleddata/20260905-185749    <- shuffleddata younger than 7200s
+   PROTECT  /scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/runs/p1/shuffleddata/20260905-191109    <- shuffleddata younger than 7200s
+   PROTECT  /scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/runs/p1/shuffleddata/20260905-192318    <- shuffleddata younger than 7200s
+   PROTECT  /scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/runs/p1/shuffleddata/20260905-193636    <- shuffleddata younger than 7200s
+   PROTECT  /scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/runs/p1/shuffleddata/20260905-194842    <- shuffleddata younger than 7200s
+   PROTECT  /scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/runs/p1/shuffleddata/20260905-200017    <- shuffleddata younger than 7200s
+   PROTECT  /scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/evidence    <- evidence tree
+-- deletion plan (5 paths, 152256763 B) --
+   WOULD-REMOVE       50875594 B  /scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/runs/p1/shuffleddata/20260905-174549    <- shuffleddata: keep newest 3 older than 7200s (cleanup_old_dirs.py:13,24)
+   WOULD-REMOVE       16976260 B  /scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/runs/p1/selfplay/t9-s15847040-d2653436    <- selfplay: keep newest 3 generations, and only delete generations older than the oldest retained shuffle window
+   WOULD-REMOVE       42069850 B  /scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/runs/p1/selfplay/t9-s16146944-d2687330    <- selfplay: keep newest 3 generations, and only delete generations older than the oldest retained shuffle window
+   WOULD-REMOVE       25413233 B  /scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/runs/p1/selfplay/t9-s16746112-d2770965    <- selfplay: keep newest 3 generations, and only delete generations older than the oldest retained shuffle window
+   WOULD-REMOVE       16921826 B  /scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/runs/p1/selfplay/t9-s17045760-d2821985    <- selfplay: keep newest 3 generations, and only delete generations older than the oldest retained shuffle window

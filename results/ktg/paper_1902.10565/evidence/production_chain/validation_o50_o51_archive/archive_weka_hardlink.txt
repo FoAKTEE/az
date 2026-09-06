@@ -1,0 +1,3 @@
+# hard links on wekafs across selfplay/ and archive/ (scratch work dir, same mount as runs/p1: wekafs1/scratchssci)
+flag unset: archive_sgf.sh creates nothing (no archive/)
+KTG_ARCHIVE_SGF=1: linked=2 copied=0; archived entry same inode as the live file (stat %i equal, link count 2); du -sb delta 0 B; an append to the live file is visible through the archive entry; second pass linked=0 already-linked=2; after rm -rf of the generation the archive keeps the last link (1 link, full size) and du then counts it; prune_retention.py lists PROTECT <basedir>/archive
