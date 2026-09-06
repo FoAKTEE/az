@@ -1,0 +1,8 @@
+--- a/results/ktg/paper_1902.10565/codes/data_budget/budget.env	2026-09-06 10:35:40.577743082 -0400
++++ b/results/ktg/paper_1902.10565/codes/data_budget/budget.env	2026-09-06 10:35:40.604743010 -0400
+@@ -52,4 +52,4 @@
+ # scripts/dated/<ts>: one archive per resubmit, each carrying a katago binary.
+ KTG_KEEP_DATED_SCRIPTS=3
+ # selfplay/<model>/ generations kept regardless of the shuffle window.
+-KTG_KEEP_SELFPLAY_GENERATIONS=3
++KTG_KEEP_SELFPLAY_GENERATIONS=60

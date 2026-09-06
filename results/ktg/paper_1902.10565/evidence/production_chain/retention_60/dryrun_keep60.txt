@@ -1,0 +1,26 @@
+== prune_retention 2026-09-06T10:28:16-0400 DRY-RUN ==
+constants : /scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/runtime/retention_60_dryrun/keep60/budget.env
+root      : /scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train
+basedir   : /scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/runs/p1
+-- protected set (18 entries; never a deletion candidate) --
+   PROTECT  /scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/runs/p1/models/t9-s143744-d157367    <- frozen baseline (oldest models/ dir)
+   PROTECT  /scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/runs/p1/models/t9-s27212800-d2664932    <- latest accepted net (newest models/ dir)
+   PROTECT  /scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/runs/p1/train/t9/checkpoint.ckpt    <- short-term checkpoint (train.py:573-578)
+   PROTECT  /scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/runs/p1/train/t9/checkpoint_prev3.ckpt    <- short-term checkpoint (train.py:573-578)
+   PROTECT  /scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/runs/p1/train/t9/checkpoint_prev2.ckpt    <- short-term checkpoint (train.py:573-578)
+   PROTECT  /scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/runs/p1/train/t9/checkpoint_prev1.ckpt    <- short-term checkpoint (train.py:573-578)
+   PROTECT  /scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/runs/p1/train/t9/checkpoint_prev0.ckpt    <- short-term checkpoint (train.py:573-578)
+   PROTECT  /scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/runs/p1/shuffleddata/20260906-083247    <- shuffleddata younger than 7200s
+   PROTECT  /scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/runs/p1/shuffleddata/20260906-084534    <- shuffleddata younger than 7200s
+   PROTECT  /scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/runs/p1/shuffleddata/20260906-085717    <- shuffleddata younger than 7200s
+   PROTECT  /scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/runs/p1/shuffleddata/20260906-090907    <- shuffleddata younger than 7200s
+   PROTECT  /scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/runs/p1/shuffleddata/20260906-092158    <- shuffleddata younger than 7200s
+   PROTECT  /scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/runs/p1/shuffleddata/20260906-093358    <- shuffleddata younger than 7200s
+   PROTECT  /scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/runs/p1/shuffleddata/20260906-094713    <- shuffleddata younger than 7200s
+   PROTECT  /scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/runs/p1/shuffleddata/20260906-095851    <- shuffleddata younger than 7200s
+   PROTECT  /scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/runs/p1/shuffleddata/20260906-101041    <- shuffleddata younger than 7200s
+   PROTECT  /scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/runs/p1/shuffleddata/20260906-102341    <- shuffleddata younger than 7200s
+   PROTECT  /scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/evidence    <- evidence tree
+-- deletion plan (0 paths, 0 B) --
+   (nothing to remove)
+-- plan written to /scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/runtime/retention_60_dryrun/plan_keep60.json --

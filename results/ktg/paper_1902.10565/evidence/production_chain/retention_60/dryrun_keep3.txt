@@ -1,0 +1,57 @@
+== prune_retention 2026-09-06T10:28:15-0400 DRY-RUN ==
+constants : /scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/runtime/retention_60_dryrun/keep3/budget.env
+root      : /scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train
+basedir   : /scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/runs/p1
+-- protected set (18 entries; never a deletion candidate) --
+   PROTECT  /scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/runs/p1/models/t9-s143744-d157367    <- frozen baseline (oldest models/ dir)
+   PROTECT  /scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/runs/p1/models/t9-s27212800-d2664932    <- latest accepted net (newest models/ dir)
+   PROTECT  /scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/runs/p1/train/t9/checkpoint.ckpt    <- short-term checkpoint (train.py:573-578)
+   PROTECT  /scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/runs/p1/train/t9/checkpoint_prev3.ckpt    <- short-term checkpoint (train.py:573-578)
+   PROTECT  /scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/runs/p1/train/t9/checkpoint_prev2.ckpt    <- short-term checkpoint (train.py:573-578)
+   PROTECT  /scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/runs/p1/train/t9/checkpoint_prev1.ckpt    <- short-term checkpoint (train.py:573-578)
+   PROTECT  /scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/runs/p1/train/t9/checkpoint_prev0.ckpt    <- short-term checkpoint (train.py:573-578)
+   PROTECT  /scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/runs/p1/shuffleddata/20260906-083247    <- shuffleddata younger than 7200s
+   PROTECT  /scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/runs/p1/shuffleddata/20260906-084534    <- shuffleddata younger than 7200s
+   PROTECT  /scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/runs/p1/shuffleddata/20260906-085717    <- shuffleddata younger than 7200s
+   PROTECT  /scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/runs/p1/shuffleddata/20260906-090907    <- shuffleddata younger than 7200s
+   PROTECT  /scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/runs/p1/shuffleddata/20260906-092158    <- shuffleddata younger than 7200s
+   PROTECT  /scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/runs/p1/shuffleddata/20260906-093358    <- shuffleddata younger than 7200s
+   PROTECT  /scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/runs/p1/shuffleddata/20260906-094713    <- shuffleddata younger than 7200s
+   PROTECT  /scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/runs/p1/shuffleddata/20260906-095851    <- shuffleddata younger than 7200s
+   PROTECT  /scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/runs/p1/shuffleddata/20260906-101041    <- shuffleddata younger than 7200s
+   PROTECT  /scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/runs/p1/shuffleddata/20260906-102341    <- shuffleddata younger than 7200s
+   PROTECT  /scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/evidence    <- evidence tree
+-- deletion plan (32 paths, 1131433908 B) --
+   WOULD-REMOVE       16976260 B  /scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/runs/p1/selfplay/t9-s15847040-d2653436    <- selfplay: keep newest 3 generations, and only delete generations older than the oldest retained shuffle window
+   WOULD-REMOVE       42069850 B  /scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/runs/p1/selfplay/t9-s16146944-d2687330    <- selfplay: keep newest 3 generations, and only delete generations older than the oldest retained shuffle window
+   WOULD-REMOVE       25413233 B  /scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/runs/p1/selfplay/t9-s16746112-d2770965    <- selfplay: keep newest 3 generations, and only delete generations older than the oldest retained shuffle window
+   WOULD-REMOVE       16921826 B  /scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/runs/p1/selfplay/t9-s17045760-d2821985    <- selfplay: keep newest 3 generations, and only delete generations older than the oldest retained shuffle window
+   WOULD-REMOVE       25419865 B  /scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/runs/p1/selfplay/t9-s17345664-d2855966    <- selfplay: keep newest 3 generations, and only delete generations older than the oldest retained shuffle window
+   WOULD-REMOVE       16865329 B  /scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/runs/p1/selfplay/t9-s17645440-d2906849    <- selfplay: keep newest 3 generations, and only delete generations older than the oldest retained shuffle window
+   WOULD-REMOVE       49489402 B  /scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/runs/p1/selfplay/t9-s17945216-d2940346    <- selfplay: keep newest 3 generations, and only delete generations older than the oldest retained shuffle window
+   WOULD-REMOVE       30908108 B  /scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/runs/p1/selfplay/t9-s18225024-d381697    <- selfplay: keep newest 3 generations, and only delete generations older than the oldest retained shuffle window
+   WOULD-REMOVE       45985383 B  /scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/runs/p1/selfplay/t9-s18522368-d443329    <- selfplay: keep newest 3 generations, and only delete generations older than the oldest retained shuffle window
+   WOULD-REMOVE       30653653 B  /scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/runs/p1/selfplay/t9-s18821760-d534816    <- selfplay: keep newest 3 generations, and only delete generations older than the oldest retained shuffle window
+   WOULD-REMOVE       45281599 B  /scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/runs/p1/selfplay/t9-s19121664-d596114    <- selfplay: keep newest 3 generations, and only delete generations older than the oldest retained shuffle window
+   WOULD-REMOVE       30577673 B  /scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/runs/p1/selfplay/t9-s19421312-d686939    <- selfplay: keep newest 3 generations, and only delete generations older than the oldest retained shuffle window
+   WOULD-REMOVE       45267438 B  /scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/runs/p1/selfplay/t9-s19720960-d748675    <- selfplay: keep newest 3 generations, and only delete generations older than the oldest retained shuffle window
+   WOULD-REMOVE       30117921 B  /scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/runs/p1/selfplay/t9-s20020864-d839733    <- selfplay: keep newest 3 generations, and only delete generations older than the oldest retained shuffle window
+   WOULD-REMOVE       45274130 B  /scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/runs/p1/selfplay/t9-s20320384-d900599    <- selfplay: keep newest 3 generations, and only delete generations older than the oldest retained shuffle window
+   WOULD-REMOVE       30332156 B  /scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/runs/p1/selfplay/t9-s20620032-d992128    <- selfplay: keep newest 3 generations, and only delete generations older than the oldest retained shuffle window
+   WOULD-REMOVE       45129848 B  /scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/runs/p1/selfplay/t9-s20919936-d1053205    <- selfplay: keep newest 3 generations, and only delete generations older than the oldest retained shuffle window
+   WOULD-REMOVE       30154278 B  /scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/runs/p1/selfplay/t9-s21219584-d1143954    <- selfplay: keep newest 3 generations, and only delete generations older than the oldest retained shuffle window
+   WOULD-REMOVE       45924509 B  /scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/runs/p1/selfplay/t9-s21519232-d1204669    <- selfplay: keep newest 3 generations, and only delete generations older than the oldest retained shuffle window
+   WOULD-REMOVE       30464999 B  /scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/runs/p1/selfplay/t9-s21818880-d1296843    <- selfplay: keep newest 3 generations, and only delete generations older than the oldest retained shuffle window
+   WOULD-REMOVE       45312477 B  /scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/runs/p1/selfplay/t9-s22118528-d1357824    <- selfplay: keep newest 3 generations, and only delete generations older than the oldest retained shuffle window
+   WOULD-REMOVE       30154923 B  /scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/runs/p1/selfplay/t9-s22418432-d1448624    <- selfplay: keep newest 3 generations, and only delete generations older than the oldest retained shuffle window
+   WOULD-REMOVE       45441929 B  /scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/runs/p1/selfplay/t9-s22717824-d1508800    <- selfplay: keep newest 3 generations, and only delete generations older than the oldest retained shuffle window
+   WOULD-REMOVE       30232236 B  /scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/runs/p1/selfplay/t9-s23017344-d1599714    <- selfplay: keep newest 3 generations, and only delete generations older than the oldest retained shuffle window
+   WOULD-REMOVE       45793888 B  /scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/runs/p1/selfplay/t9-s23316992-d1660341    <- selfplay: keep newest 3 generations, and only delete generations older than the oldest retained shuffle window
+   WOULD-REMOVE       30317212 B  /scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/runs/p1/selfplay/t9-s23616384-d1752387    <- selfplay: keep newest 3 generations, and only delete generations older than the oldest retained shuffle window
+   WOULD-REMOVE       44743321 B  /scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/runs/p1/selfplay/t9-s23916160-d1813599    <- selfplay: keep newest 3 generations, and only delete generations older than the oldest retained shuffle window
+   WOULD-REMOVE       29888832 B  /scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/runs/p1/selfplay/t9-s24215808-d1903631    <- selfplay: keep newest 3 generations, and only delete generations older than the oldest retained shuffle window
+   WOULD-REMOVE       44810442 B  /scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/runs/p1/selfplay/t9-s24515584-d1963915    <- selfplay: keep newest 3 generations, and only delete generations older than the oldest retained shuffle window
+   WOULD-REMOVE       30162619 B  /scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/runs/p1/selfplay/t9-s24815616-d2054706    <- selfplay: keep newest 3 generations, and only delete generations older than the oldest retained shuffle window
+   WOULD-REMOVE       44855886 B  /scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/runs/p1/selfplay/t9-s25114880-d2115472    <- selfplay: keep newest 3 generations, and only delete generations older than the oldest retained shuffle window
+   WOULD-REMOVE       30492683 B  /scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/runs/p1/selfplay/t9-s25414912-d2205679    <- selfplay: keep newest 3 generations, and only delete generations older than the oldest retained shuffle window
+-- plan written to /scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/runtime/retention_60_dryrun/plan_keep3.json --

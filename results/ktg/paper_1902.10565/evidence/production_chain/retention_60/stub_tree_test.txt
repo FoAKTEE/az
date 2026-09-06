@@ -1,0 +1,63 @@
+stub_tree_test  2026-09-06T10:31:24-0400
+prune_retention.py sha256 identical in both trees; only budget.env:55 differs.
+GEN_S = 1929.3 s between generations; CYCLE_S = 732.6 s between shuffle dirs.
+
+==============================================================================
+SCENARIO A_link3: 51 selfplay generations, 13 shuffleddata dirs
+==============================================================================
+  keep3  exit=0  plan=46 paths 753664 B   selfplay=46  shuffleddata=0
+         selfplay deleted: t9-s443744-d44374 ... t9-s13943744-d1394374
+         protected entries: 14
+         protected kinds  : frozen baseline; latest accepted net; short-term checkpoint; shuffleddata younger than 7200s
+  keep60 exit=0  plan=0 paths 0 B   selfplay=0  shuffleddata=0
+         protected entries: 14
+         protected kinds  : frozen baseline; latest accepted net; short-term checkpoint; shuffleddata younger than 7200s
+  DELTA  selfplay deleted 3 -> 60 : 46 -> 0   (generations spared by 60: 46)
+  DELTA  shuffleddata deleted     : 0 -> 0   (identical)
+  DELTA  survivors on disk        : 5 -> 51 generations
+
+==============================================================================
+SCENARIO B_link4: 95 selfplay generations, 13 shuffleddata dirs
+==============================================================================
+  keep3  exit=0  plan=90 paths 1474560 B   selfplay=90  shuffleddata=0
+         selfplay deleted: t9-s443744-d44374 ... t9-s27143744-d2714374
+         protected entries: 14
+         protected kinds  : frozen baseline; latest accepted net; short-term checkpoint; shuffleddata younger than 7200s
+  keep60 exit=0  plan=35 paths 573440 B   selfplay=35  shuffleddata=0
+         selfplay deleted: t9-s443744-d44374 ... t9-s10643744-d1064374
+         protected entries: 14
+         protected kinds  : frozen baseline; latest accepted net; short-term checkpoint; shuffleddata younger than 7200s
+  DELTA  selfplay deleted 3 -> 60 : 90 -> 35   (generations spared by 60: 55)
+  DELTA  shuffleddata deleted     : 0 -> 0   (identical)
+  DELTA  survivors on disk        : 5 -> 60 generations
+
+==============================================================================
+SCENARIO C_scramble: 51 selfplay generations, 13 shuffleddata dirs, mtime order scrambled
+==============================================================================
+  keep3  exit=0  plan=45 paths 737280 B   selfplay=45  shuffleddata=0
+         selfplay deleted: t9-s443744-d44374 ... t9-s13943744-d1394374
+         protected entries: 14
+         protected kinds  : frozen baseline; latest accepted net; short-term checkpoint; shuffleddata younger than 7200s
+  keep60 exit=0  plan=0 paths 0 B   selfplay=0  shuffleddata=0
+         protected entries: 14
+         protected kinds  : frozen baseline; latest accepted net; short-term checkpoint; shuffleddata younger than 7200s
+  DELTA  selfplay deleted 3 -> 60 : 45 -> 0   (generations spared by 60: 45)
+  DELTA  shuffleddata deleted     : 0 -> 0   (identical)
+  DELTA  survivors on disk        : 6 -> 51 generations
+
+==============================================================================
+SCENARIO D_rolling: 95 selfplay generations, 13 shuffleddata dirs, extra args --target-bytes 1000000
+==============================================================================
+  keep3  exit=0  plan=90 paths 1474560 B   selfplay=90  shuffleddata=0
+         selfplay deleted: t9-s443744-d44374 ... t9-s27143744-d2714374
+         protected entries: 14
+         protected kinds  : frozen baseline; latest accepted net; short-term checkpoint; shuffleddata younger than 7200s
+  keep60 exit=0  plan=50 paths 819200 B   selfplay=47  shuffleddata=3
+         selfplay deleted: t9-s443744-d44374 ... t9-s14243744-d1424374
+         protected entries: 14
+         protected kinds  : frozen baseline; latest accepted net; short-term checkpoint; shuffleddata younger than 7200s
+  DELTA  selfplay deleted 3 -> 60 : 90 -> 47   (generations spared by 60: 43)
+  DELTA  shuffleddata deleted     : 0 -> 3   (DIFFERENT)
+  DELTA  survivors on disk        : 5 -> 48 generations
+
+done.

@@ -1,0 +1,61 @@
+== 1. window formula calibrated against logs/loop-305318.log ==
+   rows on disk   321,499 -> desired  102,521   log:  102,521   MATCH
+   rows on disk   351,470 -> desired  108,521   log:  108,521   MATCH
+   rows on disk   381,697 -> desired  114,405   log:  114,405   MATCH
+   rows on disk   412,531 -> desired  120,251   log:  120,251   MATCH
+   rows on disk   443,329 -> desired  125,948   log:  125,948   MATCH
+   rows on disk 2,604,285 -> desired  398,509   log:  398,509   MATCH
+   rows on disk 2,634,485 -> desired  401,521   log:  401,521   MATCH
+   rows on disk 2,664,932 -> desired  404,546   log:  404,546   MATCH
+   rows on disk 2,695,293 -> desired  407,550   log:  407,550   MATCH
+   all 9 log points reproduced: True
+
+== 2. rates measured over link 2 ==
+   cycles/h 4.914  (79 shuffles / 16.075 h = 12.21 min per cycle)
+   generations/h 1.866  (2.633 cycles per generation)
+   rows/cycle 30,365   rows/generation 79,961
+   hours from the 10:28 measurement to link-3 start (17:53:21) = 7.42
+   projected at link-3 start: +36 cycles, 3,788,433 rows on disk, 51 generations
+
+== 3. the shuffle window across the link-2 -> link-3 boundary ==
+   LAST CYCLE OF LINK 2  rows 3,788,433 -> window  509,034
+   KEEP=60  0 generations deleted (51 <= 60, stub scenario A)
+            rows 3,788,433 -> window  509,034   step +0   (+0.0 %)
+   KEEP=3   46 of 51 generations deleted, 5 survive (stub scenario A: 46 of 51 deleted)
+            rows   359,825-439,786 -> window  110,163-125,299   step -398,871 to -383,735   (-78.4 % to -75.4 %)
+   link-2 boundary, for comparison (measured): 421,842 -> 109,442 rows (-74.1 %), vloss 0.6002 -> 0.6146
+
+== 4. which knob binds once the collapse is gone ==
+   last cycle of link 2                   window  509,034   SHUFFLE_KEEPROWS binds: 120000 of 509034 rows drawn, keep_prob 0.236
+   KEEP=60 first cycle of link 3          window  509,034   SHUFFLE_KEEPROWS binds: 120000 of 509034 rows drawn, keep_prob 0.236
+   KEEP=3 first cycle of link 3 (low)     window  110,163   SHUFFLE_KEEPROWS DOES NOT bind: window 110163 < KEEPROWS 120000, keep_prob 1.000 -- every row on disk is drawn every cycle
+   KEEP=3 first cycle of link 3 (high)    window  125,299   SHUFFLE_KEEPROWS binds: 120000 of 125299 rows drawn, keep_prob 0.958
+   SHUFFLE_MINROWS  25,000: the clamp floor; the smallest window above is 110,163 = 4.4x it -- never binds
+   TAPER_WINDOW_SCALE 50,000: the power-law OFFSET (shuffle.py:421), not a clamp; it shapes the curve at every window size and can never bind
+   -max-rows: not passed by shuffle.sh or synchronous_loop_9x9.sh -> max_rows=None, no upper clamp exists
+   reuse rho = KEEPROWS/(G*r) = 120000/(1800*16.87) = 3.952 -- a function of games/cycle and rows/game only, unchanged by retention
+
+== 5. scratch projection ==
+   measured now: mission root 15,446,626,012 B (14.39 GiB), selfplay 1,362,996,266 B, shuffleddata 658,610,549 B, 37 generations
+   mean COMPLETE link-2 generation: 39,150,047 B (37.3 MiB) = tdata 23,287,955 + sgfs 15,836,783
+   KEEP=3   link-3 start   5 generations =  0.18 GiB; link-3 END  49 generations =  1.79 GiB
+            peak mission root 16,001,982,049 B = 14.90 GiB; guard's projected total 37,476,818,529 B = 6.98 % of the 500 GiB hard cap
+   KEEP=60  link-3 start  51 generations =  1.86 GiB; link-3 END  95 generations =  3.46 GiB
+            peak mission root 17,802,884,211 B = 16.58 GiB; guard's projected total 39,277,720,691 B = 7.32 % of the 500 GiB hard cap
+   COST OF THE CHANGE: at most (60-5) x 39,150,047 B = 2,153,252,585 B = 2.01 GiB extra, 0.401 % of the 500 GiB budget
+   guard thresholds unchanged: hard cap 536,870,912,000 B, default projection 21,474,836,480 B (effective soft cap 480 GiB)
+   headroom under the soft cap with 60 generations retained: 498,963,442,954 B = 464.7 GiB = 12,744 further generations
+   VERDICT: the guard's own cap does NOT need raising.
+
+== 6. SGF side effect (bears on o52; quantified, not decided) ==
+   on disk now: 161,470 games in 549,853,444 B of .sgfs across 37 generations (524 MiB)
+   mean per COMPLETE link-2 generation: 4,655 games, 15,836,783 B (15.1 MiB); 3402 B/game
+   at link-3 start the tree will hold 226,270 games (161,470 now + 36 cycles x 1800) in ~735 MiB of .sgfs, across 51 generations
+   KEEP=3   5 generations survive: the newest five now hold 26,627 games; at link-3 start expect ~23,276 games, ~76 MiB (10.3 % of the tree)
+   KEEP=60  all 51 generations survive (51 <= 60): 226,270 games, ~735 MiB (100 % of the tree)
+   DELTA    202,994 games and ~659 MiB of .sgfs that KEEP=3 deletes at 17:53 and KEEP=60 keeps
+   link 2 alone will have written ~115 cycles = ~207,000 games in ~44 generations; KEEP=60 carries every one of them into link 3, KEEP=3 carries the newest ~5 generations
+   the deleted games are unrecoverable unless codes/data_budget/archive_sgf.sh ran first (KTG_ARCHIVE_SGF, committed at 0; loop.sbatch:859-869 runs it BEFORE the prune)
+   NOTE for o52: KEEP=60 does not archive anything. It defers the loss by one link (the 60th-oldest generation is deleted at the NEXT boundary) and buys ~32 h of game history on disk at ~906 MiB. An archive decision is still open.
+
+wrote /weka/home/schmidt/ssci-haiyangw/az/results/ktg/paper_1902.10565/evidence/production_chain/retention_60/projection.json

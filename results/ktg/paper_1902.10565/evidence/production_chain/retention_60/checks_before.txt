@@ -1,0 +1,107 @@
+### BASELINE (budget.env:55 = KTG_KEEP_SELFPLAY_GENERATIONS=3, unmodified repo) ###
+
+$ sed -n 55p codes/data_budget/budget.env
+KTG_KEEP_SELFPLAY_GENERATIONS=3
+
+$ python3 codes/eval/check_knobs_9x9.py --throughput evidence/production_chain/throughput.json --rows-file evidence/production_chain/rows_per_game.txt --marginal-nets 3 --trend-nets 9 --horizon-nets 10
+check_knobs_9x9 -- node arxiv-1902.10565::derive_cycle_knobs_9x9
+
+INPUTS (content-hashed)
+  8a229b8dd16dcfe69eb372c8eb359060c5c064bcefb391e2ef66c121c67bfc11  paper_1902.10565/evidence/production_chain/rows_per_game.txt
+  a639db8517ecc8183bf9f68ff542f56ed0f458ee18707f938b56059e11f1c59a  paper_1902.10565/evidence/production_chain/throughput.json
+  646e4ef1a9f295b10926fa10f43172482cf4f1ca7244ca9146919d358d09f282  paper_1902.10565/evidence/smoke/audit-298712.json
+  78121713b305630980fca3b1476098540f7eda8ed5f722083e5b93d5545a5dc0  paper_1902.10565/codes/loop/knobs_9x9.env
+  6f38681ea6befc64f1e0f0c4faced2ddd1d774ac7f445595997d07e4abf81f62  paper_1902.10565/codes/data_budget/budget.env
+  57306e0d27802033b9c28de222afe00aadadfd9a485e03b2ad463b4382ea161b  paper_1902.10565/codes/loop/synchronous_loop_9x9.sh
+
+MEASURED KEYS PRESENT: train_samples_per_second, bytes_per_row_on_disk, selfplay_rows_total
+GATE (measured pair): stage_elapsed_s['gatekeeper'] = 1550.62 s over the 34 gate stage(s) the file records (cycle4/gatekeeper, cycle6/gatekeeper, cycle9/gatekeeper, cycle11/gatekeeper, cycle14/gatekeeper, cycle16/gatekeeper, cycle19/gatekeeper, cycle21/gatekeeper, cycle23/gatekeeper, cycle24/gatekeeper, cycle26/gatekeeper, cycle29/gatekeeper, cycle31/gatekeeper, cycle34/gatekeeper, cycle36/gatekeeper, cycle39/gatekeeper, cycle41/gatekeeper, cycle44/gatekeeper, cycle46/gatekeeper, cycle49/gatekeeper, cycle51/gatekeeper, cycle52/gatekeeper, cycle54/gatekeeper, cycle56/gatekeeper, cycle59/gatekeeper, cycle61/gatekeeper, cycle64/gatekeeper, cycle66/gatekeeper, cycle69/gatekeeper, cycle71/gatekeeper, cycle72/gatekeeper, cycle74/gatekeeper, cycle75/gatekeeper, cycle76/gatekeeper) / gatekeeper_games_total = 14626 measured gate games -> 0.10602 s per gate game
+SHUFFLE (measured):   per_phase_stage['cycle2/shuffle'].elapsed_s = 7.46 s, over the 76 cycle selfplay phase(s) selfplay_rows_total is spread across
+
+ROWS/GAME BY SELFPLAY NET DIRECTORY (throughput JSON per_net; the last row is the net still playing and is NOT used)
+  t9-s15847040-d2653436          games   2000  rows    33894  rows/game  16.947
+  t9-s16146944-d2687330          games   5000  rows    83635  rows/game  16.727
+  t9-s16746112-d2770965          games   3000  rows    51020  rows/game  17.007
+  t9-s17045760-d2821985          games   2000  rows    33981  rows/game  16.991
+  t9-s17345664-d2855966          games   3000  rows    50883  rows/game  16.961
+  t9-s17645440-d2906849          games   2000  rows    33497  rows/game  16.748
+  t9-s17945216-d2940346          games   6243  rows    94787  rows/game  15.183
+  t9-s18225024-d381697           games   3600  rows    61632  rows/game  17.120
+  t9-s18522368-d443329           games   5400  rows    91487  rows/game  16.942
+  t9-s18821760-d534816           games   3600  rows    61298  rows/game  17.027
+  t9-s19121664-d596114           games   5400  rows    90825  rows/game  16.819
+  t9-s19421312-d686939           games   3600  rows    61736  rows/game  17.149
+  t9-s19720960-d748675           games   5400  rows    91058  rows/game  16.863
+  t9-s20020864-d839733           games   3600  rows    60866  rows/game  16.907
+  t9-s20320384-d900599           games   5400  rows    91529  rows/game  16.950
+  t9-s20620032-d992128           games   3600  rows    61077  rows/game  16.966
+  t9-s20919936-d1053205          games   5400  rows    90749  rows/game  16.805
+  t9-s21219584-d1143954          games   3600  rows    60715  rows/game  16.865
+  t9-s21519232-d1204669          games   5400  rows    92174  rows/game  17.069
+  t9-s21818880-d1296843          games   3600  rows    60981  rows/game  16.939
+  t9-s22118528-d1357824          games   5400  rows    90800  rows/game  16.815
+  t9-s22418432-d1448624          games   3600  rows    60176  rows/game  16.716
+  t9-s22717824-d1508800          games   5400  rows    90914  rows/game  16.836
+  t9-s23017344-d1599714          games   3600  rows    60627  rows/game  16.841
+  t9-s23316992-d1660341          games   5400  rows    92046  rows/game  17.046
+  t9-s23616384-d1752387          games   3600  rows    61212  rows/game  17.003
+  t9-s23916160-d1813599          games   5400  rows    90032  rows/game  16.673
+  t9-s24215808-d1903631          games   3600  rows    60284  rows/game  16.746
+  t9-s24515584-d1963915          games   5400  rows    90791  rows/game  16.813
+  t9-s24815616-d2054706          games   3600  rows    60766  rows/game  16.879
+  t9-s25114880-d2115472          games   5400  rows    90207  rows/game  16.705
+  t9-s25414912-d2205679          games   3600  rows    61613  rows/game  17.115
+  t9-s25714304-d2267292          games   9000  rows   154106  rows/game  17.123
+  t9-s26313728-d2421398          games   5400  rows    92019  rows/game  17.041
+  t9-s26613120-d2513417          games   3600  rows    60376  rows/game  16.771
+  t9-s26913152-d2573793          games   1515  rows    16654  rows/game  10.993   <- incomplete
+  marginal r    = 17.0278   aggregate over the last 3 COMPLETE real-net selfplay directories (t9-s25714304-d2267292, t9-s26313728-d2421398, t9-s26613120-d2513417): 306501 rows / 18000 games
+  lower bound   = 17.0278   17.0278 carried 10 accepted nets forward at the least-squares slope of rows/game over the last 9 complete directories, +0.0356 rows/game per accepted net (NOT the sampling formula: over 18000 games its 90 % term is 0.75 %, while the binding uncertainty is drift as the net trains)
+  whole-run aggregate in rows_per_game.txt = 16.782071547959937 (NOT used: it averages in the early long-game nets)
+
+TRAIN samples/s:           6801.902 (throughput.json) -> taking 6801.902 (throughput.json)
+
+derive_knobs: --rows-per-game-lower 17.0278 is above --rows-per-game 17.0278; a lower bound that exceeds the measurement is not a bound.
+EXIT=1
+
+$ python3 codes/eval/check_knobs_9x9.py                       # frozen smoke evidence, the documented default
+  ok   EPOCHS_PER_EXPORT            loop default 5 == derived 5
+
+CHECK_KNOBS_9X9: PASS
+EXIT=0
+
+$ python3 codes/eval/check_knobs_9x9.py --throughput evidence/production_chain/throughput.json --rows-file evidence/production_chain/rows_per_game.txt
+  ok   EPOCHS_PER_EXPORT            loop default 5 == derived 5
+
+CHECK_KNOBS_9X9: PASS
+EXIT=0
+
+$ bash tests/run_guard_tests.sh   (against an UNPATCHED copy of codes/data_budget)
+PASS  exit 0   A. within budget, default 20 GiB projection
+PASS  exit 1   B. projected write crosses the 500 GiB hard cap
+PASS  exit 1   C. a stray KTG_SCRATCH_HARD_BYTES in the environment cannot loosen the cap
+PASS  exit 1   D. current usage already over the cap, zero projection
+PASS  exit 2   E. group scratch free space below the safety floor
+PASS  exit 0   F. group free below the warn floor only: warns, does not abort
+PASS  exit 3   G. mission root does not exist
+PASS  exit 3   H. malformed --projected-bytes
+PASS  exit 3   I. unknown argument
+PASS  exit 3   J. constants file missing
+PASS  exit 0   K. quotas.py unreadable: falls back to df on the same pool and warns
+PASS  exit 0   M. control: an EXPLICIT --projected-bytes 0 is caller control and passes
+PASS  exit 1   L. KTG_CYCLE_PROJECTED_BYTES=0 in the environment cannot zero the projection
+PASS  exit 0   Q. control: an EXPLICIT --root is caller control, and is announced in the log
+PASS  exit 1   P. KTG_SCRATCH_ROOT in the environment cannot redirect the measured root
+PASS  exit 0   N1. control: a raised-cap constants file INSIDE the guard dir is honoured
+PASS  exit 3   N2. the byte-identical file OUTSIDE the guard dir is refused, cap not raised
+PASS  exit 3   O. an in-tree constants file with a ${...} indirection is refused by the guard
+PASS  exit 2   R. a fake KTG_QUOTAS_BIN overstating free space cannot lift the group floor
+PASS  exit 0   S1. pruner with no --root (documented contract) dry-runs the MISSION ROOT
+PASS  exit 0   S2. the legacy ${NAME:-default} form resolves to the file default, not the env
+PASS  exit 0   S3. an exported KTG_SCRATCH_ROOT cannot redirect the pruner
+PASS  exit 3   S4. pruner refuses an out-of-tree --budget-env
+PASS  exit 1   T1. control: the same root, nothing unreadable, measures and refuses on the cap
+PASS  exit 3   T2. du -sb non-zero on every attempt: partial total discarded, guard refuses
+      | scratch_guard: du -sb failed on /scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/runtime/guard_tests.WcVjFe/duroot after 3 attempts: du: cannot read directory '/scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/runtime/guard_tests.WcVjFe/duroot/locked': Permission denied 
+== 25 passed, 0 failed ==
+EXIT=0

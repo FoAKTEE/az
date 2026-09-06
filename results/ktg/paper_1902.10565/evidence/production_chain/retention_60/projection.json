@@ -1,0 +1,57 @@
+{
+  "window_formula_calibration_all_match": true,
+  "projected_link3_start": {
+    "cycles_added": 36,
+    "rows_on_disk": 3788433,
+    "generations": 51
+  },
+  "window": {
+    "last_cycle_link2": 509034,
+    "keep60_first_cycle_link3": 509034,
+    "keep3_first_cycle_link3_lo": 110163,
+    "keep3_first_cycle_link3_hi": 125299,
+    "keep60_step": 0,
+    "keep3_step_lo": -398871,
+    "keep3_step_hi": -383735
+  },
+  "binding": {
+    "keeprows": 120000,
+    "minrows": 25000,
+    "taper": 50000,
+    "max_rows": null,
+    "keeprows_binds_at_keep60": true,
+    "keeprows_binds_at_keep3_lo": false,
+    "rho": 3.9519183270212417
+  },
+  "scratch": {
+    "KEEP=3": {
+      "gens_link3_start": 5,
+      "gens_link3_end": 49,
+      "selfplay_bytes_peak": 1918352303,
+      "root_bytes_peak": 16001982049,
+      "guard_projected_total": 37476818529,
+      "pct_of_hard_cap": 6.98060142416507
+    },
+    "KEEP=60": {
+      "gens_link3_start": 51,
+      "gens_link3_end": 95,
+      "selfplay_bytes_peak": 3719254465,
+      "root_bytes_peak": 17802884211,
+      "guard_projected_total": 39277720691,
+      "pct_of_hard_cap": 7.316045591793954
+    },
+    "delta_bytes": 2153252585,
+    "headroom_bytes_at_60": 498963442954,
+    "cap_needs_raising": false
+  },
+  "sgf": {
+    "games_on_disk_now": 161470,
+    "sgf_bytes_on_disk_now": 549853444,
+    "games_per_generation": 4655.172413793103,
+    "sgf_bytes_per_generation": 15836783,
+    "bytes_per_game": 3401.9756074074076,
+    "keep3_games_surviving_link3_start": 23275.862068965514,
+    "keep60_games_surviving_link3_start": 237413.79310344826,
+    "link2_games_written_estimate": 207000
+  }
+}

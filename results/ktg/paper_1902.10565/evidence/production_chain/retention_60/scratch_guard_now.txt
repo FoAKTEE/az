@@ -1,0 +1,17 @@
+== scratch_guard 2026-09-06T10:30:10-04:00 [retention_60 candidate: measurement only, no cycle] ==
+constants            : /weka/home/schmidt/ssci-haiyangw/az/results/ktg/paper_1902.10565/codes/data_budget/budget.env
+root                 : /scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train
+du -sb               : 15446626012	/scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train
+df -B1               : wekafs1/scratchssci 40000000000000 30780756369408 9219243630592 77% /weka/scratch/schmidt
+quotas.py            | +--------------------------------------------------------+
+quotas.py            | | Usage for [31mssci-haiyangw[0m as of [31mSun Sep  6 10:01:02 2026[0m |
+quotas.py            | +----------------------+----------+-----------+----------+
+quotas.py            | |          FS          |   Used   |   Quota   |  Used %  |
+quotas.py            | +----------------------+----------+-----------+----------+
+quotas.py            | | /home/[31mssci-haiyangw[0m/ | 4.36 GB  | 100.00 GB |  4.36%   |
+quotas.py            | | /scratch/[31mssci-anima[0m/ | 30.76 TB |  40.00 TB |   76%    |
+quotas.py            | +----------------------+----------+-----------+----------+
+projected write      : 21474836480 B
+projected root total : 36921462492 B   (hard cap 536870912000 B = 500 GiB)
+group scratch free   : 9219243630592 B   (source: df; fail floor 1099511627776 B, warn floor 1649267441664 B)
+scratch_guard: OK  used=15446626012 B  projected_total=36921462492 B  group_free=9219243630592 B

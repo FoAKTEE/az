@@ -1,0 +1,47 @@
+# By-hand execution of every verification.command carried by this packet's ledger rows.
+# The error ledger does NOT execute verification.command at append (only the result and
+# claim ledgers do), so a worker runs it and records the transcript. Run from the az root.
+# host login03   2026-09-06T10:50:33-04:00   HEAD 7ab60bb
+
+================================================================
+$ cd /home/schmidt/ssci-haiyangw/az && bash results/ktg/paper_1902.10565/evidence/production_chain/retention_60/verify_retention60.sh
+================================================================
+projection.json: keep60 boundary step 0 rows; keep3 step -398871..-383735; KEEP=60 peak 7.32 % of the 500 GiB cap; delta 2.01 GiB
+RETENTION60_VERIFIED: patch applies and is NOT applied (budget.env:55 = 3); prune plan
+  32 paths / 1131433908 B at keep 3 vs 0 paths / 0 B at keep 60 with an identical
+  18-entry protected set; stub 46->0 at the link-3 geometry and 90->35 (60 survivors)
+  at the link-4 geometry; window formula reproduces all 9 log points; boundary step 0
+  rows at keep 60 against -384k..-399k at keep 3; +2.01 GiB, 7.32 % of the 500 GiB cap
+EXIT=0
+
+================================================================
+$ cd /home/schmidt/ssci-haiyangw/az && bash results/ktg/paper_1902.10565/evidence/production_chain/retention_60/verify_keeprows_refutation.sh
+================================================================
+claim (knobs_9x9.env:198) : # is not even consulted by chain link 2, which resumes a mature window pinned at
+claim (knobs_9x9.env:226) : # what a cycle actually trains: samples/cycle = SHUFFLE_KEEPROWS = 120000, one pass over the
+
+first five shuffles of link 2 (verbatim):
+  rows on disk   321,499  desired  102,521  used  109,442   BELOW KEEPROWS
+  rows on disk   351,470  desired  108,521  used  112,661   BELOW KEEPROWS
+  rows on disk   381,697  desired  114,405  used  115,719   BELOW KEEPROWS
+  rows on disk   412,531  desired  120,251  used  121,268   at/above KEEPROWS
+  rows on disk   443,329  desired  125,948  used  129,309   at/above KEEPROWS
+
+REFUTED: the first link-2 window was 109,442 rows (102,521 desired), 10,558 BELOW SHUFFLE_KEEPROWS = 120,000;
+         3 of the first five shuffles were below it, so keep_prob was 1.000 and samples/cycle was the whole window, not KEEPROWS.
+
+shuffle.py:414-435 transcribed: window(321,499) = 102,521 == the log's 'Desired num rows: 102521' -- min_rows is an ADDITIVE term at every window size and was the operative floor here, not KEEPROWS.
+
+OK
+EXIT=0
+
+================================================================
+$ cd /home/schmidt/ssci-haiyangw/az && bash results/ktg/paper_1902.10565/evidence/production_chain/c14_match_9x9/verify_c14.sh
+================================================================
+armA_vs_s20919936: 296.5/400  p=0.7412  se=0.0219  CI=[0.6983,0.7842]  Elo=+182.8
+   colour split verified 200 B / 200 W; every field reproduced
+armB_vs_first: 400/400  p=1.0000  se=0.0000  CI=[1.0000,1.0000]  Elo=inf
+   colour split verified 200 B / 200 W; every field reproduced
+
+C14_VERIFIED: p(latest vs t9-s20919936) = 0.7412 >= 0.60 -- the 19-export loss stall is NOT a strength stall; memo option (b) LR x0.5 is NOT triggered
+EXIT=0
