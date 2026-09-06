@@ -3950,3 +3950,154 @@ partition / node: l40s / gl111, link 2 of 9, 90 cycles completed in this link
       my jobs : gpus=1 cpus=64  (2 jobs incl. 1 dependency-pending, not counted)
       OK      : request gpus=1 cpus=32 part=b200,l40s within policy
     chain_status: OK -- no section-11 escalate condition present.
+
+################################################################################
+# STOPPED BY HUMAN 2026-09-06 -- link 2 -- job 305318 -- FINAL BLOCK
+################################################################################
+
+Human order, 2026-09-06 12:57 EDT: "this is good enough already, save all
+necessary checkpoints and stop." The chain is stopped and the artefacts are
+saved. No further read will be written to this file for this run.
+
+(1) THE STOP, IN THE ORDER IT WAS DONE
+    12:59:09  scancel 314831 -- the pending afterany successor.
+              sacct: 314831|ktg-loop|b200,l40s|CANCELLED by 30154|00:00:00|0:0
+              It was cancelled FIRST because job 305318 ran the pre-o50 wrapper,
+              which queues its successor at job start and cancels it only from
+              the failure branches of finalize(); the rc=0 clean-exit branch
+              (loop.sbatch:560-563) does not. A successor left queued would have
+              started the instant 305318 ended.
+    12:59:50  touch runs/p1/STOP -- the loop's manual brake,
+              synchronous_loop_9x9.sh:426-429, checked at the top of every cycle.
+              This is the only write this node made into runs/p1.
+    13:03:06  the loop exited through that brake, mid-link, at a cycle boundary:
+                cycle 92 complete -- 249 cycle(s) recorded in .../runs/p1/.cycles_completed
+                STOP file present at .../runs/p1/STOP -- exiting the loop cleanly.
+                === [2026-09-06T13:03:06-04:00] loop exited rc=0 after 67185s ===
+                stage_monitor: stopped; 64137 ps samples, 13342 gpu samples
+                === [2026-09-06T13:03:10-04:00] clean exit -- failcount reset to 0 ===
+    13:03:11  job 305318 ended.
+              sacct: 305318|ktg-loop|l40s|COMPLETED|18:39:50|0:0|2026-09-05T18:23:21|2026-09-06T13:03:11
+
+    STOP is a return-code path, not a signal path, so finalize() ran in full:
+    the stage monitor was stopped and drained and .failcount was reset to 0.
+    Elapsed 67185 s from the loop's own clock; 4 s from the brake being seen to
+    the wrapper's last line. Nothing was killed mid-write.
+
+    Time from touching STOP to the loop's exit: 3 min 16 s. The 25-minute
+    fallback (scancel 305318) was therefore never needed and never used.
+
+    squeue -u ssci-haiyangw is empty and no job named ktg-loop exists anywhere in
+    the queue. No successor was resubmitted.
+
+(2) FINAL STATE OF runs/p1
+      .cycles_completed   249   (link 1: 157 cycles; link 2: 92 cycles)
+      .chain_depth        2
+      .failcount          0
+      .breaker_tripped    absent
+      STOP                present
+      models              93 accepted
+      rejectedmodels      3
+      modelstobetested    empty -- nothing was pending at the stop
+      torchmodels_toexport empty
+
+    Cycle 92 is the last cycle. It completed selfplay (1800 games), shuffle and
+    one 16000-sample training epoch, wrote train/t9/checkpoint.ckpt, then found
+    "Not enough data files to fill a subepoch" for epoch 2 and exited 0 WITHOUT
+    exporting. The trainer checkpoint is therefore 239744 samples ahead of the
+    newest exported net (28950784 global step vs 28711040 at the last export),
+    which is the normal resume position, not a loss.
+
+(3) WHAT THE RUN REACHED
+      samples trained     28950784   (last metric row 28942080)
+      last export at      28711040 samples
+      selfplay games      322600 cumulative -- 157 x 1000 in link 1 and
+                          92 x 1800 in link 2, read off the wrapper logs'
+                          per-cycle selfplay progress counter (the per-cycle
+                          maxima are exactly {1000} in link 1 and {1800} in
+                          link 2, so every cycle ran its full complement)
+      games retained      183443 in the .sgfs surviving the retention window;
+                          these are the games that were saved
+      wall clock          42 h 10 m over the two links on 1 L40S + 32 CPUs
+
+    Chain, link by link:
+      301099|ktg-loop|l40s|TIMEOUT  |23:30:11|0:0|2026-09-04T18:52:13|2026-09-05T18:22:24
+      305318|ktg-loop|l40s|COMPLETED|18:39:50|0:0|2026-09-05T18:23:21|2026-09-06T13:03:11
+    Link 1 ended at its designed 23.5 h walltime and resumed; link 2 ended here.
+
+(4) THE NET THE RUN LEAVES BEHIND
+    The latest accepted net is also the best on both learned metrics, computed
+    over all 93 exports by joining each export's sample count to metrics_train.json
+    (93 of 93 exports matched a metric row exactly):
+
+      t9-s28711040-d3032547   p0loss 1.468345   pacc1 0.546604   vloss 0.605518
+      sha256 4cbedf24ac86f97f1d15ec69706161e7ac98c3f3a2fddadb543d40bea897f49c
+
+    Read 14's figures (p0loss 1.468828, pacc1 0.546105) came from the export's
+    own metadata; the numbers above come from the metric row at the same sample
+    count. They differ in the fourth decimal for that reason and rank identically.
+
+    Ranked by RAW vloss alone the minimum is t9-s1762560-d595534 at 0.569050 --
+    an early net with p0loss 2.734 and pacc1 0.362. That is the memo's point in
+    its starkest form: raw vloss is an outcome cross-entropy over the net's own
+    self-play games and moves with how decisive those games are, so it is not a
+    strength ranking and must not be used as one.
+
+    The c14 match is the direct measurement that settles it, and it is recorded
+    here once more because it is the run's headline result:
+      t9-s27212800-d2664932 vs t9-s20919936-d1053205 (the then loss-record net)
+        400 games, 200 B / 200 W, score 296.5/400 = p 0.7412, se 0.0219,
+        95 % CI [0.6983, 0.7842], Elo +182.8 [+145.8, +224.1]
+      t9-s27212800-d2664932 vs t9-s143744-d157367 (the frozen first net)
+        400 games, 200 B / 200 W, score 400/400, exact p [0.9908, 1.0000]
+    Evidence: evidence/production_chain/c14_match_9x9/ (job 317503).
+    Five further exports landed after the net that played that match, ending
+    with the best net above, so those figures are a LOWER bound on what is saved.
+
+(5) THE CHECKPOINT
+      /home/schmidt/ssci-haiyangw/ktg-checkpoints/2026-09-06_stop
+      7683842860 B (7.2 GB), 10957 files, of which 10956 are covered by
+      MANIFEST.sha256; sha256sum -c over the manifest exits 0 with 10956 OK.
+      MANIFEST.sha256 itself is sha256
+      ef75ba6c3155593a687daaf70e0b3ef5f0c705af6ec17974e8f12bc0a7efc4d2.
+
+    p1/ (3.1 GB) holds models, rejectedmodels, modelstobetested, train/t9,
+    selfplay in full, shuffleddata, gatekeepersgf, monitor, logs, both wrapper
+    logs and every dot-state file including STOP. t7/ (4.1 GB) is the 7x7 test
+    run in full. code_snapshot/ holds the loop scripts, configs, budget.env, the
+    env diffs and what link 2 actually ran (resolved cfgs, engine version.txt
+    and working-tree diff, and the sha256 of the katago binary). pages/ holds
+    the 16 built game viewers and the loss-curve pages. README.md carries the
+    stop record, the net identities, the c14 result, the resume procedure and
+    how to serve the net.
+
+    Byte counts and file counts were compared source-to-destination for every
+    copied component; all ten matched exactly. Pointer file, tracked:
+    evidence/production_chain/CHECKPOINTS.md.
+
+(6) WHAT IS NOT SAVED, AND WHY
+    The venv, the CUDA build tree and the compiled katago binary -- all
+    rebuildable from codes/env/env_build.sbatch plus the diffs in
+    code_snapshot/env/, and the binary's sha256 is recorded so a rebuild can be
+    checked against what ran. runs/p1/scripts/dated/ (56 MB, two per-link copies
+    of the upstream python/ tree and the binary) -- rebuildable from the tag; the
+    parts that were not reproducible from the tag are saved in
+    code_snapshot/link2_archive/. runs/p1/models_extra, torchmodels_toexport,
+    torchmodels_toexport_extra and shufflescratch -- all empty at the stop.
+
+(7) OPEN ITEMS THIS RUN DOES NOT CLOSE
+    Carried forward, unresolved, and stated here so they are not lost:
+      * budget.env:55 still reads KTG_KEEP_SELFPLAY_GENERATIONS=3 while the
+        shuffle window sits at 442100 rows, inside the KEEP=60 band, and 38
+        selfplay net directories survive on disk. Whatever holds those
+        directories is not that knob. The retention-60 result is admitted
+        conditional, not checked.
+      * the vloss-stability half of the retention test is not met: the maximum
+        |vloss step| inside the >= 380000-row window is 0.006765 against a
+        stated 0.005. The row-count half passes.
+      * there is still no validation split, so TD-loss trigger (iii) was never
+        evaluable at any read of this run.
+      * o48's rows/game bound never fired -- marginal r 17.1187 against a 13.0
+        target -- so the knobs were never re-derived downward. rho at G=1800 was
+        3.894 of a cap of 8 at the last read.
+    None of these is a reason the run was stopped. It was stopped on human order.

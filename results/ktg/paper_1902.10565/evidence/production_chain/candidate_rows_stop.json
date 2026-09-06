@@ -1,0 +1,93 @@
+{
+  "_note_for_validator": {
+    "from": "worker, production_chain_9x9, the human stop of 2026-09-06",
+    "status": "CANDIDATE -- not appended to the result ledger. The worker executed the stop, made the save and produced the evidence; a validator on a different model refutes or admits it (kernel section 0, admission contract).",
+    "proposed_status": "empirical",
+    "why_not_checked": "the row is a record of what a particular run reached and of what was copied where. Every number in it is a direct measurement of an artefact that still exists and is hash-pinned, but none of it is a proof of anything about the method: the run was stopped on human order at an arbitrary point, not at a convergence criterion, so the terminal numbers are a description of this run and not a claimed limit of the setup.",
+    "what_would_refute_it": [
+      "sacct showing job 305318 did not end COMPLETED 0:0, or showing 314831 ran rather than being cancelled at 00:00:00 -- both are re-readable from the accounting database and are asserted by verify_stop.sh checks 1 and 2",
+      "the wrapper log not containing the STOP-brake line and the clean-exit finalize line, which would mean the loop ended some other way and the 'clean stop' claim is wrong (checks 3-7)",
+      "a ktg-loop job still in the queue, or a successor having been resubmitted, which would refute 'the chain is stopped' (check 8)",
+      "runs/p1/.cycles_completed not reading 249, or the export count not being 93, which would refute the terminal figures (checks 9-13)",
+      "sha256sum -c over MANIFEST.sha256 reporting any file not OK, or the checkpoint's byte/file count differing from the recorded 7683842860 B / 10956 files -- that would mean the save is not what the row says it is (checks 14-19)",
+      "the saved model.bin.gz for t9-s28711040-d3032547 not hashing to 4cbedf24... , which would mean the net named as best/latest is not the net that was saved (check 20)",
+      "showing that some other export has a lower p0loss or a higher pacc1 than t9-s28711040-d3032547 -- recomputable from the saved train/t9/metrics_train.json joined to the export sample counts, which is exactly how the row's figures were produced"
+    ],
+    "not_claimed": [
+      "that the run converged, or that 28.95 M samples is where this setup plateaus -- it was stopped on human order mid-link, at cycle 92 of link 2, with both loss records having been broken on each of the last three exports",
+      "that t9-s28711040-d3032547 is stronger than t9-s27212800-d2664932; no match was played between them. The strength evidence in this row is the c14 match on the EARLIER net (r_c14_latest_beats_best_by_loss_9x9), which the row cites as a lower bound and does not re-derive",
+      "anything about the four open obligations listed below; the stop did not close them"
+    ],
+    "worker_evidence": "results/ktg/paper_1902.10565/evidence/production_chain/ -- CHECKPOINTS.md, verify_stop.sh, status_log.txt (the 'STOPPED BY HUMAN 2026-09-06' block), and the checkpoint itself at /home/schmidt/ssci-haiyangw/ktg-checkpoints/2026-09-06_stop with its README.md and MANIFEST.sha256",
+    "error_ledger_row": "d3cab5b5e0347eed87138eae5eae0b71ad985e111843fb2c20b649e0b2093eb7",
+    "error_ledger_node": "arxiv-1902.10565::production_chain_9x9 node_seq 1, iteration 22, pass"
+  },
+  "row": {
+    "paper": "arxiv-1902.10565",
+    "result_id": "r_production_chain_9x9_stopped_by_human",
+    "name": "the 9x9 production chain was stopped clean on human order at 249 cycles / 28.95 M samples / 93 accepted exports, and every artefact it produced is saved and hash-verified outside git",
+    "working_context": {
+      "regime": "9x9, komi 7, b7c96h3tfrs transformer trunk, training name t9, one L40S GPU with 32 CPUs, 1800 selfplay games and one 16000-sample training epoch per cycle (the option-C knobs), gatekeeper at 150 visits",
+      "run": "runs/p1 under /scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train; chain of 2 links, jobs 301099 and 305318, 2026-09-04T18:52:13 to 2026-09-06T13:03:11, 42 h 10 m wall",
+      "stop": "human order 2026-09-06 12:57 EDT. scancel 314831 at 12:59:09; touch runs/p1/STOP at 12:59:50; loop exited rc=0 at 13:03:06; job ended 13:03:11. The STOP file is the only write this node made into runs/p1.",
+      "engine": "KataGo v1.18.2, fd0723fdbc0e9d82cf269c9630af8c27c57c07c4; the binary that played link 2 is sha256 4d2bbed4de859598109d7fcec3665304312bed62d0c441fd1cbbfd0f43020550",
+      "units": "p0loss and pacc1 are the trainer's policy cross-entropy and policy top-1 accuracy on the training window; vloss is the outcome cross-entropy on the same window; gate scores are out of 100 games"
+    },
+    "claim": "The chain was stopped cleanly and completely. Job 305318 ended COMPLETED with ExitCode 0:0 after 18:39:50, having exited the loop through the STOP brake at a cycle boundary (synchronous_loop_9x9.sh:426-429) rather than through a signal, so finalize() ran in full: the stage monitor was stopped and drained (64137 ps samples, 13342 gpu samples) and .failcount was reset to 0. The queued afterany successor 314831 was cancelled first, at 12:59:09, before the brake was set at 12:59:50, and shows CANCELLED with Elapsed 00:00:00; this was necessary because on the wrapper version that ran, the rc=0 clean-exit branch of finalize() (loop.sbatch:560-563) does not cancel the successor. No ktg-loop job remains in the queue and none was resubmitted. Terminal state: .cycles_completed 249 (157 cycles in link 1, 92 in link 2), .chain_depth 2, .failcount 0, .breaker_tripped absent, STOP present, 93 accepted exports, 3 rejected, modelstobetested and torchmodels_toexport both empty. The run trained 28950784 samples (last metric row 28942080) and last exported at 28711040 samples, so the trainer checkpoint is 239744 samples ahead of the newest net -- the normal resume position. Cumulative self-play is 322600 games (157 x 1000 in link 1, 92 x 1800 in link 2, read from the wrapper logs' per-cycle progress counter, whose per-cycle maxima are exactly {1000} and {1800}); 183443 of those games survive the retention window and are saved. The latest accepted net, t9-s28711040-d3032547 (model.bin.gz sha256 4cbedf24ac86f97f1d15ec69706161e7ac98c3f3a2fddadb543d40bea897f49c), is also the best of all 93 exports on both learned metrics -- p0loss 1.468345 and pacc1 0.546604, computed by joining every export's sample count to train/t9/metrics_train.json, which matched exactly for 93 of 93 exports. Ranked by raw vloss alone the minimum is t9-s1762560-d595534 at 0.569050, an early net whose p0loss is 2.734 and pacc1 0.362; raw vloss is therefore not a strength ordering, which is the reading the c14 match (r_c14_latest_beats_best_by_loss_9x9) established independently. All of it is saved at /home/schmidt/ssci-haiyangw/ktg-checkpoints/2026-09-06_stop: 7683842860 B in 10957 files, of which 10956 are listed in MANIFEST.sha256 (sha256 ef75ba6c3155593a687daaf70e0b3ef5f0c705af6ec17974e8f12bc0a7efc4d2) and all 10956 verify. Every copied component was compared source-to-destination on both byte count and file count before the manifest was written and all ten matched exactly.",
+    "evidence_type": "empirical_measurement",
+    "evidence": "results/ktg/paper_1902.10565/evidence/production_chain/CHECKPOINTS.md",
+    "verification": {
+      "command": "cd /home/schmidt/ssci-haiyangw/az && bash results/ktg/paper_1902.10565/evidence/production_chain/verify_stop.sh",
+      "expect": "exit 0 with 20 PASS lines and a final STOP_VERIFIED line"
+    },
+    "verifier_result": {
+      "verdict": "pass",
+      "execution": {
+        "command": "cd /home/schmidt/ssci-haiyangw/az && bash results/ktg/paper_1902.10565/evidence/production_chain/verify_stop.sh",
+        "exit_code": 0,
+        "output_tail": "STOP_VERIFIED: chain stopped clean at cycle 249; 10956 files (7683842860 B) saved and hash-verified at /home/schmidt/ssci-haiyangw/ktg-checkpoints/2026-09-06_stop; best/latest net t9-s28711040-d3032547",
+        "checks": 20,
+        "failures": 0,
+        "wall_seconds": 43,
+        "ran_at": "2026-09-06T17:32:00+00:00",
+        "note": "run by the WORKER by hand; the validator must re-run it before admitting. It is idempotent and touches nothing -- it only reads sacct, squeue, the wrapper log, runs/p1 and the checkpoint."
+      }
+    },
+    "dependencies": [
+      "arxiv-1902.10565::loop_resume_under_walltime",
+      "arxiv-1902.10565::measure_stage_throughput",
+      "arxiv-1902.10565::gating_rule",
+      "arxiv-1902.10565::eval_improvement",
+      "arxiv-1902.10565::data_budget",
+      "r_c14_latest_beats_best_by_loss_9x9",
+      "results/ktg/paper_1902.10565/codes/loop/loop.sbatch",
+      "results/ktg/paper_1902.10565/codes/loop/synchronous_loop_9x9.sh",
+      "results/ktg/paper_1902.10565/codes/loop/knobs_9x9.env"
+    ],
+    "assumptions": [
+      "the per-cycle selfplay progress counter in the wrapper log reaches the configured games-per-cycle in every cycle; the per-cycle maxima are exactly {1000} in link 1 and {1800} in link 2, with no cycle short, which is what makes the 322600 cumulative figure a count rather than an estimate",
+      "one .sgfs line is one game, the same rule the throughput node counts by; that is the basis of the 183443 retained-game figure",
+      "each export's sample count identifies its metric row exactly; 93 of 93 exports matched a row at the same nsamp, so no interpolation or nearest-neighbour fallback was used in ranking the nets",
+      "job 305318 read knobs_9x9.env at sha256 prefix ba7f1bf7e1bc166d while the copy saved in the checkpoint has prefix 78121713b3056309; the only difference is the optional SGF-archive step, committed with its switch off and byte-neutral at that setting, so every knob link 2 actually used is unchanged in the saved copy",
+      "du -sb and find -type f are the size and count measures throughout; the checkpoint's recorded byte count includes MANIFEST.sha256 itself, which is why the README's stated total had to be made self-consistent with the file that states it"
+    ],
+    "status": "empirical",
+    "provenance": {
+      "stage": "2-work",
+      "task_id": "production_chain_9x9",
+      "agent_role": "worker",
+      "trigger": "human order 2026-09-06 12:57 EDT: 'this is good enough already, save all necessary checkpoints and stop.'",
+      "jobs": "305318 (the loop, stopped) and 314831 (the successor, cancelled). No new job was submitted, so no compute-policy check was required.",
+      "isolation": "the only write into runs/p1 was the STOP file; nothing else under the run tree was modified, and the save is a read-only copy out",
+      "code": "no loop or engine code was changed. The new code is the verifier verify_stop.sh, under the evidence directory."
+    },
+    "open_obligations": [
+      "the run was stopped on human order at an arbitrary point, not at a convergence criterion. Both loss records were broken on each of the last three exports, so the terminal p0loss 1.468345 is a value this run reached and NOT a plateau of the setup; any claim about where this configuration converges needs a run that is allowed to stop on its own criterion",
+      "no match was played between t9-s28711040-d3032547 and t9-s27212800-d2664932, so the strength of the saved best net is only bounded below by the c14 figures on the earlier net; a 400-game match between them would close it",
+      "budget.env:55 still reads KTG_KEEP_SELFPLAY_GENERATIONS=3 while the shuffle window sits at 442100 rows, inside the KEEP=60 band, with 38 selfplay net directories surviving; whatever holds those directories is not that knob, and the retention-60 result stands conditional rather than checked",
+      "the vloss-stability half of the retention test is not met -- max |vloss step| inside the >=380000-row window is 0.006765 against a stated 0.005 -- and there is still no validation split, so TD-loss trigger (iii) was never evaluable at any read of this run",
+      "the checkpoint is a single copy on one filesystem. It is hash-manifested but not replicated; a second copy elsewhere would be needed before the scratch tree is cleared"
+    ],
+    "notes": "The stop was ordered, not triggered by any condition in the run. Nothing in the chain's own state called for stopping: the circuit breaker was not tripped, the storage guard had passed 251 of 251 invocations, and read 14 forty minutes earlier had recorded that the 19-export policy stall had just ended with new records on both metrics. The successor was cancelled before the brake was set specifically because the wrapper version that was running does not cancel it on a clean exit; getting that order wrong would have started a fresh 23.5 h allocation that then immediately exited on the brake. Time from the brake to the loop's exit was 3 min 16 s, well inside the 25-minute fallback, so the fallback (scancel of the running job) was never used and the last cycle finished its train and export stages normally."
+  }
+}
