@@ -3707,3 +3707,112 @@ partition / node: l40s / gl111, link 2 of 9, 61 cycles completed in this link
       OK      : request gpus=1 cpus=32 part=b200,l40s within policy
       squeue  : 305318 l40s RUNNING gl111 ; 314831 b200,l40s PENDING (Dependency)
     chain_status: OK -- no section-11 escalate condition present.
+
+################################################################################
+# READ 13 -- link 2 -- 2026-09-06T09:45 -- job 305318
+################################################################################
+partition / node: l40s / gl111, link 2 of 9, 75 cycles completed in this link
+
+(1) HISTORY FIRST (o51)
+    "+5 new, 30 already present, 73 complete real-net record(s), 1 gap(s);
+     newest t9-s26913152-d2573793 is still being written and is NOT recorded"
+    --assert-nlwp-le 32 exit 0.
+
+(2) o48 BLOCK
+    marginal r (3-net)  17.0278  (t9-s25714304-d2267292, t9-s26313728-d2421398,
+                                  t9-s26613120-d2513417: 306501 rows / 18000 games)
+    slope, 9 CONTIGUOUS +0.0356 rows/game per accepted net
+    r_lo (10-net)       17.0278
+    whole-run aggregate 17.7031 (NOT used)
+      marginal 17.0278 <= 13.0    ?  NO -- 4.0278 above
+      r_lo     17.0278 <= 11.733  ?  NO -- 5.2948 above
+      => o48 DOES NOT FIRE
+    GAP note verbatim, unchanged, fit does not cross it:
+      GAP  t9-s11352064-d2008893 (accepted net 37) -> t9-s15847040-d2653436
+      (accepted net 51): 13 accepted net(s) in between have no complete record
+    Slope by read: -0.0161, -0.0160, +0.0004, +0.0356 -- still scattered around
+    zero. rows/game remains STATIONARY, now at 17.0.
+    rho at G=1800 = 3.915 (cap 8);  T1 = 30650.0 vs 19200 -> +59.64 %
+
+(3) [WATCH] ANSWERED PLAINLY: NO NEW BEST ON EITHER METRIC, AND THE RECOVERY HAS
+    STALLED AND PARTLY REVERSED.
+
+  net                    samples     p0loss     vloss      pacc1   gate   d(p0)      d(vl)      d(pacc1)
+  t9-s24515584-d1963915  24515584  1.487855  0.607404  0.544401  81.5
+  t9-s24815616-d2054706  24815616  1.486201  0.603448  0.544079  65.0  -0.001654 -0.003956  -0.000322
+  t9-s25114880-d2115472  25114880  1.488754  0.602601  0.542796  66.0  +0.002553 -0.000847  -0.001283
+  t9-s25414912-d2205679  25414912  1.493862  0.603568  0.541367  69.0  +0.005108 +0.000967  -0.001429
+  t9-s25714304-d2267292  25714304  1.499413  0.603705  0.538945  60.0  +0.005551 +0.000137  -0.002422
+  t9-s26313728-d2421398  26313728  1.493484  0.606547  0.540620  64.0  -0.005929 +0.002842  +0.001675
+  t9-s26613120-d2513417  26613120  1.494641  0.606619  0.540752  47.5  +0.001157 +0.000072  +0.000132
+  t9-s26913152-d2573793  26913152  1.495273  0.608482  0.539717  82.0  +0.000632 +0.001863  -0.001035
+
+      new p0loss best (< 1.485115) ?  NO
+      new pacc1  best (> 0.544882) ?  NO
+      the run best on BOTH is still t9-s20919936-d1053205, set at read 10
+      consecutive non-improving exports since that low: 19
+        (14 at read 12, 8 at read 11)
+
+    Read 12 reported a seven-export monotone recovery that had closed 98.6 % of
+    the gap. That recovery ENDED at t9-s24815616 (1.486201, the closest approach)
+    and p0loss has risen on five of the seven exports since, to 1.495273. pacc1
+    peaked with it at 0.544079 and has fallen to 0.539717. So the read-12 reading
+    -- "an excursion with a recovery underway" -- did not hold: the run touched
+    within 0.0011 of its record and turned away without crossing. Nineteen
+    exports and roughly 6 M samples have now passed without a new best on either
+    policy metric. No cause is claimed, and no threshold in section 11 is
+    crossed; this is reported as the measurement it is.
+
+(4) VLOSS -- ITS OWN LINE, AND IT IS THE ONE METRIC MOVING THE WRONG WAY
+      run low                 0.568837  at t9-s1762560-d595534
+      prior post-low high     0.607404  at t9-s24515584-d1963915
+      NOW                     0.608482  at t9-s26913152-d2573793
+                              -- A NEW POST-LOW HIGH, exceeding the 0.607404
+                                 that read 12 flagged
+      flag 0.62               margin 0.0115
+      margin by read          0.0257 (r9) -> 0.0199 (r11) -> 0.0174 (r12)
+                              -> 0.0115 (r13)
+    The margin has narrowed at every read since read 9 and has now halved since
+    read 11. vloss has risen on five of the last seven exports. At the mean rate
+    of the last four reads (~0.0047 of margin per read) the 0.62 flag would be
+    reached in roughly two to three more reads if the trend holds -- an
+    extrapolation, not a prediction, and stated only to size the watch. It is
+    the first quantity of the run on a monotone course toward a stated flag.
+
+(5) GATE -- THE FIRST REJECTION OF LINK 2
+      Candidate lost match, score 96.500 to 100.500 in 197 games,
+        rejecting candidate t9-s26014080-d2359870
+      link 2 totals: 30 decisions, 29 accepted, 1 rejected
+      last six: 69.0, 60.0, REJECTED(96.5), 64.0, 47.5, 82.0
+    A rejection is expected behaviour, not a fault, and the loop recovered
+    immediately -- the next three candidates were accepted at 64.0, 47.5 and
+    82.0. Chain totals now 87 accepted, 3 rejected.
+
+(6) LINK-2 P8 FROM THE LINK'S OWN stage_elapsed_s
+      stage_elapsed_s  gatekeeper 1550.62, selfplay 47697.8, shuffle 486.24,
+                       train 3956.71
+      cycles in link 2 75
+      selfplay         75 * 1800 / 47697.8 = 10189.1 games/h
+                       (10311.7 r12, 10262.2 r11, 10156.8 r10)
+      cycle wall       projected_cycle_h 0.2080 (max 0.2175) over 33
+                       all-four-stage cycles   (0.2084 r12)
+      train per cycle  3956.71 / 75 = 52.8 s   (52.8 r12)
+      bytes/row        295.97 B;  basedir 3003918998 B
+    Excluded as before: throughput.json's cumulative selfplay games/h and train
+    samples/s.
+
+(7) EXPORT CADENCE
+      30 exports over 75 link-2 cycles = 2.50 cycles per export
+      (2.54 r12, 2.56 r11, 2.58 r10, 2.67 r9; link 1 was 2.91)
+
+(8) THREADS, GUARD, GPU
+    nlwp_max: gatekeeper 24, selfplay 24, shuffle 4, train 13, cap 32 --
+    unchanged at every read of the whole run.
+    guard 236 invocations, 236 'scratch_guard: OK', of which
+    [cycle N pre-gatekeeper] 234; the difference of 2 is the two link pre-flight
+    calls. mission root 15340235379 B of 536870912000 B (2.9 % of the cap);
+    runs/p1 3007324543 B.
+    GPU-count check via mission.json compute.policyCheck:
+      my jobs : gpus=1 cpus=64  (2 jobs incl. 1 dependency-pending, not counted)
+      OK      : request gpus=1 cpus=32 part=b200,l40s within policy
+    chain_status: OK -- no section-11 escalate condition present.
