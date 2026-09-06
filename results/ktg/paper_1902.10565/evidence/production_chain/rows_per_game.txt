@@ -3,7 +3,7 @@ basedir = /scratch/schmidt/ssci-anima/ssci-haiyangw/ktg-train/runs/p1
 games = one line of a .sgfs file (cpp/program/selfplaymanager.cpp:377-378)
 rows  = sum of npz binaryInputNCHWPacked.shape[0] over tdata
 
-rows_per_game_real   = 16.294708167280433   (323010 rows / 19823 games)
+rows_per_game_real   = 16.63899368447381   (798289 rows / 47977 games)
 
 per selfplay net directory (name = the net that played, 'random' = bootstrap):
   t9-s15847040-d2653436        real_net=True  games=2000   rows=33894    rows/game=16.947
@@ -12,4 +12,10 @@ per selfplay net directory (name = the net that played, 'random' = bootstrap):
   t9-s17045760-d2821985        real_net=True  games=2000   rows=33981    rows/game=16.9905
   t9-s17345664-d2855966        real_net=True  games=3000   rows=50883    rows/game=16.961
   t9-s17645440-d2906849        real_net=True  games=2000   rows=33497    rows/game=16.7485
-  t9-s17945216-d2940346        real_net=True  games=2823   rows=36100    rows/game=12.787814381863265
+  t9-s17945216-d2940346        real_net=True  games=6243   rows=94787    rows/game=15.182924875860964
+  t9-s18225024-d381697         real_net=True  games=3600   rows=61632    rows/game=17.12
+  t9-s18522368-d443329         real_net=True  games=5400   rows=91487    rows/game=16.942037037037036
+  t9-s18821760-d534816         real_net=True  games=3600   rows=61298    rows/game=17.02722222222222
+  t9-s19121664-d596114         real_net=True  games=5400   rows=90825    rows/game=16.819444444444443
+  t9-s19421312-d686939         real_net=True  games=3600   rows=61736    rows/game=17.148888888888887
+  t9-s19720960-d748675         real_net=True  games=3134   rows=49614    rows/game=15.830887045309508

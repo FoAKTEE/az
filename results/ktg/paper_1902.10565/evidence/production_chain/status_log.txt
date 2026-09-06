@@ -3249,3 +3249,156 @@ RATES NOT REPORTED THIS READ, AND WHY
     nlwp_max from link 2's own samples so far: selfplay 24, shuffle 4, train 13,
     cap 32 -- unchanged, and the gatekeeper stage has not yet been sampled in
     link 2.
+
+################################################################################
+# READ 9 -- FIRST FULL LINK-2 READ -- 2026-09-05T21:45 -- job 305318
+################################################################################
+partition / node: l40s / gl111, link 2 of 9, 16 cycles completed in this link
+(chain total 168 at the previous page refresh; 175 cycles started per the guard)
+
+(1) HISTORY WRITTEN FIRST, BEFORE ANYTHING COULD PRUNE (o51)
+    throughput_report.py ... --history-out .../rows_per_game_history.jsonl
+      "rows/game history : .../rows_per_game_history.jsonl (+4 new, 8 already
+       present, 50 complete real-net record(s), 1 gap(s); newest
+       t9-s19720960-d748675 is still being written and is NOT recorded)"
+    The newest directory is correctly excluded, which is the defect that made the
+    boundary read's 12.79 an artefact. --assert-nlwp-le 32 exit 0.
+
+(2) o48 BLOCK, SLOPE AND r_lo FROM THE RECORD
+    marginal r (3-net, from the tree)  16.9729
+        t9-s18821760-d534816, t9-s19121664-d596114, t9-s19421312-d686939
+        213859 rows / 12600 games
+    slope, 9 CONTIGUOUS records       +0.0421 rows/game per accepted net
+    r_lo (10-net horizon)              16.9729
+    whole-run aggregate over the record 18.3024 (NOT used)
+
+    THE SLOPE HAS TURNED POSITIVE. It is not merely flat: the fit over the last
+    nine contiguous records is +0.0421 per accepted net, so carrying the marginal
+    ten nets forward does not lower it and r_lo equals the marginal. Read 5 fitted
+    -0.1070, read 6 -0.1742, read 7 -0.0675, read 8 -0.0148, and this read +0.0421.
+    The rows/game decline that opened this whole obligation has ended.
+
+    THE GAP NOTE, VERBATIM (o53 -- the fit does NOT cross it):
+      ROWS/GAME SOURCE: the append-only per-net record
+      paper_1902.10565/evidence/production_chain/rows_per_game_history.jsonl --
+      50 complete real-net record(s), 1 gap(s) (obligation o51)
+        GAP  t9-s11352064-d2008893 (accepted net 37) -> t9-s15847040-d2653436
+        (accepted net 51): 13 accepted net(s) in between have no complete record
+        t9-s15847040-d2653436   games 2000  rows 33894  rows/game 16.947
+                                prev UNKNOWN -- gap before this net
+        t9-s17945216-d2940346   games 6243  rows 94787  rows/game 15.183
+                                prev t9-s17645440-d2906849
+
+    THE SIGKILL-CUT RECORD IS INSIDE THE FIT WINDOW, AND IT MATTERS THE RIGHT WAY.
+    The nine contiguous records the slope is fitted over are
+        t9-s17045760-d2821985   2000 games   33981 rows   16.991
+        t9-s17345664-d2855966   3000 games   50883 rows   16.961
+        t9-s17645440-d2906849   2000 games   33497 rows   16.748
+        t9-s17945216-d2940346   6243 games   94787 rows   15.183  <-- SIGKILL-CUT
+        t9-s18225024-d381697    3600 games   61632 rows   17.120
+        t9-s18522368-d443329    5400 games   91487 rows   16.942
+        t9-s18821760-d534816    3600 games   61298 rows   17.027
+        t9-s19121664-d596114    5400 games   90825 rows   16.819
+        t9-s19421312-d686939    3600 games   61736 rows   17.149
+    The 15.183 point is the directory link 1 was writing when it was SIGKILLed at
+    18:22:24: its games were counted but the tail of its rows never reached disk,
+    so the ratio is depressed by construction rather than by the net. It sits in
+    the MIDDLE of the window, which biases the least-squares slope DOWNWARD. The
+    fitted slope is positive anyway, so the reversal is robust to it -- excluding
+    the point could only make the slope more positive, never less. Named here as
+    required; not excluded, because the tool's window is the tool's to define and
+    the bias is in the conservative direction.
+
+    VERDICT
+      marginal 16.9729 <= 13.0    ?  NO -- 3.9729 above
+      r_lo     16.9729 <= 11.733  ?  NO -- 5.2399 above
+      => o48 DOES NOT FIRE
+
+    rho at the knob link 2 is running, G=1800
+      rho = SHUFFLE_KEEPROWS/(G*r) = 120000/30551.2 = 3.928  (cap 8)
+      T1  = 30551.2 vs 1.2*E = 19200 -> +59.12 %
+      link 1 peaked at rho 7.217, 89 % of the cap; option C holds it under half.
+
+(3) THE KNOB SHA MISMATCH IS CORRECT, NOT A DEFECT
+    file now       78121713b3056309
+    link 2 logs    ba7f1bf7e1bc166d
+    A link reads the knob file once, at its own start. Link 2 started 18:23:21
+    with option C and keeps it for its whole duration; link 3 (314831) will log
+    the new sha. Recorded as the expected immutable state.
+
+(4) LINK-2 P8 RATES -- computed from LINK 2's OWN cycles
+    Two of throughput.json's headline rates are still whole-run counts divided by
+    link-2 stage time and are NOT reported as link-2 rates: selfplay 16446.3
+    games/h (its 47977 games include link-1 games still on disk) and train
+    23030.702 samples/s (19720960 is the cumulative model step). What IS clean is
+    link 2's own stage_elapsed_s and cycle timings:
+      stage_elapsed_s   gatekeeper 302.84, selfplay 10501.9, shuffle 120.71,
+                        train 856.29
+      cycles in link 2  16
+      selfplay games/h  16 cycles * 1800 games / 10501.9 s = 9872.5
+      cycle wall        projected_cycle_h 0.2093 (max 0.2173) over the
+                        all-four-stage cycles 4, 6, 9, 11, 14, 16
+      train per cycle   856.29 s / 16 = 53.5 s
+      bytes/row         296.79 B on disk
+      basedir           1861900025 B
+    Against link 1's 0.1608 h/cycle at 1000 games: 0.2093 h at 1800 games is
+    +30 % wall for +80 % games, i.e. the per-game cost fell.
+
+(5) EXPORT CADENCE AT 1800 / 16000 -- MEASURED (this is what N1 was waiting on)
+      exports in link 2   6
+      cycles in link 2    16
+      cycles per export   2.67
+    Against link 1 at 1000 / 20000: 54 exports in 157 cycles = 2.91 cycles per
+    export. So option C exports slightly MORE often, not less, despite the
+    smaller nominal epoch -- consistent with the whole-file finding, in which
+    SHUFFLE_KEEPROWS and not E sets what a cycle trains.
+
+    GATE OUTCOMES IN LINK 2: 6 decisions, 6 accepted, 0 rejected.
+      100.500 to 54.500 in 155 games
+      100.000 to 55.000 in 155 games
+      100.000 to 46.000 in 146 games
+      100.000 to 64.000 in 164 games
+      100.000 to 39.000 in 139 games
+    The losing scores are back in the 39-64 band. Link 1's last decisions before
+    the boundary were 90, 93, 97 with two outright rejections at 92.5 and 96.5.
+    Halving the reuse has restored the candidate's margin over the incumbent --
+    the clearest single sign that option C did what it was chosen to do.
+
+    VALUE LOSS vs THE 0.62 FLAG: 0.596950 at t9-s19720960-d748675, against the
+    0.568837 minimum and the 0.602834 peak. It remains BELOW 0.60 and 0.0231
+    clear of the flag. The policy keeps improving: p0loss 1.535785,
+    pacc1 0.528520, loss 35.161852. c12 still UNAVAILABLE for the structural
+    reason recorded since read 2. CHECK_METRICS: PASS.
+
+    nlwp_max per stage: gatekeeper 24, selfplay 24, shuffle 4, train 13, cap 32
+    -- unchanged at every read of the whole run.
+
+    GUARD TRIPLES: 177 invocations, 177 'scratch_guard: OK', of which
+    [cycle N pre-gatekeeper] 175. The difference of 2 is exactly the two link
+    pre-flight calls (one per link), so the two-class predicate holds.
+    mission root 14101687786 B of 536870912000 B (2.6 % of the cap);
+    runs/p1 1862560864 B.
+    chain_status: OK -- no section-11 escalate condition present.
+
+(6) GPU-COUNT CHECK via mission.json compute.policyCheck
+      my jobs : gpus=1 cpus=64  (2 jobs incl. 1 dependency-pending, not counted)
+      OK      : request gpus=1 cpus=32 part=b200,l40s within policy
+                (gpu<=4, no cpu cap)
+      squeue  : 305318 l40s RUNNING gl111 ; 314831 b200,l40s PENDING (Dependency)
+    Exactly the two expected jobs and one GPU in flight.
+
+CORRECTION ACCEPTED AND VERIFIED -- THE SUCCESSOR-ID PARSE DEFECT IS FIXED
+    I had been reporting this as unfixed; that was wrong from the repo's point of
+    view and the coordinator's correction is right. Verified rather than assumed:
+      b1e25d9  "read the successor id off sbatch stdout, past the site banner",
+               authored 2026-09-04 19:41:50 -0400
+      repo loop.sbatch:685-687 now redirects stderr to a temp file and parses
+               stdout: out=$(sbatch --parsable ... 2>"$sb_err")
+      305318 submitted 2026-09-04T18:52:22 -- BEFORE the fix landed
+      314831 submitted 2026-09-05T18:23:23 -- AFTER it
+    Slurm spools the batch script at SUBMISSION time, so link 2 executes the
+    pre-fix copy and still logs "sbatch did not return a job id" once, with no
+    "successor queued:" line. The successor's own spooled copy CARRIES THE FIX --
+    scontrol write batch_script 314831 shows the 2>"$sb_err" form at its line 578.
+    So the mis-logging ends with link 2 and link 3 will record its successor
+    correctly. Recorded as fixed-and-pending-rollover, not as an open defect.
