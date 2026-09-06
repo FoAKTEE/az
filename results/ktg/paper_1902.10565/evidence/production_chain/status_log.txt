@@ -3503,3 +3503,103 @@ partition / node: l40s / gl111, link 2 of 9, 31 cycles completed in this link
       OK      : request gpus=1 cpus=32 part=b200,l40s within policy
       squeue  : 305318 l40s RUNNING gl111 ; 314831 b200,l40s PENDING (Dependency)
     chain_status: OK -- no section-11 escalate condition present.
+
+################################################################################
+# READ 11 -- link 2 -- 2026-09-06T03:45 -- job 305318
+################################################################################
+partition / node: l40s / gl111, link 2 of 9, 46 cycles completed in this link
+
+(1) HISTORY FIRST (o51)
+    "+6 new, 18 already present, 62 complete real-net record(s), 1 gap(s);
+     newest t9-s23316992-d1660341 is still being written and is NOT recorded"
+    --assert-nlwp-le 32 exit 0.
+
+(2) o48 BLOCK
+    marginal r (3-net, from the tree)  16.8029
+        t9-s22418432-d1448624, t9-s22717824-d1508800, t9-s23017344-d1599714
+        211717 rows / 12600 games
+    slope, 9 CONTIGUOUS records        -0.0160 rows/game per accepted net
+    r_lo (10-net horizon)              16.6426
+    whole-run aggregate over the record 17.9169 (NOT used)
+      marginal 16.8029 <= 13.0    ?  NO -- 3.8029 above
+      r_lo     16.6426 <= 11.733  ?  NO -- 4.9096 above
+      => o48 DOES NOT FIRE
+    GAP note verbatim, unchanged, fit does not cross it:
+      GAP  t9-s11352064-d2008893 (accepted net 37) -> t9-s15847040-d2653436
+      (accepted net 51): 13 accepted net(s) in between have no complete record
+    No narrowing note. The slope is -0.0160, essentially identical to read 10's
+    -0.0161, which supports the read-10 reading that rows/game is STATIONARY near
+    16.8-16.9 rather than trending.
+    rho at G=1800 = 3.968 (cap 8);  T1 = 30245.2 vs 19200 -> +57.53 %
+
+(3) [WATCH] THE FLATTENING PERSISTS -- CANDIDATE PLATEAU SIGNAL, NO CLAIM MADE
+    Every export since the t9-s20919936 low, with its gate score alongside:
+
+      net                    samples    p0loss    vloss     pacc1    gate (losing score)
+      t9-s20919936-d1053205  20919936  1.485115  0.599423  0.544882  87.5   <- the low
+      t9-s21219584-d1143954  21219584  1.497000  0.601278  0.539143  53.0
+      t9-s21519232-d1204669  21519232  1.506489  0.600090  0.537954  75.5
+      t9-s21818880-d1296843  21818880  1.521745  0.601954  0.533102  69.5
+      t9-s22118528-d1357824  22118528  1.532060  0.600742  0.529566  61.0
+      t9-s22418432-d1448624  22418432  1.535492  0.597285  0.528905  39.0
+      t9-s22717824-d1508800  22717824  1.534797  0.596181  0.527309  79.0
+      t9-s23017344-d1599714  23017344  1.532730  0.593747  0.526594  68.0
+      t9-s23316992-d1660341  23316992  1.528426  0.594310  0.529552  79.5
+
+    CONSECUTIVE NON-IMPROVING EXPORTS (against the running best): 8.
+    The threshold for reporting a candidate plateau signal is 4, so THE SIGNAL
+    FIRES. Reported as required; no claim is made about its cause.
+
+    But the direction matters and the bare counter hides it. Deltas over the
+    last five exports:
+      net          d(p0loss)   d(vloss)    d(pacc1)
+      s22118528    +0.010315   -0.001212   -0.003536
+      s22418432    +0.003432   -0.003457   -0.000661
+      s22717824    -0.000695   -0.001104   -0.001596
+      s23017344    -0.002067   -0.002434   -0.000715
+      s23316992    -0.004304   +0.000563   +0.002958
+    p0loss PEAKED at 1.535492 (s22418432) and has fallen on each of the three
+    exports since; pacc1 BOTTOMED at 0.526594 (s23017344) and rose on the newest;
+    vloss has fallen on four of the last five and sits at 0.5943, its best since
+    the 0.601954 peak. So the honest description is an EXCURSION WITH A RECOVERY
+    UNDERWAY, not a flat plateau: the run has not yet beaten its s20919936 record
+    on p0loss or pacc1, which is what the 8-count measures, but the last three
+    exports are improving relative to one another on all three metrics.
+    The gate is unaffected throughout: 18 decisions, 18 accepted, 0 rejected,
+    losing scores across the window 39.0-87.5 with no trend toward the 100 bar.
+    Both readings are recorded; the next read decides between them.
+
+(4) LINK-2 P8 FROM THE LINK'S OWN stage_elapsed_s
+      stage_elapsed_s  gatekeeper 931.09, selfplay 29046.49, shuffle 314.27,
+                       train 2437.66
+      cycles in link 2 46
+      selfplay         46 * 1800 / 29046.49 s = 10262.2 games/h
+                       (10156.8 at read 10, 9872.5 at read 9)
+      cycle wall       projected_cycle_h 0.2093 (max 0.2175) over 19
+                       all-four-stage cycles   (0.2097 at read 10)
+      train per cycle  2437.66 / 46 = 53.0 s   (53.3 at read 10)
+      bytes/row        296.40 B;  basedir 2436136447 B
+    Excluded as before: throughput.json's cumulative selfplay games/h and train
+    samples/s, which divide whole-run counts by link-2 stage time.
+
+(5) EXPORT CADENCE
+      18 exports over 46 link-2 cycles = 2.56 cycles per export
+      (read 10: 12/31 = 2.58; read 9: 6/16 = 2.67; link 1: 54/157 = 2.91)
+    Continuing to settle very slightly denser as the sample grows.
+
+(6) VALUE LOSS vs THE 0.62 FLAG
+      0.594310 on the newest export -- 0.0257 clear of the flag and its best
+      reading since the 0.601954 peak. min 0.568837, peak 0.602834.
+      c12 still UNAVAILABLE structurally. CHECK_METRICS: PASS.
+
+(7) THREADS, GUARD, GPU
+    nlwp_max: gatekeeper 24, selfplay 24, shuffle 4, train 13, cap 32 --
+    unchanged at every read of the whole run.
+    guard 207 invocations, 207 'scratch_guard: OK', of which
+    [cycle N pre-gatekeeper] 205; the difference of 2 is the two link pre-flight
+    calls. mission root 14701051452 B of 536870912000 B (2.7 % of the cap);
+    runs/p1 2436704073 B.
+    GPU-count check via mission.json compute.policyCheck:
+      my jobs : gpus=1 cpus=64  (2 jobs incl. 1 dependency-pending, not counted)
+      OK      : request gpus=1 cpus=32 part=b200,l40s within policy
+    chain_status: OK -- no section-11 escalate condition present.
